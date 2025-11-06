@@ -344,7 +344,7 @@ const Buscar = () => {
                     Filtros
                   </h2>
                   {activeFiltersCount > 0 && (
-                    <Badge variant="secondary" className="ml-2">
+                    <Badge variant="secondary" className="ml-2 animate-scale-in">
                       {activeFiltersCount} {activeFiltersCount === 1 ? 'activo' : 'activos'}
                     </Badge>
                   )}
@@ -473,7 +473,7 @@ const Buscar = () => {
                 {activeFiltersCount > 0 && (
                   <Button 
                     variant="outline" 
-                    className="w-full"
+                    className="w-full animate-fade-in"
                     onClick={() => setFilters({
                       estado: '', municipio: '', precioMin: '', precioMax: '',
                       tipo: '', recamaras: '', banos: '', orden: 'desc'
