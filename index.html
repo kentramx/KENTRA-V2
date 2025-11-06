@@ -20,5 +20,23 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      window.initMap = function() {
+        window.googleMapsLoaded = true;
+        window.dispatchEvent(new Event('google-maps-loaded'));
+      };
+      
+      window.googleMapsError = function(error) {
+        console.error('Google Maps loading error:', error);
+        window.googleMapsLoadError = error || 'Unknown error';
+        window.dispatchEvent(new Event('google-maps-error'));
+      };
+    </script>
+    <script 
+      src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&libraries=places&callback=initMap&loading=async"
+      onerror="googleMapsError('Script failed to load')"
+      async
+      defer
+    ></script>
   </body>
 </html>

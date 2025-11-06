@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, X } from 'lucide-react';
 import { z } from 'zod';
+import { LocationSearch } from '@/components/LocationSearch';
 
 const propertySchema = z.object({
   title: z.string().min(5, 'El título debe tener al menos 5 caracteres').max(200),
@@ -51,6 +52,8 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
     parking: '',
     sqft: '',
     lot_size: '',
+    lat: undefined as number | undefined,
+    lng: undefined as number | undefined,
   });
 
   useEffect(() => {
@@ -68,6 +71,8 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         parking: property.parking?.toString() || '',
         sqft: property.sqft?.toString() || '',
         lot_size: property.lot_size?.toString() || '',
+        lat: property.lat,
+        lng: property.lng,
       });
       setExistingImages(property.images || []);
     }
@@ -268,13 +273,18 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         </div>
 
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="address">Dirección*</Label>
-          <Input
-            id="address"
-            value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            placeholder="Calle, número, colonia"
-            required
+          <LocationSearch
+            defaultValue={formData.address}
+            onLocationSelect={(location) => {
+              setFormData({
+                ...formData,
+                address: location.address,
+                municipality: location.municipality,
+                state: location.state,
+                lat: location.lat,
+                lng: location.lng,
+              });
+            }}
           />
         </div>
 
