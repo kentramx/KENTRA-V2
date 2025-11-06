@@ -373,7 +373,12 @@ const PropertyDetail = () => {
                 {agent ? (
                   <div className="space-y-4">
                     <div>
-                      <p className="font-semibold">{agent.name}</p>
+                      <button
+                        onClick={() => navigate(`/agente/${agent.id}`)}
+                        className="font-semibold hover:text-primary transition-colors text-left"
+                      >
+                        {agent.name}
+                      </button>
                       {agent.is_verified && (
                         <Badge variant="secondary" className="mt-1">
                           Verificado

@@ -10,6 +10,7 @@ import Properties from "./pages/Properties";
 import PropertyDetail from "./pages/PropertyDetail";
 import Favorites from "./pages/Favorites";
 import AgentDashboard from "./pages/AgentDashboard";
+import AgentProfile from "./pages/AgentProfile";
 import Auth from "./pages/Auth";
 import Buscar from "./pages/Buscar";
 import MessagesPage from "./pages/MessagesPage";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/" element={<Home />} />
             <Route path="/propiedades" element={<Properties />} />
             <Route path="/propiedad/:id" element={<PropertyDetail />} />
+            <Route path="/agente/:id" element={<AgentProfile />} />
             <Route path="/buscar" element={<Buscar />} />
             <Route path="/favoritos" element={<Favorites />} />
             <Route path="/panel-agente" element={<AgentDashboard />} />
