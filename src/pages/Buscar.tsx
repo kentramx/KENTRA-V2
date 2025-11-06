@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlacesAutocomplete } from '@/hooks/usePlacesAutocomplete';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
@@ -43,21 +43,23 @@ interface Filters {
 }
 
 const Buscar = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   
+  // Inicializar filtros desde URL
   const [filters, setFilters] = useState<Filters>({
-    estado: '',
-    municipio: '',
-    precioMin: '',
-    precioMax: '',
-    tipo: '',
-    recamaras: '',
-    banos: '',
-    orden: 'desc',
+    estado: searchParams.get('estado') || '',
+    municipio: searchParams.get('municipio') || '',
+    precioMin: searchParams.get('precioMin') || '',
+    precioMax: searchParams.get('precioMax') || '',
+    tipo: searchParams.get('tipo') || '',
+    recamaras: searchParams.get('recamaras') || '',
+    banos: searchParams.get('banos') || '',
+    orden: (searchParams.get('orden') as 'asc' | 'desc') || 'desc',
   });
 
   const [estados, setEstados] = useState<string[]>([]);
@@ -67,6 +69,22 @@ const Buscar = () => {
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const markerClustererRef = useRef<MarkerClusterer | null>(null);
+
+  // Actualizar URL cuando cambien los filtros
+  useEffect(() => {
+    const params = new URLSearchParams();
+    
+    if (filters.estado) params.set('estado', filters.estado);
+    if (filters.municipio) params.set('municipio', filters.municipio);
+    if (filters.precioMin) params.set('precioMin', filters.precioMin);
+    if (filters.precioMax) params.set('precioMax', filters.precioMax);
+    if (filters.tipo) params.set('tipo', filters.tipo);
+    if (filters.recamaras) params.set('recamaras', filters.recamaras);
+    if (filters.banos) params.set('banos', filters.banos);
+    if (filters.orden !== 'desc') params.set('orden', filters.orden);
+
+    setSearchParams(params, { replace: true });
+  }, [filters, setSearchParams]);
 
   // Cargar propiedades desde Supabase
   useEffect(() => {
