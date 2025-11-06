@@ -49,11 +49,24 @@ const PropertyDetail = () => {
   useEffect(() => {
     if (id) {
       fetchProperty();
+      trackPropertyView();
       if (user) {
         checkFavorite();
       }
     }
   }, [id, user]);
+
+  const trackPropertyView = async () => {
+    try {
+      await supabase.from("property_views").insert({
+        property_id: id,
+        viewer_id: user?.id || null,
+      });
+    } catch (error) {
+      // Silently fail - analytics shouldn't break the page
+      console.error("Error tracking view:", error);
+    }
+  };
 
   const checkFavorite = async () => {
     if (!user || !id) return;

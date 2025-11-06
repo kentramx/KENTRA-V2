@@ -385,6 +385,48 @@ export type Database = {
           },
         ]
       }
+      property_views: {
+        Row: {
+          id: string
+          ip_address: string | null
+          property_id: string
+          user_agent: string | null
+          viewed_at: string
+          viewer_id: string | null
+        }
+        Insert: {
+          id?: string
+          ip_address?: string | null
+          property_id: string
+          user_agent?: string | null
+          viewed_at?: string
+          viewer_id?: string | null
+        }
+        Update: {
+          id?: string
+          ip_address?: string | null
+          property_id?: string
+          user_agent?: string | null
+          viewed_at?: string
+          viewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_views_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_views_viewer_id_fkey"
+            columns: ["viewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_searches: {
         Row: {
           created_at: string
@@ -417,6 +459,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_agent_stats: {
+        Args: { agent_uuid: string }
+        Returns: {
+          active_properties: number
+          conversion_rate: number
+          total_conversations: number
+          total_favorites: number
+          total_properties: number
+          total_views: number
+        }[]
+      }
       mark_messages_as_read: {
         Args: { p_conversation_id: string; p_user_id: string }
         Returns: undefined

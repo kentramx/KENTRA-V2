@@ -10,6 +10,7 @@ import { Loader2, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import PropertyForm from '@/components/PropertyForm';
 import AgentPropertyList from '@/components/AgentPropertyList';
+import { AgentAnalytics } from '@/components/AgentAnalytics';
 
 const AgentDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -117,7 +118,9 @@ const AgentDashboard = () => {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Mis Propiedades</CardTitle>
+              <CardTitle>
+                {activeTab === 'analytics' ? 'Panel de Analíticas' : 'Mis Propiedades'}
+              </CardTitle>
               {activeTab === 'list' && (
                 <Button onClick={handleNewProperty}>
                   <Plus className="mr-2 h-4 w-4" />
@@ -128,8 +131,9 @@ const AgentDashboard = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="list">Mis Propiedades</TabsTrigger>
+                <TabsTrigger value="analytics">Analíticas</TabsTrigger>
                 <TabsTrigger value="form">
                   {editingProperty ? 'Editar' : 'Nueva'} Propiedad
                 </TabsTrigger>
@@ -137,6 +141,10 @@ const AgentDashboard = () => {
 
               <TabsContent value="list" className="mt-6">
                 <AgentPropertyList onEdit={handleEditProperty} />
+              </TabsContent>
+
+              <TabsContent value="analytics" className="mt-6">
+                <AgentAnalytics agentId={user?.id || ''} />
               </TabsContent>
 
               <TabsContent value="form" className="mt-6">
