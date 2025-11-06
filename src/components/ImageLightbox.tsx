@@ -14,10 +14,14 @@ interface ImageLightboxProps {
 export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: ImageLightboxProps) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoom, setZoom] = useState(1);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState(0);
 
-  // Resetear zoom cuando cambia la imagen
+  // Resetear zoom y swipe cuando cambia la imagen
   useEffect(() => {
     setZoom(1);
+    setSwipeOffset(0);
   }, [currentIndex]);
 
   // Sincronizar el índice cuando cambia desde fuera
@@ -57,6 +61,50 @@ export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: 
 
   const handleZoomOut = () => {
     setZoom((prev) => Math.max(prev - 0.25, 0.5));
+  };
+
+  // Manejo de gestos táctiles
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    
+    const currentTouch = e.targetTouches[0].clientX;
+    setTouchEnd(currentTouch);
+    
+    // Calcular offset para feedback visual
+    const distance = currentTouch - touchStart;
+    // Limitar el offset para evitar swipe excesivo
+    const maxOffset = 100;
+    const limitedOffset = Math.max(-maxOffset, Math.min(maxOffset, distance / 3));
+    setSwipeOffset(limitedOffset);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) {
+      setSwipeOffset(0);
+      return;
+    }
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && images.length > 1) {
+      handleNext();
+    } else if (isRightSwipe && images.length > 1) {
+      handlePrevious();
+    }
+
+    // Resetear valores
+    setTouchStart(null);
+    setTouchEnd(null);
+    setSwipeOffset(0);
   };
 
   return (
@@ -108,13 +156,21 @@ export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: 
             </Button>
           </div>
 
-          {/* Imagen principal */}
-          <div className="w-full h-full flex items-center justify-center overflow-hidden p-16">
+          {/* Imagen principal con soporte de swipe */}
+          <div 
+            className="w-full h-full flex items-center justify-center overflow-hidden p-16"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
             <img
               src={images[currentIndex].url}
               alt={`${title || 'Imagen'} ${currentIndex + 1}`}
-              className="max-w-full max-h-full object-contain transition-transform duration-300 animate-fade-in"
-              style={{ transform: `scale(${zoom})` }}
+              className="max-w-full max-h-full object-contain animate-fade-in select-none"
+              style={{ 
+                transform: `scale(${zoom}) translateX(${swipeOffset}px)`,
+                transition: swipeOffset === 0 ? 'transform 0.3s ease-out' : 'none'
+              }}
             />
           </div>
 
