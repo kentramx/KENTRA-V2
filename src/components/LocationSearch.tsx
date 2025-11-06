@@ -10,7 +10,7 @@ interface LocationSearchProps {
 const LocationSearch = ({ onLocationSelect, placeholder = 'Buscar ubicación...', defaultValue = '' }: LocationSearchProps) => {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const pacRef = useRef<any>(null);
-
+  const inputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     const ensureScript = () => {
       // If Google Maps is already available, initialize immediately
@@ -29,6 +29,9 @@ const LocationSearch = ({ onLocationSelect, placeholder = 'Buscar ubicación...'
       script.defer = true;
       script.setAttribute('data-google-maps', 'true');
       script.addEventListener('load', () => { initPAC(); }, { once: true });
+      script.addEventListener('error', () => {
+        console.error('Error cargando Google Maps JS. Revisa la API key y las restricciones de dominio.');
+      }, { once: true });
       document.head.appendChild(script);
     };
 
@@ -40,10 +43,50 @@ const LocationSearch = ({ onLocationSelect, placeholder = 'Buscar ubicación...'
         const placesLib: any = await (google.maps as any).importLibrary?.('places');
         const PacCtor = placesLib?.PlaceAutocompleteElement || (google.maps as any).places?.PlaceAutocompleteElement;
         if (!PacCtor) {
-          console.error('PlaceAutocompleteElement no disponible. Verifica que la Places API esté habilitada.');
-          return;
-        }
+          // Fallback: usar Autocomplete clásico con un <input>
+          if ((google.maps as any).places && inputRef.current) {
+            inputRef.current.classList.remove('hidden');
+            const ac = new (google.maps as any).places.Autocomplete(inputRef.current, {
+              types: ['address'],
+              componentRestrictions: { country: 'mx' },
+            });
+            ac.addListener('place_changed', () => {
+              const place = ac.getPlace();
+              const placeId = place?.place_id;
+              const description = place?.formatted_address || place?.name || inputRef.current?.value || '';
+              const geocoder = new google.maps.Geocoder();
+              const geocodeReq: google.maps.GeocoderRequest = placeId ? { placeId } : { address: description };
+              geocoder.geocode(geocodeReq, (results, status) => {
+                if (status !== 'OK' || !results || results.length === 0) return;
+                const r = results[0];
+                const lat = r.geometry?.location?.lat?.();
+                const lng = r.geometry?.location?.lng?.();
+                if (lat == null || lng == null) return;
 
+                let municipality = '';
+                let state = '';
+                r.address_components?.forEach((c) => {
+                  if (c.types.includes('locality')) municipality = c.long_name;
+                  if (c.types.includes('administrative_area_level_1')) state = c.long_name;
+                });
+
+                onLocationSelect({
+                  address: r.formatted_address || description,
+                  lat,
+                  lng,
+                  municipality,
+                  state,
+                });
+              });
+            });
+            // Set default value
+            if (defaultValue && inputRef.current) inputRef.current.value = defaultValue;
+            return;
+          } else {
+            console.error('Places Autocomplete no disponible. Verifica que la Places API esté habilitada y la clave tenga permisos.');
+            return;
+          }
+        }
         const pac = new PacCtor();
         pac.placeholder = placeholder;
         pac.className = 'w-full';
@@ -106,7 +149,12 @@ const LocationSearch = ({ onLocationSelect, placeholder = 'Buscar ubicación...'
     };
   }, [placeholder, defaultValue, onLocationSelect]);
 
-  return <div ref={hostRef} className="w-full" />;
+  return (
+    <div className="w-full">
+      <div ref={hostRef} className="w-full" />
+      <input ref={inputRef} placeholder={placeholder} defaultValue={defaultValue} className="w-full hidden" />
+    </div>
+  );
 };
 
 export default LocationSearch;

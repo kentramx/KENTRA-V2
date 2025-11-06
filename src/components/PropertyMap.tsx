@@ -28,6 +28,7 @@ const PropertyMap = ({ properties, center, zoom = 12 }: PropertyMapProps) => {
   const navigate = useNavigate();
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [mapCenter, setMapCenter] = useState(center || { lat: 20.6597, lng: -103.3496 }); // Guadalajara default
+  const [mapLoadError, setMapLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (properties.length > 0 && !center) {
@@ -60,8 +61,27 @@ const PropertyMap = ({ properties, center, zoom = 12 }: PropertyMapProps) => {
     );
   }
 
+  if (mapLoadError) {
+    return (
+      <Card className="p-4 text-center">
+        <p className="text-muted-foreground">
+          Error cargando Google Maps: {mapLoadError}. Verifica la clave y las restricciones de dominio (añade tu subdominio *.lovable.app) y que Places/Maps estén habilitadas.
+        </p>
+      </Card>
+    );
+  }
+
   return (
-    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+    <APIProvider
+      apiKey={GOOGLE_MAPS_API_KEY}
+      onError={(err) => {
+        console.error('Google Maps failed to load', err);
+        setMapLoadError((err as any)?.message || 'error');
+      }}
+      language="es"
+      region="MX"
+      libraries={['places', 'marker']}
+    >
       <div className="w-full h-full min-h-[400px] rounded-lg overflow-hidden">
         <Map
           mapId="kentra-map"
