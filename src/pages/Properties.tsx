@@ -3,9 +3,11 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import PropertyCard from "@/components/PropertyCard";
+import PropertyMap from "@/components/PropertyMap";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Map, Grid } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Properties = () => {
   const [searchParams] = useSearchParams();
@@ -13,6 +15,7 @@ const Properties = () => {
   const [properties, setProperties] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -54,8 +57,14 @@ const Properties = () => {
         .order("created_at", { ascending: false });
 
       const tipo = searchParams.get("tipo");
+      const municipio = searchParams.get("municipio");
+      
       if (tipo) {
         query = query.eq("type", tipo as any);
+      }
+      
+      if (municipio) {
+        query = query.ilike("municipality", `%${municipio}%`);
       }
 
       const { data, error } = await query;
@@ -139,10 +148,26 @@ const Properties = () => {
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold">Propiedades Disponibles</h1>
-          <p className="mt-2 text-muted-foreground">
-            {properties.length} propiedades encontradas
-          </p>
+          <h1 className="text-4xl font-bold mb-4">Propiedades Disponibles</h1>
+          
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'grid' | 'map')} className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="grid">
+                <Grid className="mr-2 h-4 w-4" />
+                Lista
+              </TabsTrigger>
+              <TabsTrigger value="map">
+                <Map className="mr-2 h-4 w-4" />
+                Mapa
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="mt-4">
+              <p className="text-muted-foreground">
+                {properties.length} propiedades encontradas
+              </p>
+            </div>
+          </Tabs>
         </div>
 
         {loading ? (
@@ -159,27 +184,41 @@ const Properties = () => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {properties.map((property) => (
-              <PropertyCard
-                key={property.id}
-                id={property.id}
-                title={property.title}
-                price={property.price}
-                type={property.type}
-                address={property.address}
-                municipality={property.municipality}
-                state={property.state}
-                bedrooms={property.bedrooms}
-                bathrooms={property.bathrooms}
-                parking={property.parking}
-                sqft={property.sqft}
-                imageUrl={property.images?.[0]?.url}
-                isFavorite={favorites.has(property.id)}
-                onToggleFavorite={() => handleToggleFavorite(property.id)}
-              />
-            ))}
-          </div>
+          <>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {properties.map((property) => (
+                  <PropertyCard
+                    key={property.id}
+                    id={property.id}
+                    title={property.title}
+                    price={property.price}
+                    type={property.type}
+                    address={property.address}
+                    municipality={property.municipality}
+                    state={property.state}
+                    bedrooms={property.bedrooms}
+                    bathrooms={property.bathrooms}
+                    parking={property.parking}
+                    sqft={property.sqft}
+                    imageUrl={property.images?.[0]?.url}
+                    isFavorite={favorites.has(property.id)}
+                    onToggleFavorite={() => handleToggleFavorite(property.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="h-[600px]">
+                <PropertyMap 
+                  properties={properties.map(p => ({
+                    ...p,
+                    lat: p.lat || 0,
+                    lng: p.lng || 0,
+                  }))} 
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

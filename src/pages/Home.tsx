@@ -1,17 +1,21 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, MapPin, Home as HomeIcon, Building2, TreePine } from "lucide-react";
+import LocationSearch from "@/components/LocationSearch";
+import { Search, Home as HomeIcon, Building2, TreePine } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
 
 const Home = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState<any>(null);
   const navigate = useNavigate();
 
   const handleSearch = () => {
-    navigate(`/propiedades?busqueda=${encodeURIComponent(searchQuery)}`);
+    if (selectedLocation) {
+      navigate(`/propiedades?municipio=${encodeURIComponent(selectedLocation.municipality)}`);
+    } else {
+      navigate('/propiedades');
+    }
   };
 
   return (
@@ -35,15 +39,10 @@ const Home = () => {
           {/* Search Bar */}
           <div className="mx-auto max-w-3xl">
             <div className="flex gap-2 rounded-lg bg-white p-2 shadow-2xl">
-              <div className="flex flex-1 items-center gap-2 px-4">
-                <MapPin className="h-5 w-5 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Ciudad, colonia o código postal"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="border-0 bg-transparent text-foreground focus-visible:ring-0"
+              <div className="flex-1">
+                <LocationSearch
+                  placeholder="Ciudad, colonia o dirección"
+                  onLocationSelect={(location) => setSelectedLocation(location)}
                 />
               </div>
               <Button
