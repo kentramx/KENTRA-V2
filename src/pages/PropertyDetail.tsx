@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
   ArrowLeft,
   Phone,
   Mail,
+  Heart,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import propertyPlaceholder from "@/assets/property-placeholder.jpg";
@@ -29,16 +31,90 @@ import propertyPlaceholder from "@/assets/property-placeholder.jpg";
 const PropertyDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [property, setProperty] = useState<any>(null);
   const [agent, setAgent] = useState<any>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     if (id) {
       fetchProperty();
+      if (user) {
+        checkFavorite();
+      }
     }
-  }, [id]);
+  }, [id, user]);
+
+  const checkFavorite = async () => {
+    if (!user || !id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('property_id', id)
+        .maybeSingle();
+
+      if (error) throw error;
+      setIsFavorite(!!data);
+    } catch (error) {
+      console.error('Error checking favorite:', error);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      toast({
+        title: 'Inicia sesión',
+        description: 'Debes iniciar sesión para guardar favoritos',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      if (isFavorite) {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('property_id', id)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+        setIsFavorite(false);
+
+        toast({
+          title: 'Removido',
+          description: 'Propiedad removida de favoritos',
+        });
+      } else {
+        const { error } = await supabase
+          .from('favorites')
+          .insert({
+            property_id: id,
+            user_id: user.id,
+          });
+
+        if (error) throw error;
+        setIsFavorite(true);
+
+        toast({
+          title: 'Agregado',
+          description: 'Propiedad agregada a favoritos',
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar favoritos',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const fetchProperty = async () => {
     try {
@@ -109,14 +185,25 @@ const PropertyDetail = () => {
       <Navbar />
 
       <div className="container mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/propiedades")}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Volver
-        </Button>
+        <div className="mb-4 flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/propiedades")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver
+          </Button>
+
+          <Button
+            variant={isFavorite ? "default" : "outline"}
+            onClick={handleToggleFavorite}
+          >
+            <Heart
+              className={`mr-2 h-4 w-4 ${isFavorite ? "fill-current" : ""}`}
+            />
+            {isFavorite ? "Guardado" : "Guardar"}
+          </Button>
+        </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Main Content */}

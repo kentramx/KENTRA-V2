@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import PropertyCard from "@/components/PropertyCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,13 +9,35 @@ import { useToast } from "@/hooks/use-toast";
 
 const Properties = () => {
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const [properties, setProperties] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchProperties();
-  }, [searchParams]);
+    if (user) {
+      fetchFavorites();
+    }
+  }, [searchParams, user]);
+
+  const fetchFavorites = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('property_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setFavorites(new Set(data?.map(f => f.property_id) || []));
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
+  };
 
   const fetchProperties = async () => {
     setLoading(true);
@@ -48,6 +71,65 @@ const Properties = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async (propertyId: string) => {
+    if (!user) {
+      toast({
+        title: 'Inicia sesión',
+        description: 'Debes iniciar sesión para guardar favoritos',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const isFavorite = favorites.has(propertyId);
+
+    try {
+      if (isFavorite) {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('property_id', propertyId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        setFavorites(prev => {
+          const newFavorites = new Set(prev);
+          newFavorites.delete(propertyId);
+          return newFavorites;
+        });
+
+        toast({
+          title: 'Removido',
+          description: 'Propiedad removida de favoritos',
+        });
+      } else {
+        const { error } = await supabase
+          .from('favorites')
+          .insert({
+            property_id: propertyId,
+            user_id: user.id,
+          });
+
+        if (error) throw error;
+
+        setFavorites(prev => new Set([...prev, propertyId]));
+
+        toast({
+          title: 'Agregado',
+          description: 'Propiedad agregada a favoritos',
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar favoritos',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -93,6 +175,8 @@ const Properties = () => {
                 parking={property.parking}
                 sqft={property.sqft}
                 imageUrl={property.images?.[0]?.url}
+                isFavorite={favorites.has(property.id)}
+                onToggleFavorite={() => handleToggleFavorite(property.id)}
               />
             ))}
           </div>
