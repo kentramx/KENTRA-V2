@@ -176,7 +176,11 @@ const Home = () => {
                     <SelectItem value="casa">Casa</SelectItem>
                     <SelectItem value="departamento">Departamento</SelectItem>
                     <SelectItem value="terreno">Terreno</SelectItem>
+                    <SelectItem value="oficina">Oficina</SelectItem>
                     <SelectItem value="local">Local Comercial</SelectItem>
+                    <SelectItem value="bodega">Bodega</SelectItem>
+                    <SelectItem value="edificio">Edificio</SelectItem>
+                    <SelectItem value="rancho">Rancho</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
