@@ -5,10 +5,44 @@ import { Input } from "@/components/ui/input";
 import { Search, MapPin, Home as HomeIcon, Building2, TreePine } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
+import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+
+  const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
+    const addressComponents = place.address_components || [];
+    
+    let municipio = '';
+    let estado = '';
+    
+    addressComponents.forEach(component => {
+      if (component.types.includes('locality') || 
+          component.types.includes('sublocality') ||
+          component.types.includes('administrative_area_level_2')) {
+        municipio = component.long_name;
+      }
+      if (component.types.includes('administrative_area_level_1')) {
+        estado = component.long_name;
+      }
+    });
+
+    const params = new URLSearchParams();
+    
+    if (estado) params.set('estado', estado);
+    if (municipio) params.set('municipio', municipio);
+    
+    if (!estado && !municipio && place.formatted_address) {
+      params.set('busqueda', place.formatted_address);
+    }
+
+    navigate(`/propiedades?${params.toString()}`);
+  };
+
+  const { inputRef, isLoaded, error } = usePlacesAutocomplete({
+    onPlaceSelect: handlePlaceSelect
+  });
 
   const handleSearch = () => {
     navigate(`/propiedades?busqueda=${encodeURIComponent(searchQuery)}`);
@@ -34,26 +68,40 @@ const Home = () => {
 
           {/* Search Bar */}
           <div className="mx-auto max-w-3xl">
-            <div className="flex gap-2 rounded-lg bg-white p-2 shadow-2xl">
-              <div className="flex flex-1 items-center gap-2 px-4">
-                <MapPin className="h-5 w-5 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Ciudad, colonia o código postal"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="border-0 bg-transparent text-foreground focus-visible:ring-0"
-                />
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2 rounded-lg bg-white p-2 shadow-2xl">
+                <div className="flex flex-1 items-center gap-2 px-4">
+                  <MapPin className="h-5 w-5 text-muted-foreground" />
+                  <Input
+                    ref={inputRef}
+                    type="text"
+                    placeholder="Ciudad, colonia o código postal"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    disabled={!isLoaded && !error}
+                    className="border-0 bg-transparent text-foreground focus-visible:ring-0"
+                  />
+                </div>
+                <Button
+                  onClick={handleSearch}
+                  size="lg"
+                  className="bg-secondary hover:bg-secondary/90"
+                >
+                  <Search className="mr-2 h-5 w-5" />
+                  Buscar
+                </Button>
               </div>
-              <Button
-                onClick={handleSearch}
-                size="lg"
-                className="bg-secondary hover:bg-secondary/90"
-              >
-                <Search className="mr-2 h-5 w-5" />
-                Buscar
-              </Button>
+              {error && (
+                <p className="text-xs text-yellow-400 text-center animate-fade-in">
+                  Búsqueda con sugerencias no disponible. Puedes buscar manualmente.
+                </p>
+              )}
+              {!isLoaded && !error && (
+                <p className="text-xs text-white/70 text-center animate-fade-in">
+                  Cargando sugerencias...
+                </p>
+              )}
             </div>
           </div>
         </div>
