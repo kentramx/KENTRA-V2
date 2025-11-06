@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import LocationSearch from '@/components/LocationSearch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, X } from 'lucide-react';
 import { z } from 'zod';
@@ -19,8 +18,6 @@ const propertySchema = z.object({
   address: z.string().min(5, 'La dirección debe tener al menos 5 caracteres').max(300),
   municipality: z.string().min(2, 'El municipio es requerido').max(100),
   state: z.string().min(2, 'El estado es requerido').max(100),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
   bedrooms: z.number().optional(),
   bathrooms: z.number().optional(),
   parking: z.number().optional(),
@@ -49,8 +46,6 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
     address: '',
     municipality: '',
     state: '',
-    lat: null as number | null,
-    lng: null as number | null,
     bedrooms: '',
     bathrooms: '',
     parking: '',
@@ -68,8 +63,6 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         address: property.address || '',
         municipality: property.municipality || '',
         state: property.state || '',
-        lat: property.lat || null,
-        lng: property.lng || null,
         bedrooms: property.bedrooms?.toString() || '',
         bathrooms: property.bathrooms?.toString() || '',
         parking: property.parking?.toString() || '',
@@ -127,8 +120,6 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
       const validatedData = propertySchema.parse({
         ...formData,
         price: parseFloat(formData.price),
-        lat: formData.lat,
-        lng: formData.lng,
         bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
         bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
         parking: formData.parking ? parseInt(formData.parking) : undefined,
@@ -254,30 +245,37 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
           />
         </div>
 
-        <div className="space-y-2 md:col-span-2">
-          <Label>Ubicación*</Label>
-          <LocationSearch
-            defaultValue={formData.address}
-            placeholder="Busca y selecciona la dirección de la propiedad"
-            onLocationSelect={(location) => {
-              setFormData({
-                ...formData,
-                address: location.address,
-                municipality: location.municipality,
-                state: location.state,
-                lat: location.lat,
-                lng: location.lng,
-              });
-            }}
+        <div className="space-y-2">
+          <Label htmlFor="state">Estado*</Label>
+          <Input
+            id="state"
+            value={formData.state}
+            onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+            placeholder="Ej: Jalisco"
+            required
           />
-          <p className="text-xs text-muted-foreground">
-            Usa el buscador para obtener la ubicación exacta con coordenadas GPS
-          </p>
-          {formData.address && (
-            <p className="text-sm text-foreground mt-2">
-              📍 {formData.address}
-            </p>
-          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="municipality">Municipio*</Label>
+          <Input
+            id="municipality"
+            value={formData.municipality}
+            onChange={(e) => setFormData({ ...formData, municipality: e.target.value })}
+            placeholder="Ej: Guadalajara"
+            required
+          />
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="address">Dirección*</Label>
+          <Input
+            id="address"
+            value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            placeholder="Calle, número, colonia"
+            required
+          />
         </div>
 
         {showResidentialFields && (

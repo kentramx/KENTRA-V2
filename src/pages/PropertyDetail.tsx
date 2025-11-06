@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
-import PropertyMap from "@/components/PropertyMap";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -287,38 +286,13 @@ const PropertyDetail = () => {
               </div>
 
               {/* Description */}
-              <div className="mb-6">
+              <div>
                 <h2 className="mb-3 text-2xl font-semibold">Descripción</h2>
                 <p className="whitespace-pre-line text-muted-foreground">
                   {property.description ||
                     "Esta propiedad no tiene descripción disponible."}
                 </p>
               </div>
-
-              {/* Map */}
-              {property.lat && property.lng && (
-                <div>
-                  <h2 className="mb-3 text-2xl font-semibold">Ubicación</h2>
-                  <div className="h-[400px] rounded-lg overflow-hidden">
-                    <PropertyMap
-                      properties={[{
-                        id: property.id,
-                        title: property.title,
-                        price: property.price,
-                        lat: property.lat,
-                        lng: property.lng,
-                        type: property.type,
-                        address: property.address,
-                        municipality: property.municipality,
-                        state: property.state,
-                        images: property.images,
-                      }]}
-                      center={{ lat: property.lat, lng: property.lng }}
-                      zoom={16}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
