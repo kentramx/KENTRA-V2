@@ -26,6 +26,9 @@ const Navbar = () => {
           <Link to="/propiedades">
             <Button variant="ghost">Propiedades</Button>
           </Link>
+          <Link to="/buscar">
+            <Button variant="ghost">Buscar con Mapa</Button>
+          </Link>
           
           {user ? (
             <>

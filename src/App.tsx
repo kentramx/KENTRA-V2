@@ -10,6 +10,7 @@ import PropertyDetail from "./pages/PropertyDetail";
 import Favorites from "./pages/Favorites";
 import AgentDashboard from "./pages/AgentDashboard";
 import Auth from "./pages/Auth";
+import Buscar from "./pages/Buscar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/" element={<Home />} />
             <Route path="/propiedades" element={<Properties />} />
             <Route path="/propiedad/:id" element={<PropertyDetail />} />
+            <Route path="/buscar" element={<Buscar />} />
             <Route path="/favoritos" element={<Favorites />} />
             <Route path="/panel-agente" element={<AgentDashboard />} />
             <Route path="/auth" element={<Auth />} />
