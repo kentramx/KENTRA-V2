@@ -10,6 +10,7 @@ interface PropertyCardProps {
   title: string;
   price: number;
   type: string;
+  listingType?: string;
   address: string;
   municipality: string;
   state: string;
@@ -27,6 +28,7 @@ const PropertyCard = ({
   title,
   price,
   type,
+  listingType = 'venta',
   address,
   municipality,
   state,
@@ -55,9 +57,19 @@ const PropertyCard = ({
             alt={title}
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
           />
-          <Badge className="absolute left-3 top-3 bg-primary text-primary-foreground">
-            {type}
-          </Badge>
+          <div className="absolute left-3 top-3 flex gap-2">
+            <Badge 
+              className={listingType === 'renta' 
+                ? "bg-accent text-accent-foreground" 
+                : "bg-secondary text-secondary-foreground"
+              }
+            >
+              {listingType === 'renta' ? 'Renta' : 'Venta'}
+            </Badge>
+            <Badge className="bg-primary/90 text-primary-foreground">
+              {type}
+            </Badge>
+          </div>
           {onToggleFavorite && (
             <Button
               variant="ghost"

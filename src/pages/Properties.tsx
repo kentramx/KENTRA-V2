@@ -173,6 +173,7 @@ const Properties = () => {
                 title={property.title}
                 price={property.price}
                 type={property.type}
+                listingType={property.listing_type}
                 address={property.address}
                 municipality={property.municipality}
                 state={property.state}

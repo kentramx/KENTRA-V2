@@ -15,6 +15,7 @@ interface Property {
   title: string;
   price: number;
   type: string;
+  listing_type: string;
   address: string;
   municipality: string;
   state: string;
@@ -84,6 +85,7 @@ const Home = () => {
             title,
             price,
             type,
+            listing_type,
             address,
             municipality,
             state,
@@ -236,6 +238,7 @@ const Home = () => {
                       title={property.title}
                       price={property.price}
                       type={property.type}
+                      listingType={property.listing_type}
                       address={property.address}
                       municipality={property.municipality}
                       state={property.state}
