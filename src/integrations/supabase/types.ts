@@ -155,6 +155,7 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
+          read_at: string | null
           sender_id: string
         }
         Insert: {
@@ -162,6 +163,7 @@ export type Database = {
           conversation_id: string
           created_at?: string
           id?: string
+          read_at?: string | null
           sender_id: string
         }
         Update: {
@@ -169,6 +171,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
+          read_at?: string | null
           sender_id?: string
         }
         Relationships: [
@@ -290,7 +293,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      mark_messages_as_read: {
+        Args: { p_conversation_id: string; p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       property_status: "activa" | "vendida" | "rentada" | "pausada"

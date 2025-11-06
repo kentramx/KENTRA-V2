@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Home } from 'lucide-react';
+import { Send, Home, Check, CheckCheck } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -17,6 +17,7 @@ interface Message {
   sender_id: string;
   content: string;
   created_at: string;
+  read_at?: string | null;
 }
 
 interface PresenceState {
@@ -75,6 +76,24 @@ export const ChatWindow = ({
           if (newMsg.sender_id !== user.id) {
             markAsRead();
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updatedMsg = payload.new as Message;
+          // Actualizar el mensaje en la lista cuando se marca como leído
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === updatedMsg.id ? updatedMsg : msg
+            )
+          );
         }
       )
       .subscribe();
@@ -151,6 +170,15 @@ export const ChatWindow = ({
     if (!user) return;
 
     try {
+      // Llamar a la función de base de datos para marcar mensajes como leídos
+      const { error } = await supabase.rpc('mark_messages_as_read', {
+        p_conversation_id: conversationId,
+        p_user_id: user.id,
+      });
+
+      if (error) throw error;
+
+      // También actualizar el contador de no leídos
       await supabase
         .from('conversation_participants')
         .update({
@@ -277,6 +305,8 @@ export const ChatWindow = ({
           <div className="space-y-4">
             {messages.map((message) => {
               const isOwn = message.sender_id === user?.id;
+              const isRead = message.read_at !== null && message.read_at !== undefined;
+              
               return (
                 <div
                   key={message.id}
@@ -290,16 +320,37 @@ export const ChatWindow = ({
                     }`}
                   >
                     <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                    <p
-                      className={`text-xs mt-1 ${
-                        isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                      }`}
-                    >
-                      {formatDistanceToNow(new Date(message.created_at), {
-                        addSuffix: true,
-                        locale: es,
-                      })}
-                    </p>
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <p
+                        className={`text-xs ${
+                          isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                        }`}
+                      >
+                        {formatDistanceToNow(new Date(message.created_at), {
+                          addSuffix: true,
+                          locale: es,
+                        })}
+                      </p>
+                      
+                      {/* Confirmación de lectura - solo para mensajes propios */}
+                      {isOwn && (
+                        <div className="flex-shrink-0">
+                          {isRead ? (
+                            <CheckCheck 
+                              className={`w-4 h-4 ${
+                                isOwn ? 'text-blue-400' : 'text-muted-foreground'
+                              }`}
+                            />
+                          ) : (
+                            <Check 
+                              className={`w-4 h-4 ${
+                                isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                              }`}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
