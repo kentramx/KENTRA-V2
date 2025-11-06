@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Send, Home, Check, CheckCheck, Search, X, ChevronUp, ChevronDown, Image as ImageIcon, Paperclip } from 'lucide-react';
+import { Send, Home, Check, CheckCheck, Search, X, ChevronUp, ChevronDown, Image as ImageIcon, Paperclip, Wifi, WifiOff, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { ImageLightbox } from './ImageLightbox';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 
 interface Message {
   id: string;
@@ -47,6 +48,7 @@ export const ChatWindow = ({
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showNotification, permission } = useNotifications();
+  const { isOnline, pendingCount, queueMessage } = useBackgroundSync();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -459,7 +461,38 @@ export const ChatWindow = ({
         }
       }
 
-      // Insertar mensaje
+      // Si no hay conexión, agregar a la cola
+      if (!isOnline) {
+        await queueMessage({
+          conversationId,
+          senderId: user.id,
+          content: newMessage.trim() || '',
+          messageType: selectedImage ? 'image' : 'text',
+          imageUrl: imageUrl,
+        });
+
+        // Mostrar mensaje temporal en la UI
+        const tempMessage: Message = {
+          id: `temp_${Date.now()}`,
+          conversation_id: conversationId,
+          sender_id: user.id,
+          content: newMessage.trim() || '',
+          message_type: selectedImage ? 'image' : 'text',
+          image_url: imageUrl,
+          created_at: new Date().toISOString(),
+          read_at: null,
+        };
+
+        setMessages((prev) => [...prev, tempMessage]);
+        toast.info('Sin conexión. El mensaje se enviará cuando vuelvas a estar online.');
+        
+        setNewMessage('');
+        clearSelectedImage();
+        setSending(false);
+        return;
+      }
+
+      // Insertar mensaje normalmente si hay conexión
       const { error } = await supabase.from('messages').insert({
         conversation_id: conversationId,
         sender_id: user.id,
@@ -501,7 +534,22 @@ export const ChatWindow = ({
       <div className="border-b bg-card">
         <div className="p-4 flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <h2 className="font-semibold text-lg">{otherUserName}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-lg">{otherUserName}</h2>
+              {/* Indicador de estado de conexión */}
+              {!isOnline && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                  <WifiOff className="w-3 h-3" />
+                  <span>Sin conexión</span>
+                </div>
+              )}
+              {pendingCount > 0 && (
+                <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950 px-2 py-1 rounded">
+                  <Clock className="w-3 h-3" />
+                  <span>{pendingCount} pendiente{pendingCount > 1 ? 's' : ''}</span>
+                </div>
+              )}
+            </div>
             {propertyTitle && (
               <p className="text-sm text-muted-foreground truncate">{propertyTitle}</p>
             )}
