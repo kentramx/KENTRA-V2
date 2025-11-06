@@ -135,6 +135,17 @@ const Buscar = () => {
     }
   }, [filters.estado, properties]);
 
+  // Contar filtros activos
+  const activeFiltersCount = [
+    filters.estado,
+    filters.municipio,
+    filters.precioMin,
+    filters.precioMax,
+    filters.tipo,
+    filters.recamaras,
+    filters.banos,
+  ].filter(Boolean).length;
+
   // Aplicar filtros
   useEffect(() => {
     let filtered = [...properties];
@@ -327,10 +338,17 @@ const Buscar = () => {
             {/* Filtros */}
             <Card>
               <CardContent className="p-6 space-y-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Search className="h-5 w-5" />
-                  Filtros
-                </h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Search className="h-5 w-5" />
+                    Filtros
+                  </h2>
+                  {activeFiltersCount > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {activeFiltersCount} {activeFiltersCount === 1 ? 'activo' : 'activos'}
+                    </Badge>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -452,16 +470,18 @@ const Buscar = () => {
                   </div>
                 </div>
 
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => setFilters({
-                    estado: '', municipio: '', precioMin: '', precioMax: '',
-                    tipo: '', recamaras: '', banos: '', orden: 'desc'
-                  })}
-                >
-                  Limpiar filtros
-                </Button>
+                {activeFiltersCount > 0 && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setFilters({
+                      estado: '', municipio: '', precioMin: '', precioMax: '',
+                      tipo: '', recamaras: '', banos: '', orden: 'desc'
+                    })}
+                  >
+                    Limpiar {activeFiltersCount} {activeFiltersCount === 1 ? 'filtro' : 'filtros'}
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
