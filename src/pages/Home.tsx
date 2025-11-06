@@ -1,14 +1,34 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, Home as HomeIcon, Building2, TreePine } from "lucide-react";
+import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
 import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
+import { supabase } from "@/integrations/supabase/client";
+import PropertyCard from "@/components/PropertyCard";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface Property {
+  id: string;
+  title: string;
+  price: number;
+  type: string;
+  address: string;
+  municipality: string;
+  state: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  parking?: number;
+  sqft?: number;
+  images?: { url: string }[];
+}
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
+  const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const navigate = useNavigate();
 
   const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
@@ -47,6 +67,42 @@ const Home = () => {
   const handleSearch = () => {
     navigate(`/propiedades?busqueda=${encodeURIComponent(searchQuery)}`);
   };
+
+  useEffect(() => {
+    const fetchFeaturedProperties = async () => {
+      setIsLoadingProperties(true);
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select(`
+            id,
+            title,
+            price,
+            type,
+            address,
+            municipality,
+            state,
+            bedrooms,
+            bathrooms,
+            parking,
+            sqft,
+            images (url)
+          `)
+          .eq('status', 'activa')
+          .order('created_at', { ascending: false })
+          .limit(6);
+
+        if (error) throw error;
+        setFeaturedProperties(data || []);
+      } catch (error) {
+        console.error('Error fetching featured properties:', error);
+      } finally {
+        setIsLoadingProperties(false);
+      }
+    };
+
+    fetchFeaturedProperties();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -107,8 +163,86 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Featured Properties */}
+      <section className="py-16 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold">Propiedades Destacadas</h2>
+              <p className="mt-2 text-muted-foreground">
+                Descubre las últimas propiedades agregadas
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/propiedades")}
+              className="hidden md:flex items-center gap-2"
+            >
+              Ver Todas
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {isLoadingProperties ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton className="aspect-[4/3] w-full rounded-lg" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-8 w-1/2" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              ))}
+            </div>
+          ) : featuredProperties.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {featuredProperties.map((property, index) => (
+                  <div
+                    key={property.id}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <PropertyCard
+                      id={property.id}
+                      title={property.title}
+                      price={property.price}
+                      type={property.type}
+                      address={property.address}
+                      municipality={property.municipality}
+                      state={property.state}
+                      bedrooms={property.bedrooms}
+                      bathrooms={property.bathrooms}
+                      parking={property.parking}
+                      sqft={property.sqft}
+                      imageUrl={property.images?.[0]?.url}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8 text-center md:hidden">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/propiedades")}
+                  className="w-full sm:w-auto"
+                >
+                  Ver Todas las Propiedades
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="py-12 text-center">
+              <p className="text-muted-foreground">
+                No hay propiedades disponibles en este momento
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Property Types */}
-      <section className="py-16">
+      <section className="py-16 bg-muted">
         <div className="container mx-auto px-4">
           <h2 className="mb-8 text-center text-3xl font-bold">
             Explora por Tipo de Propiedad
