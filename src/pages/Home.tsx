@@ -1,8 +1,9 @@
+/// <reference types="@types/google.maps" />
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal } from "lucide-react";
+import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal, Save, Star, Trash2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
 import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
@@ -10,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import PropertyCard from "@/components/PropertyCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -22,6 +25,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface Property {
   id: string;
@@ -54,7 +66,15 @@ const Home = () => {
   const [bathrooms, setBathrooms] = useState("");
   const [parking, setParking] = useState("");
   
+  // Saved searches
+  const [savedSearches, setSavedSearches] = useState<any[]>([]);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [loadDialogOpen, setLoadDialogOpen] = useState(false);
+  const [searchName, setSearchName] = useState("");
+  
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
     const addressComponents = place.address_components || [];
@@ -107,6 +127,130 @@ const Home = () => {
     if (bathrooms) params.set('banos', bathrooms);
     if (parking) params.set('estacionamiento', parking);
     navigate(`/propiedades?${params.toString()}`);
+  };
+
+  // Load saved searches
+  useEffect(() => {
+    if (user) {
+      fetchSavedSearches();
+    }
+  }, [user]);
+
+  const fetchSavedSearches = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('saved_searches')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSavedSearches(data || []);
+    } catch (error) {
+      console.error('Error fetching saved searches:', error);
+    }
+  };
+
+  const handleSaveSearch = async () => {
+    if (!user) {
+      toast({
+        title: 'Inicia sesión',
+        description: 'Debes iniciar sesión para guardar búsquedas',
+        variant: 'destructive',
+      });
+      navigate('/auth');
+      return;
+    }
+
+    if (!searchName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Ingresa un nombre para la búsqueda',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const filters = {
+      tipo_listado: listingType,
+      tipo: propertyType !== 'all' ? propertyType : '',
+      precioMin: priceMin,
+      precioMax: priceMax,
+      recamaras: bedrooms,
+      banos: bathrooms,
+      estacionamiento: parking,
+    };
+
+    try {
+      const { error } = await supabase
+        .from('saved_searches')
+        .insert([{
+          user_id: user.id,
+          name: searchName,
+          filters: filters as any,
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Búsqueda guardada',
+        description: `"${searchName}" se guardó correctamente`,
+      });
+
+      setSearchName('');
+      setSaveDialogOpen(false);
+      fetchSavedSearches();
+    } catch (error: any) {
+      console.error('Error saving search:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo guardar la búsqueda',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleLoadSearch = (savedFilters: any) => {
+    setListingType(savedFilters.tipo_listado || 'venta');
+    setPropertyType(savedFilters.tipo || 'all');
+    setPriceMin(savedFilters.precioMin || '');
+    setPriceMax(savedFilters.precioMax || '');
+    setBedrooms(savedFilters.recamaras || '');
+    setBathrooms(savedFilters.banos || '');
+    setParking(savedFilters.estacionamiento || '');
+    
+    setLoadDialogOpen(false);
+    toast({
+      title: 'Búsqueda cargada',
+      description: 'Los filtros se aplicaron correctamente',
+    });
+  };
+
+  const handleDeleteSearch = async (id: string, name: string) => {
+    try {
+      const { error } = await supabase
+        .from('saved_searches')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Búsqueda eliminada',
+        description: `"${name}" se eliminó correctamente`,
+      });
+
+      fetchSavedSearches();
+    } catch (error) {
+      console.error('Error deleting search:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo eliminar la búsqueda',
+        variant: 'destructive',
+      });
+    }
   };
 
   useEffect(() => {
@@ -208,6 +352,100 @@ const Home = () => {
                     <SelectItem value="rancho">Rancho</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Saved Searches Buttons */}
+              <div className="flex justify-center gap-2">
+                <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="bg-white/95 text-foreground border-white/50 hover:bg-white"
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      Guardar Búsqueda
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Guardar Búsqueda</DialogTitle>
+                      <DialogDescription>
+                        Guarda esta búsqueda para acceder rápidamente después
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="searchName">Nombre de la búsqueda</Label>
+                        <Input
+                          id="searchName"
+                          placeholder="Ej: Casas en CDMX bajo 5M"
+                          value={searchName}
+                          onChange={(e) => setSearchName(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSaveSearch()}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={handleSaveSearch}>
+                        <Save className="mr-2 h-4 w-4" />
+                        Guardar
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                {user && savedSearches.length > 0 && (
+                  <Dialog open={loadDialogOpen} onOpenChange={setLoadDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="bg-white/95 text-foreground border-white/50 hover:bg-white"
+                      >
+                        <Star className="mr-2 h-4 w-4" />
+                        Mis Búsquedas ({savedSearches.length})
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>Mis Búsquedas Guardadas</DialogTitle>
+                        <DialogDescription>
+                          Selecciona una búsqueda para cargar sus filtros
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="max-h-96 overflow-y-auto space-y-2">
+                        {savedSearches.map((search) => (
+                          <div
+                            key={search.id}
+                            className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent"
+                          >
+                            <button
+                              onClick={() => handleLoadSearch(search.filters)}
+                              className="flex-1 text-left"
+                            >
+                              <p className="font-medium">{search.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(search.created_at).toLocaleDateString('es-MX')}
+                              </p>
+                            </button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteSearch(search.id, search.name)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
 
               {/* Advanced Filters */}
