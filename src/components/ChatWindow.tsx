@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { ImageLightbox } from './ImageLightbox';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Message {
   id: string;
@@ -45,6 +46,7 @@ export const ChatWindow = ({
 }: ChatWindowProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { showNotification, permission } = useNotifications();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -91,6 +93,21 @@ export const ChatWindow = ({
           // Marcar como leído si el mensaje es de otro usuario
           if (newMsg.sender_id !== user.id) {
             markAsRead();
+            
+            // Mostrar notificación push si el usuario no está viendo la ventana
+            if (document.hidden && permission === 'granted') {
+              const notificationBody = newMsg.message_type === 'image' 
+                ? '📷 Te envió una imagen' 
+                : newMsg.content;
+              
+              showNotification(`Nuevo mensaje de ${otherUserName}`, {
+                body: notificationBody,
+                data: {
+                  conversationId,
+                  propertyId,
+                },
+              });
+            }
           }
         }
       )
