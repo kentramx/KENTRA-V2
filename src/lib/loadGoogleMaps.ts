@@ -1,3 +1,4 @@
+/// <reference types="google.maps" />
 /**
  * Carga dinámicamente la API de Google Maps con la librería Places
  * @returns Promise que se resuelve cuando google.maps está disponible
