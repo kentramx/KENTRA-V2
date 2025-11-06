@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight } from "lucide-react";
+import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
 import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import PropertyCard from "@/components/PropertyCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -16,6 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface Property {
   id: string;
@@ -39,6 +45,15 @@ const Home = () => {
   const [propertyType, setPropertyType] = useState<string>("all");
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // Advanced filters
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [bedrooms, setBedrooms] = useState("");
+  const [bathrooms, setBathrooms] = useState("");
+  const [parking, setParking] = useState("");
+  
   const navigate = useNavigate();
 
   const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
@@ -64,6 +79,11 @@ const Home = () => {
     if (propertyType && propertyType !== 'all') params.set('tipo', propertyType);
     if (estado) params.set('estado', estado);
     if (municipio) params.set('municipio', municipio);
+    if (priceMin) params.set('precioMin', priceMin);
+    if (priceMax) params.set('precioMax', priceMax);
+    if (bedrooms) params.set('recamaras', bedrooms);
+    if (bathrooms) params.set('banos', bathrooms);
+    if (parking) params.set('estacionamiento', parking);
     
     if (!estado && !municipio && place.formatted_address) {
       params.set('busqueda', place.formatted_address);
@@ -81,6 +101,11 @@ const Home = () => {
     params.set('tipo_listado', listingType);
     if (propertyType && propertyType !== 'all') params.set('tipo', propertyType);
     if (searchQuery) params.set('busqueda', encodeURIComponent(searchQuery));
+    if (priceMin) params.set('precioMin', priceMin);
+    if (priceMax) params.set('precioMax', priceMax);
+    if (bedrooms) params.set('recamaras', bedrooms);
+    if (bathrooms) params.set('banos', bathrooms);
+    if (parking) params.set('estacionamiento', parking);
     navigate(`/propiedades?${params.toString()}`);
   };
 
@@ -184,6 +209,129 @@ const Home = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Advanced Filters */}
+              <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full max-w-xs mx-auto bg-white/95 text-foreground border-white/50 hover:bg-white"
+                  >
+                    <SlidersHorizontal className="mr-2 h-4 w-4" />
+                    Filtros Avanzados
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4">
+                  <div className="bg-white/95 rounded-lg p-4 space-y-4 max-w-3xl mx-auto">
+                    {/* Price Range */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="priceMin" className="text-sm font-medium text-foreground">
+                          Precio Mínimo
+                        </Label>
+                        <Input
+                          id="priceMin"
+                          type="number"
+                          placeholder="$0"
+                          value={priceMin}
+                          onChange={(e) => setPriceMin(e.target.value)}
+                          className="bg-white text-foreground"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="priceMax" className="text-sm font-medium text-foreground">
+                          Precio Máximo
+                        </Label>
+                        <Input
+                          id="priceMax"
+                          type="number"
+                          placeholder="Sin límite"
+                          value={priceMax}
+                          onChange={(e) => setPriceMax(e.target.value)}
+                          className="bg-white text-foreground"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Bedrooms, Bathrooms, Parking */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="bedrooms" className="text-sm font-medium text-foreground">
+                          Recámaras
+                        </Label>
+                        <Select value={bedrooms} onValueChange={setBedrooms}>
+                          <SelectTrigger id="bedrooms" className="bg-white text-foreground">
+                            <SelectValue placeholder="Cualquiera" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Cualquiera</SelectItem>
+                            <SelectItem value="1">1+</SelectItem>
+                            <SelectItem value="2">2+</SelectItem>
+                            <SelectItem value="3">3+</SelectItem>
+                            <SelectItem value="4">4+</SelectItem>
+                            <SelectItem value="5">5+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="bathrooms" className="text-sm font-medium text-foreground">
+                          Baños
+                        </Label>
+                        <Select value={bathrooms} onValueChange={setBathrooms}>
+                          <SelectTrigger id="bathrooms" className="bg-white text-foreground">
+                            <SelectValue placeholder="Cualquiera" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Cualquiera</SelectItem>
+                            <SelectItem value="1">1+</SelectItem>
+                            <SelectItem value="2">2+</SelectItem>
+                            <SelectItem value="3">3+</SelectItem>
+                            <SelectItem value="4">4+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="parking" className="text-sm font-medium text-foreground">
+                          Estacionamiento
+                        </Label>
+                        <Select value={parking} onValueChange={setParking}>
+                          <SelectTrigger id="parking" className="bg-white text-foreground">
+                            <SelectValue placeholder="Cualquiera" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Cualquiera</SelectItem>
+                            <SelectItem value="1">1+</SelectItem>
+                            <SelectItem value="2">2+</SelectItem>
+                            <SelectItem value="3">3+</SelectItem>
+                            <SelectItem value="4">4+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Clear Filters Button */}
+                    {(priceMin || priceMax || bedrooms || bathrooms || parking) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setPriceMin("");
+                          setPriceMax("");
+                          setBedrooms("");
+                          setBathrooms("");
+                          setParking("");
+                        }}
+                        className="w-full"
+                      >
+                        Limpiar Filtros
+                      </Button>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
 
               <div className="flex gap-2 rounded-lg bg-white p-2 shadow-2xl">
                 <div className="flex flex-1 items-center gap-2 px-4">
