@@ -36,7 +36,7 @@ interface Property {
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [listingType, setListingType] = useState<"venta" | "renta">("venta");
-  const [propertyType, setPropertyType] = useState<string>("");
+  const [propertyType, setPropertyType] = useState<string>("all");
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const navigate = useNavigate();
@@ -61,7 +61,7 @@ const Home = () => {
     const params = new URLSearchParams();
     
     params.set('tipo_listado', listingType);
-    if (propertyType) params.set('tipo', propertyType);
+    if (propertyType && propertyType !== 'all') params.set('tipo', propertyType);
     if (estado) params.set('estado', estado);
     if (municipio) params.set('municipio', municipio);
     
@@ -79,7 +79,7 @@ const Home = () => {
   const handleSearch = () => {
     const params = new URLSearchParams();
     params.set('tipo_listado', listingType);
-    if (propertyType) params.set('tipo', propertyType);
+    if (propertyType && propertyType !== 'all') params.set('tipo', propertyType);
     if (searchQuery) params.set('busqueda', encodeURIComponent(searchQuery));
     navigate(`/propiedades?${params.toString()}`);
   };
@@ -172,7 +172,7 @@ const Home = () => {
                     <SelectValue placeholder="Todos los tipos de propiedad" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos los tipos</SelectItem>
+                    <SelectItem value="all">Todos los tipos</SelectItem>
                     <SelectItem value="casa">Casa</SelectItem>
                     <SelectItem value="departamento">Departamento</SelectItem>
                     <SelectItem value="terreno">Terreno</SelectItem>
