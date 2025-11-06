@@ -5,6 +5,7 @@ import { usePlacesAutocomplete } from '@/hooks/usePlacesAutocomplete';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import Navbar from '@/components/Navbar';
+import { PropertyImageGallery } from '@/components/PropertyImageGallery';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ interface Property {
   state: string;
   municipality: string;
   type: 'casa' | 'departamento' | 'terreno' | 'oficina' | 'local_comercial';
+  images: { url: string; position: number }[];
 }
 
 interface Filters {
@@ -72,13 +74,37 @@ const Buscar = () => {
       try {
         const { data, error } = await supabase
           .from('properties')
-          .select('id, title, price, bedrooms, bathrooms, parking, lat, lng, address, state, municipality, type')
-          .eq('status', 'activa');
+          .select(`
+            id, 
+            title, 
+            price, 
+            bedrooms, 
+            bathrooms, 
+            parking, 
+            lat, 
+            lng, 
+            address, 
+            state, 
+            municipality, 
+            type,
+            images (
+              url,
+              position
+            )
+          `)
+          .eq('status', 'activa')
+          .order('position', { foreignTable: 'images', ascending: true });
 
         if (error) throw error;
 
-        setProperties(data || []);
-        setFilteredProperties(data || []);
+        // Ordenar imágenes por posición
+        const propertiesWithSortedImages = data?.map(property => ({
+          ...property,
+          images: (property.images || []).sort((a: any, b: any) => a.position - b.position)
+        })) || [];
+
+        setProperties(propertiesWithSortedImages);
+        setFilteredProperties(propertiesWithSortedImages);
 
         // Extraer estados únicos
         const uniqueEstados = [...new Set(data?.map(p => p.state) || [])].filter(Boolean);
@@ -455,61 +481,69 @@ const Buscar = () => {
               ) : (
                 <div className="space-y-4 max-h-[800px] overflow-y-auto pr-2">
                   {filteredProperties.map((property) => (
-                    <Card
+                    <Link
                       key={property.id}
+                      to={`/propiedad/${property.id}`}
                       id={`property-${property.id}`}
-                      className={`cursor-pointer transition-all hover:shadow-lg ${
-                        highlightedId === property.id ? 'ring-2 ring-primary' : ''
-                      }`}
-                      onClick={() => handlePropertyClick(property)}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <Link 
-                              to={`/propiedad/${property.id}`}
-                              className="font-semibold hover:text-primary transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {property.title}
-                            </Link>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                              <MapPin className="h-3 w-3" />
-                              {property.municipality}, {property.state}
-                            </p>
+                      <Card
+                        className={`cursor-pointer transition-all hover:shadow-lg animate-fade-in ${
+                          highlightedId === property.id ? 'ring-2 ring-primary' : ''
+                        }`}
+                        onClick={() => handlePropertyClick(property)}
+                      >
+                        <CardContent className="p-4">
+                          {/* Galería de imágenes */}
+                          <div className="mb-4">
+                            <PropertyImageGallery
+                              images={property.images || []}
+                              title={property.title}
+                              type={property.type}
+                            />
                           </div>
-                          <Badge variant="secondary" className="flex items-center gap-1">
-                            {getPropertyIcon(property.type)}
-                            {property.type}
-                          </Badge>
-                        </div>
 
-                        <p className="text-2xl font-bold text-primary mb-3">
-                          {formatPrice(property.price)}
-                        </p>
+                          {/* Información de la propiedad */}
+                          <div className="space-y-3">
+                            <div>
+                              <h3 className="font-semibold text-lg hover:text-primary transition-colors line-clamp-1">
+                                {property.title}
+                              </h3>
+                              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                                <MapPin className="h-3 w-3 flex-shrink-0" />
+                                <span className="line-clamp-1">
+                                  {property.municipality}, {property.state}
+                                </span>
+                              </p>
+                            </div>
 
-                        <div className="flex gap-4 text-sm text-muted-foreground">
-                          {property.bedrooms && (
-                            <span className="flex items-center gap-1">
-                              <Bed className="h-4 w-4" />
-                              {property.bedrooms}
-                            </span>
-                          )}
-                          {property.bathrooms && (
-                            <span className="flex items-center gap-1">
-                              <Bath className="h-4 w-4" />
-                              {property.bathrooms}
-                            </span>
-                          )}
-                          {property.parking && (
-                            <span className="flex items-center gap-1">
-                              <Car className="h-4 w-4" />
-                              {property.parking}
-                            </span>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                            <p className="text-2xl font-bold text-primary">
+                              {formatPrice(property.price)}
+                            </p>
+
+                            <div className="flex gap-4 text-sm text-muted-foreground">
+                              {property.bedrooms && (
+                                <span className="flex items-center gap-1">
+                                  <Bed className="h-4 w-4" />
+                                  {property.bedrooms}
+                                </span>
+                              )}
+                              {property.bathrooms && (
+                                <span className="flex items-center gap-1">
+                                  <Bath className="h-4 w-4" />
+                                  {property.bathrooms}
+                                </span>
+                              )}
+                              {property.parking && (
+                                <span className="flex items-center gap-1">
+                                  <Car className="h-4 w-4" />
+                                  {property.parking}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
                   ))}
                 </div>
               )}
