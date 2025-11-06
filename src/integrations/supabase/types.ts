@@ -312,6 +312,10 @@ export type Database = {
         | "terreno"
         | "oficina"
         | "local_comercial"
+        | "local"
+        | "bodega"
+        | "edificio"
+        | "rancho"
       user_role: "buyer" | "agent" | "admin"
     }
     CompositeTypes: {
@@ -447,6 +451,10 @@ export const Constants = {
         "terreno",
         "oficina",
         "local_comercial",
+        "local",
+        "bodega",
+        "edificio",
+        "rancho",
       ],
       user_role: ["buyer", "agent", "admin"],
     },
