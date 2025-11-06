@@ -1,4 +1,3 @@
-/// <reference types="@types/google.maps" />
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';

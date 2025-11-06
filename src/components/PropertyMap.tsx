@@ -1,4 +1,3 @@
-/// <reference types="@types/google.maps" />
 import { useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
