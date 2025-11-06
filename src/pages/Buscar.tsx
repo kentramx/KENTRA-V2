@@ -335,12 +335,12 @@ const Buscar = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Estado</Label>
-                    <Select value={filters.estado} onValueChange={(v) => setFilters(prev => ({ ...prev, estado: v }))}>
+                    <Select value={filters.estado || "all"} onValueChange={(v) => setFilters(prev => ({ ...prev, estado: v === "all" ? "" : v }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Todos" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos</SelectItem>
+                        <SelectItem value="all">Todos</SelectItem>
                         {estados.map(estado => (
                           <SelectItem key={estado} value={estado}>{estado}</SelectItem>
                         ))}
@@ -351,15 +351,15 @@ const Buscar = () => {
                   <div className="space-y-2">
                     <Label>Municipio</Label>
                     <Select 
-                      value={filters.municipio} 
-                      onValueChange={(v) => setFilters(prev => ({ ...prev, municipio: v }))}
+                      value={filters.municipio || "all"} 
+                      onValueChange={(v) => setFilters(prev => ({ ...prev, municipio: v === "all" ? "" : v }))}
                       disabled={!filters.estado}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Todos" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos</SelectItem>
+                        <SelectItem value="all">Todos</SelectItem>
                         {municipios.map(municipio => (
                           <SelectItem key={municipio} value={municipio}>{municipio}</SelectItem>
                         ))}
@@ -389,12 +389,12 @@ const Buscar = () => {
 
                   <div className="space-y-2">
                     <Label>Tipo de propiedad</Label>
-                    <Select value={filters.tipo} onValueChange={(v) => setFilters(prev => ({ ...prev, tipo: v }))}>
+                    <Select value={filters.tipo || "all"} onValueChange={(v) => setFilters(prev => ({ ...prev, tipo: v === "all" ? "" : v }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Todas" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todas</SelectItem>
+                        <SelectItem value="all">Todas</SelectItem>
                         <SelectItem value="casa">Casa</SelectItem>
                         <SelectItem value="departamento">Departamento</SelectItem>
                         <SelectItem value="terreno">Terreno</SelectItem>
@@ -409,12 +409,12 @@ const Buscar = () => {
 
                   <div className="space-y-2">
                     <Label>Recámaras mínimas</Label>
-                    <Select value={filters.recamaras} onValueChange={(v) => setFilters(prev => ({ ...prev, recamaras: v }))}>
+                    <Select value={filters.recamaras || "all"} onValueChange={(v) => setFilters(prev => ({ ...prev, recamaras: v === "all" ? "" : v }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Todas" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todas</SelectItem>
+                        <SelectItem value="all">Todas</SelectItem>
                         <SelectItem value="1">1+</SelectItem>
                         <SelectItem value="2">2+</SelectItem>
                         <SelectItem value="3">3+</SelectItem>
@@ -425,12 +425,12 @@ const Buscar = () => {
 
                   <div className="space-y-2">
                     <Label>Baños mínimos</Label>
-                    <Select value={filters.banos} onValueChange={(v) => setFilters(prev => ({ ...prev, banos: v }))}>
+                    <Select value={filters.banos || "all"} onValueChange={(v) => setFilters(prev => ({ ...prev, banos: v === "all" ? "" : v }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Todos" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos</SelectItem>
+                        <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="1">1+</SelectItem>
                         <SelectItem value="2">2+</SelectItem>
                         <SelectItem value="3">3+</SelectItem>
