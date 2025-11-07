@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { MapPin, Bed, Bath, Car, Home as HomeIcon, Search, AlertCircle, Save, Star, Trash2, X, Loader2, Tag, TrendingUp } from 'lucide-react';
+import { MapPin, Bed, Bath, Car, Home as HomeIcon, Search, AlertCircle, Save, Star, Trash2, X, Loader2, Tag, TrendingUp, Plus, Minus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -1309,6 +1309,23 @@ const Buscar = () => {
     });
   };
 
+  // Funciones de zoom
+  const handleZoomIn = () => {
+    if (!mapInstanceRef.current) return;
+    const currentZoom = mapInstanceRef.current.getZoom();
+    if (currentZoom !== undefined) {
+      mapInstanceRef.current.setZoom(currentZoom + 1);
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (!mapInstanceRef.current) return;
+    const currentZoom = mapInstanceRef.current.getZoom();
+    if (currentZoom !== undefined) {
+      mapInstanceRef.current.setZoom(currentZoom - 1);
+    }
+  };
+
   // Función para obtener ubicación actual
   const centerOnMyLocation = () => {
     if (!mapInstanceRef.current) return;
@@ -2052,6 +2069,29 @@ const Buscar = () => {
                           {visiblePropertiesCount} {visiblePropertiesCount === 1 ? 'propiedad' : 'propiedades'}
                         </span>
                       </div>
+                    </div>
+
+                    {/* Controles de zoom */}
+                    <div className="bg-background border-2 border-border rounded-lg shadow-lg overflow-hidden animate-fade-in">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleZoomIn}
+                        className="w-full rounded-none border-b border-border hover:bg-accent transition-all hover:scale-105"
+                        title="Acercar"
+                      >
+                        <Plus className="h-5 w-5" />
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleZoomOut}
+                        className="w-full rounded-none hover:bg-accent transition-all hover:scale-105"
+                        title="Alejar"
+                      >
+                        <Minus className="h-5 w-5" />
+                      </Button>
                     </div>
                   </div>
                 )}
