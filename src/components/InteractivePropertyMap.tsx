@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
+import { loadGoogleMaps, resetGoogleMapsLoader } from '@/lib/loadGoogleMaps';
 import { Loader2, AlertCircle, MapPin, Map as MapIcon, Satellite, Plus, Minus, Home as HomeIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -301,6 +301,21 @@ export const InteractivePropertyMap = ({
 
     return marker;
   };
+
+  // Escuchar errores de Google Maps
+  useEffect(() => {
+    const handleMapsError = () => {
+      const errorMsg = (window as any).googleMapsLoadError || 'Error desconocido al cargar Google Maps';
+      console.error('[InteractivePropertyMap] Error capturado:', errorMsg);
+      setError(errorMsg);
+      setIsLoading(false);
+    };
+
+    window.addEventListener('google-maps-error', handleMapsError);
+    return () => {
+      window.removeEventListener('google-maps-error', handleMapsError);
+    };
+  }, []);
 
   // Inicializar mapa
   useEffect(() => {
@@ -734,7 +749,30 @@ export const InteractivePropertyMap = ({
     return (
       <Alert variant="destructive" className="my-4">
         <AlertCircle className="h-4 w-4" />
-        <AlertDescription>{error}</AlertDescription>
+        <AlertDescription className="flex flex-col gap-3">
+          <span>{error}</span>
+          <Button
+            onClick={() => {
+              console.log('[InteractivePropertyMap] Reintentando carga del mapa...');
+              setError(null);
+              setIsLoading(true);
+              setMapLoadingProgress(0);
+              resetGoogleMapsLoader();
+              // Forzar remount del mapa
+              if (mapRef.current) {
+                mapRef.current.innerHTML = '';
+              }
+              mapInstanceRef.current = null;
+              // El useEffect se ejecutará automáticamente
+            }}
+            variant="outline"
+            size="sm"
+            className="w-fit"
+          >
+            <MapIcon className="mr-2 h-4 w-4" />
+            Reintentar
+          </Button>
+        </AlertDescription>
       </Alert>
     );
   }
