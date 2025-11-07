@@ -83,6 +83,7 @@ const Buscar = () => {
   const [mapError, setMapError] = useState<string | null>(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
+  const [mapLoadingProgress, setMapLoadingProgress] = useState(0);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [mapType, setMapType] = useState<'roadmap' | 'satellite'>('roadmap');
@@ -522,11 +523,25 @@ const Buscar = () => {
   useEffect(() => {
     let isMounted = true;
     let timeoutId: NodeJS.Timeout;
+    let progressInterval: NodeJS.Timeout;
     
     const initMap = async () => {
       try {
         setIsMapLoading(true);
+        setMapLoadingProgress(0);
+        
+        // Simular progreso de carga inicial (0-30%)
+        progressInterval = setInterval(() => {
+          setMapLoadingProgress(prev => {
+            if (prev < 30) return prev + 5;
+            return prev;
+          });
+        }, 100);
+        
         await loadGoogleMaps();
+        
+        // Progreso después de cargar API (30-50%)
+        setMapLoadingProgress(50);
         
         if (!isMounted || !mapRef.current) return;
 
@@ -534,6 +549,9 @@ const Buscar = () => {
         await new Promise(resolve => setTimeout(resolve, 100));
         
         if (!mapRef.current) return;
+
+        // Progreso después de verificar DOM (50-70%)
+        setMapLoadingProgress(70);
 
         // Crear mapa centrado en CDMX
         mapInstanceRef.current = new google.maps.Map(mapRef.current, {
@@ -546,15 +564,27 @@ const Buscar = () => {
           mapTypeId: mapType,
         });
 
+        // Progreso después de crear instancia (70-85%)
+        setMapLoadingProgress(85);
+
         let mapReadySet = false;
         
         const setMapReadyOnce = () => {
           if (!mapReadySet && isMounted) {
             mapReadySet = true;
             console.log('[Mapa] Listo para renderizar marcadores');
-            setMapReady(true);
-            setIsMapLoading(false);
+            setMapLoadingProgress(100);
+            
+            // Esperar un momento antes de ocultar el loader
+            setTimeout(() => {
+              if (isMounted) {
+                setMapReady(true);
+                setIsMapLoading(false);
+              }
+            }, 300);
+            
             if (timeoutId) clearTimeout(timeoutId);
+            if (progressInterval) clearInterval(progressInterval);
           }
         };
 
@@ -580,15 +610,14 @@ const Buscar = () => {
           }
         }, 3000);
 
-        if (isMounted && !mapReadySet) {
-          setIsMapLoading(false);
-        }
       } catch (err: any) {
         console.error('Error loading map:', err);
         if (isMounted) {
           setMapError(err.message || 'Error al cargar el mapa');
           setIsMapLoading(false);
+          setMapLoadingProgress(0);
         }
+        if (progressInterval) clearInterval(progressInterval);
       }
     };
 
@@ -597,6 +626,7 @@ const Buscar = () => {
     return () => {
       isMounted = false;
       if (timeoutId) clearTimeout(timeoutId);
+      if (progressInterval) clearInterval(progressInterval);
     };
   }, [mapType, mapFilterActive]);
 
@@ -1720,12 +1750,37 @@ const Buscar = () => {
               <Card className="h-full overflow-hidden relative">
                 <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: '400px' }} />
                 
-                {/* Indicador de carga */}
+                {/* Indicador de carga con progreso */}
                 {isMapLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-10">
-                    <div className="text-center space-y-2">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                      <p className="text-sm text-muted-foreground">Cargando mapa...</p>
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/95 backdrop-blur-sm z-10">
+                    <div className="text-center space-y-4 w-full max-w-xs px-6">
+                      <div className="relative">
+                        <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary">
+                            {Math.round(mapLoadingProgress)}%
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground">Cargando mapa interactivo</p>
+                        
+                        {/* Barra de progreso */}
+                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-300 ease-out"
+                            style={{ width: `${mapLoadingProgress}%` }}
+                          />
+                        </div>
+                        
+                        <p className="text-xs text-muted-foreground">
+                          {mapLoadingProgress < 30 && 'Inicializando Google Maps...'}
+                          {mapLoadingProgress >= 30 && mapLoadingProgress < 70 && 'Preparando interfaz...'}
+                          {mapLoadingProgress >= 70 && mapLoadingProgress < 100 && 'Cargando tiles del mapa...'}
+                          {mapLoadingProgress === 100 && 'Completado'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}
