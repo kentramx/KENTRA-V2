@@ -57,6 +57,7 @@ interface Property {
   state: string;
   municipality: string;
   type: 'casa' | 'departamento' | 'terreno' | 'oficina' | 'local' | 'bodega' | 'edificio' | 'rancho';
+  listing_type: 'venta' | 'renta';
   images: { url: string; position: number }[];
 }
 
@@ -66,6 +67,7 @@ interface Filters {
   precioMin: string;
   precioMax: string;
   tipo: string;
+  listingType: string;
   recamaras: string;
   banos: string;
   orden: 'asc' | 'desc';
@@ -108,6 +110,7 @@ const Buscar = () => {
     precioMin: searchParams.get('precioMin') || '',
     precioMax: searchParams.get('precioMax') || '',
     tipo: searchParams.get('tipo') || '',
+    listingType: searchParams.get('listingType') || '',
     recamaras: searchParams.get('recamaras') || '',
     banos: searchParams.get('banos') || '',
     orden: (searchParams.get('orden') as 'asc' | 'desc') || 'desc',
@@ -290,6 +293,7 @@ const Buscar = () => {
     if (filters.precioMin) params.set('precioMin', filters.precioMin);
     if (filters.precioMax) params.set('precioMax', filters.precioMax);
     if (filters.tipo) params.set('tipo', filters.tipo);
+    if (filters.listingType) params.set('listingType', filters.listingType);
     if (filters.recamaras) params.set('recamaras', filters.recamaras);
     if (filters.banos) params.set('banos', filters.banos);
     if (filters.orden !== 'desc') params.set('orden', filters.orden);
@@ -316,6 +320,7 @@ const Buscar = () => {
             state, 
             municipality, 
             type,
+            listing_type,
             images (
               url,
               position
@@ -430,6 +435,14 @@ const Buscar = () => {
       });
     }
 
+    if (filters.listingType) {
+      chips.push({
+        key: 'listingType',
+        label: filters.listingType === 'venta' ? 'En venta' : 'En renta',
+        removeFilter: () => removeFilter('listingType')
+      });
+    }
+
     if (filters.recamaras) {
       chips.push({
         key: 'recamaras',
@@ -456,6 +469,7 @@ const Buscar = () => {
     filters.precioMin,
     filters.precioMax,
     filters.tipo,
+    filters.listingType,
     filters.recamaras,
     filters.banos,
   ].filter(Boolean).length;
@@ -482,6 +496,10 @@ const Buscar = () => {
 
     if (filters.tipo) {
       filtered = filtered.filter(p => p.type === filters.tipo);
+    }
+
+    if (filters.listingType) {
+      filtered = filtered.filter(p => p.listing_type === filters.listingType);
     }
 
     if (filters.recamaras) {
@@ -1172,6 +1190,24 @@ const Buscar = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
+                  {/* Filtro de Venta/Renta - DESTACADO */}
+                  <div className="col-span-2 space-y-2">
+                    <Label className="text-base font-semibold flex items-center gap-2">
+                      <HomeIcon className="h-4 w-4 text-primary" />
+                      Tipo de operación
+                    </Label>
+                    <Select value={filters.listingType || "all"} onValueChange={(v) => setFilters(prev => ({ ...prev, listingType: v === "all" ? "" : v }))}>
+                      <SelectTrigger className="h-11 border-2">
+                        <SelectValue placeholder="Todas las opciones" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas las opciones</SelectItem>
+                        <SelectItem value="venta">En venta</SelectItem>
+                        <SelectItem value="renta">En renta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="space-y-2">
                     <Label>Estado</Label>
                     <Select value={filters.estado || "all"} onValueChange={(v) => setFilters(prev => ({ ...prev, estado: v === "all" ? "" : v }))}>
@@ -1350,7 +1386,7 @@ const Buscar = () => {
                     className="w-full animate-fade-in"
                     onClick={() => setFilters({
                       estado: '', municipio: '', precioMin: '', precioMax: '',
-                      tipo: '', recamaras: '', banos: '', orden: 'desc'
+                      tipo: '', listingType: '', recamaras: '', banos: '', orden: 'desc'
                     })}
                   >
                     Limpiar {activeFiltersCount} {activeFiltersCount === 1 ? 'filtro' : 'filtros'}
