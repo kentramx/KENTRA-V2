@@ -55,6 +55,7 @@ const Buscar = () => {
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [savedSearches, setSavedSearches] = useState<any[]>([]);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -444,6 +445,14 @@ const Buscar = () => {
           fullscreenControl: true,
         });
 
+        // Esperar a que el mapa esté listo para pintar marcadores
+        mapInstanceRef.current.addListener('idle', () => {
+          if (!isMounted) return;
+          console.log('[Mapa] idle - listo para renderizar marcadores');
+          setMapReady(true);
+        });
+
+
         if (isMounted) {
           setIsMapLoading(false);
         }
@@ -465,8 +474,8 @@ const Buscar = () => {
 
   // Actualizar marcadores cuando cambian las propiedades filtradas
   useEffect(() => {
-    if (!mapInstanceRef.current) {
-      console.log('[Marcadores] Mapa no inicializado aún');
+    if (!mapInstanceRef.current || !mapReady) {
+      console.log('[Marcadores] Mapa no inicializado o no listo aún', { map: !!mapInstanceRef.current, mapReady });
       return;
     }
 
@@ -475,6 +484,7 @@ const Buscar = () => {
     // Limpiar marcadores anteriores
     if (markerClustererRef.current) {
       markerClustererRef.current.clearMarkers();
+      markerClustererRef.current = null;
     }
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
@@ -504,6 +514,7 @@ const Buscar = () => {
 
     console.log('[Marcadores] Marcadores creados:', newMarkers.length);
     markersRef.current = newMarkers;
+
 
     // Agregar clustering
     if (newMarkers.length > 0) {
