@@ -648,10 +648,14 @@ const Buscar = () => {
         mapInstanceRef.current = new google.maps.Map(mapRef.current, {
           center: { lat: 19.4326, lng: -99.1332 },
           zoom: 12,
-          zoomControl: true,
+          zoomControl: false,
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
+          rotateControl: false,
+          scaleControl: false,
+          panControl: false,
+          gestureHandling: 'greedy',
           mapTypeId: mapType,
         });
 
