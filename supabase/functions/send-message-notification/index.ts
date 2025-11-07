@@ -31,25 +31,25 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Obtener el perfil del receptor para verificar preferencias y email
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('name, email_notifications')
-      .eq('id', recipientId)
+    // Obtener las preferencias de notificación del usuario
+    const { data: preferences, error: preferencesError } = await supabase
+      .from('notification_preferences')
+      .select('email_new_messages')
+      .eq('user_id', recipientId)
       .single();
 
-    if (profileError) {
-      console.error('Error fetching profile:', profileError);
-      return new Response(JSON.stringify({ error: 'Profile not found' }), {
+    if (preferencesError || !preferences) {
+      console.error('Error fetching preferences:', preferencesError);
+      return new Response(JSON.stringify({ error: 'Preferences not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     // Verificar si el usuario tiene notificaciones por email activadas
-    if (!profile.email_notifications) {
-      console.log('User has email notifications disabled');
-      return new Response(JSON.stringify({ message: 'Email notifications disabled for this user' }), {
+    if (!preferences.email_new_messages) {
+      console.log('User has email notifications disabled for new messages');
+      return new Response(JSON.stringify({ message: 'Email notifications disabled for new messages' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

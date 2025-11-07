@@ -382,6 +382,51 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          created_at: string | null
+          email_new_messages: boolean | null
+          email_new_properties: boolean | null
+          email_price_changes: boolean | null
+          email_saved_searches: boolean | null
+          email_weekly_digest: boolean | null
+          id: string
+          push_new_messages: boolean | null
+          push_new_properties: boolean | null
+          push_price_changes: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email_new_messages?: boolean | null
+          email_new_properties?: boolean | null
+          email_price_changes?: boolean | null
+          email_saved_searches?: boolean | null
+          email_weekly_digest?: boolean | null
+          id?: string
+          push_new_messages?: boolean | null
+          push_new_properties?: boolean | null
+          push_price_changes?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email_new_messages?: boolean | null
+          email_new_properties?: boolean | null
+          email_price_changes?: boolean | null
+          email_saved_searches?: boolean | null
+          email_weekly_digest?: boolean | null
+          id?: string
+          push_new_messages?: boolean | null
+          push_new_properties?: boolean | null
+          push_price_changes?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null

@@ -12,6 +12,7 @@ import Favorites from "./pages/Favorites";
 import AgentDashboard from "./pages/AgentDashboard";
 import AgentProfile from "./pages/AgentProfile";
 import UserProfile from "./pages/UserProfile";
+import NotificationSettings from "./pages/NotificationSettings";
 import Auth from "./pages/Auth";
 import Buscar from "./pages/Buscar";
 import MessagesPage from "./pages/MessagesPage";
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/propiedad/:id" element={<PropertyDetail />} />
             <Route path="/agente/:id" element={<AgentProfile />} />
             <Route path="/perfil" element={<UserProfile />} />
+            <Route path="/notificaciones" element={<NotificationSettings />} />
             <Route path="/buscar" element={<Buscar />} />
             <Route path="/favoritos" element={<Favorites />} />
             <Route path="/panel-agente" element={<AgentDashboard />} />

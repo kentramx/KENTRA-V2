@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -19,6 +19,8 @@ import {
   Bell,
   Trash2,
   MapPin,
+  Settings,
+  Mail,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -212,7 +214,7 @@ const UserProfile = () => {
         <h1 className="text-3xl font-bold mb-8">Mi Perfil</h1>
 
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile">
               <User className="mr-2 h-4 w-4" />
               Información Personal
@@ -224,6 +226,10 @@ const UserProfile = () => {
             <TabsTrigger value="notifications">
               <Bell className="mr-2 h-4 w-4" />
               Notificaciones
+            </TabsTrigger>
+            <TabsTrigger value="advanced">
+              <Settings className="mr-2 h-4 w-4" />
+              Avanzado
             </TabsTrigger>
           </TabsList>
 
@@ -418,6 +424,22 @@ const UserProfile = () => {
                 <Separator />
 
                 <div className="bg-muted p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2">Configuración Avanzada</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Personaliza qué tipo de notificaciones quieres recibir y cómo las recibes
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigate("/notificaciones")}
+                  >
+                    Configuración Avanzada
+                  </Button>
+                </div>
+
+                <Separator />
+
+                <div className="bg-muted p-4 rounded-lg">
                   <h4 className="font-semibold mb-2">Preferencias de Newsletter</h4>
                   <p className="text-sm text-muted-foreground mb-3">
                     Gestiona tus preferencias de newsletter desde el formulario de suscripción
@@ -426,6 +448,63 @@ const UserProfile = () => {
                   <Button variant="outline" size="sm" onClick={() => navigate("/")}>
                     Ir al Newsletter
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="advanced" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuración Avanzada</CardTitle>
+                <CardDescription>
+                  Opciones adicionales para personalizar tu experiencia
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Bell className="h-5 w-5 text-primary mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Notificaciones Personalizadas</h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Configura en detalle qué notificaciones quieres recibir por email y push
+                      </p>
+                      <Button onClick={() => navigate("/notificaciones")}>
+                        Configurar Notificaciones
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-5 w-5 text-primary mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Newsletter</h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Suscríbete al newsletter para recibir las mejores ofertas y novedades
+                      </p>
+                      <Button variant="outline" onClick={() => navigate("/")}>
+                        Gestionar Suscripción
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-primary mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Búsquedas Guardadas</h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Gestiona tus búsquedas guardadas y recibe alertas cuando haya nuevas propiedades
+                      </p>
+                      <Button variant="outline" onClick={() => navigate("/perfil?tab=searches")}>
+                        Ver Búsquedas
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
