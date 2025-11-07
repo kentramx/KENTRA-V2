@@ -588,6 +588,7 @@ const Buscar = () => {
     
     const initMap = async () => {
       try {
+        console.log('[DEBUG Mapa] 1. Iniciando carga del mapa...');
         setIsMapLoading(true);
         setMapLoadingProgress(0);
         
@@ -599,20 +600,36 @@ const Buscar = () => {
           });
         }, 100);
         
+        console.log('[DEBUG Mapa] 2. Cargando Google Maps API...');
         await loadGoogleMaps();
+        console.log('[DEBUG Mapa] 3. Google Maps API cargada exitosamente');
         
         // Progreso después de cargar API (30-50%)
         setMapLoadingProgress(50);
         
-        if (!isMounted || !mapRef.current) return;
+        if (!isMounted) {
+          console.log('[DEBUG Mapa] 4. Componente desmontado, cancelando...');
+          return;
+        }
+        
+        if (!mapRef.current) {
+          console.log('[DEBUG Mapa] 5. mapRef.current no existe, cancelando...');
+          return;
+        }
+        
+        console.log('[DEBUG Mapa] 6. mapRef.current existe, continuando...');
 
         // Pequeño delay para asegurar que el DOM está listo
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        if (!mapRef.current) return;
+        if (!mapRef.current) {
+          console.log('[DEBUG Mapa] 7. mapRef.current desapareció después del delay');
+          return;
+        }
 
         // Progreso después de verificar DOM (50-70%)
         setMapLoadingProgress(70);
+        console.log('[DEBUG Mapa] 8. Creando instancia de Google Maps...');
 
         // Crear mapa centrado en CDMX
         mapInstanceRef.current = new google.maps.Map(mapRef.current, {
@@ -625,6 +642,8 @@ const Buscar = () => {
           mapTypeId: mapType,
         });
 
+        console.log('[DEBUG Mapa] 9. Instancia del mapa creada:', !!mapInstanceRef.current);
+
         // Progreso después de crear instancia (70-85%)
         setMapLoadingProgress(85);
 
@@ -633,12 +652,13 @@ const Buscar = () => {
         const setMapReadyOnce = () => {
           if (!mapReadySet && isMounted) {
             mapReadySet = true;
-            console.log('[Mapa] Listo para renderizar marcadores');
+            console.log('[DEBUG Mapa] 10. Mapa listo para renderizar marcadores');
             setMapLoadingProgress(100);
             
             // Esperar un momento antes de ocultar el loader
             setTimeout(() => {
               if (isMounted) {
+                console.log('[DEBUG Mapa] 11. Actualizando estados finales');
                 setMapReady(true);
                 setIsMapLoading(false);
               }
@@ -649,6 +669,7 @@ const Buscar = () => {
           }
         };
 
+        console.log('[DEBUG Mapa] 12. Agregando listeners de eventos...');
         // Múltiples listeners para asegurar que el mapa se marca como listo
         mapInstanceRef.current.addListener('tilesloaded', setMapReadyOnce);
         mapInstanceRef.current.addListener('idle', setMapReadyOnce);
@@ -663,16 +684,18 @@ const Buscar = () => {
           }
         });
 
+        console.log('[DEBUG Mapa] 13. Configurando timeout de seguridad...');
         // Timeout de seguridad: marcar como listo después de 3 segundos
         timeoutId = setTimeout(() => {
           if (isMounted && !mapReadySet) {
-            console.log('[Mapa] Timeout alcanzado - forzando estado listo');
+            console.log('[DEBUG Mapa] 14. Timeout alcanzado - forzando estado listo');
             setMapReadyOnce();
           }
         }, 3000);
 
       } catch (err: any) {
-        console.error('Error loading map:', err);
+        console.error('[DEBUG Mapa] ERROR en inicialización:', err);
+        console.error('[DEBUG Mapa] Stack trace:', err.stack);
         if (isMounted) {
           setMapError(err.message || 'Error al cargar el mapa');
           setIsMapLoading(false);
