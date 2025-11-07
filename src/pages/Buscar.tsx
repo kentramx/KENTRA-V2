@@ -769,11 +769,6 @@ const Buscar = () => {
         map: mapInstanceRef.current,
         markers: newMarkers,
         renderer,
-        // Configuración de clustering mejorada
-        algorithm: new (window as any).markerClusterer.SuperClusterAlgorithm({
-          radius: 80, // Radio de agrupación más pequeño para mejor precisión
-          maxZoom: 16, // Zoom máximo para clusters
-        }),
         onClusterClick: (event, cluster, map) => {
           // Animación al hacer clic en cluster
           map.fitBounds(cluster.bounds as google.maps.LatLngBounds, {
