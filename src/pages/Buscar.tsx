@@ -519,6 +519,22 @@ const Buscar = () => {
     setFilteredProperties(filtered);
   }, [filters, properties]);
 
+  // Animación de bounce en marcador cuando se hace hover sobre la tarjeta
+  useEffect(() => {
+    if (!hoveredPropertyId || !mapReady) return;
+
+    const marker = markerMapRef.current.get(hoveredPropertyId);
+    if (marker) {
+      // Aplicar animación de bounce
+      marker.setAnimation(google.maps.Animation.BOUNCE);
+      
+      // Detener la animación cuando se deje de hacer hover
+      return () => {
+        marker.setAnimation(null);
+      };
+    }
+  }, [hoveredPropertyId, mapReady]);
+
   // Inicializar mapa
   useEffect(() => {
     let isMounted = true;
