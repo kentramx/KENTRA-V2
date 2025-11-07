@@ -498,15 +498,112 @@ const Buscar = () => {
       infoWindowRef.current.close();
     }
 
+    // Función para obtener color según rango de precio
+    const getPriceColor = (price: number): string => {
+      if (price < 1000000) return '#10B981'; // Verde - económico
+      if (price < 3000000) return '#3B82F6'; // Azul - medio
+      if (price < 5000000) return '#F59E0B'; // Naranja - alto
+      return '#EF4444'; // Rojo - premium
+    };
+
+    // Función para crear SVG del icono según tipo de propiedad
+    const getPropertyIcon = (type: string, color: string): string => {
+      const icons: Record<string, string> = {
+        casa: `<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>`,
+        departamento: `<rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line>`,
+        terreno: `<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line>`,
+        oficina: `<rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>`,
+        local: `<path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M9 21V9"></path>`,
+        bodega: `<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path>`,
+        edificio: `<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path>`,
+        rancho: `<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>`,
+      };
+      
+      const iconPath = icons[type] || icons['casa'];
+      
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="11" fill="${color}" opacity="0.9"/>
+          <g transform="scale(0.7) translate(4.2, 4.2)">
+            ${iconPath}
+          </g>
+        </svg>
+      `;
+    };
+
+    // Función para crear etiqueta de precio
+    const createPriceLabel = (price: number, color: string): string => {
+      const formattedPrice = new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(price);
+      
+      return `
+        <div style="
+          background: white;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-weight: 600;
+          font-size: 11px;
+          color: ${color};
+          border: 2px solid ${color};
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          white-space: nowrap;
+          position: relative;
+          margin-top: -8px;
+        ">
+          ${formattedPrice}
+        </div>
+      `;
+    };
+
     // Crear nuevos marcadores
     const propertiesWithCoords = filteredProperties.filter(p => p.lat && p.lng);
     console.log('[Marcadores] Propiedades con coordenadas:', propertiesWithCoords.length);
 
     const newMarkers = propertiesWithCoords.map(property => {
+      const priceColor = getPriceColor(property.price);
+      const iconSvg = getPropertyIcon(property.type, priceColor);
+      const priceLabel = createPriceLabel(property.price, priceColor);
+      
+      // Crear un elemento HTML personalizado para el marcador
+      const markerContent = `
+        <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+          ${iconSvg}
+          ${priceLabel}
+        </div>
+      `;
+      
+      // Convertir SVG a data URL
+      const svgBlob = new Blob([iconSvg], { type: 'image/svg+xml' });
+      const svgUrl = URL.createObjectURL(svgBlob);
+      
       const marker = new google.maps.Marker({
         position: { lat: Number(property.lat), lng: Number(property.lng) },
         title: property.title,
         map: mapInstanceRef.current,
+        icon: {
+          url: svgUrl,
+          scaledSize: new google.maps.Size(40, 40),
+          anchor: new google.maps.Point(20, 40),
+        },
+        label: {
+          text: new Intl.NumberFormat('es-MX', {
+            style: 'currency',
+            currency: 'MXN',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+            notation: 'compact',
+            compactDisplay: 'short'
+          }).format(property.price).replace('MXN', '').trim(),
+          color: priceColor,
+          fontSize: '11px',
+          fontWeight: 'bold',
+          className: 'marker-price-label'
+        },
+        optimized: false,
       });
 
       // Crear contenido del info window
