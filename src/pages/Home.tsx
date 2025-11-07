@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal, Map } from "lucide-react";
+import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal, Map as MapIcon } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
 import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
@@ -352,7 +352,7 @@ const Home = () => {
                     Buscar
                   </TabsTrigger>
                   <TabsTrigger value="map" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                    <Map className="mr-2 h-4 w-4" />
+                    <MapIcon className="mr-2 h-4 w-4" />
                     Mapa Interactivo
                   </TabsTrigger>
                 </TabsList>
