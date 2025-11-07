@@ -2039,87 +2039,106 @@ const Buscar = () => {
 
                 {/* Controles personalizados del mapa */}
                  {!isMapLoading && mapReady && (
-                  <div className="absolute top-4 right-4 z-10 space-y-2">
-                    {/* Contador de propiedades */}
-                    <div className="bg-background border-2 border-border rounded-lg shadow-lg px-4 py-2 animate-fade-in transition-all hover:shadow-xl hover:scale-105">
-                      <div className="flex items-center gap-2">
-                        <HomeIcon className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-semibold">
-                          {visiblePropertiesCount} {visiblePropertiesCount === 1 ? 'propiedad' : 'propiedades'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Grupo de botones de control */}
-                    <div className="bg-background border-2 border-border rounded-lg shadow-lg overflow-hidden animate-fade-in">
+                  <>
+                    {/* Botón flotante "Buscar en esta área" - Centro superior */}
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 animate-fade-in">
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={centerOnResults}
-                        disabled={visiblePropertiesCount === 0}
-                        className="w-full rounded-none border-b border-border hover:bg-accent transition-all hover:scale-105"
-                        title="Centrar en resultados"
+                        variant={mapFilterActive ? "default" : "secondary"}
+                        size="lg"
+                        onClick={() => setMapFilterActive(!mapFilterActive)}
+                        className={`
+                          shadow-xl transition-all duration-300 hover:scale-105 
+                          ${mapFilterActive 
+                            ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-2 border-primary-foreground/20' 
+                            : 'bg-background hover:bg-accent border-2 border-border'
+                          }
+                        `}
                       >
-                        <MapPin className="h-5 w-5" />
-                      </Button>
-                      
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setMapType(prev => prev === 'roadmap' ? 'satellite' : 'roadmap')}
-                        className="w-full rounded-none border-b border-border hover:bg-accent transition-all hover:scale-105"
-                        title={mapType === 'roadmap' ? 'Vista satélite' : 'Vista mapa'}
-                      >
-                        {mapType === 'roadmap' ? (
-                          <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                          </svg>
+                        <svg 
+                          className={`h-5 w-5 mr-2 transition-transform ${mapFilterActive ? 'scale-110 rotate-90' : ''}`}
+                          viewBox="0 0 24 24" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="2"
+                        >
+                          <rect x="3" y="3" width="18" height="18" rx="2"/>
+                          <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+                        </svg>
+                        {mapFilterActive ? (
+                          <span className="font-semibold">
+                            {propertiesInViewport.length} en esta área
+                          </span>
                         ) : (
-                          <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>
-                          </svg>
+                          <span className="font-semibold">
+                            🔍 Buscar en esta área
+                          </span>
                         )}
                       </Button>
-                      
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={centerOnMyLocation}
-                        className="w-full rounded-none hover:bg-accent transition-all hover:scale-105"
-                        title="Mi ubicación"
-                      >
-                        <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="3"/>
-                          <circle cx="12" cy="12" r="10"/>
-                          <line x1="12" y1="2" x2="12" y2="4"/>
-                          <line x1="12" y1="20" x2="12" y2="22"/>
-                          <line x1="2" y1="12" x2="4" y2="12"/>
-                          <line x1="20" y1="12" x2="22" y2="12"/>
-                        </svg>
-                      </Button>
                     </div>
 
-                    {/* Botón de filtro por viewport */}
-                    <Button
-                      variant={mapFilterActive ? "default" : "outline"}
-                      size="icon"
-                      onClick={() => setMapFilterActive(!mapFilterActive)}
-                      className="w-full transition-all hover:scale-105 animate-fade-in shadow-lg"
-                      title={mapFilterActive ? "Desactivar filtro de mapa" : "Filtrar por área visible"}
-                    >
-                      <svg 
-                        className={`h-5 w-5 transition-transform ${mapFilterActive ? 'scale-110' : ''}`}
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2"
-                      >
-                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                        <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
-                      </svg>
-                    </Button>
-                  </div>
+                    {/* Controles derecha */}
+                    <div className="absolute top-4 right-4 z-10 space-y-2">
+                      {/* Contador de propiedades */}
+                      <div className="bg-background border-2 border-border rounded-lg shadow-lg px-4 py-2 animate-fade-in transition-all hover:shadow-xl hover:scale-105">
+                        <div className="flex items-center gap-2">
+                          <HomeIcon className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-semibold">
+                            {mapFilterActive ? propertiesInViewport.length : visiblePropertiesCount} {(mapFilterActive ? propertiesInViewport.length : visiblePropertiesCount) === 1 ? 'propiedad' : 'propiedades'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Grupo de botones de control */}
+                      <div className="bg-background border-2 border-border rounded-lg shadow-lg overflow-hidden animate-fade-in">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={centerOnResults}
+                          disabled={visiblePropertiesCount === 0}
+                          className="w-full rounded-none border-b border-border hover:bg-accent transition-all hover:scale-105"
+                          title="Centrar en resultados"
+                        >
+                          <MapPin className="h-5 w-5" />
+                        </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setMapType(prev => prev === 'roadmap' ? 'satellite' : 'roadmap')}
+                          className="w-full rounded-none border-b border-border hover:bg-accent transition-all hover:scale-105"
+                          title={mapType === 'roadmap' ? 'Vista satélite' : 'Vista mapa'}
+                        >
+                          {mapType === 'roadmap' ? (
+                            <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="12" cy="12" r="10"/>
+                              <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                            </svg>
+                          ) : (
+                            <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>
+                            </svg>
+                          )}
+                        </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={centerOnMyLocation}
+                          className="w-full rounded-none hover:bg-accent transition-all hover:scale-105"
+                          title="Mi ubicación"
+                        >
+                          <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="2" x2="12" y2="4"/>
+                            <line x1="12" y1="20" x2="12" y2="22"/>
+                            <line x1="2" y1="12" x2="4" y2="12"/>
+                            <line x1="20" y1="12" x2="22" y2="12"/>
+                          </svg>
+                        </Button>
+                      </div>
+                    </div>
+                  </>
                 )}
               </Card>
             )}
