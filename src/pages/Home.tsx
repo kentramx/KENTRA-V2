@@ -54,7 +54,7 @@ const Home = () => {
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [activeTab, setActiveTab] = useState<'search' | 'map'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'map'>('map');
   
   // Advanced filters
   const [priceMin, setPriceMin] = useState("");
