@@ -419,8 +419,17 @@ const Buscar = () => {
 
   // Inicializar mapa
   useEffect(() => {
-    loadGoogleMaps()
-      .then(() => {
+    let isMounted = true;
+    
+    const initMap = async () => {
+      try {
+        await loadGoogleMaps();
+        
+        if (!isMounted || !mapRef.current) return;
+
+        // Pequeño delay para asegurar que el DOM está listo
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         if (!mapRef.current) return;
 
         // Crear mapa centrado en CDMX
@@ -431,11 +440,19 @@ const Buscar = () => {
           streetViewControl: true,
           fullscreenControl: true,
         });
-      })
-      .catch((err) => {
+      } catch (err: any) {
         console.error('Error loading map:', err);
-        setMapError(err.message);
-      });
+        if (isMounted) {
+          setMapError(err.message || 'Error al cargar el mapa');
+        }
+      }
+    };
+
+    initMap();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Actualizar marcadores cuando cambian las propiedades filtradas
@@ -961,7 +978,7 @@ const Buscar = () => {
               </Card>
             ) : (
               <Card className="h-full overflow-hidden">
-                <div ref={mapRef} className="w-full h-full" />
+                <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: '400px' }} />
               </Card>
             )}
           </div>
