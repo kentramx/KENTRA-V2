@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Bed, Bath, Car, Home as HomeIcon, Search, AlertCircle, Save, Star, Trash2, X } from 'lucide-react';
+import { MapPin, Bed, Bath, Car, Home as HomeIcon, Search, AlertCircle, Save, Star, Trash2, X, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -54,6 +54,7 @@ const Buscar = () => {
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [isMapLoading, setIsMapLoading] = useState(true);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [savedSearches, setSavedSearches] = useState<any[]>([]);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -423,6 +424,7 @@ const Buscar = () => {
     
     const initMap = async () => {
       try {
+        setIsMapLoading(true);
         await loadGoogleMaps();
         
         if (!isMounted || !mapRef.current) return;
@@ -440,10 +442,15 @@ const Buscar = () => {
           streetViewControl: true,
           fullscreenControl: true,
         });
+
+        if (isMounted) {
+          setIsMapLoading(false);
+        }
       } catch (err: any) {
         console.error('Error loading map:', err);
         if (isMounted) {
           setMapError(err.message || 'Error al cargar el mapa');
+          setIsMapLoading(false);
         }
       }
     };
@@ -977,8 +984,18 @@ const Buscar = () => {
                 </CardContent>
               </Card>
             ) : (
-              <Card className="h-full overflow-hidden">
+              <Card className="h-full overflow-hidden relative">
                 <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: '400px' }} />
+                
+                {/* Indicador de carga */}
+                {isMapLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-10">
+                    <div className="text-center space-y-2">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <p className="text-sm text-muted-foreground">Cargando mapa...</p>
+                    </div>
+                  </div>
+                )}
               </Card>
             )}
           </div>
