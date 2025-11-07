@@ -329,8 +329,32 @@ export const InteractivePropertyMap = ({
         console.log('[InteractivePropertyMap] Google Maps API cargado');
         setMapLoadingProgress(70);
 
-        if (!isMounted || !mapRef.current) {
-          console.log('[InteractivePropertyMap] Componente desmontado o ref no disponible');
+        // Esperar a que el contenedor del mapa esté listo en el DOM
+        const waitForRef = async () => {
+          let attempts = 0;
+          return new Promise<void>((resolve, reject) => {
+            const check = () => {
+              if (!isMounted) {
+                reject(new Error('Componente desmontado durante init'));
+                return;
+              }
+              if (mapRef.current) {
+                resolve();
+              } else if (attempts++ < 30) {
+                requestAnimationFrame(check);
+              } else {
+                reject(new Error('Contenedor del mapa no disponible'));
+              }
+            };
+            check();
+          });
+        };
+
+        try {
+          await waitForRef();
+        } catch (e) {
+          console.log('[InteractivePropertyMap] Contenedor no listo, cancelando init');
+          if (progressInterval) clearInterval(progressInterval);
           return;
         }
 
@@ -481,7 +505,7 @@ export const InteractivePropertyMap = ({
         infoWindowRef.current.close();
       }
     };
-  }, [defaultCenter, defaultZoom, showLocationPicker, onLocationSelect, mapType]);
+  }, [defaultCenter, defaultZoom, showLocationPicker, onLocationSelect]);
 
   // Actualizar marcadores cuando cambian las propiedades con renderizado incremental
   useEffect(() => {
