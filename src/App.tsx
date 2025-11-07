@@ -18,6 +18,7 @@ import MessagesPage from "./pages/MessagesPage";
 import InstallPWA from "./pages/InstallPWA";
 import SetupDemo from "./pages/SetupDemo";
 import NotFound from "./pages/NotFound";
+import MapPreloader from "@/components/MapPreloader";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <NotificationPermissionBanner />
+      <MapPreloader />
       <BrowserRouter>
         <AuthProvider>
           <Routes>
