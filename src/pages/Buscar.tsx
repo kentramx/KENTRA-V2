@@ -21,6 +21,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { mexicoStates, mexicoMunicipalities } from '@/data/mexicoLocations';
+import { AnimatedCounter } from '@/components/AnimatedCounter';
 
 // Función throttle para optimizar rendimiento
 const throttle = <T extends (...args: any[]) => void>(
@@ -1841,14 +1842,11 @@ const Buscar = () => {
 
             {/* Lista de propiedades */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">
-                  {mapFilterActive 
-                    ? `${propertiesToDisplay.length} ${propertiesToDisplay.length === 1 ? 'propiedad' : 'propiedades'} en el área visible`
-                    : `${filteredProperties.length} ${filteredProperties.length === 1 ? 'Propiedad' : 'Propiedades'}`
-                  }
-                </h2>
-              </div>
+              {/* Contador animado */}
+              <AnimatedCounter 
+                value={propertiesToDisplay.length} 
+                label={propertiesToDisplay.length === 1 ? 'propiedad' : 'propiedades'}
+              />
 
               {propertiesToDisplay.length === 0 ? (
                 <Card>
