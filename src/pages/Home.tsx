@@ -3,15 +3,17 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal } from "lucide-react";
+import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal, Map } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
-import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
+import { PlaceAutocomplete } from "@/components/PlaceAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import PropertyCard from "@/components/PropertyCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { NewsletterForm } from "@/components/NewsletterForm";
+import { InteractiveMapSearch } from "@/components/InteractiveMapSearch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -58,45 +60,41 @@ const Home = () => {
   
   const navigate = useNavigate();
 
-  const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
-    const addressComponents = place.address_components || [];
-    
-    let municipio = '';
-    let estado = '';
-    
-    addressComponents.forEach(component => {
-      if (component.types.includes('locality') || 
-          component.types.includes('sublocality') ||
-          component.types.includes('administrative_area_level_2')) {
-        municipio = component.long_name;
-      }
-      if (component.types.includes('administrative_area_level_1')) {
-        estado = component.long_name;
-      }
-    });
-
+  const handlePlaceSelect = (location: {
+    address: string;
+    municipality: string;
+    state: string;
+    lat?: number;
+    lng?: number;
+  }) => {
     const params = new URLSearchParams();
     
     params.set('tipo_listado', listingType);
     if (propertyType && propertyType !== 'all') params.set('tipo', propertyType);
-    if (estado) params.set('estado', estado);
-    if (municipio) params.set('municipio', municipio);
+    if (location.state) params.set('estado', location.state);
+    if (location.municipality) params.set('municipio', location.municipality);
     if (priceMin) params.set('precioMin', priceMin);
     if (priceMax) params.set('precioMax', priceMax);
     if (bedrooms && bedrooms !== 'all') params.set('recamaras', bedrooms);
     if (bathrooms && bathrooms !== 'all') params.set('banos', bathrooms);
     if (parking && parking !== 'all') params.set('estacionamiento', parking);
     
-    if (!estado && !municipio && place.formatted_address) {
-      params.set('busqueda', place.formatted_address);
+    if (!location.state && !location.municipality && location.address) {
+      params.set('busqueda', location.address);
     }
 
     navigate(`/propiedades?${params.toString()}`);
   };
 
-  const { inputRef, isLoaded, error } = usePlacesAutocomplete({
-    onPlaceSelect: handlePlaceSelect
-  });
+  const handleMapLocationSelect = (location: {
+    address: string;
+    municipality: string;
+    state: string;
+    lat: number;
+    lng: number;
+  }) => {
+    handlePlaceSelect(location);
+  };
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -105,9 +103,9 @@ const Home = () => {
     if (searchQuery) params.set('busqueda', encodeURIComponent(searchQuery));
     if (priceMin) params.set('precioMin', priceMin);
     if (priceMax) params.set('precioMax', priceMax);
-    if (bedrooms) params.set('recamaras', bedrooms);
-    if (bathrooms) params.set('banos', bathrooms);
-    if (parking) params.set('estacionamiento', parking);
+    if (bedrooms && bedrooms !== 'all') params.set('recamaras', bedrooms);
+    if (bathrooms && bathrooms !== 'all') params.set('banos', bathrooms);
+    if (parking && parking !== 'all') params.set('estacionamiento', parking);
     navigate(`/propiedades?${params.toString()}`);
   };
 
@@ -335,39 +333,46 @@ const Home = () => {
                 </CollapsibleContent>
               </Collapsible>
 
-              <div className="flex gap-2 rounded-lg bg-white p-2 shadow-2xl">
-                <div className="flex flex-1 items-center gap-2 px-4">
-                  <MapPin className="h-5 w-5 text-muted-foreground" />
-                  <Input
-                    ref={inputRef}
-                    type="text"
-                    placeholder="Ciudad, colonia o código postal"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    disabled={!isLoaded && !error}
-                    className="border-0 bg-transparent text-foreground focus-visible:ring-0"
+              {/* Tabs para búsqueda por texto o mapa */}
+              <Tabs defaultValue="search" className="w-full">
+                <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 bg-white/95">
+                  <TabsTrigger value="search" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    <Search className="mr-2 h-4 w-4" />
+                    Buscar
+                  </TabsTrigger>
+                  <TabsTrigger value="map" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    <Map className="mr-2 h-4 w-4" />
+                    Mapa
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="search" className="mt-4">
+                  <div className="space-y-4">
+                    <PlaceAutocomplete
+                      onPlaceSelect={handlePlaceSelect}
+                      placeholder="Ciudad, colonia o código postal"
+                      label=""
+                      id="hero-place-search"
+                    />
+                    <Button
+                      onClick={handleSearch}
+                      size="lg"
+                      className="w-full bg-secondary hover:bg-secondary/90"
+                    >
+                      <Search className="mr-2 h-5 w-5" />
+                      Buscar Propiedades
+                    </Button>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="map" className="mt-4">
+                  <InteractiveMapSearch
+                    onLocationSelect={handleMapLocationSelect}
+                    height="450px"
+                    defaultZoom={6}
                   />
-                </div>
-                <Button
-                  onClick={handleSearch}
-                  size="lg"
-                  className="bg-secondary hover:bg-secondary/90"
-                >
-                  <Search className="mr-2 h-5 w-5" />
-                  Buscar
-                </Button>
-              </div>
-              {error && (
-                <p className="text-xs text-yellow-400 text-center animate-fade-in">
-                  Búsqueda con sugerencias no disponible. Puedes buscar manualmente.
-                </p>
-              )}
-              {!isLoaded && !error && (
-                <p className="text-xs text-white/70 text-center animate-fade-in">
-                  Cargando sugerencias...
-                </p>
-              )}
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         </div>
