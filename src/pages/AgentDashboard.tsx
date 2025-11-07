@@ -34,15 +34,15 @@ const AgentDashboard = () => {
 
   const checkAgentStatus = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user?.id)
+      // Check user role from user_roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user?.id)
+        .in('role', ['agent', 'agency'])
         .single();
 
-      if (error) throw error;
-
-      if (data.role !== 'agent') {
+      if (roleError || !roleData) {
         toast({
           title: 'Acceso denegado',
           description: 'Solo los agentes pueden acceder a esta página',
@@ -52,7 +52,16 @@ const AgentDashboard = () => {
         return;
       }
 
-      setProfile(data);
+      // Get profile data
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      setProfile(profileData);
     } catch (error) {
       console.error('Error checking agent status:', error);
       navigate('/');
@@ -97,7 +106,7 @@ const AgentDashboard = () => {
     );
   }
 
-  if (!profile || profile.role !== 'agent') {
+  if (!profile) {
     return null;
   }
 

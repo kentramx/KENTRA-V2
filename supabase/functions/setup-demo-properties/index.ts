@@ -419,10 +419,35 @@ Deno.serve(async (req) => {
 
     console.log('Setting up demo properties for user:', user.id);
 
-    // Update user role to agent
+    // Check if user already has agent role
+    const { data: existingRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'agent')
+      .single();
+
+    if (!existingRole) {
+      // Insert agent role into user_roles table
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({ 
+          user_id: user.id,
+          role: 'agent'
+        });
+
+      if (roleError) {
+        console.error('Error granting agent role:', roleError);
+        throw roleError;
+      }
+
+      console.log('Agent role granted to user');
+    }
+
+    // Update verification status in profiles
     const { error: profileError } = await supabase
       .from('profiles')
-      .update({ role: 'agent', is_verified: true })
+      .update({ is_verified: true })
       .eq('id', user.id);
 
     if (profileError) {
@@ -430,7 +455,7 @@ Deno.serve(async (req) => {
       throw profileError;
     }
 
-    console.log('User role updated to agent');
+    console.log('User profile updated');
 
     // Create properties with images
     const createdProperties = [];
