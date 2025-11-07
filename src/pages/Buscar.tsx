@@ -549,15 +549,24 @@ const Buscar = () => {
       bounds.extend(new google.maps.LatLng(Number(property.lat), Number(property.lng)));
     });
 
-    // Ajustar el mapa a los bounds
+    // Ajustar el mapa a los bounds con transición suave
     mapInstanceRef.current.fitBounds(bounds, 50);
 
-    // Si solo hay una propiedad, ajustar el zoom
-    if (propertiesWithCoords.length === 1) {
-      setTimeout(() => {
-        mapInstanceRef.current?.setZoom(14);
-      }, 500);
-    }
+    // Ajustar zoom según el contexto después del fitBounds
+    setTimeout(() => {
+      if (!mapInstanceRef.current) return;
+      
+      if (propertiesWithCoords.length === 1) {
+        // Una sola propiedad: zoom cercano
+        mapInstanceRef.current.setZoom(14);
+      } else if (propertiesWithCoords.length <= 3) {
+        // Pocas propiedades: zoom medio
+        const currentZoom = mapInstanceRef.current.getZoom() || 12;
+        if (currentZoom > 13) {
+          mapInstanceRef.current.setZoom(13);
+        }
+      }
+    }, 600);
   }, [filters.estado, filters.municipio, filteredProperties, mapReady]);
 
   // Geocodificar selección de estado/municipio cuando no hay propiedades coincidentes
@@ -573,22 +582,45 @@ const Buscar = () => {
       ? `${filters.municipio}, ${filters.estado}, México`
       : `${filters.estado}, México`;
 
+    console.log('[Geocoder] Geocodificando:', address);
+
     geocoder.geocode({ address }, (results, status) => {
       if (status === 'OK' && results && results[0]) {
         const geometry = results[0].geometry;
+        const targetZoom = filters.municipio ? 12 : 7;
+        
         if ((geometry as any).viewport) {
+          // Usar viewport con transición suave
           mapInstanceRef.current?.fitBounds((geometry as any).viewport);
+          setTimeout(() => {
+            const currentZoom = mapInstanceRef.current?.getZoom() || 10;
+            // Ajustar zoom solo si está fuera del rango deseado
+            if (Math.abs(currentZoom - targetZoom) > 2) {
+              mapInstanceRef.current?.setZoom(targetZoom);
+            }
+          }, 500);
         } else if (geometry.location) {
+          // Transición suave al centro
           mapInstanceRef.current?.panTo(geometry.location);
           setTimeout(() => {
-            mapInstanceRef.current?.setZoom(filters.municipio ? 12 : 7);
-          }, 300);
+            mapInstanceRef.current?.setZoom(targetZoom);
+          }, 400);
         }
+        
+        toast({
+          title: '📍 Ubicación encontrada',
+          description: `Mostrando ${filters.municipio || filters.estado}`,
+        });
       } else {
         console.warn('[Geocoder] No se pudo geocodificar:', address, status);
+        toast({
+          title: '⚠️ Ubicación no encontrada',
+          description: 'No se pudo centrar el mapa en esta ubicación',
+          variant: 'destructive',
+        });
       }
     });
-  }, [filters.estado, filters.municipio, filteredProperties.length, mapReady]);
+  }, [filters.estado, filters.municipio, filteredProperties.length, mapReady, toast]);
 
   // Animación de bounce en marcador cuando se hace hover sobre la tarjeta
   // y scroll a tarjeta cuando se hace hover sobre el marcador (bidireccional)
