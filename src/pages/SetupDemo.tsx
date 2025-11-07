@@ -31,9 +31,9 @@ const SetupDemo = () => {
         return;
       }
 
-      setProgress("Actualizando tu perfil a agente inmobiliario...");
+      setProgress("Actualizando tu perfil a agente inmobiliario verificado...");
       
-      const { error } = await supabase.functions.invoke('setup-demo-properties');
+      const { data, error } = await supabase.functions.invoke('setup-demo-properties');
 
       if (error) {
         throw error;
@@ -47,14 +47,18 @@ const SetupDemo = () => {
         description: "Se han creado 20 propiedades de ejemplo. Ahora eres un agente inmobiliario verificado.",
       });
 
+      // Force refresh the session to update role
+      await supabase.auth.refreshSession();
+
       setTimeout(() => {
-        navigate("/agent/dashboard");
+        navigate("/panel-agente");
       }, 2000);
     } catch (error) {
       console.error('Error setting up demo:', error);
+      const errorMessage = error instanceof Error ? error.message : "Hubo un error al configurar las propiedades de demostración";
       toast({
         title: "Error",
-        description: error.message || "Hubo un error al configurar las propiedades de demostración",
+        description: errorMessage,
         variant: "destructive",
       });
       setLoading(false);
@@ -125,7 +129,7 @@ const SetupDemo = () => {
                     </p>
                   </div>
                   <Button 
-                    onClick={() => navigate("/agent/dashboard")}
+                    onClick={() => navigate("/panel-agente")}
                     size="lg"
                   >
                     <Home className="mr-2 h-4 w-4" />
