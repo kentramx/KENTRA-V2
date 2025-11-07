@@ -419,6 +419,17 @@ Deno.serve(async (req) => {
 
     console.log('Setting up demo properties for user:', user.id);
 
+    // Check if demo has already been set up (rate limiting)
+    const { data: existingLog } = await supabase
+      .from('demo_setup_log')
+      .select('created_at')
+      .eq('user_id', user.id)
+      .single();
+
+    if (existingLog) {
+      throw new Error('Demo has already been set up for this account. Each user can only set up demo properties once.');
+    }
+
     // Check if user already has agent role
     const { data: existingRole } = await supabase
       .from('user_roles')
@@ -444,18 +455,9 @@ Deno.serve(async (req) => {
       console.log('Agent role granted to user');
     }
 
-    // Update verification status in profiles
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ is_verified: true })
-      .eq('id', user.id);
-
-    if (profileError) {
-      console.error('Error updating profile:', profileError);
-      throw profileError;
-    }
-
-    console.log('User profile updated');
+    // Do NOT auto-verify - require manual admin approval
+    // is_verified should remain false until admin reviews
+    console.log('Note: User verification requires manual admin approval');
 
     // Create properties with images
     const createdProperties = [];
@@ -535,6 +537,16 @@ Deno.serve(async (req) => {
         console.error('Error with image generation/upload:', imageError);
         createdProperties.push(newProperty);
       }
+    }
+
+    // Log successful setup to prevent re-runs
+    const { error: logError } = await supabase
+      .from('demo_setup_log')
+      .insert({ user_id: user.id });
+
+    if (logError) {
+      console.error('Error logging demo setup:', logError);
+      // Continue even if logging fails
     }
 
     console.log(`Setup complete! Created ${createdProperties.length} properties`);
