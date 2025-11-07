@@ -1,10 +1,10 @@
 /// <reference types="google.maps" />
 import React, { useEffect, useRef, useState } from 'react';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
-import { Loader2, AlertCircle, MapPin } from 'lucide-react';
+import { Loader2, AlertCircle, MapPin, Map as MapIcon, Satellite } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { MarkerClusterer, SuperClusterAlgorithm } from '@googlemaps/markerclusterer';
+import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
 interface Property {
   id: string;
@@ -20,6 +20,7 @@ interface Property {
   created_at?: string;
   bedrooms?: number;
   bathrooms?: number;
+  parking?: number;
   images?: { url: string }[];
 }
 
@@ -56,9 +57,11 @@ export const InteractivePropertyMap = ({
   const clustererRef = useRef<MarkerClusterer | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const locationMarkerRef = useRef<google.maps.Marker | null>(null);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
+  const [mapType, setMapType] = useState<'roadmap' | 'satellite'>('roadmap');
 
   // Helper para verificar si una propiedad es reciente
   const isRecentProperty = (createdAt?: string): boolean => {
@@ -69,88 +72,223 @@ export const InteractivePropertyMap = ({
     return daysDiff <= 7;
   };
 
-  // Generar icono SVG con animación de pulso para propiedades recientes
-  const getPropertyIcon = (type: string, isRecent: boolean): string => {
-    const colors: Record<string, string> = {
-      casa: '#3b82f6',
-      departamento: '#8b5cf6',
-      terreno: '#10b981',
-      oficina: '#f59e0b',
-      local: '#ef4444',
-      bodega: '#6366f1',
-      default: '#6366f1',
+  // Obtener color según tipo de propiedad
+  const getPropertyTypeColor = (type: string): string => {
+    const colorMap: Record<string, string> = {
+      casa: '#3B82F6',           // Azul - Casas
+      departamento: '#10B981',   // Verde - Departamentos
+      terreno: '#92400E',        // Café/Marrón - Terrenos
+      oficina: '#F59E0B',        // Naranja - Oficinas
+      local: '#F59E0B',          // Naranja - Locales comerciales
+      bodega: '#6B7280',         // Gris - Bodegas
+      edificio: '#8B5CF6',       // Púrpura - Edificios
+      rancho: '#84CC16',         // Lima - Ranchos
     };
+    return colorMap[type] || '#3B82F6'; // Azul por defecto
+  };
 
-    const color = colors[type.toLowerCase()] || colors.default;
+  // Generar icono SVG con animación de pulso para propiedades recientes
+  const getPropertyIcon = (type: string, color: string, isRecent: boolean): string => {
+    const icons: Record<string, string> = {
+      casa: `<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>`,
+      departamento: `<rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line>`,
+      terreno: `<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line>`,
+      oficina: `<rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>`,
+      local: `<path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M9 21V9"></path>`,
+      bodega: `<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path>`,
+      edificio: `<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path>`,
+      rancho: `<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>`,
+    };
     
-    const pulseRing = isRecent
-      ? `<circle cx="15" cy="15" r="12" fill="none" stroke="${color}" stroke-width="2" opacity="0.6">
-           <animate attributeName="r" from="12" to="20" dur="1.5s" repeatCount="indefinite"/>
-           <animate attributeName="opacity" from="0.6" to="0" dur="1.5s" repeatCount="indefinite"/>
-         </circle>`
-      : '';
-
-    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="30" height="40" viewBox="0 0 30 40">
-        ${pulseRing}
-        <path d="M15 0C8.4 0 3 5.4 3 12c0 8.3 12 28 12 28s12-19.7 12-28c0-6.6-5.4-12-12-12z" fill="${color}" stroke="white" stroke-width="2"/>
-        <circle cx="15" cy="12" r="5" fill="white"/>
+    const iconPath = icons[type] || icons['casa'];
+    
+    const pulseRing = isRecent ? `
+      <radialGradient id="pulse-${type}">
+        <stop offset="0%" style="stop-color:${color};stop-opacity:0" />
+        <stop offset="100%" style="stop-color:${color};stop-opacity:0.4" />
+      </radialGradient>
+      <circle cx="12" cy="12" r="16" fill="url(#pulse-${type})" opacity="0.7">
+        <animate attributeName="r" from="11" to="18" dur="1.5s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" from="0.7" to="0" dur="1.5s" repeatCount="indefinite"/>
+      </circle>
+    ` : '';
+    
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <defs>
+          <filter id="shadow-${type}" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+            <feOffset dx="0" dy="2" result="offsetblur"/>
+            <feComponentTransfer>
+              <feFuncA type="linear" slope="0.5"/>
+            </feComponentTransfer>
+            <feMerge>
+              <feMergeNode/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <radialGradient id="grad-${type}">
+            <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
+            <stop offset="100%" style="stop-color:${color};stop-opacity:0.9" />
+          </radialGradient>
+          ${pulseRing}
+        </defs>
+        ${isRecent ? pulseRing.split('</radialGradient>')[1] : ''}
+        <circle cx="12" cy="12" r="11" fill="url(#grad-${type})" filter="url(#shadow-${type})" opacity="0.95"/>
+        <circle cx="12" cy="12" r="11" fill="none" stroke="white" stroke-width="2.5" opacity="0.9"/>
+        <g transform="scale(0.65) translate(6, 6)">
+          ${iconPath}
+        </g>
       </svg>
-    `)}`;
+    `;
+  };
+
+  // Formatear precio
+  const formatPrice = (price: number): string => {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(price);
   };
 
   // Crear marcador de propiedad
   const createMarker = (property: Property, map: google.maps.Map): google.maps.Marker | null => {
     if (!property.lat || !property.lng) return null;
 
+    const typeColor = getPropertyTypeColor(property.type);
     const isRecent = isRecentProperty(property.created_at);
+    const iconSvg = getPropertyIcon(property.type, typeColor, isRecent);
+    
+    const svgBlob = new Blob([iconSvg], { type: 'image/svg+xml' });
+    const svgUrl = URL.createObjectURL(svgBlob);
     
     const marker = new google.maps.Marker({
       map,
       position: { lat: Number(property.lat), lng: Number(property.lng) },
       title: property.title,
       icon: {
-        url: getPropertyIcon(property.type, isRecent),
-        scaledSize: new google.maps.Size(30, 40),
-        anchor: new google.maps.Point(15, 40),
+        url: svgUrl,
+        scaledSize: new google.maps.Size(44, 44),
+        anchor: new google.maps.Point(22, 44),
       },
-      animation: google.maps.Animation.DROP,
+      label: {
+        text: new Intl.NumberFormat('es-MX', {
+          style: 'currency',
+          currency: 'MXN',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+          notation: 'compact',
+          compactDisplay: 'short'
+        }).format(property.price).replace('MXN', '').trim(),
+        color: typeColor,
+        fontSize: '11px',
+        fontWeight: 'bold',
+        className: 'marker-price-label'
+      },
+      optimized: false,
     });
 
-    // Animación de rebote inicial
-    marker.setAnimation(google.maps.Animation.BOUNCE);
-    setTimeout(() => marker.setAnimation(null), 1000);
+    // Crear contenido del InfoWindow
+    const createInfoWindowContent = (prop: Property) => {
+      const imageUrl = prop.images && prop.images.length > 0 
+        ? prop.images[0].url 
+        : '/src/assets/property-placeholder.jpg';
+      
+      const features = [];
+      if (prop.bedrooms) features.push(`${prop.bedrooms} rec`);
+      if (prop.bathrooms) features.push(`${prop.bathrooms} baños`);
+      if (prop.parking) features.push(`${prop.parking} est`);
 
-    // InfoWindow con información básica
-    const infoWindow = new google.maps.InfoWindow({
-      content: `
-        <div style="padding: 8px; max-width: 200px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold;">${property.title}</h3>
-          <p style="margin: 0 0 4px 0; color: #059669; font-weight: bold; font-size: 16px;">
-            $${property.price.toLocaleString('es-MX')} ${property.listing_type === 'renta' ? 'MXN/mes' : 'MXN'}
+      const isVenta = prop.listing_type === 'renta';
+      const badgeColor = isVenta ? '#3b82f6' : '#10b981';
+      const badgeBgColor = isVenta ? 'rgba(59, 130, 246, 0.9)' : 'rgba(16, 185, 129, 0.9)';
+      const badgeIcon = isVenta ? '📈' : '🏷️';
+      const badgeText = isVenta ? 'En Renta' : 'En Venta';
+
+      return `
+        <div style="min-width: 280px; max-width: 320px; font-family: system-ui, -apple-system, sans-serif;">
+          <div style="position: relative;">
+            <img 
+              src="${imageUrl}" 
+              alt="${prop.title}"
+              style="width: 100%; height: 160px; object-fit: cover; border-radius: 8px 8px 0 0; margin: -16px -16px 12px -16px;"
+            />
+            <div style="
+              position: absolute;
+              top: -4px;
+              left: -4px;
+              background: ${badgeBgColor};
+              color: white;
+              padding: 6px 12px;
+              border-radius: 6px;
+              font-size: 13px;
+              font-weight: 600;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+              backdrop-filter: blur(4px);
+              border: 2px solid rgba(255,255,255,0.3);
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+            ">
+              <span>${badgeIcon}</span>
+              <span>${badgeText}</span>
+            </div>
+          </div>
+          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1a1a1a; line-height: 1.3;">
+            ${prop.title}
+          </h3>
+          <p style="margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #0EA5E9;">
+            ${formatPrice(prop.price)}
           </p>
-          <p style="margin: 0; font-size: 12px; color: #666;">
-            ${property.municipality}, ${property.state}
+          ${features.length > 0 ? `
+            <div style="display: flex; gap: 12px; margin: 0 0 12px 0; font-size: 14px; color: #666;">
+              ${features.join(' · ')}
+            </div>
+          ` : ''}
+          <p style="margin: 0 0 12px 0; font-size: 13px; color: #666; display: flex; align-items: center; gap: 4px;">
+            <span style="color: #0EA5E9;">📍</span>
+            ${prop.municipality}, ${prop.state}
           </p>
+          <a 
+            href="/propiedad/${prop.id}"
+            style="display: block; width: 100%; padding: 10px 16px; background: #0EA5E9; color: white; text-align: center; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 14px; transition: background 0.2s;"
+            onmouseover="this.style.background='#0284C7'"
+            onmouseout="this.style.background='#0EA5E9'"
+          >
+            Ver detalles
+          </a>
         </div>
-      `,
-    });
+      `;
+    };
 
     marker.addListener('click', () => {
       if (onPropertySelect) {
         onPropertySelect(property);
       }
-      infoWindow.open(map, marker);
+      
+      marker.setAnimation(google.maps.Animation.BOUNCE);
+      setTimeout(() => marker.setAnimation(null), 2100);
+      
+      if (infoWindowRef.current) {
+        infoWindowRef.current.close();
+      }
+
+      infoWindowRef.current = new google.maps.InfoWindow({
+        content: createInfoWindowContent(property),
+        maxWidth: 320,
+      });
+
+      infoWindowRef.current.open(map, marker);
     });
 
     marker.addListener('mouseover', () => {
       marker.setAnimation(google.maps.Animation.BOUNCE);
-      infoWindow.open(map, marker);
     });
 
     marker.addListener('mouseout', () => {
       marker.setAnimation(null);
-      infoWindow.close();
     });
 
     return marker;
@@ -171,6 +309,14 @@ export const InteractivePropertyMap = ({
           zoom: defaultZoom,
           clickableIcons: false,
           gestureHandling: 'greedy',
+          zoomControl: false,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          rotateControl: false,
+          scaleControl: false,
+          panControl: false,
+          mapTypeId: mapType,
           styles: [
             {
               featureType: 'poi',
@@ -267,8 +413,11 @@ export const InteractivePropertyMap = ({
       if (locationMarkerRef.current) {
         locationMarkerRef.current.setMap(null);
       }
+      if (infoWindowRef.current) {
+        infoWindowRef.current.close();
+      }
     };
-  }, [defaultCenter, defaultZoom, showLocationPicker, onLocationSelect]);
+  }, [defaultCenter, defaultZoom, showLocationPicker, onLocationSelect, mapType]);
 
   // Actualizar marcadores cuando cambian las propiedades
   useEffect(() => {
@@ -297,7 +446,6 @@ export const InteractivePropertyMap = ({
       clustererRef.current = new MarkerClusterer({
         map: mapInstanceRef.current,
         markers: newMarkers,
-        algorithm: new SuperClusterAlgorithm({ radius: 100 }),
       });
 
       // Ajustar vista para mostrar todos los marcadores
@@ -315,7 +463,7 @@ export const InteractivePropertyMap = ({
         }
       }
     }
-  }, [properties, isLoading]);
+  }, [properties, isLoading, mapType]);
 
   // Efecto hover desde lista de propiedades
   useEffect(() => {
@@ -384,6 +532,19 @@ export const InteractivePropertyMap = ({
       {!isLoading && (
         <>
           <div className="absolute top-4 right-4 space-y-2">
+            <Button
+              onClick={() => setMapType(mapType === 'roadmap' ? 'satellite' : 'roadmap')}
+              size="icon"
+              variant="secondary"
+              className="shadow-lg"
+              title={mapType === 'roadmap' ? 'Vista Satélite' : 'Vista Mapa'}
+            >
+              {mapType === 'roadmap' ? (
+                <Satellite className="h-4 w-4" />
+              ) : (
+                <MapIcon className="h-4 w-4" />
+              )}
+            </Button>
             <Button
               onClick={handleMyLocation}
               size="icon"
