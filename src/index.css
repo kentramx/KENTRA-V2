@@ -97,13 +97,9 @@ All colors MUST be HSL.
   }
 }
 
-/* Google Places Autocomplete - Legacy & New PlaceAutocompleteElement (2025) */
-.pac-container,
-gmp-place-autocomplete {
-  z-index: 9999 !important;
-}
-
+/* Google Places Autocomplete - asegurar visibilidad */
 .pac-container {
+  z-index: 9999 !important;
   background: hsl(var(--popover));
   color: hsl(var(--popover-foreground));
   box-shadow: 0 10px 30px -10px hsl(var(--primary) / 0.25);
@@ -111,37 +107,6 @@ gmp-place-autocomplete {
   border-radius: calc(var(--radius) - 2px);
   margin-top: 4px;
 }
-
-.pac-item {
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.pac-item:hover {
-  background: hsl(var(--muted));
-}
-
-.pac-item-query {
-  color: hsl(var(--foreground));
-  font-weight: 500;
-}
-
-/* PlaceAutocompleteElement (2025) - Web Component styling */
-gmp-place-autocomplete {
-  width: 100%;
-  font-family: inherit;
-}
-
-gmp-place-autocomplete input {
-  font-family: inherit !important;
-  width: 100%;
-}
-
-gmp-place-autocomplete .pac-container,
-gmp-place-autocomplete [role="listbox"] {
-  background: hsl(var(--popover)) !important;
-  color: hsl(var(--popover-foreground)) !important;
-  border: 1px solid hsl(var(--border)) !important;
-  border-radius: calc(var(--radius) - 2px) !important;
-  box-shadow: 0 10px 30px -10px hsl(var(--primary) / 0.25) !important;
-}
+.pac-item { padding: 8px 12px; cursor: pointer; }
+.pac-item:hover { background: hsl(var(--muted)); }
+.pac-item-query { color: hsl(var(--foreground)); font-weight: 500; }

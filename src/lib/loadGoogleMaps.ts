@@ -61,9 +61,9 @@ export const loadGoogleMaps = (): Promise<typeof google.maps> => {
       const existing = document.querySelector<HTMLScriptElement>('script[data-google-maps]');
       if (existing) return; // initGoogleMaps resolverá
 
-      // Crear y agregar el script con v=beta para PlaceAutocompleteElement
+      // Crear y agregar el script estable con Places legacy y carga async
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&v=beta&callback=initGoogleMaps&language=es&region=MX`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps&language=es&region=MX&loading=async`;
       script.async = true;
       script.defer = true;
       script.setAttribute('data-google-maps', 'true');

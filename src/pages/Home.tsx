@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal, Map } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
-import { PlaceAutocomplete } from "@/components/PlaceAutocomplete";
+import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import PropertyCard from "@/components/PropertyCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,6 +60,12 @@ const Home = () => {
   
   const navigate = useNavigate();
 
+  const { inputRef, isLoaded, error } = usePlacesAutocomplete({
+    onPlaceSelect: (place) => {
+      if (place.formatted_address) setSearchQuery(place.formatted_address);
+    }
+  });
+
   const handlePlaceSelect = (location: {
     address: string;
     municipality: string;
@@ -95,7 +101,6 @@ const Home = () => {
   }) => {
     handlePlaceSelect(location);
   };
-
   const handleSearch = () => {
     const params = new URLSearchParams();
     params.set('tipo_listado', listingType);
@@ -108,7 +113,6 @@ const Home = () => {
     if (parking && parking !== 'all') params.set('estacionamiento', parking);
     navigate(`/propiedades?${params.toString()}`);
   };
-
   useEffect(() => {
     const fetchFeaturedProperties = async () => {
       setIsLoadingProperties(true);
@@ -347,20 +351,27 @@ const Home = () => {
                 </TabsList>
                 
                 <TabsContent value="search" className="mt-4">
-                  <div className="space-y-4">
-                    <PlaceAutocomplete
-                      onPlaceSelect={handlePlaceSelect}
-                      placeholder="Ciudad, colonia o código postal"
-                      label=""
-                      id="hero-place-search"
-                    />
+                  <div className="flex gap-2 rounded-lg bg-white p-2 shadow-2xl">
+                    <div className="flex flex-1 items-center gap-2 px-4">
+                      <MapPin className="h-5 w-5 text-muted-foreground" />
+                      <Input
+                        ref={inputRef}
+                        type="text"
+                        placeholder="Ciudad, colonia o código postal"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                        disabled={!isLoaded && !error}
+                        className="border-0 bg-transparent text-foreground focus-visible:ring-0"
+                      />
+                    </div>
                     <Button
                       onClick={handleSearch}
                       size="lg"
-                      className="w-full bg-secondary hover:bg-secondary/90"
+                      className="bg-secondary hover:bg-secondary/90"
                     >
                       <Search className="mr-2 h-5 w-5" />
-                      Buscar Propiedades
+                      Buscar
                     </Button>
                   </div>
                 </TabsContent>

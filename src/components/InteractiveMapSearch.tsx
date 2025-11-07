@@ -27,7 +27,7 @@ export const InteractiveMapSearch = ({
 }: InteractiveMapSearchProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,11 +42,9 @@ export const InteractiveMapSearch = ({
 
         if (!isMounted || !mapRef.current) return;
 
-        // Inicializar el mapa
         const map = new google.maps.Map(mapRef.current, {
           center: defaultCenter,
           zoom: defaultZoom,
-          mapId: 'INTERACTIVE_MAP_ID', // Required for AdvancedMarkerElement
           clickableIcons: false,
           gestureHandling: 'greedy',
         });
@@ -63,12 +61,10 @@ export const InteractiveMapSearch = ({
 
           // Actualizar marcador
           if (markerRef.current) {
-            markerRef.current.position = { lat, lng };
+            markerRef.current.setPosition({ lat, lng });
           } else {
-            // Crear nuevo marcador usando AdvancedMarkerElement
-            const { AdvancedMarkerElement } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
-            
-            markerRef.current = new AdvancedMarkerElement({
+            // Crear nuevo marcador estándar (sin AdvancedMarker)
+            markerRef.current = new google.maps.Marker({
               map,
               position: { lat, lng },
               title: 'Ubicación seleccionada',
@@ -143,7 +139,7 @@ export const InteractiveMapSearch = ({
     return () => {
       isMounted = false;
       if (markerRef.current) {
-        markerRef.current.map = null;
+        markerRef.current.setMap(null);
       }
     };
   }, [defaultCenter, defaultZoom, onLocationSelect]);
