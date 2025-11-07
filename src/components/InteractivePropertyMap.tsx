@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { loadGoogleMaps, resetGoogleMapsLoader } from '@/lib/loadGoogleMaps';
 import { Loader2, AlertCircle, MapPin, Map as MapIcon, Satellite, Plus, Minus, Home as HomeIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -318,7 +318,7 @@ export const InteractivePropertyMap = ({
   }, []);
 
   // Inicializar mapa
-  useEffect(() => {
+  useLayoutEffect(() => {
     let isMounted = true;
     let timeoutId: NodeJS.Timeout | null = null;
     let progressInterval: NodeJS.Timeout | null = null;
@@ -355,7 +355,7 @@ export const InteractivePropertyMap = ({
               }
               if (mapRef.current) {
                 resolve();
-              } else if (attempts++ < 120) { // ~2s a 60fps
+              } else if (attempts++ < 300) { // ~5s a 60fps
                 requestAnimationFrame(check);
               } else {
                 reject(new Error('Contenedor del mapa no disponible'));
