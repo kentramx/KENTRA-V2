@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { MapPin, Bed, Bath, Car, Home as HomeIcon, Search, AlertCircle, Save, Star, Trash2, X, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -88,6 +89,12 @@ const Buscar = () => {
   const [propertiesInViewport, setPropertiesInViewport] = useState<Property[]>([]);
   const [markersLoadingProgress, setMarkersLoadingProgress] = useState(0);
   const [isLoadingMarkers, setIsLoadingMarkers] = useState(false);
+  
+  // Estado para el slider de precios (en millones)
+  const MIN_PRICE = 0;
+  const MAX_PRICE = 100; // 100 millones
+  const [priceRange, setPriceRange] = useState<[number, number]>([MIN_PRICE, MAX_PRICE]);
+  
   const [savedSearches, setSavedSearches] = useState<any[]>([]);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [searchName, setSearchName] = useState('');
@@ -235,6 +242,42 @@ const Buscar = () => {
         description: 'No se pudo eliminar la búsqueda',
         variant: 'destructive',
       });
+    }
+  };
+
+  // Inicializar slider de precios desde filtros URL
+  useEffect(() => {
+    const minFromUrl = filters.precioMin ? parseFloat(filters.precioMin) / 1000000 : MIN_PRICE;
+    const maxFromUrl = filters.precioMax ? parseFloat(filters.precioMax) / 1000000 : MAX_PRICE;
+    setPriceRange([minFromUrl, maxFromUrl]);
+  }, []);
+
+  // Sincronizar slider con filtros
+  const handlePriceRangeChange = (values: number[]) => {
+    setPriceRange(values as [number, number]);
+    
+    // Actualizar filtros (convertir millones a pesos)
+    setFilters(prev => ({
+      ...prev,
+      precioMin: values[0] === MIN_PRICE ? '' : (values[0] * 1000000).toString(),
+      precioMax: values[1] === MAX_PRICE ? '' : (values[1] * 1000000).toString(),
+    }));
+  };
+
+  // Formatear precio para mostrar
+  const formatPriceDisplay = (millions: number) => {
+    if (millions === 0) return '$0';
+    if (millions === MAX_PRICE) return 'Sin límite';
+    
+    if (millions >= 1) {
+      return `$${millions.toFixed(1)}M`;
+    } else {
+      return new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(millions * 1000000);
     }
   };
 
@@ -1163,24 +1206,51 @@ const Buscar = () => {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Precio mínimo</Label>
-                    <Input
-                      type="number"
-                      placeholder="$0"
-                      value={filters.precioMin}
-                      onChange={(e) => setFilters(prev => ({ ...prev, precioMin: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Precio máximo</Label>
-                    <Input
-                      type="number"
-                      placeholder="Sin límite"
-                      value={filters.precioMax}
-                      onChange={(e) => setFilters(prev => ({ ...prev, precioMax: e.target.value }))}
-                    />
+                  {/* Filtro de rango de precios con slider dual */}
+                  <div className="col-span-2 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Rango de precio</Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setPriceRange([MIN_PRICE, MAX_PRICE]);
+                          setFilters(prev => ({ ...prev, precioMin: '', precioMax: '' }));
+                        }}
+                        className="h-6 px-2 text-xs hover:text-primary transition-colors"
+                      >
+                        Restablecer
+                      </Button>
+                    </div>
+                    
+                    <div className="pt-2 pb-1">
+                      <Slider
+                        min={MIN_PRICE}
+                        max={MAX_PRICE}
+                        step={0.5}
+                        value={priceRange}
+                        onValueChange={handlePriceRangeChange}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between gap-4 pt-1">
+                      <div className="flex-1 px-3 py-2 bg-muted/50 rounded-md border border-border transition-all hover:border-primary/50">
+                        <div className="text-xs text-muted-foreground mb-0.5">Mínimo</div>
+                        <div className="text-sm font-semibold text-foreground">
+                          {formatPriceDisplay(priceRange[0])}
+                        </div>
+                      </div>
+                      
+                      <div className="text-muted-foreground">—</div>
+                      
+                      <div className="flex-1 px-3 py-2 bg-muted/50 rounded-md border border-border transition-all hover:border-primary/50">
+                        <div className="text-xs text-muted-foreground mb-0.5">Máximo</div>
+                        <div className="text-sm font-semibold text-foreground">
+                          {formatPriceDisplay(priceRange[1])}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
