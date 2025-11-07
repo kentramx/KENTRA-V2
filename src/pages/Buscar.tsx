@@ -560,6 +560,36 @@ const Buscar = () => {
     }
   }, [filters.estado, filters.municipio, filteredProperties, mapReady]);
 
+  // Geocodificar selección de estado/municipio cuando no hay propiedades coincidentes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !mapReady) return;
+    if (!filters.estado && !filters.municipio) return;
+
+    // Si ya hay propiedades para mostrar, no geocodificar
+    if (filteredProperties.length > 0) return;
+
+    const geocoder = new google.maps.Geocoder();
+    const address = filters.municipio
+      ? `${filters.municipio}, ${filters.estado}, México`
+      : `${filters.estado}, México`;
+
+    geocoder.geocode({ address }, (results, status) => {
+      if (status === 'OK' && results && results[0]) {
+        const geometry = results[0].geometry;
+        if ((geometry as any).viewport) {
+          mapInstanceRef.current?.fitBounds((geometry as any).viewport);
+        } else if (geometry.location) {
+          mapInstanceRef.current?.panTo(geometry.location);
+          setTimeout(() => {
+            mapInstanceRef.current?.setZoom(filters.municipio ? 12 : 7);
+          }, 300);
+        }
+      } else {
+        console.warn('[Geocoder] No se pudo geocodificar:', address, status);
+      }
+    });
+  }, [filters.estado, filters.municipio, filteredProperties.length, mapReady]);
+
   // Animación de bounce en marcador cuando se hace hover sobre la tarjeta
   // y scroll a tarjeta cuando se hace hover sobre el marcador (bidireccional)
   useEffect(() => {
