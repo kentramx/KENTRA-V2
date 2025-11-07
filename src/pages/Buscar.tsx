@@ -531,7 +531,7 @@ const Buscar = () => {
       });
       mapInstanceRef.current.fitBounds(bounds);
     }
-  }, [filteredProperties]);
+  }, [filteredProperties, mapReady]);
 
   // Hook de autocompletado de lugares
   const handlePlaceSelect = useCallback((location: {
