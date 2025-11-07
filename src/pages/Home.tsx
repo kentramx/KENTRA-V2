@@ -369,7 +369,6 @@ const Home = () => {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                        disabled={!isLoaded && !error}
                         className="border-0 bg-transparent text-foreground focus-visible:ring-0"
                       />
                     </div>
