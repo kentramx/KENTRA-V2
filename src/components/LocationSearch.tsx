@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { MapPin, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
 
 interface LocationSearchProps {
   onLocationSelect: (location: {
@@ -24,78 +25,13 @@ export const LocationSearch = ({ onLocationSelect, defaultValue }: LocationSearc
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkGoogleMaps = () => {
-      if (window.google && window.google.maps && window.google.maps.places) {
+    loadGoogleMaps()
+      .then(() => {
         setIsGoogleMapsReady(true);
-        return true;
-      }
-      return false;
-    };
-
-    const handleMapsLoaded = () => {
-      if (checkGoogleMaps()) {
-        toast({
-          title: "✅ Google Maps cargado",
-          description: "El autocompletado de direcciones está listo",
-        });
-      }
-    };
-
-    const handleMapsError = () => {
-      const error = (window as any).googleMapsLoadError || 'Error desconocido';
-      setLoadError(error);
-      
-      // Diagnóstico basado en errores comunes
-      let diagnostico = '';
-      let solucion = '';
-      
-      if (error.includes('RefererNotAllowedMapError') || error.includes('ApiNotActivatedMapError')) {
-        diagnostico = '🔑 Problema de configuración de Google Cloud';
-        solucion = '1. Ve a Google Cloud Console\n2. Habilita Maps JavaScript API y Places API\n3. En Credenciales, agrega estos dominios:\n   - http://localhost:5173/*\n   - https://*.lovableproject.com/*\n   - Tu dominio personalizado';
-      } else if (error.includes('Script failed')) {
-        diagnostico = '📡 No se pudo cargar el script de Google Maps';
-        solucion = '1. Verifica tu conexión a internet\n2. Revisa que la API key sea válida\n3. Asegúrate de que no haya bloqueadores de contenido';
-      } else if (error.includes('InvalidKey')) {
-        diagnostico = '🔐 API Key inválida o faltante';
-        solucion = '1. Ve a index.html\n2. Reemplaza YOUR_API_KEY_HERE con tu API key real\n3. Obtén una en: https://console.cloud.google.com/apis/credentials';
-      } else {
-        diagnostico = '⚠️ Error al cargar Google Maps';
-        solucion = '1. Verifica la configuración en Google Cloud Console\n2. Revisa la consola del navegador para más detalles';
-      }
-
-      toast({
-        title: diagnostico,
-        description: solucion,
-        variant: "destructive",
-        duration: 10000,
+      })
+      .catch((err) => {
+        setLoadError(err.message);
       });
-      
-      console.error('Google Maps Error Details:', {
-        error,
-        timestamp: new Date().toISOString(),
-        currentUrl: window.location.href,
-      });
-    };
-
-    if (checkGoogleMaps()) {
-      setIsGoogleMapsReady(true);
-    } else {
-      window.addEventListener('google-maps-loaded', handleMapsLoaded);
-      window.addEventListener('google-maps-error', handleMapsError);
-      
-      // Check after a delay if still not loaded
-      const timeoutId = setTimeout(() => {
-        if (!checkGoogleMaps() && !loadError) {
-          handleMapsError();
-        }
-      }, 5000);
-
-      return () => {
-        window.removeEventListener('google-maps-loaded', handleMapsLoaded);
-        window.removeEventListener('google-maps-error', handleMapsError);
-        clearTimeout(timeoutId);
-      };
-    }
   }, []);
 
   useEffect(() => {

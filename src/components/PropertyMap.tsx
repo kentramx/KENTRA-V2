@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { AlertCircle, MapPin } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
 
 interface PropertyMapProps {
   address?: string;
@@ -20,42 +21,18 @@ export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMap
   const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkGoogleMaps = () => {
-      if (window.google && window.google.maps) {
+    loadGoogleMaps()
+      .then(() => {
         setIsGoogleMapsReady(true);
-        return true;
-      }
-      return false;
-    };
-
-    const handleMapsLoaded = () => {
-      if (checkGoogleMaps()) {
-        console.log('Google Maps loaded successfully for map component');
-      }
-    };
-
-    const handleMapsError = () => {
-      const error = (window as any).googleMapsLoadError || 'Error desconocido';
-      setMapError(error);
-      
-      toast({
-        title: "🗺️ Error cargando mapa",
-        description: "Verifica la configuración de Google Maps API. El mapa no se mostrará.",
-        variant: "destructive",
+      })
+      .catch((err) => {
+        setMapError(err.message);
+        toast({
+          title: "🗺️ Error cargando mapa",
+          description: "Verifica la configuración de Google Maps API. El mapa no se mostrará.",
+          variant: "destructive",
+        });
       });
-    };
-
-    if (checkGoogleMaps()) {
-      setIsGoogleMapsReady(true);
-    } else {
-      window.addEventListener('google-maps-loaded', handleMapsLoaded);
-      window.addEventListener('google-maps-error', handleMapsError);
-
-      return () => {
-        window.removeEventListener('google-maps-loaded', handleMapsLoaded);
-        window.removeEventListener('google-maps-error', handleMapsError);
-      };
-    }
   }, []);
 
   useEffect(() => {
