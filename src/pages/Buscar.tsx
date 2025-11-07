@@ -388,6 +388,51 @@ const Buscar = () => {
     }
   }, [filters.estado]);
 
+  // Centrar mapa cuando cambian estado/municipio
+  useEffect(() => {
+    if (!mapInstanceRef.current || !mapReady) return;
+    
+    const geocodeLocation = async () => {
+      // Construir dirección para geocodificación
+      let address = '';
+      if (filters.municipio && filters.estado) {
+        address = `${filters.municipio}, ${filters.estado}, México`;
+      } else if (filters.estado) {
+        address = `${filters.estado}, México`;
+      }
+      
+      if (!address) return;
+
+      try {
+        const geocoder = new google.maps.Geocoder();
+        const result = await geocoder.geocode({ address });
+        
+        if (result.results && result.results[0]) {
+          const location = result.results[0].geometry.location;
+          
+          // Centrar mapa en la ubicación
+          mapInstanceRef.current?.setCenter(location);
+          
+          // Ajustar zoom según el tipo de búsqueda
+          if (filters.municipio) {
+            mapInstanceRef.current?.setZoom(13); // Zoom más cercano para municipio
+          } else {
+            mapInstanceRef.current?.setZoom(10); // Zoom más lejano para estado
+          }
+          
+          toast({
+            title: 'Mapa actualizado',
+            description: `Mostrando ${filters.municipio || filters.estado}`,
+          });
+        }
+      } catch (error) {
+        console.error('Error geocoding location:', error);
+      }
+    };
+
+    geocodeLocation();
+  }, [filters.estado, filters.municipio, mapReady]);
+
   // Función para remover filtro individual
   const removeFilter = (filterKey: keyof Filters) => {
     setFilters(prev => ({
