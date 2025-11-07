@@ -54,6 +54,7 @@ const Home = () => {
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState<'search' | 'map'>('search');
   
   // Advanced filters
   const [priceMin, setPriceMin] = useState("");
@@ -345,7 +346,7 @@ const Home = () => {
               </Collapsible>
 
               {/* Tabs para búsqueda por texto o mapa */}
-              <Tabs defaultValue="search" className="w-full">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'search' | 'map')} className="w-full">
                 <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 bg-white/95">
                   <TabsTrigger value="search" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                     <Search className="mr-2 h-4 w-4" />
@@ -384,12 +385,14 @@ const Home = () => {
                 </TabsContent>
                 
                 <TabsContent value="map" className="mt-4">
-                  <InteractivePropertyMap
-                    properties={featuredProperties}
-                    onPropertySelect={(property) => navigate(`/propiedad/${property.id}`)}
-                    height="500px"
-                    defaultZoom={5}
-                  />
+                  {activeTab === 'map' && (
+                    <InteractivePropertyMap
+                      properties={featuredProperties}
+                      onPropertySelect={(property) => navigate(`/propiedad/${property.id}`)}
+                      height="500px"
+                      defaultZoom={5}
+                    />
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
