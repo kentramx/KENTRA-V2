@@ -16,6 +16,7 @@ import Auth from "./pages/Auth";
 import Buscar from "./pages/Buscar";
 import MessagesPage from "./pages/MessagesPage";
 import InstallPWA from "./pages/InstallPWA";
+import SetupDemo from "./pages/SetupDemo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/panel-agente" element={<AgentDashboard />} />
             <Route path="/mensajes" element={<MessagesPage />} />
             <Route path="/instalar" element={<InstallPWA />} />
+            <Route path="/setup-demo" element={<SetupDemo />} />
             <Route path="/auth" element={<Auth />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
