@@ -84,6 +84,8 @@ const Buscar = () => {
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [mapType, setMapType] = useState<'roadmap' | 'satellite'>('roadmap');
   const [visiblePropertiesCount, setVisiblePropertiesCount] = useState(0);
+  const [mapFilterActive, setMapFilterActive] = useState(false);
+  const [propertiesInViewport, setPropertiesInViewport] = useState<Property[]>([]);
   const [savedSearches, setSavedSearches] = useState<any[]>([]);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [searchName, setSearchName] = useState('');
@@ -125,6 +127,9 @@ const Buscar = () => {
       }
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
+
+  // Propiedades a mostrar según el filtro de viewport
+  const propertiesToDisplay = mapFilterActive ? propertiesInViewport : filteredProperties;
 
   // Cargar búsquedas guardadas del usuario
   useEffect(() => {
@@ -482,6 +487,11 @@ const Buscar = () => {
           if (!isMounted) return;
           console.log('[Mapa] idle - listo para renderizar marcadores');
           setMapReady(true);
+          
+          // Activar filtro de viewport cuando el mapa se detiene
+          if (mapFilterActive) {
+            throttledViewportFilter();
+          }
         });
 
 
@@ -916,11 +926,14 @@ const Buscar = () => {
             lng: position.coords.longitude
           };
           
-          mapInstanceRef.current?.setCenter(pos);
-          mapInstanceRef.current?.setZoom(14);
+          // Movimiento suave al centro
+          mapInstanceRef.current?.panTo(pos);
+          setTimeout(() => {
+            mapInstanceRef.current?.setZoom(14);
+          }, 500);
 
-          // Añadir marcador temporal
-          new google.maps.Marker({
+          // Añadir marcador temporal con animación
+          const myLocationMarker = new google.maps.Marker({
             position: pos,
             map: mapInstanceRef.current,
             icon: {
@@ -932,6 +945,7 @@ const Buscar = () => {
               strokeWeight: 2,
             },
             title: 'Tu ubicación',
+            animation: google.maps.Animation.DROP,
           });
 
           toast({
@@ -965,17 +979,63 @@ const Buscar = () => {
     lng?: number;
   }) => {
     if (location.lat && location.lng && mapInstanceRef.current) {
-      mapInstanceRef.current.setCenter({ lat: Number(location.lat), lng: Number(location.lng) });
-      mapInstanceRef.current.setZoom(14);
+      // Movimiento suave con panTo
+      mapInstanceRef.current.panTo({ lat: Number(location.lat), lng: Number(location.lng) });
+      setTimeout(() => {
+        mapInstanceRef.current?.setZoom(14);
+      }, 500);
     }
   }, []);
 
 
+  // Filtrar propiedades por área visible del mapa
+  const filterPropertiesByViewport = useCallback(() => {
+    if (!mapInstanceRef.current) return;
+    
+    const bounds = mapInstanceRef.current.getBounds();
+    if (!bounds) return;
+
+    const propertiesInBounds = filteredProperties.filter(property => {
+      if (!property.lat || !property.lng) return false;
+      
+      const position = new google.maps.LatLng(
+        Number(property.lat),
+        Number(property.lng)
+      );
+      
+      return bounds.contains(position);
+    });
+
+    setPropertiesInViewport(propertiesInBounds);
+  }, [filteredProperties]);
+
+  // Versión throttled del filtro de viewport
+  const throttledViewportFilter = useCallback(
+    throttle(filterPropertiesByViewport, 500),
+    [filterPropertiesByViewport]
+  );
+
+  // Ejecutar filtro cuando se activa/desactiva
+  useEffect(() => {
+    if (mapFilterActive) {
+      filterPropertiesByViewport();
+      toast({
+        title: 'Filtro de mapa activado',
+        description: 'Mostrando propiedades del área visible',
+      });
+    } else {
+      setPropertiesInViewport([]);
+    }
+  }, [mapFilterActive, filterPropertiesByViewport, toast]);
+
   const handlePropertyClick = (property: Property) => {
     setHighlightedId(property.id);
     if (property.lat && property.lng && mapInstanceRef.current) {
-      mapInstanceRef.current.setCenter({ lat: Number(property.lat), lng: Number(property.lng) });
-      mapInstanceRef.current.setZoom(16);
+      // Movimiento suave con panTo
+      mapInstanceRef.current.panTo({ lat: Number(property.lat), lng: Number(property.lng) });
+      setTimeout(() => {
+        mapInstanceRef.current?.setZoom(16);
+      }, 500);
     }
   };
 
@@ -1329,11 +1389,14 @@ const Buscar = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">
-                  {filteredProperties.length} {filteredProperties.length === 1 ? 'Propiedad' : 'Propiedades'}
+                  {mapFilterActive 
+                    ? `${propertiesToDisplay.length} ${propertiesToDisplay.length === 1 ? 'propiedad' : 'propiedades'} en el área visible`
+                    : `${filteredProperties.length} ${filteredProperties.length === 1 ? 'Propiedad' : 'Propiedades'}`
+                  }
                 </h2>
               </div>
 
-              {filteredProperties.length === 0 ? (
+              {propertiesToDisplay.length === 0 ? (
                 <Card>
                   <CardContent className="p-8 text-center">
                     <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -1344,16 +1407,17 @@ const Buscar = () => {
                 </Card>
               ) : (
                 <div className="space-y-4 max-h-[800px] overflow-y-auto pr-2">
-                  {filteredProperties.map((property) => (
+                  {propertiesToDisplay.map((property, index) => (
                     <Link
                       key={property.id}
                       to={`/propiedad/${property.id}`}
                       id={`property-${property.id}`}
                     >
                       <Card
-                        className={`cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] animate-fade-in ${
-                          highlightedId === property.id ? 'ring-2 ring-primary shadow-xl' : ''
+                        className={`cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] animate-fade-in ${
+                          highlightedId === property.id ? 'ring-2 ring-primary shadow-xl scale-[1.01]' : ''
                         }`}
+                        style={{ animationDelay: `${index * 50}ms` }}
                         onClick={() => handlePropertyClick(property)}
                         onMouseEnter={() => setHoveredPropertyId(property.id)}
                         onMouseLeave={() => setHoveredPropertyId(null)}
@@ -1442,10 +1506,10 @@ const Buscar = () => {
                 )}
 
                 {/* Controles personalizados del mapa */}
-                {!isMapLoading && mapReady && (
+                 {!isMapLoading && mapReady && (
                   <div className="absolute top-4 right-4 z-10 space-y-2">
                     {/* Contador de propiedades */}
-                    <div className="bg-background border-2 border-border rounded-lg shadow-lg px-4 py-2 animate-fade-in">
+                    <div className="bg-background border-2 border-border rounded-lg shadow-lg px-4 py-2 animate-fade-in transition-all hover:shadow-xl hover:scale-105">
                       <div className="flex items-center gap-2">
                         <HomeIcon className="h-4 w-4 text-primary" />
                         <span className="text-sm font-semibold">
@@ -1461,7 +1525,7 @@ const Buscar = () => {
                         size="icon"
                         onClick={centerOnResults}
                         disabled={visiblePropertiesCount === 0}
-                        className="w-full rounded-none border-b border-border hover:bg-accent"
+                        className="w-full rounded-none border-b border-border hover:bg-accent transition-all hover:scale-105"
                         title="Centrar en resultados"
                       >
                         <MapPin className="h-5 w-5" />
@@ -1471,16 +1535,16 @@ const Buscar = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => setMapType(prev => prev === 'roadmap' ? 'satellite' : 'roadmap')}
-                        className="w-full rounded-none border-b border-border hover:bg-accent"
+                        className="w-full rounded-none border-b border-border hover:bg-accent transition-all hover:scale-105"
                         title={mapType === 'roadmap' ? 'Vista satélite' : 'Vista mapa'}
                       >
                         {mapType === 'roadmap' ? (
-                          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <circle cx="12" cy="12" r="10"/>
                             <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                           </svg>
                         ) : (
-                          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>
                           </svg>
                         )}
@@ -1490,10 +1554,10 @@ const Buscar = () => {
                         variant="ghost"
                         size="icon"
                         onClick={centerOnMyLocation}
-                        className="w-full rounded-none hover:bg-accent"
+                        className="w-full rounded-none hover:bg-accent transition-all hover:scale-105"
                         title="Mi ubicación"
                       >
-                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <circle cx="12" cy="12" r="3"/>
                           <circle cx="12" cy="12" r="10"/>
                           <line x1="12" y1="2" x2="12" y2="4"/>
@@ -1503,6 +1567,26 @@ const Buscar = () => {
                         </svg>
                       </Button>
                     </div>
+
+                    {/* Botón de filtro por viewport */}
+                    <Button
+                      variant={mapFilterActive ? "default" : "outline"}
+                      size="icon"
+                      onClick={() => setMapFilterActive(!mapFilterActive)}
+                      className="w-full transition-all hover:scale-105 animate-fade-in shadow-lg"
+                      title={mapFilterActive ? "Desactivar filtro de mapa" : "Filtrar por área visible"}
+                    >
+                      <svg 
+                        className={`h-5 w-5 transition-transform ${mapFilterActive ? 'scale-110' : ''}`}
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+                      </svg>
+                    </Button>
                   </div>
                 )}
               </Card>
