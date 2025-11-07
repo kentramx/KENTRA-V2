@@ -178,7 +178,7 @@ const Home = () => {
           </p>
 
           {/* Search Bar */}
-          <div className="mx-auto max-w-3xl">
+          <div className="mx-auto max-w-3xl relative z-50 pointer-events-auto">
             <div className="flex flex-col gap-4">
               {/* Listing Type Selector */}
               <div className="flex justify-center gap-2">
@@ -372,14 +372,24 @@ const Home = () => {
                         className="border-0 bg-transparent text-foreground focus-visible:ring-0"
                       />
                     </div>
-                    <Button
-                      onClick={handleSearch}
-                      size="lg"
-                      className="bg-secondary hover:bg-secondary/90"
-                    >
-                      <Search className="mr-2 h-5 w-5" />
-                      Buscar
-                    </Button>
+                      <Button
+                        onClick={handleSearch}
+                        size="lg"
+                        className="bg-secondary hover:bg-secondary/90"
+                      >
+                        <Search className="mr-2 h-5 w-5" />
+                        Buscar
+                      </Button>
+                      <Button
+                        onClick={() => setActiveTab('map')}
+                        size="lg"
+                        variant="outline"
+                        className="border-white/50 bg-white/90 text-foreground hover:bg-white"
+                        title="Abrir mapa interactivo"
+                      >
+                        <MapIcon className="mr-2 h-5 w-5" />
+                        Mapa Interactivo
+                      </Button>
                   </div>
                 </TabsContent>
                 
