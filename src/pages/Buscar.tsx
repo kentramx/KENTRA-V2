@@ -995,30 +995,33 @@ const Buscar = () => {
         setIsLoadingMarkers(false);
         setMarkersLoadingProgress(100);
 
-        // Agregar clustering con renderizado personalizado
+        // Agregar clustering con renderizado personalizado y animaciones
         if (newMarkers.length > 0) {
-          // Función para obtener color según densidad de cluster
-          const getClusterColor = (count: number): string => {
-            if (count < 5) return '#10B981'; // Verde - baja densidad
-            if (count < 10) return '#3B82F6'; // Azul - media densidad
-            if (count < 20) return '#F59E0B'; // Naranja - alta densidad
-            return '#EF4444'; // Rojo - muy alta densidad
+          // Función para obtener color y tamaño según densidad de cluster
+          const getClusterStyle = (count: number): { color: string; size: number; label: string } => {
+            if (count < 5) return { color: '#10B981', size: 50, label: 'Baja densidad' };
+            if (count < 10) return { color: '#3B82F6', size: 55, label: 'Media densidad' };
+            if (count < 20) return { color: '#F59E0B', size: 60, label: 'Alta densidad' };
+            if (count < 50) return { color: '#EF4444', size: 65, label: 'Muy alta densidad' };
+            return { color: '#DC2626', size: 70, label: 'Densidad extrema' };
           };
 
-          // Crear renderer personalizado para clusters
+          // Crear renderer personalizado para clusters con diseño mejorado
           const renderer = {
-            render: ({ count, position }: { count: number; position: google.maps.LatLng }) => {
-              const color = getClusterColor(count);
+            render: (cluster: any) => {
+              const count = cluster.count;
+              const position = cluster.position;
+              const style = getClusterStyle(count);
               
-              // Crear SVG del cluster con estilo mejorado
+              // Crear SVG del cluster con estilo moderno y animaciones
               const svg = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60">
+                <svg xmlns="http://www.w3.org/2000/svg" width="${style.size + 20}" height="${style.size + 20}" viewBox="0 0 ${style.size + 20} ${style.size + 20}">
                   <defs>
                     <filter id="shadow-${count}" x="-50%" y="-50%" width="200%" height="200%">
-                      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-                      <feOffset dx="0" dy="2" result="offsetblur"/>
+                      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+                      <feOffset dx="0" dy="3" result="offsetblur"/>
                       <feComponentTransfer>
-                        <feFuncA type="linear" slope="0.3"/>
+                        <feFuncA type="linear" slope="0.4"/>
                       </feComponentTransfer>
                       <feMerge>
                         <feMergeNode/>
@@ -1026,17 +1029,66 @@ const Buscar = () => {
                       </feMerge>
                     </filter>
                     <radialGradient id="grad-${count}">
-                      <stop offset="0%" style="stop-color:${color};stop-opacity:0.9" />
-                      <stop offset="100%" style="stop-color:${color};stop-opacity:1" />
+                      <stop offset="0%" style="stop-color:${style.color};stop-opacity:1" />
+                      <stop offset="70%" style="stop-color:${style.color};stop-opacity:0.95" />
+                      <stop offset="100%" style="stop-color:${style.color};stop-opacity:0.85" />
+                    </radialGradient>
+                    <radialGradient id="pulse-${count}">
+                      <stop offset="0%" style="stop-color:${style.color};stop-opacity:0" />
+                      <stop offset="100%" style="stop-color:${style.color};stop-opacity:0.3" />
                     </radialGradient>
                   </defs>
-                  <circle cx="30" cy="30" r="24" fill="url(#grad-${count})" filter="url(#shadow-${count})" stroke="white" stroke-width="3"/>
-                  <text x="30" y="30" text-anchor="middle" dominant-baseline="central" 
+                  
+                  <!-- Anillo pulsante exterior -->
+                  <circle cx="${(style.size + 20) / 2}" cy="${(style.size + 20) / 2}" r="${style.size / 2 + 8}" 
+                          fill="url(#pulse-${count})" opacity="0.6">
+                    <animate attributeName="r" 
+                             from="${style.size / 2 + 5}" 
+                             to="${style.size / 2 + 12}" 
+                             dur="2s" 
+                             repeatCount="indefinite"/>
+                    <animate attributeName="opacity" 
+                             from="0.6" 
+                             to="0" 
+                             dur="2s" 
+                             repeatCount="indefinite"/>
+                  </circle>
+                  
+                  <!-- Círculo principal con gradiente -->
+                  <circle cx="${(style.size + 20) / 2}" cy="${(style.size + 20) / 2}" r="${style.size / 2 - 2}" 
+                          fill="url(#grad-${count})" 
+                          filter="url(#shadow-${count})" 
+                          stroke="white" 
+                          stroke-width="4"
+                          opacity="0.95"/>
+                  
+                  <!-- Círculo interior decorativo -->
+                  <circle cx="${(style.size + 20) / 2}" cy="${(style.size + 20) / 2}" r="${style.size / 2 - 8}" 
+                          fill="none" 
+                          stroke="white" 
+                          stroke-width="2"
+                          opacity="0.3"/>
+                  
+                  <!-- Texto del número -->
+                  <text x="${(style.size + 20) / 2}" y="${(style.size + 20) / 2}" 
+                        text-anchor="middle" 
+                        dominant-baseline="central" 
                         font-family="system-ui, -apple-system, sans-serif" 
-                        font-size="18" 
-                        font-weight="700" 
-                        fill="white">
+                        font-size="${count > 99 ? '16' : '20'}" 
+                        font-weight="800" 
+                        fill="white"
+                        letter-spacing="0.5">
                     ${count}
+                  </text>
+                  
+                  <!-- Icono de propiedades debajo del número -->
+                  <text x="${(style.size + 20) / 2}" y="${(style.size + 20) / 2 + 14}" 
+                        text-anchor="middle" 
+                        font-size="8" 
+                        fill="white"
+                        opacity="0.8"
+                        font-weight="600">
+                    PROPS
                   </text>
                 </svg>
               `;
@@ -1045,15 +1097,40 @@ const Buscar = () => {
               const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
               const svgUrl = URL.createObjectURL(svgBlob);
               
-              return new google.maps.Marker({
+              const clusterMarker = new google.maps.Marker({
                 position,
                 icon: {
                   url: svgUrl,
-                  scaledSize: new google.maps.Size(60, 60),
-                  anchor: new google.maps.Point(30, 30),
+                  scaledSize: new google.maps.Size(style.size + 20, style.size + 20),
+                  anchor: new google.maps.Point((style.size + 20) / 2, (style.size + 20) / 2),
                 },
                 zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+                title: `${count} propiedades en esta zona`,
               });
+
+              // Animación inicial de aparición
+              clusterMarker.setOpacity(0);
+              setTimeout(() => {
+                let opacity = 0;
+                const fadeIn = setInterval(() => {
+                  opacity += 0.2;
+                  clusterMarker.setOpacity(Math.min(opacity, 1));
+                  if (opacity >= 1) {
+                    clearInterval(fadeIn);
+                  }
+                }, 30);
+              }, 100);
+
+              // Hover effect en cluster
+              clusterMarker.addListener('mouseover', () => {
+                clusterMarker.setZIndex(Number(google.maps.Marker.MAX_ZINDEX) + count + 1000);
+              });
+
+              clusterMarker.addListener('mouseout', () => {
+                clusterMarker.setZIndex(Number(google.maps.Marker.MAX_ZINDEX) + count);
+              });
+              
+              return clusterMarker;
             },
           };
 
@@ -1062,17 +1139,29 @@ const Buscar = () => {
             markers: newMarkers,
             renderer,
             onClusterClick: (event, cluster, map) => {
-              // Animación al hacer clic en cluster
-              map.fitBounds(cluster.bounds as google.maps.LatLngBounds, {
-                bottom: 100,
-                left: 100,
-                right: 100,
-                top: 100,
+              // Animación suave al hacer clic en cluster
+              const bounds = cluster.bounds as google.maps.LatLngBounds;
+              
+              // Zoom con animación smooth
+              map.fitBounds(bounds, {
+                bottom: 150,
+                left: 150,
+                right: 150,
+                top: 150,
               });
               
+              // Incrementar zoom levemente para mejor visualización
+              setTimeout(() => {
+                const currentZoom = map.getZoom() || 12;
+                if (currentZoom < 18) {
+                  map.setZoom(currentZoom + 1);
+                }
+              }, 400);
+              
+              const style = getClusterStyle(cluster.count);
               toast({
-                title: 'Cluster expandido',
-                description: `Mostrando ${cluster.count} propiedades`,
+                title: `🏘️ ${cluster.count} Propiedades`,
+                description: `${style.label} - Expandiendo área`,
               });
             },
           });
