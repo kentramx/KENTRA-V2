@@ -188,56 +188,93 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
       if (statsError) throw statsError;
       setStats(statsData?.[0] || null);
 
-      // Fetch property performance
+      // Fetch property performance with individual queries for each metric
       const { data: propertiesData, error: propertiesError } = await supabase
         .from("properties")
-        .select(`
-          id,
-          title,
-          property_views (count),
-          favorites (count),
-          conversations (count)
-        `)
+        .select("id, title")
         .eq("agent_id", agentId)
+        .order("created_at", { ascending: false })
         .limit(10);
 
       if (propertiesError) throw propertiesError;
 
-      const performance = propertiesData?.map((p: any) => ({
-        id: p.id,
-        title: p.title.length > 30 ? p.title.substring(0, 30) + "..." : p.title,
-        views: p.property_views?.[0]?.count || 0,
-        favorites: p.favorites?.[0]?.count || 0,
-        conversations: p.conversations?.[0]?.count || 0,
-      })) || [];
+      // For each property, fetch views, favorites, and conversations counts
+      const performance = await Promise.all(
+        (propertiesData || []).map(async (property) => {
+          const [viewsResult, favoritesResult, conversationsResult] = await Promise.all([
+            supabase
+              .from("property_views")
+              .select("id", { count: "exact", head: true })
+              .eq("property_id", property.id),
+            supabase
+              .from("favorites")
+              .select("id", { count: "exact", head: true })
+              .eq("property_id", property.id),
+            supabase
+              .from("conversations")
+              .select("id", { count: "exact", head: true })
+              .eq("property_id", property.id),
+          ]);
 
+          return {
+            id: property.id,
+            title: property.title.length > 30 ? property.title.substring(0, 30) + "..." : property.title,
+            views: viewsResult.count || 0,
+            favorites: favoritesResult.count || 0,
+            conversations: conversationsResult.count || 0,
+          };
+        })
+      );
+
+      // Sort by views descending
+      performance.sort((a, b) => b.views - a.views);
       setPropertyPerformance(performance);
 
-      // Fetch views over time (last 30 days)
+      // Fetch views over time (last 30 days) - only for agent's properties
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const { data: viewsData, error: viewsError } = await supabase
-        .from("property_views")
-        .select("viewed_at")
-        .gte("viewed_at", thirtyDaysAgo.toISOString())
-        .order("viewed_at", { ascending: true });
+      // First get all property IDs for this agent
+      const { data: agentProperties } = await supabase
+        .from("properties")
+        .select("id")
+        .eq("agent_id", agentId);
 
-      if (viewsError) throw viewsError;
+      const propertyIds = agentProperties?.map(p => p.id) || [];
 
-      // Group views by date
-      const viewsByDate: { [key: string]: number } = {};
-      viewsData?.forEach((view: any) => {
-        const date = new Date(view.viewed_at).toLocaleDateString("es-MX");
-        viewsByDate[date] = (viewsByDate[date] || 0) + 1;
-      });
+      if (propertyIds.length > 0) {
+        const { data: viewsData, error: viewsError } = await supabase
+          .from("property_views")
+          .select("viewed_at, property_id")
+          .in("property_id", propertyIds)
+          .gte("viewed_at", thirtyDaysAgo.toISOString())
+          .order("viewed_at", { ascending: true });
 
-      const viewsTimeData = Object.entries(viewsByDate).map(([date, views]) => ({
-        date,
-        views,
-      }));
+        if (viewsError) throw viewsError;
 
-      setViewsOverTime(viewsTimeData);
+        // Group views by date
+        const viewsByDate: { [key: string]: number } = {};
+        viewsData?.forEach((view: any) => {
+          const date = new Date(view.viewed_at).toISOString().split('T')[0];
+          viewsByDate[date] = (viewsByDate[date] || 0) + 1;
+        });
+
+        // Fill in missing dates with 0 views
+        const viewsTimeData: ViewsOverTime[] = [];
+        for (let i = 29; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+          viewsTimeData.push({
+            date: date.toLocaleDateString("es-MX", { month: 'short', day: 'numeric' }),
+            views: viewsByDate[dateStr] || 0,
+          });
+        }
+
+        setViewsOverTime(viewsTimeData);
+      } else {
+        setViewsOverTime([]);
+      }
     } catch (error) {
       console.error("Error fetching analytics:", error);
     } finally {
@@ -289,6 +326,46 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
 
   return (
     <div className="space-y-6">
+      {/* Best Performing Property Card */}
+      {propertyPerformance.length > 0 && (
+        <Card className="border-primary/50 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Mejor Propiedad del Mes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold">{propertyPerformance[0].title}</h3>
+              <div className="grid grid-cols-3 gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-blue-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{propertyPerformance[0].views}</p>
+                    <p className="text-sm text-muted-foreground">Vistas</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-red-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{propertyPerformance[0].favorites}</p>
+                    <p className="text-sm text-muted-foreground">Favoritos</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-purple-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{propertyPerformance[0].conversations}</p>
+                    <p className="text-sm text-muted-foreground">Leads</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Export Buttons */}
       <Card>
         <CardContent className="pt-6">
