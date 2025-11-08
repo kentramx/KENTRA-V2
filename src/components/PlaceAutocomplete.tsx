@@ -44,6 +44,12 @@ export const PlaceAutocomplete = ({
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
 
+  // keep latest onPlaceSelect without recreating input
+  const onPlaceSelectRef = React.useRef(onPlaceSelect);
+  useEffect(() => {
+    onPlaceSelectRef.current = onPlaceSelect;
+  }, [onPlaceSelect]);
+
   useEffect(() => {
     loadGoogleMaps()
       .then(() => {
@@ -122,7 +128,7 @@ export const PlaceAutocomplete = ({
           });
         }
 
-        onPlaceSelect(location);
+        onPlaceSelectRef.current?.(location);
         toast({ title: '📍 Ubicación seleccionada', description: `${location.municipality}, ${location.state}` });
       });
 
@@ -144,7 +150,7 @@ export const PlaceAutocomplete = ({
         input.removeEventListener('input', onInputChange);
       }
     };
-  }, [isLoaded, placeholder, defaultValue, onPlaceSelect]);
+  }, [isLoaded, placeholder, defaultValue]);
 
   if (loadError) {
     return (
