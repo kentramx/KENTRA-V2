@@ -83,6 +83,7 @@ const Buscar = () => {
 
   const [estados] = useState<string[]>(mexicoStates);
   const [municipios, setMunicipios] = useState<string[]>([]);
+  const [hoveredProperty, setHoveredProperty] = useState<Property | null>(null);
 
   const filteredSavedSearches = savedSearches
     .filter(search => 
@@ -464,9 +465,11 @@ const Buscar = () => {
     .filter(p => typeof p.lat === 'number' && typeof p.lng === 'number')
     .map(p => ({ id: p.id, lat: p.lat as number, lng: p.lng as number }));
 
-  const defaultCenter = mapMarkers.length > 0
-    ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
-    : { lat: 19.4326, lng: -99.1332 };
+  const mapCenter = hoveredProperty && hoveredProperty.lat && hoveredProperty.lng
+    ? { lat: hoveredProperty.lat, lng: hoveredProperty.lng }
+    : (mapMarkers.length > 0
+        ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
+        : { lat: 19.4326, lng: -99.1332 });
 
   if (loading) {
     return (
@@ -834,6 +837,8 @@ const Buscar = () => {
                         className="cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] animate-fade-in"
                         style={{ animationDelay: `${index * 50}ms` }}
                         onClick={() => handlePropertyClick(property)}
+                        onMouseEnter={() => setHoveredProperty(property)}
+                        onMouseLeave={() => setHoveredProperty(null)}
                       >
                         <CardContent className="p-4">
                           <div className="mb-4 relative">
@@ -933,7 +938,7 @@ const Buscar = () => {
           {/* Panel derecho: Mapa */}
           <div className="lg:sticky lg:top-20">
             <BasicGoogleMap
-              center={defaultCenter}
+              center={mapCenter}
               zoom={12}
               markers={mapMarkers}
               height="calc(100vh - 8rem)"

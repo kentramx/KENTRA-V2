@@ -152,6 +152,19 @@ export function BasicGoogleMap({
     }
   }, [markers, enableClustering]);
 
+  // Centrar el mapa cuando cambie la prop center
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !center) return;
+    
+    map.panTo(center);
+    // Ajustar zoom si está muy alejado
+    const currentZoom = map.getZoom();
+    if (currentZoom && currentZoom < 14) {
+      map.setZoom(14);
+    }
+  }, [center]);
+
   if (error) {
     return (
       <div className="flex h-full items-center justify-center text-destructive text-sm">
