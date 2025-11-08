@@ -1,19 +1,12 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
+import { DynamicBreadcrumbs } from "@/components/DynamicBreadcrumbs";
 import {
   Carousel,
   CarouselContent,
@@ -259,39 +252,20 @@ const PropertyDetail = () => {
 
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumbs */}
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/">Inicio</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/buscar">Buscar</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to={`/buscar?estado=${property.state}`}>{property.state}</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to={`/buscar?estado=${property.state}&municipio=${property.municipality}`}>
-                  {property.municipality}
-                </Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{property.title}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+        <DynamicBreadcrumbs 
+          items={[
+            { label: 'Inicio', href: '/', active: false },
+            { label: 'Buscar', href: '/buscar', active: false },
+            { label: property.state, href: `/buscar?estado=${property.state}`, active: false },
+            { 
+              label: property.municipality, 
+              href: `/buscar?estado=${property.state}&municipio=${property.municipality}`, 
+              active: false 
+            },
+            { label: property.title, href: '', active: true }
+          ]} 
+          className="mb-4" 
+        />
 
         <div className="mb-4 flex items-center justify-between">
           <Button

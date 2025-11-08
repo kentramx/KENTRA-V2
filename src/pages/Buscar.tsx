@@ -26,14 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { mexicoStates, mexicoMunicipalities } from '@/data/mexicoLocations';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { PropertyStats } from '@/components/PropertyStats';
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
+import { DynamicBreadcrumbs, type BreadcrumbItem } from '@/components/DynamicBreadcrumbs';
 
 interface Property {
   id: string;
@@ -601,8 +594,8 @@ const Buscar = () => {
         ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
         : { lat: 19.4326, lng: -99.1332 });
 
-  const getBreadcrumbItems = () => {
-    const items = [
+  const getBreadcrumbItems = (): BreadcrumbItem[] => {
+    const items: BreadcrumbItem[] = [
       { label: 'Inicio', href: '/', active: false }
     ];
 
@@ -651,24 +644,7 @@ const Buscar = () => {
       
       <main className="container mx-auto px-4 pt-20 pb-8">
         {/* Breadcrumbs */}
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            {getBreadcrumbItems().map((item, index, array) => (
-              <div key={item.href} className="contents">
-                <BreadcrumbItem>
-                  {item.active ? (
-                    <BreadcrumbPage>{item.label}</BreadcrumbPage>
-                  ) : (
-                    <BreadcrumbLink asChild>
-                      <Link to={item.href}>{item.label}</Link>
-                    </BreadcrumbLink>
-                  )}
-                </BreadcrumbItem>
-                {index < array.length - 1 && <BreadcrumbSeparator />}
-              </div>
-            ))}
-          </BreadcrumbList>
-        </Breadcrumb>
+        <DynamicBreadcrumbs items={getBreadcrumbItems()} className="mb-4" />
 
         {/* Barra de búsqueda estilo Zillow */}
         <Card className="mb-4 shadow-sm border-border/40">
