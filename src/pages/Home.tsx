@@ -346,7 +346,7 @@ const Home = () => {
                 
                 <TabsContent value="search" className="mt-4">
                   <div className="flex gap-2 rounded-lg bg-white p-2 shadow-2xl">
-                    <div className="flex flex-1 items-center">
+                    <div className="flex flex-1 items-center max-w-2xl">
                       <PlaceAutocomplete
                         onPlaceSelect={handlePlaceSelect}
                         placeholder="Ciudad, colonia o código postal"
