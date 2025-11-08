@@ -89,7 +89,7 @@ const Home = () => {
       params.set('busqueda', location.address);
     }
 
-    navigate(`/propiedades?${params.toString()}`);
+    navigate(`/buscar?${params.toString()}`);
   };
 
   const handleMapLocationSelect = (location: {
@@ -111,7 +111,7 @@ const Home = () => {
     if (bedrooms && bedrooms !== 'all') params.set('recamaras', bedrooms);
     if (bathrooms && bathrooms !== 'all') params.set('banos', bathrooms);
     if (parking && parking !== 'all') params.set('estacionamiento', parking);
-    navigate(`/propiedades?${params.toString()}`);
+    navigate(`/buscar?${params.toString()}`);
   };
   useEffect(() => {
     const fetchFeaturedProperties = async () => {
