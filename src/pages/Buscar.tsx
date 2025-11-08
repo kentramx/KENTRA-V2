@@ -587,14 +587,15 @@ const Buscar = () => {
         <Card className="mb-4 shadow-sm border-border/40">
           <CardContent className="p-3">
             <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap">
-              {/* 1. Búsqueda de ubicación */}
-              <div className="flex items-center gap-2 min-w-[250px] flex-1 lg:flex-initial">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <PlaceAutocomplete
-                  onPlaceSelect={handlePlaceSelect}
-                  placeholder="Ciudad, código postal o dirección..."
-                />
-              </div>
+          {/* 1. Búsqueda de ubicación */}
+          <div className="min-w-[280px] flex-1 lg:flex-initial">
+            <PlaceAutocomplete
+              onPlaceSelect={handlePlaceSelect}
+              placeholder="Ciudad, código postal o dirección..."
+              showIcon={true}
+              label=""
+            />
+          </div>
 
               <Separator orientation="vertical" className="h-8 hidden lg:block" />
 

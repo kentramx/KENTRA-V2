@@ -17,6 +17,7 @@ interface PlaceAutocompleteProps {
   defaultValue?: string;
   placeholder?: string;
   label?: string;
+  showIcon?: boolean;
   id?: string;
 }
 
@@ -32,7 +33,8 @@ export const PlaceAutocomplete = ({
   onPlaceSelect, 
   defaultValue = '', 
   placeholder = 'Escribe para buscar dirección...',
-  label = 'Dirección*',
+  label,
+  showIcon = true,
   id = 'place-autocomplete'
 }: PlaceAutocompleteProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,7 +64,9 @@ export const PlaceAutocomplete = ({
       input.type = 'text';
       input.placeholder = placeholder;
       input.defaultValue = defaultValue;
-      input.className = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9';
+      input.className = showIcon 
+        ? 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9'
+        : 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
       containerRef.current.appendChild(input);
 
@@ -153,14 +157,14 @@ export const PlaceAutocomplete = ({
   }
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label} {!isLoaded && '(Cargando...)'}</Label>
+    <div className={label ? "space-y-2" : ""}>
+      {label && <Label htmlFor={id}>{label} {!isLoaded && '(Cargando...)'}</Label>}
       <div className="relative">
-        <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
+        {showIcon && <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />}
         <div 
           ref={containerRef} 
           id={id}
-          className="pl-9 [&_gmp-place-autocomplete]:w-full [&_gmp-place-autocomplete]:min-h-[40px] [&_gmp-place-autocomplete_input]:w-full [&_gmp-place-autocomplete_input]:h-10 [&_gmp-place-autocomplete_input]:rounded-md [&_gmp-place-autocomplete_input]:border [&_gmp-place-autocomplete_input]:border-input [&_gmp-place-autocomplete_input]:bg-background [&_gmp-place-autocomplete_input]:px-3 [&_gmp-place-autocomplete_input]:py-2 [&_gmp-place-autocomplete_input]:text-sm [&_gmp-place-autocomplete_input]:ring-offset-background [&_gmp-place-autocomplete_input]:placeholder:text-muted-foreground [&_gmp-place-autocomplete_input]:focus-visible:outline-none [&_gmp-place-autocomplete_input]:focus-visible:ring-2 [&_gmp-place-autocomplete_input]:focus-visible:ring-ring [&_gmp-place-autocomplete_input]:focus-visible:ring-offset-2 [&_gmp-place-autocomplete_input]:disabled:cursor-not-allowed [&_gmp-place-autocomplete_input]:disabled:opacity-50"
+          className={showIcon ? "pl-9" : ""}
         />
       </div>
     </div>
