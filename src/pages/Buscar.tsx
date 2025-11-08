@@ -14,7 +14,10 @@ import { Label } from '@/components/ui/label';
 import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp } from 'lucide-react';
+import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -50,6 +53,20 @@ interface Filters {
   banos: string;
   orden: 'asc' | 'desc';
 }
+
+const getTipoLabel = (tipo: string) => {
+  const labels: Record<string, string> = {
+    casa: '🏠 Casa',
+    departamento: '🏢 Depto',
+    terreno: '🌳 Terreno',
+    oficina: '💼 Oficina',
+    local: '🏪 Local',
+    bodega: '📦 Bodega',
+    edificio: '🏛️ Edificio',
+    rancho: '🐎 Rancho'
+  };
+  return labels[tipo] || tipo;
+};
 
 const Buscar = () => {
   const { user } = useAuth();
@@ -382,6 +399,12 @@ const Buscar = () => {
     return chips;
   };
 
+  const moreFiltersCount = [
+    filters.estado,
+    filters.municipio,
+    filters.orden !== 'desc' ? filters.orden : null
+  ].filter(Boolean).length;
+
   const activeFiltersCount = [
     filters.estado,
     filters.municipio,
@@ -560,179 +583,216 @@ const Buscar = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20 pb-8">
-        {/* Barra de búsqueda compacta y moderna */}
+        {/* Barra de búsqueda estilo Zillow */}
         <Card className="mb-4 shadow-sm border-border/40">
           <CardContent className="p-3">
-            {/* Primera fila: Búsqueda + Filtros principales */}
-            <div className="flex flex-col lg:flex-row gap-2 mb-2">
-              {/* Búsqueda */}
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap">
+              {/* 1. Búsqueda de ubicación */}
+              <div className="flex items-center gap-2 min-w-[250px] flex-1 lg:flex-initial">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
                 <PlaceAutocomplete
                   onPlaceSelect={handlePlaceSelect}
-                  placeholder="Ciudad o código postal..."
+                  placeholder="Ciudad, código postal o dirección..."
                 />
               </div>
 
-              {/* Filtros principales en línea */}
-              <div className="flex gap-2 flex-wrap lg:flex-nowrap">
-                <Combobox
-                  options={estados.map(e => ({ value: e, label: e }))}
-                  value={filters.estado}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, estado: value }))}
-                  placeholder="Estado"
-                  searchPlaceholder="Buscar estado..."
-                  className="w-full lg:w-[140px]"
-                />
+              <Separator orientation="vertical" className="h-8 hidden lg:block" />
 
-                {filters.estado ? (
-                  <Combobox
-                    options={municipios.map(m => ({ value: m, label: m }))}
-                    value={filters.municipio}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, municipio: value }))}
-                    placeholder="Municipio"
-                    searchPlaceholder="Buscar municipio..."
-                    className="w-full lg:w-[140px]"
-                  />
-                ) : (
-                  <Select disabled>
-                    <SelectTrigger className="w-full lg:w-[140px]">
-                      <SelectValue placeholder="Municipio" />
-                    </SelectTrigger>
-                  </Select>
-                )}
+              {/* 2. Operación (Venta/Renta) */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    {filters.listingType === 'venta' ? '💰 Venta' : filters.listingType === 'renta' ? '📅 Renta' : 'Operación'}
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56" align="start">
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm">Tipo de operación</h4>
+                    <RadioGroup value={filters.listingType || ''} onValueChange={(value) => setFilters(prev => ({ ...prev, listingType: value }))}>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="venta" id="venta" />
+                        <Label htmlFor="venta">💰 Venta</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="renta" id="renta" />
+                        <Label htmlFor="renta">📅 Renta</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
-                <Select value={filters.tipo || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, tipo: value }))}>
-                  <SelectTrigger className="w-full lg:w-[150px]">
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="casa">🏠 Casa</SelectItem>
-                    <SelectItem value="departamento">🏢 Departamento</SelectItem>
-                    <SelectItem value="terreno">🌳 Terreno</SelectItem>
-                    <SelectItem value="oficina">💼 Oficina</SelectItem>
-                    <SelectItem value="local">🏪 Local</SelectItem>
-                    <SelectItem value="bodega">📦 Bodega</SelectItem>
-                    <SelectItem value="edificio">🏛️ Edificio</SelectItem>
-                    <SelectItem value="rancho">🐎 Rancho</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={filters.listingType || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, listingType: value }))}>
-                  <SelectTrigger className="w-full lg:w-[120px]">
-                    <SelectValue placeholder="Operación" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="venta">💰 Venta</SelectItem>
-                    <SelectItem value="renta">📅 Renta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Segunda fila: Precio y características */}
-            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
-              {/* Precio slider compacto */}
-              <div className="flex-1 min-w-0 w-full">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">Precio:</span>
-                  <div className="flex-1 min-w-0">
+              {/* 3. Precio */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    {priceRange[0] === MIN_PRICE && priceRange[1] === MAX_PRICE 
+                      ? 'Precio' 
+                      : `${formatPriceDisplay(priceRange[0])} - ${formatPriceDisplay(priceRange[1])}`}
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="start">
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-sm">Rango de precio</h4>
                     <Slider
                       min={MIN_PRICE}
                       max={MAX_PRICE}
                       step={0.5}
                       value={priceRange}
                       onValueChange={handlePriceRangeChange}
-                      className="flex-1"
                     />
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>{formatPriceDisplay(priceRange[0])}</span>
+                      <span>{formatPriceDisplay(priceRange[1])}</span>
+                    </div>
                   </div>
-                  <div className="flex gap-1 text-xs font-medium whitespace-nowrap">
-                    <span>{formatPriceDisplay(priceRange[0])}</span>
-                    <span className="text-muted-foreground">-</span>
-                    <span>{formatPriceDisplay(priceRange[1])}</span>
+                </PopoverContent>
+              </Popover>
+
+              {/* 4. Beds & Baths */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    {filters.recamaras || filters.banos 
+                      ? `${filters.recamaras || '0'}+ rec, ${filters.banos || '0'}+ baños` 
+                      : 'Rec & Baños'}
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="start">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Recámaras</h4>
+                      <div className="grid grid-cols-5 gap-2">
+                        {['', '1', '2', '3', '4'].map(num => (
+                          <Button
+                            key={num}
+                            variant={filters.recamaras === num ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setFilters(prev => ({ ...prev, recamaras: num }))}
+                          >
+                            {num || 'Todas'}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Baños</h4>
+                      <div className="grid grid-cols-4 gap-2">
+                        {['', '1', '2', '3'].map(num => (
+                          <Button
+                            key={num}
+                            variant={filters.banos === num ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setFilters(prev => ({ ...prev, banos: num }))}
+                          >
+                            {num || 'Todos'}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </PopoverContent>
+              </Popover>
 
-              {/* Características compactas */}
-              <div className="flex gap-2 flex-wrap lg:flex-nowrap w-full lg:w-auto">
-                <Select value={filters.recamaras || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, recamaras: value }))}>
-                  <SelectTrigger className="w-full lg:w-[100px] text-xs">
-                    <SelectValue placeholder="🛏️ Rec" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="1">1+</SelectItem>
-                    <SelectItem value="2">2+</SelectItem>
-                    <SelectItem value="3">3+</SelectItem>
-                    <SelectItem value="4">4+</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* 5. Home Type */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    {filters.tipo ? getTipoLabel(filters.tipo) : 'Tipo'}
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-96" align="start">
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm">Tipo de propiedad</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: 'casa', label: '🏠 Casa' },
+                        { value: 'departamento', label: '🏢 Depto' },
+                        { value: 'terreno', label: '🌳 Terreno' },
+                        { value: 'oficina', label: '💼 Oficina' },
+                        { value: 'local', label: '🏪 Local' },
+                        { value: 'bodega', label: '📦 Bodega' },
+                        { value: 'edificio', label: '🏛️ Edificio' },
+                        { value: 'rancho', label: '🐎 Rancho' },
+                      ].map(tipo => (
+                        <Button
+                          key={tipo.value}
+                          variant={filters.tipo === tipo.value ? 'default' : 'outline'}
+                          size="sm"
+                          className="justify-start"
+                          onClick={() => setFilters(prev => ({ ...prev, tipo: prev.tipo === tipo.value ? '' : tipo.value }))}
+                        >
+                          {tipo.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
-                <Select value={filters.banos || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, banos: value }))}>
-                  <SelectTrigger className="w-full lg:w-[100px] text-xs">
-                    <SelectValue placeholder="🚿 Baños" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="1">1+</SelectItem>
-                    <SelectItem value="2">2+</SelectItem>
-                    <SelectItem value="3">3+</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* 6. More (Estado, Municipio, Orden) */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Más {moreFiltersCount > 0 && `(${moreFiltersCount})`}
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-96" align="start">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Ubicación</h4>
+                      <div className="space-y-2">
+                        <Combobox
+                          options={estados.map(e => ({ value: e, label: e }))}
+                          value={filters.estado}
+                          onValueChange={(value) => setFilters(prev => ({ ...prev, estado: value }))}
+                          placeholder="Estado"
+                          searchPlaceholder="Buscar estado..."
+                        />
+                        {filters.estado && (
+                          <Combobox
+                            options={municipios.map(m => ({ value: m, label: m }))}
+                            value={filters.municipio}
+                            onValueChange={(value) => setFilters(prev => ({ ...prev, municipio: value }))}
+                            placeholder="Municipio"
+                            searchPlaceholder="Buscar municipio..."
+                          />
+                        )}
+                      </div>
+                    </div>
+                    <Separator />
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Ordenar por</h4>
+                      <RadioGroup value={filters.orden} onValueChange={(value: 'asc' | 'desc') => setFilters(prev => ({ ...prev, orden: value }))}>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="desc" id="desc" />
+                          <Label htmlFor="desc">Precio: Mayor a menor</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="asc" id="asc" />
+                          <Label htmlFor="asc">Precio: Menor a mayor</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
-                <Select value={filters.orden} onValueChange={(value: 'asc' | 'desc') => setFilters(prev => ({ ...prev, orden: value }))}>
-                  <SelectTrigger className="w-full lg:w-[110px] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="desc">$ Mayor</SelectItem>
-                    <SelectItem value="asc">$ Menor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+              {/* Espaciador */}
+              <div className="flex-1 hidden lg:block" />
 
-            {/* Chips de filtros activos - compactos */}
-            {activeFiltersCount > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 pt-2 mt-2 border-t border-border/40">
-                {getActiveFilterChips().map(chip => (
-                  <Badge 
-                    key={chip.key} 
-                    variant="secondary" 
-                    className="gap-1 text-xs py-0 h-6 px-2 hover:bg-secondary/80 transition-colors"
-                  >
-                    {chip.label}
-                    <X className="h-3 w-3 cursor-pointer hover:text-destructive transition-colors" onClick={chip.removeFilter} />
-                  </Badge>
-                ))}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-xs px-2"
-                  onClick={() => setFilters({
-                    estado: '',
-                    municipio: '',
-                    precioMin: '',
-                    precioMax: '',
-                    tipo: '',
-                    listingType: '',
-                    recamaras: '',
-                    banos: '',
-                    orden: 'desc',
-                  })}
-                >
-                  Limpiar todo
-                </Button>
-              </div>
-            )}
-
-            {/* Botones de guardar búsqueda */}
-            {user && (
-              <div className="flex gap-2 pt-2">
+              {/* 7. Save search button */}
+              {user && (
                 <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button variant="default" size="sm">
                       <Save className="h-4 w-4 mr-2" />
-                      Guardar búsqueda
+                      Guardar
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -752,6 +812,43 @@ const Buscar = () => {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+              )}
+            </div>
+
+            {/* Chips de filtros activos - solo si hay filtros */}
+            {activeFiltersCount > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-3 mt-3 border-t border-border/40">
+                {getActiveFilterChips().map(chip => (
+                  <Badge 
+                    key={chip.key} 
+                    variant="secondary" 
+                    className="gap-1 text-xs py-0 h-6 px-2 hover:bg-secondary/80 transition-colors"
+                  >
+                    {chip.label}
+                    <X className="h-3 w-3 cursor-pointer hover:text-destructive transition-colors" onClick={chip.removeFilter} />
+                  </Badge>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs px-2"
+                  onClick={() => {
+                    setFilters({
+                      estado: '',
+                      municipio: '',
+                      precioMin: '',
+                      precioMax: '',
+                      tipo: '',
+                      listingType: '',
+                      recamaras: '',
+                      banos: '',
+                      orden: 'desc',
+                    });
+                    setPriceRange([MIN_PRICE, MAX_PRICE]);
+                  }}
+                >
+                  Limpiar todo
+                </Button>
               </div>
             )}
           </CardContent>
