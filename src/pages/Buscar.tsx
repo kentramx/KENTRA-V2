@@ -182,6 +182,9 @@ const Buscar = () => {
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const [isLoadingViewport, setIsLoadingViewport] = useState(false);
   
+  // Ref para debounced function
+  const debouncedFetchByViewportRef = useRef<((bounds: google.maps.LatLngBounds) => void) | null>(null);
+  
   // Crear función debounced para hover (150ms de delay)
   const debouncedSetHoveredProperty = useCallback(
     debounce((propertyId: string | null) => {
@@ -509,13 +512,13 @@ const Buscar = () => {
     }
   };
 
-  // Debounced fetch por viewport
-  const debouncedFetchByViewport = useCallback(
-    debounce((bounds: google.maps.LatLngBounds) => {
-      fetchPropertiesByViewport(bounds);
-    }, 400),
-    [filters]
-  );
+  // Create debounced version of fetchPropertiesByViewport
+  useEffect(() => {
+    debouncedFetchByViewportRef.current = debounce(
+      (bounds: google.maps.LatLngBounds) => fetchPropertiesByViewport(bounds),
+      400
+    );
+  }, [filters]);
 
   // Actualizar municipios cuando cambia el estado
   useEffect(() => {
@@ -858,14 +861,11 @@ const Buscar = () => {
           }
           
           // Luego manejar viewport filter
-          if (mapReadySet && isMounted) {
+          if (mapReadySet && isMounted && mapFilterActive) {
             const currentBounds = mapInstanceRef.current?.getBounds();
-            if (currentBounds) {
+            if (currentBounds && debouncedFetchByViewportRef.current) {
               setViewportBounds(currentBounds);
-              
-              if (mapFilterActive) {
-                debouncedFetchByViewport(currentBounds);
-              }
+              debouncedFetchByViewportRef.current(currentBounds);
             }
           }
         });
