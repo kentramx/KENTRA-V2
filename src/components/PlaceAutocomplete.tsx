@@ -40,11 +40,13 @@ export const PlaceAutocomplete = ({
   showIcon = true,
   id = 'place-autocomplete'
 }: PlaceAutocompleteProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
+  const webComponentRef = useRef<any>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [useWebComponent, setUseWebComponent] = React.useState(false);
 
   // keep latest onPlaceSelect without recreating input
   const onPlaceSelectRef = React.useRef(onPlaceSelect);
@@ -64,12 +66,37 @@ export const PlaceAutocomplete = ({
   }, []);
 
   useEffect(() => {
-    if (!isLoaded || !containerRef.current) return;
+    if (!isLoaded || !inputRef.current) return;
 
     const initAutocomplete = async () => {
-      if (!containerRef.current) return;
-      
-      containerRef.current.innerHTML = '';
+      if (!inputRef.current) return;
+
+      // Función auxiliar para manejar la selección de lugar
+      const handlePlaceSelection = (location: {
+        address: string;
+        municipality: string;
+        state: string;
+        lat?: number;
+        lng?: number;
+      }, inputValue: string) => {
+        // Guardar en caché
+        if (inputValue) {
+          placesCache.set(inputValue, location);
+        }
+
+        if (!location.municipality || !location.state) {
+          toast({
+            title: 'ℹ️ Información incompleta',
+            description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
+          });
+        }
+
+        onPlaceSelectRef.current?.(location);
+        toast({ 
+          title: '📍 Ubicación seleccionada', 
+          description: `${location.municipality}, ${location.state}` 
+        });
+      };
 
       try {
         // 🆕 Intentar usar el nuevo Web Component oficial
@@ -118,20 +145,7 @@ export const PlaceAutocomplete = ({
             lng: place.location?.lng(),
           };
           
-          // Guardar en caché
-          if (placeAutocomplete.value) {
-            placesCache.set(placeAutocomplete.value, location);
-          }
-          
-          if (!municipality || !state) {
-            toast({
-              title: 'ℹ️ Información incompleta',
-              description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
-            });
-          }
-          
-          onPlaceSelectRef.current?.(location);
-          toast({ title: '📍 Ubicación seleccionada', description: `${location.municipality}, ${location.state}` });
+          handlePlaceSelection(location, placeAutocomplete.value);
         });
         
         // Listener para detectar cuando el usuario escribe (con debouncing)
@@ -147,107 +161,29 @@ export const PlaceAutocomplete = ({
           placeAutocomplete.addEventListener('input', debouncedInputHandler);
         }
 
-        // Si el Web Component falla por API deshabilitada, hacemos fallback automático
+        // Si el Web Component falla, usar fallback
         placeAutocomplete.addEventListener('gmp-error', () => {
-          console.warn('PlaceAutocompleteElement lanzó gmp-error; aplicando fallback legacy');
-          if (!containerRef.current) return;
-          containerRef.current.innerHTML = '';
-
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.placeholder = placeholder;
-          input.defaultValue = defaultValue;
-          input.className = showIcon 
-            ? 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9'
-            : 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
-
-          containerRef.current.appendChild(input);
-
-          if (onInputChange) {
-            const debouncedInputHandler = () => {
-              if (debounceTimerRef.current) {
-                clearTimeout(debounceTimerRef.current);
-              }
-              debounceTimerRef.current = setTimeout(() => {
-                onInputChange();
-              }, 300);
-            };
-            input.addEventListener('input', debouncedInputHandler);
-          }
-
-          const autocomplete = new google.maps.places.Autocomplete(input, {
-            componentRestrictions: { country: 'mx' },
-            fields: ['address_components', 'formatted_address', 'geometry'],
-            types: ['(cities)'],
-          });
-
-          autocomplete.addListener('place_changed', () => {
-            const place = autocomplete.getPlace();
-
-            if (!place || !place.address_components) {
-              toast({
-                title: '⚠️ Lugar incompleto',
-                description: 'Por favor selecciona una dirección de la lista de sugerencias',
-                variant: 'destructive',
-              });
-              return;
-            }
-
-            let municipality = '';
-            let state = '';
-
-            place.address_components.forEach((component) => {
-              if (component.types.includes('locality')) {
-                municipality = component.long_name;
-              }
-              if (component.types.includes('administrative_area_level_1')) {
-                state = component.long_name;
-              }
-            });
-
-            const location = {
-              address: place.formatted_address || '',
-              municipality,
-              state,
-              lat: place.geometry?.location?.lat(),
-              lng: place.geometry?.location?.lng(),
-            };
-
-            // Guardar en caché
-            if (input.value) {
-              placesCache.set(input.value, location);
-            }
-
-            if (!municipality || !state) {
-              toast({
-                title: 'ℹ️ Información incompleta',
-                description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
-              });
-            }
-
-            onPlaceSelectRef.current?.(location);
-            toast({ title: '📍 Ubicación seleccionada', description: `${location.municipality}, ${location.state}` });
-          });
-
-          autocompleteRef.current = autocomplete;
+          console.warn('PlaceAutocompleteElement error, usando fallback legacy');
+          setUseWebComponent(false);
+          applyLegacyAutocomplete();
         });
         
-        containerRef.current.appendChild(placeAutocomplete);
-        autocompleteRef.current = placeAutocomplete;
+        // Reemplazar input con Web Component
+        if (inputRef.current && inputRef.current.parentNode) {
+          inputRef.current.parentNode.replaceChild(placeAutocomplete, inputRef.current);
+          webComponentRef.current = placeAutocomplete;
+          setUseWebComponent(true);
+        }
         
       } catch (error) {
         // ⚙️ FALLBACK al método legacy si el nuevo API falla
         console.warn('PlaceAutocompleteElement no disponible, usando fallback legacy:', error);
-        
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.placeholder = placeholder;
-        input.defaultValue = defaultValue;
-        input.className = showIcon 
-          ? 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9'
-          : 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+        applyLegacyAutocomplete();
+      }
 
-        containerRef.current.appendChild(input);
+      // Función para aplicar autocomplete legacy al input existente
+      function applyLegacyAutocomplete() {
+        if (!inputRef.current) return;
 
         if (onInputChange) {
           const debouncedInputHandler = () => {
@@ -258,10 +194,10 @@ export const PlaceAutocomplete = ({
               onInputChange();
             }, 300);
           };
-          input.addEventListener('input', debouncedInputHandler);
+          inputRef.current.addEventListener('input', debouncedInputHandler);
         }
 
-        const autocomplete = new google.maps.places.Autocomplete(input, {
+        const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
           componentRestrictions: { country: 'mx' },
           fields: ['address_components', 'formatted_address', 'geometry'],
           types: ['(cities)'],
@@ -299,20 +235,7 @@ export const PlaceAutocomplete = ({
             lng: place.geometry?.location?.lng(),
           };
 
-          // Guardar en caché
-          if (input.value) {
-            placesCache.set(input.value, location);
-          }
-
-          if (!municipality || !state) {
-            toast({
-              title: 'ℹ️ Información incompleta',
-              description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
-            });
-          }
-
-          onPlaceSelectRef.current?.(location);
-          toast({ title: '📍 Ubicación seleccionada', description: `${location.municipality}, ${location.state}` });
+          handlePlaceSelection(location, inputRef.current?.value || '');
         });
 
         autocompleteRef.current = autocomplete;
@@ -327,18 +250,17 @@ export const PlaceAutocomplete = ({
         clearTimeout(debounceTimerRef.current);
       }
       
+      if (webComponentRef.current) {
+        webComponentRef.current.remove();
+        webComponentRef.current = null;
+      }
+      
       if (autocompleteRef.current) {
-        if (autocompleteRef.current instanceof HTMLElement) {
-          // Cleanup para Web Component
-          autocompleteRef.current.remove();
-        } else {
-          // Cleanup para legacy Autocomplete
-          google.maps.event.clearInstanceListeners(autocompleteRef.current);
-        }
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
         autocompleteRef.current = null;
       }
     };
-  }, [isLoaded, placeholder, defaultValue]);
+  }, [isLoaded, placeholder, defaultValue, showIcon, onInputChange]);
 
   if (loadError) {
     return (
@@ -364,14 +286,22 @@ export const PlaceAutocomplete = ({
 
   return (
     <div className={label ? "space-y-2" : ""}>
-      {label && <Label htmlFor={id}>{label} {!isLoaded && '(Cargando...)'}</Label>}
+      {label && <Label htmlFor={id}>{label}</Label>}
       <div className="relative">
         {showIcon && <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />}
-        <div 
-          ref={containerRef} 
-          id={id}
-          className={showIcon ? "pl-9" : ""}
-        />
+        {!useWebComponent && (
+          <input
+            ref={inputRef}
+            id={id}
+            type="text"
+            placeholder={placeholder}
+            defaultValue={defaultValue}
+            className={showIcon 
+              ? 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9'
+              : 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+            }
+          />
+        )}
       </div>
     </div>
   );
