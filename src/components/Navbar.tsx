@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,8 @@ import { ThemeToggle } from "./ThemeToggle";
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
+  const [searchParams] = useSearchParams();
+  const tipoListado = searchParams.get("tipo_listado");
 
   const getUserInitials = () => {
     if (!user?.email) return "U";
@@ -30,12 +32,20 @@ const Navbar = () => {
           {/* Left Navigation - Desktop */}
           <div className="hidden md:flex items-center gap-1">
             <Link to="/propiedades?tipo_listado=venta">
-              <Button variant="ghost" size="sm">
+              <Button 
+                variant={tipoListado === "venta" ? "default" : "ghost"} 
+                size="sm"
+                className={tipoListado === "venta" ? "shadow-sm" : ""}
+              >
                 Comprar
               </Button>
             </Link>
             <Link to="/propiedades?tipo_listado=renta">
-              <Button variant="ghost" size="sm">
+              <Button 
+                variant={tipoListado === "renta" ? "default" : "ghost"} 
+                size="sm"
+                className={tipoListado === "renta" ? "shadow-sm" : ""}
+              >
                 Rentar
               </Button>
             </Link>
