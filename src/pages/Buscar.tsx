@@ -63,6 +63,66 @@ const debounce = <T extends (...args: any[]) => void>(
   };
 };
 
+// Cache de iconos de marcadores a nivel módulo
+const iconCache = new Map<string, string>();
+
+// Función para obtener bucket de precio
+const getPriceBucket = (price: number): string => {
+  if (price < 1000000) return 'economic';
+  if (price < 3000000) return 'medium';
+  if (price < 5000000) return 'high';
+  return 'premium';
+};
+
+// Función para obtener icono cacheado
+const getCachedIcon = (type: string, bucket: string): string => {
+  const key = `${type}-${bucket}`;
+  
+  if (iconCache.has(key)) {
+    return iconCache.get(key)!;
+  }
+  
+  // Mapeo de colores por bucket
+  const colorMap: Record<string, string> = {
+    economic: '#10B981',
+    medium: '#3B82F6',
+    high: '#F59E0B',
+    premium: '#EF4444'
+  };
+  
+  const color = colorMap[bucket] || colorMap.medium;
+  
+  // Mapeo de iconos por tipo
+  const icons: Record<string, string> = {
+    casa: `<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>`,
+    departamento: `<rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line>`,
+    terreno: `<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line>`,
+    oficina: `<rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>`,
+    local: `<path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M9 21V9"></path>`,
+    bodega: `<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path>`,
+    edificio: `<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path>`,
+    rancho: `<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>`,
+  };
+  
+  const iconPath = icons[type] || icons['casa'];
+  
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="11" fill="${color}" opacity="0.9"/>
+      <g transform="scale(0.7) translate(4.2, 4.2)">
+        ${iconPath}
+      </g>
+    </svg>
+  `;
+  
+  // Encodear y cachear
+  const encodedSvg = btoa(unescape(encodeURIComponent(svg)));
+  const dataUri = `data:image/svg+xml;base64,${encodedSvg}`;
+  
+  iconCache.set(key, dataUri);
+  return dataUri;
+};
+
 interface Property {
   id: string;
   title: string;
@@ -718,13 +778,11 @@ const Buscar = () => {
             console.log('[Mapa] Listo para renderizar marcadores');
             setMapLoadingProgress(100);
             
-            // Esperar un momento antes de ocultar el loader
-            setTimeout(() => {
-              if (isMounted) {
-                setMapReady(true);
-                setIsMapLoading(false);
-              }
-            }, 300);
+            // Marcar como listo inmediatamente (sin delay)
+            if (isMounted) {
+              setMapReady(true);
+              setIsMapLoading(false);
+            }
             
             if (timeoutId) clearTimeout(timeoutId);
             if (progressInterval) clearInterval(progressInterval);
@@ -785,15 +843,6 @@ const Buscar = () => {
     setMarkersLoadingProgress(0);
     console.log('[Marcadores] Actualizando marcadores. Propiedades filtradas:', filteredProperties.length);
 
-    // Limpiar marcadores anteriores
-    if (markerClustererRef.current) {
-      markerClustererRef.current.clearMarkers();
-      markerClustererRef.current = null;
-    }
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
-    markerMapRef.current.clear();
-
     // Cerrar info window si existe
     if (infoWindowRef.current) {
       infoWindowRef.current.close();
@@ -801,79 +850,58 @@ const Buscar = () => {
 
     // Función para obtener color según rango de precio
     const getPriceColor = (price: number): string => {
-      if (price < 1000000) return '#10B981'; // Verde - económico
-      if (price < 3000000) return '#3B82F6'; // Azul - medio
-      if (price < 5000000) return '#F59E0B'; // Naranja - alto
-      return '#EF4444'; // Rojo - premium
+      if (price < 1000000) return '#10B981';
+      if (price < 3000000) return '#3B82F6';
+      if (price < 5000000) return '#F59E0B';
+      return '#EF4444';
     };
 
-    // Función para crear SVG del icono según tipo de propiedad
-    const getPropertyIcon = (type: string, color: string): string => {
-      const icons: Record<string, string> = {
-        casa: `<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>`,
-        departamento: `<rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line>`,
-        terreno: `<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line>`,
-        oficina: `<rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>`,
-        local: `<path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M9 21V9"></path>`,
-        bodega: `<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path>`,
-        edificio: `<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path>`,
-        rancho: `<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>`,
-      };
-      
-      const iconPath = icons[type] || icons['casa'];
-      
-      return `
-        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="11" fill="${color}" opacity="0.9"/>
-          <g transform="scale(0.7) translate(4.2, 4.2)">
-            ${iconPath}
-          </g>
-        </svg>
-      `;
-    };
-
-    // Función para crear etiqueta de precio
-    const createPriceLabel = (price: number, color: string): string => {
-      const formattedPrice = new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: 'MXN',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }).format(price);
-      
-      return `
-        <div style="
-          background: white;
-          padding: 4px 8px;
-          border-radius: 12px;
-          font-weight: 600;
-          font-size: 11px;
-          color: ${color};
-          border: 2px solid ${color};
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-          white-space: nowrap;
-          position: relative;
-          margin-top: -8px;
-        ">
-          ${formattedPrice}
-        </div>
-      `;
-    };
-
-    // Crear nuevos marcadores con renderizado incremental
+    // Crear nuevos marcadores con renderizado incremental y diffing
     const propertiesWithCoords = filteredProperties.filter(p => p.lat && p.lng);
     console.log('[Marcadores] Propiedades con coordenadas:', propertiesWithCoords.length);
 
-    // Función para crear un marcador individual
+    // Performance: obtener los IDs actuales y nuevos
+    const currentIds = new Set(Array.from(markerMapRef.current.keys()));
+    const newIds = new Set(propertiesWithCoords.map(p => p.id));
+    
+    // Calcular diferencias
+    const idsToRemove = Array.from(currentIds).filter(id => !newIds.has(id));
+    const idsToAdd = propertiesWithCoords.filter(p => !currentIds.has(p.id));
+    
+    console.log('[Marcadores] Diff - Agregar:', idsToAdd.length, 'Eliminar:', idsToRemove.length, 'Mantener:', currentIds.size - idsToRemove.length);
+
+    // Eliminar marcadores que ya no están
+    idsToRemove.forEach(id => {
+      const marker = markerMapRef.current.get(id);
+      if (marker) {
+        marker.setMap(null);
+        markerMapRef.current.delete(id);
+        const index = markersRef.current.indexOf(marker);
+        if (index > -1) {
+          markersRef.current.splice(index, 1);
+        }
+      }
+    });
+
+    // Limpiar clusterer solo si hay cambios
+    if (markerClustererRef.current && (idsToRemove.length > 0 || idsToAdd.length > 0)) {
+      markerClustererRef.current.clearMarkers();
+      markerClustererRef.current = null;
+    }
+
+    // Determinar si mostrar labels (solo si hay menos de 300 propiedades)
+    const showLabels = propertiesWithCoords.length < 300;
+    console.log('[Marcadores] Labels:', showLabels ? 'activados' : 'desactivados', `(${propertiesWithCoords.length} propiedades)`);
+
+    // Función para crear un marcador individual (optimizada con cache)
     const createMarker = (property: Property) => {
+      const bucket = getPriceBucket(property.price);
       const priceColor = getPriceColor(property.price);
-      const iconSvg = getPropertyIcon(property.type, priceColor);
       
-      // Convertir SVG a data URI directamente sin blob
-      const encodedSvg = btoa(unescape(encodeURIComponent(iconSvg)));
-      const dataUri = `data:image/svg+xml;base64,${encodedSvg}`;
+      // Usar icono cacheado
+      const dataUri = getCachedIcon(property.type, bucket);
       
-      const marker = new google.maps.Marker({
+      const markerOptions: google.maps.MarkerOptions = {
         position: { lat: Number(property.lat), lng: Number(property.lng) },
         title: property.title,
         map: null,
@@ -882,7 +910,12 @@ const Buscar = () => {
           scaledSize: new google.maps.Size(40, 40),
           anchor: new google.maps.Point(20, 40),
         },
-        label: {
+        optimized: true,
+      };
+
+      // Solo agregar label si hay pocas propiedades
+      if (showLabels) {
+        markerOptions.label = {
           text: new Intl.NumberFormat('es-MX', {
             style: 'currency',
             currency: 'MXN',
@@ -895,9 +928,10 @@ const Buscar = () => {
           fontSize: '11px',
           fontWeight: 'bold',
           className: 'marker-price-label'
-        },
-        optimized: true,
-      });
+        };
+      }
+      
+      const marker = new google.maps.Marker(markerOptions);
 
       // Crear contenido del info window
       const createInfoWindowContent = (prop: Property) => {
@@ -1021,40 +1055,71 @@ const Buscar = () => {
       return marker;
     };
 
-    // Renderizado directo sin batching ni animaciones
-    const newMarkers: google.maps.Marker[] = [];
+    // Crear solo los marcadores nuevos (incremental)
+    const newMarkersToAdd: google.maps.Marker[] = [];
     
-    propertiesWithCoords.forEach(property => {
+    idsToAdd.forEach(property => {
       const marker = createMarker(property);
       marker.setMap(mapInstanceRef.current);
-      newMarkers.push(marker);
+      newMarkersToAdd.push(marker);
       markerMapRef.current.set(property.id, marker);
+      markersRef.current.push(marker);
     });
 
-    markersRef.current = newMarkers;
-    console.log('[Marcadores] Todos los marcadores creados:', newMarkers.length);
+    console.log('[Marcadores] Nuevos marcadores agregados:', newMarkersToAdd.length);
+    console.log('[Marcadores] Total de marcadores activos:', markersRef.current.length);
+    console.log('[Cache] Hits de cache de iconos:', iconCache.size, 'tipos únicos cacheados');
     
     setIsLoadingMarkers(false);
     setMarkersLoadingProgress(100);
 
-    // Agregar clustering simple
-    if (newMarkers.length > 0) {
+    // Actualizar clusterer de forma eficiente
+    const allMarkers = Array.from(markerMapRef.current.values());
+    
+    if (markerClustererRef.current) {
+      // Si hay cambios significativos (>30%), recrear clusterer
+      const changePercentage = (idsToAdd.length + idsToRemove.length) / Math.max(currentIds.size, 1);
+      
+      if (changePercentage > 0.3) {
+        console.log('[Clusterer] Cambio significativo detectado, recreando clusterer');
+        markerClustererRef.current.clearMarkers();
+        markerClustererRef.current = new MarkerClusterer({
+          map: mapInstanceRef.current,
+          markers: allMarkers,
+          algorithmOptions: {
+            maxZoom: 15,
+          },
+        });
+      } else {
+        // Cambios menores: actualizar incrementalmente
+        console.log('[Clusterer] Actualizando marcadores incrementalmente');
+        if (idsToRemove.length > 0) {
+          markerClustererRef.current.clearMarkers();
+          markerClustererRef.current.addMarkers(allMarkers);
+        } else if (newMarkersToAdd.length > 0) {
+          markerClustererRef.current.addMarkers(newMarkersToAdd);
+        }
+      }
+    } else if (allMarkers.length > 0) {
+      // Crear clusterer inicial
       markerClustererRef.current = new MarkerClusterer({
         map: mapInstanceRef.current,
-        markers: newMarkers,
+        markers: allMarkers,
         algorithmOptions: {
           maxZoom: 15,
         },
       });
+    }
 
-      // Ajustar bounds para mostrar todos los marcadores
+    // Solo ajustar bounds si hay cambios significativos
+    if (idsToAdd.length > 0 || (idsToRemove.length > 0 && allMarkers.length > 0)) {
       const bounds = new google.maps.LatLngBounds();
-      newMarkers.forEach(marker => {
+      allMarkers.forEach(marker => {
         const position = marker.getPosition();
         if (position) bounds.extend(position);
       });
       
-      if (mapInstanceRef.current) {
+      if (mapInstanceRef.current && !bounds.isEmpty()) {
         mapInstanceRef.current.fitBounds(bounds);
       }
     }
