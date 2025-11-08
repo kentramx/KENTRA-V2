@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal, Map, Briefcase, Store, Warehouse, Building, Tractor } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
-import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
+import { PlaceAutocomplete } from "@/components/PlaceAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import PropertyCard from "@/components/PropertyCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,12 +59,6 @@ const Home = () => {
   const [parking, setParking] = useState("all");
   
   const navigate = useNavigate();
-
-  const { inputRef, isLoaded, error } = usePlacesAutocomplete({
-    onPlaceSelect: (place) => {
-      if (place.formatted_address) setSearchQuery(place.formatted_address);
-    }
-  });
 
   const handlePlaceSelect = (location: {
     address: string;
@@ -352,17 +346,12 @@ const Home = () => {
                 
                 <TabsContent value="search" className="mt-4">
                   <div className="flex gap-2 rounded-lg bg-white p-2 shadow-2xl">
-                    <div className="flex flex-1 items-center gap-2 px-4">
-                      <MapPin className="h-5 w-5 text-muted-foreground" />
-                      <Input
-                        ref={inputRef}
-                        type="text"
+                    <div className="flex flex-1 items-center">
+                      <PlaceAutocomplete
+                        onPlaceSelect={handlePlaceSelect}
                         placeholder="Ciudad, colonia o código postal"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                        disabled={!isLoaded && !error}
-                        className="border-0 bg-transparent text-foreground focus-visible:ring-0"
+                        defaultValue={searchQuery}
+                        showIcon={true}
                       />
                     </div>
                     <Button
