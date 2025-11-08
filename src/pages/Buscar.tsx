@@ -560,249 +560,200 @@ const Buscar = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20 pb-8">
-        {/* Barra de búsqueda */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Search className="h-5 w-5 text-muted-foreground" />
+        {/* Barra de búsqueda compacta y moderna */}
+        <Card className="mb-4 shadow-sm border-border/40">
+          <CardContent className="p-3">
+            {/* Primera fila: Búsqueda + Filtros principales */}
+            <div className="flex flex-col lg:flex-row gap-2 mb-2">
+              {/* Búsqueda */}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <PlaceAutocomplete
                   onPlaceSelect={handlePlaceSelect}
-                  placeholder="Buscar por ciudad o código postal..."
+                  placeholder="Ciudad o código postal..."
                 />
               </div>
 
-              {/* Filtros */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <Label>Estado</Label>
+              {/* Filtros principales en línea */}
+              <div className="flex gap-2 flex-wrap lg:flex-nowrap">
+                <Combobox
+                  options={estados.map(e => ({ value: e, label: e }))}
+                  value={filters.estado}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, estado: value }))}
+                  placeholder="Estado"
+                  searchPlaceholder="Buscar estado..."
+                  className="w-full lg:w-[140px]"
+                />
+
+                {filters.estado ? (
                   <Combobox
-                    options={estados.map(e => ({ value: e, label: e }))}
-                    value={filters.estado}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, estado: value }))}
-                    placeholder="Selecciona estado"
-                    searchPlaceholder="Buscar estado..."
+                    options={municipios.map(m => ({ value: m, label: m }))}
+                    value={filters.municipio}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, municipio: value }))}
+                    placeholder="Municipio"
+                    searchPlaceholder="Buscar municipio..."
+                    className="w-full lg:w-[140px]"
                   />
-                </div>
+                ) : (
+                  <Select disabled>
+                    <SelectTrigger className="w-full lg:w-[140px]">
+                      <SelectValue placeholder="Municipio" />
+                    </SelectTrigger>
+                  </Select>
+                )}
 
-                <div>
-                  <Label>Municipio</Label>
-                  {!filters.estado ? (
-                    <Select disabled>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Primero selecciona un estado" />
-                      </SelectTrigger>
-                    </Select>
-                  ) : (
-                    <Combobox
-                      options={municipios.map(m => ({ value: m, label: m }))}
-                      value={filters.municipio}
-                      onValueChange={(value) => setFilters(prev => ({ ...prev, municipio: value }))}
-                      placeholder="Selecciona municipio"
-                      searchPlaceholder="Buscar municipio..."
-                    />
-                  )}
-                </div>
+                <Select value={filters.tipo || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, tipo: value }))}>
+                  <SelectTrigger className="w-full lg:w-[150px]">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="casa">🏠 Casa</SelectItem>
+                    <SelectItem value="departamento">🏢 Departamento</SelectItem>
+                    <SelectItem value="terreno">🌳 Terreno</SelectItem>
+                    <SelectItem value="oficina">💼 Oficina</SelectItem>
+                    <SelectItem value="local">🏪 Local</SelectItem>
+                    <SelectItem value="bodega">📦 Bodega</SelectItem>
+                    <SelectItem value="edificio">🏛️ Edificio</SelectItem>
+                    <SelectItem value="rancho">🐎 Rancho</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <div>
-                  <Label>Tipo de propiedad</Label>
-                  <div className="flex gap-2">
-                    <Select value={filters.tipo || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, tipo: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="casa">Casa</SelectItem>
-                        <SelectItem value="departamento">Departamento</SelectItem>
-                        <SelectItem value="terreno">Terreno</SelectItem>
-                        <SelectItem value="oficina">Oficina</SelectItem>
-                        <SelectItem value="local">Local</SelectItem>
-                        <SelectItem value="bodega">Bodega</SelectItem>
-                        <SelectItem value="edificio">Edificio</SelectItem>
-                        <SelectItem value="rancho">Rancho</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {filters.tipo && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setFilters(prev => ({ ...prev, tipo: '' }))}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Tipo de operación</Label>
-                  <div className="flex gap-2">
-                    <Select value={filters.listingType || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, listingType: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="venta">Venta</SelectItem>
-                        <SelectItem value="renta">Renta</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {filters.listingType && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setFilters(prev => ({ ...prev, listingType: '' }))}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                <Select value={filters.listingType || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, listingType: value }))}>
+                  <SelectTrigger className="w-full lg:w-[120px]">
+                    <SelectValue placeholder="Operación" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="venta">💰 Venta</SelectItem>
+                    <SelectItem value="renta">📅 Renta</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
 
-              {/* Precio slider */}
-              <div>
-                <Label>Rango de precio</Label>
-                <div className="space-y-2 pt-2">
-                  <Slider
-                    min={MIN_PRICE}
-                    max={MAX_PRICE}
-                    step={0.5}
-                    value={priceRange}
-                    onValueChange={handlePriceRangeChange}
-                  />
-                  <div className="flex justify-between text-sm text-muted-foreground">
+            {/* Segunda fila: Precio y características */}
+            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
+              {/* Precio slider compacto */}
+              <div className="flex-1 min-w-0 w-full">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">Precio:</span>
+                  <div className="flex-1 min-w-0">
+                    <Slider
+                      min={MIN_PRICE}
+                      max={MAX_PRICE}
+                      step={0.5}
+                      value={priceRange}
+                      onValueChange={handlePriceRangeChange}
+                      className="flex-1"
+                    />
+                  </div>
+                  <div className="flex gap-1 text-xs font-medium whitespace-nowrap">
                     <span>{formatPriceDisplay(priceRange[0])}</span>
+                    <span className="text-muted-foreground">-</span>
                     <span>{formatPriceDisplay(priceRange[1])}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Recámaras y baños */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label>Recámaras mínimas</Label>
-                  <div className="flex gap-2">
-                    <Select value={filters.recamaras || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, recamaras: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Cualquiera" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1+</SelectItem>
-                        <SelectItem value="2">2+</SelectItem>
-                        <SelectItem value="3">3+</SelectItem>
-                        <SelectItem value="4">4+</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {filters.recamaras && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setFilters(prev => ({ ...prev, recamaras: '' }))}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
+              {/* Características compactas */}
+              <div className="flex gap-2 flex-wrap lg:flex-nowrap w-full lg:w-auto">
+                <Select value={filters.recamaras || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, recamaras: value }))}>
+                  <SelectTrigger className="w-full lg:w-[100px] text-xs">
+                    <SelectValue placeholder="🛏️ Rec" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="1">1+</SelectItem>
+                    <SelectItem value="2">2+</SelectItem>
+                    <SelectItem value="3">3+</SelectItem>
+                    <SelectItem value="4">4+</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <div>
-                  <Label>Baños mínimos</Label>
-                  <div className="flex gap-2">
-                    <Select value={filters.banos || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, banos: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Cualquiera" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1+</SelectItem>
-                        <SelectItem value="2">2+</SelectItem>
-                        <SelectItem value="3">3+</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {filters.banos && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setFilters(prev => ({ ...prev, banos: '' }))}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                <Select value={filters.banos || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, banos: value }))}>
+                  <SelectTrigger className="w-full lg:w-[100px] text-xs">
+                    <SelectValue placeholder="🚿 Baños" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="1">1+</SelectItem>
+                    <SelectItem value="2">2+</SelectItem>
+                    <SelectItem value="3">3+</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <div>
-                  <Label>Ordenar por precio</Label>
-                  <Select value={filters.orden} onValueChange={(value: 'asc' | 'desc') => setFilters(prev => ({ ...prev, orden: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="desc">Mayor a menor</SelectItem>
-                      <SelectItem value="asc">Menor a mayor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={filters.orden} onValueChange={(value: 'asc' | 'desc') => setFilters(prev => ({ ...prev, orden: value }))}>
+                  <SelectTrigger className="w-full lg:w-[110px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="desc">$ Mayor</SelectItem>
+                    <SelectItem value="asc">$ Menor</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-
-              {/* Chips de filtros activos */}
-              {activeFiltersCount > 0 && (
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {getActiveFilterChips().map(chip => (
-                    <Badge key={chip.key} variant="secondary" className="gap-1">
-                      {chip.label}
-                      <X className="h-3 w-3 cursor-pointer" onClick={chip.removeFilter} />
-                    </Badge>
-                  ))}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setFilters({
-                      estado: '',
-                      municipio: '',
-                      precioMin: '',
-                      precioMax: '',
-                      tipo: '',
-                      listingType: '',
-                      recamaras: '',
-                      banos: '',
-                      orden: 'desc',
-                    })}
-                  >
-                    Limpiar todo
-                  </Button>
-                </div>
-              )}
-
-              {/* Botones de guardar búsqueda */}
-              {user && (
-                <div className="flex gap-2">
-                  <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Save className="h-4 w-4 mr-2" />
-                        Guardar búsqueda
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Guardar búsqueda</DialogTitle>
-                        <DialogDescription>
-                          Dale un nombre a esta búsqueda para acceder rápidamente después
-                        </DialogDescription>
-                      </DialogHeader>
-                      <Input
-                        placeholder="Nombre de la búsqueda"
-                        value={searchName}
-                        onChange={(e) => setSearchName(e.target.value)}
-                      />
-                      <DialogFooter>
-                        <Button onClick={handleSaveSearch}>Guardar</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              )}
             </div>
+
+            {/* Chips de filtros activos - compactos */}
+            {activeFiltersCount > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 mt-2 border-t border-border/40">
+                {getActiveFilterChips().map(chip => (
+                  <Badge 
+                    key={chip.key} 
+                    variant="secondary" 
+                    className="gap-1 text-xs py-0 h-6 px-2 hover:bg-secondary/80 transition-colors"
+                  >
+                    {chip.label}
+                    <X className="h-3 w-3 cursor-pointer hover:text-destructive transition-colors" onClick={chip.removeFilter} />
+                  </Badge>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs px-2"
+                  onClick={() => setFilters({
+                    estado: '',
+                    municipio: '',
+                    precioMin: '',
+                    precioMax: '',
+                    tipo: '',
+                    listingType: '',
+                    recamaras: '',
+                    banos: '',
+                    orden: 'desc',
+                  })}
+                >
+                  Limpiar todo
+                </Button>
+              </div>
+            )}
+
+            {/* Botones de guardar búsqueda */}
+            {user && (
+              <div className="flex gap-2 pt-2">
+                <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Save className="h-4 w-4 mr-2" />
+                      Guardar búsqueda
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Guardar búsqueda</DialogTitle>
+                      <DialogDescription>
+                        Dale un nombre a esta búsqueda para acceder rápidamente después
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Input
+                      placeholder="Nombre de la búsqueda"
+                      value={searchName}
+                      onChange={(e) => setSearchName(e.target.value)}
+                    />
+                    <DialogFooter>
+                      <Button onClick={handleSaveSearch}>Guardar</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
           </CardContent>
         </Card>
 
