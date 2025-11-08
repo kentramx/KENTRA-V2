@@ -41,12 +41,12 @@ export const PlaceAutocomplete = ({
   id = 'place-autocomplete'
 }: PlaceAutocompleteProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const webComponentContainerRef = useRef<HTMLDivElement>(null);
   const autocompleteRef = useRef<any>(null);
-  const webComponentRef = useRef<any>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
-  const [useWebComponent, setUseWebComponent] = React.useState(false);
+  const [useWebComponent, setUseWebComponent] = React.useState<boolean | null>(null);
 
   // keep latest onPlaceSelect without recreating input
   const onPlaceSelectRef = React.useRef(onPlaceSelect);
@@ -66,11 +66,9 @@ export const PlaceAutocomplete = ({
   }, []);
 
   useEffect(() => {
-    if (!isLoaded || !inputRef.current) return;
+    if (!isLoaded) return;
 
     const initAutocomplete = async () => {
-      if (!inputRef.current) return;
-
       // Función auxiliar para manejar la selección de lugar
       const handlePlaceSelection = (location: {
         address: string;
@@ -102,6 +100,11 @@ export const PlaceAutocomplete = ({
         // 🆕 Intentar usar el nuevo Web Component oficial
         const { PlaceAutocompleteElement } = await google.maps.importLibrary("places") as any;
         
+        if (!webComponentContainerRef.current) {
+          // Si no hay contenedor, usar legacy
+          throw new Error('No container for web component');
+        }
+
         const placeAutocomplete = new PlaceAutocompleteElement({
           componentRestrictions: { country: 'mx' },
           requestedLanguage: 'es',
@@ -165,80 +168,17 @@ export const PlaceAutocomplete = ({
         placeAutocomplete.addEventListener('gmp-error', () => {
           console.warn('PlaceAutocompleteElement error, usando fallback legacy');
           setUseWebComponent(false);
-          applyLegacyAutocomplete();
         });
         
-        // Reemplazar input con Web Component
-        if (inputRef.current && inputRef.current.parentNode) {
-          inputRef.current.parentNode.replaceChild(placeAutocomplete, inputRef.current);
-          webComponentRef.current = placeAutocomplete;
-          setUseWebComponent(true);
-        }
+        // Agregar Web Component al contenedor (sin reemplazar nada)
+        webComponentContainerRef.current.appendChild(placeAutocomplete);
+        autocompleteRef.current = placeAutocomplete;
+        setUseWebComponent(true);
         
       } catch (error) {
         // ⚙️ FALLBACK al método legacy si el nuevo API falla
         console.warn('PlaceAutocompleteElement no disponible, usando fallback legacy:', error);
-        applyLegacyAutocomplete();
-      }
-
-      // Función para aplicar autocomplete legacy al input existente
-      function applyLegacyAutocomplete() {
-        if (!inputRef.current) return;
-
-        if (onInputChange) {
-          const debouncedInputHandler = () => {
-            if (debounceTimerRef.current) {
-              clearTimeout(debounceTimerRef.current);
-            }
-            debounceTimerRef.current = setTimeout(() => {
-              onInputChange();
-            }, 300);
-          };
-          inputRef.current.addEventListener('input', debouncedInputHandler);
-        }
-
-        const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
-          componentRestrictions: { country: 'mx' },
-          fields: ['address_components', 'formatted_address', 'geometry'],
-          types: ['(cities)'],
-        });
-
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
-
-          if (!place || !place.address_components) {
-            toast({
-              title: '⚠️ Lugar incompleto',
-              description: 'Por favor selecciona una dirección de la lista de sugerencias',
-              variant: 'destructive',
-            });
-            return;
-          }
-
-          let municipality = '';
-          let state = '';
-
-          place.address_components.forEach((component) => {
-            if (component.types.includes('locality')) {
-              municipality = component.long_name;
-            }
-            if (component.types.includes('administrative_area_level_1')) {
-              state = component.long_name;
-            }
-          });
-
-          const location = {
-            address: place.formatted_address || '',
-            municipality,
-            state,
-            lat: place.geometry?.location?.lat(),
-            lng: place.geometry?.location?.lng(),
-          };
-
-          handlePlaceSelection(location, inputRef.current?.value || '');
-        });
-
-        autocompleteRef.current = autocomplete;
+        setUseWebComponent(false);
       }
     };
 
@@ -250,17 +190,112 @@ export const PlaceAutocomplete = ({
         clearTimeout(debounceTimerRef.current);
       }
       
-      if (webComponentRef.current) {
-        webComponentRef.current.remove();
-        webComponentRef.current = null;
+      if (autocompleteRef.current) {
+        if (autocompleteRef.current instanceof HTMLElement) {
+          // Cleanup para Web Component
+          autocompleteRef.current.remove();
+        } else {
+          // Cleanup para legacy Autocomplete
+          google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        }
+        autocompleteRef.current = null;
       }
-      
+    };
+  }, [isLoaded, placeholder, defaultValue, showIcon, onInputChange]);
+
+  // Effect separado para aplicar legacy autocomplete cuando useWebComponent es false
+  useEffect(() => {
+    if (!isLoaded || useWebComponent !== false || !inputRef.current) return;
+
+    // Función auxiliar para manejar la selección de lugar
+    const handlePlaceSelection = (location: {
+      address: string;
+      municipality: string;
+      state: string;
+      lat?: number;
+      lng?: number;
+    }, inputValue: string) => {
+      // Guardar en caché
+      if (inputValue) {
+        placesCache.set(inputValue, location);
+      }
+
+      if (!location.municipality || !location.state) {
+        toast({
+          title: 'ℹ️ Información incompleta',
+          description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
+        });
+      }
+
+      onPlaceSelectRef.current?.(location);
+      toast({ 
+        title: '📍 Ubicación seleccionada', 
+        description: `${location.municipality}, ${location.state}` 
+      });
+    };
+
+    if (onInputChange) {
+      const debouncedInputHandler = () => {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = setTimeout(() => {
+          onInputChange();
+        }, 300);
+      };
+      inputRef.current.addEventListener('input', debouncedInputHandler);
+    }
+
+    const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+      componentRestrictions: { country: 'mx' },
+      fields: ['address_components', 'formatted_address', 'geometry'],
+      types: ['(cities)'],
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+
+      if (!place || !place.address_components) {
+        toast({
+          title: '⚠️ Lugar incompleto',
+          description: 'Por favor selecciona una dirección de la lista de sugerencias',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      let municipality = '';
+      let state = '';
+
+      place.address_components.forEach((component) => {
+        if (component.types.includes('locality')) {
+          municipality = component.long_name;
+        }
+        if (component.types.includes('administrative_area_level_1')) {
+          state = component.long_name;
+        }
+      });
+
+      const location = {
+        address: place.formatted_address || '',
+        municipality,
+        state,
+        lat: place.geometry?.location?.lat(),
+        lng: place.geometry?.location?.lng(),
+      };
+
+      handlePlaceSelection(location, inputRef.current?.value || '');
+    });
+
+    autocompleteRef.current = autocomplete;
+
+    return () => {
       if (autocompleteRef.current) {
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
         autocompleteRef.current = null;
       }
     };
-  }, [isLoaded, placeholder, defaultValue, showIcon, onInputChange]);
+  }, [isLoaded, useWebComponent, onInputChange]);
 
   if (loadError) {
     return (
@@ -289,7 +324,14 @@ export const PlaceAutocomplete = ({
       {label && <Label htmlFor={id}>{label}</Label>}
       <div className="relative">
         {showIcon && <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />}
-        {!useWebComponent && (
+        
+        {/* Contenedor para Web Component cuando esté disponible */}
+        {useWebComponent === true && (
+          <div ref={webComponentContainerRef} />
+        )}
+        
+        {/* Input normal para legacy autocomplete o mientras se carga */}
+        {useWebComponent !== true && (
           <input
             ref={inputRef}
             id={id}
