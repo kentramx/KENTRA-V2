@@ -100,8 +100,7 @@ export function BasicGoogleMap({
       if (typeof m.lat !== 'number' || typeof m.lng !== 'number') continue;
       
       const marker = new google.maps.Marker({ 
-        position: { lat: m.lat, lng: m.lng }, 
-        map: enableClustering ? null : map, // Si clustering está habilitado, no agregamos al mapa aún
+        position: { lat: m.lat, lng: m.lng },
       });
       
       markerRefs.current.push(marker);
@@ -140,6 +139,9 @@ export function BasicGoogleMap({
           },
         },
       });
+    } else {
+      // Si clustering no está habilitado, agregar marcadores directamente al mapa
+      markerRefs.current.forEach(marker => marker.setMap(map));
     }
 
     // Ajustar vista del mapa a los marcadores
