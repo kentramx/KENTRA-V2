@@ -30,7 +30,7 @@ export function MobileMenu() {
         </SheetHeader>
         
         <div className="flex flex-col gap-4 mt-6">
-          <Link to="/propiedades">
+          <Link to="/buscar">
             <Button variant="ghost" className="w-full justify-start">
               <Home className="mr-2 h-4 w-4" />
               Propiedades

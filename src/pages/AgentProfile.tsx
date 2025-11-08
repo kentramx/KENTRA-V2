@@ -97,7 +97,7 @@ const AgentProfile = () => {
       });
     } catch (error) {
       console.error("Error fetching agent data:", error);
-      navigate("/propiedades");
+      navigate("/buscar");
     } finally {
       setLoading(false);
     }

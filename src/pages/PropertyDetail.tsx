@@ -215,7 +215,7 @@ const PropertyDetail = () => {
         description: "No se pudo cargar la propiedad",
         variant: "destructive",
       });
-      navigate("/propiedades");
+      navigate("/buscar");
     } finally {
       setLoading(false);
     }
@@ -253,7 +253,7 @@ const PropertyDetail = () => {
         <div className="mb-4 flex items-center justify-between">
           <Button
             variant="ghost"
-            onClick={() => navigate("/propiedades")}
+            onClick={() => navigate("/buscar")}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver

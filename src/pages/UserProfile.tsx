@@ -181,7 +181,7 @@ const UserProfile = () => {
     if (filters.bedrooms) searchParams.set("bedrooms", filters.bedrooms);
     if (filters.bathrooms) searchParams.set("bathrooms", filters.bathrooms);
 
-    navigate(`/propiedades?${searchParams.toString()}`);
+    navigate(`/buscar?${searchParams.toString()}`);
   };
 
   const handleRequestNotificationPermission = async () => {

@@ -144,7 +144,7 @@ const Favorites = () => {
               Explora propiedades y guarda las que más te gusten
             </p>
             <button
-              onClick={() => navigate('/propiedades')}
+              onClick={() => navigate('/buscar')}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-6"
             >
               Ver Propiedades

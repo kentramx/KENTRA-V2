@@ -401,7 +401,7 @@ const Home = () => {
             </div>
             <Button
               variant="outline"
-              onClick={() => navigate("/propiedades")}
+              onClick={() => navigate("/buscar")}
               className="hidden md:flex items-center gap-2"
             >
               Ver Todas
@@ -450,7 +450,7 @@ const Home = () => {
               <div className="mt-8 text-center md:hidden">
                 <Button
                   variant="outline"
-                  onClick={() => navigate("/propiedades")}
+                  onClick={() => navigate("/buscar")}
                   className="w-full sm:w-auto"
                 >
                   Ver Todas las Propiedades
@@ -476,7 +476,7 @@ const Home = () => {
           </h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             <button
-              onClick={() => navigate(`/propiedades?tipo_listado=${listingType}&tipo=casa`)}
+              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=casa`)}
               className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
             >
               <HomeIcon className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
@@ -487,7 +487,7 @@ const Home = () => {
             </button>
 
             <button
-              onClick={() => navigate(`/propiedades?tipo_listado=${listingType}&tipo=departamento`)}
+              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=departamento`)}
               className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
             >
               <Building2 className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
@@ -498,7 +498,7 @@ const Home = () => {
             </button>
 
             <button
-              onClick={() => navigate(`/propiedades?tipo_listado=${listingType}&tipo=terreno`)}
+              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=terreno`)}
               className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
             >
               <TreePine className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
@@ -509,7 +509,7 @@ const Home = () => {
             </button>
 
             <button
-              onClick={() => navigate(`/propiedades?tipo_listado=${listingType}&tipo=oficina`)}
+              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=oficina`)}
               className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
             >
               <Briefcase className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
@@ -520,7 +520,7 @@ const Home = () => {
             </button>
 
             <button
-              onClick={() => navigate(`/propiedades?tipo_listado=${listingType}&tipo=local`)}
+              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=local`)}
               className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
             >
               <Store className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
@@ -531,7 +531,7 @@ const Home = () => {
             </button>
 
             <button
-              onClick={() => navigate(`/propiedades?tipo_listado=${listingType}&tipo=bodega`)}
+              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=bodega`)}
               className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
             >
               <Warehouse className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
@@ -542,7 +542,7 @@ const Home = () => {
             </button>
 
             <button
-              onClick={() => navigate(`/propiedades?tipo_listado=${listingType}&tipo=edificio`)}
+              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=edificio`)}
               className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
             >
               <Building className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
@@ -553,7 +553,7 @@ const Home = () => {
             </button>
 
             <button
-              onClick={() => navigate(`/propiedades?tipo_listado=${listingType}&tipo=rancho`)}
+              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=rancho`)}
               className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
             >
               <Tractor className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
@@ -617,7 +617,7 @@ const Home = () => {
               <ul className="space-y-2 text-sm">
                 <li>
                   <button
-                    onClick={() => navigate("/propiedades")}
+                    onClick={() => navigate("/buscar")}
                     className="text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Buscar Propiedades
