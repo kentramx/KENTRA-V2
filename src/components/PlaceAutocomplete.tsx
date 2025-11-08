@@ -73,7 +73,7 @@ export const PlaceAutocomplete = ({
       const autocomplete = new google.maps.places.Autocomplete(input, {
         componentRestrictions: { country: 'mx' },
         fields: ['address_components', 'formatted_address', 'geometry'],
-        types: ['address'],
+        types: ['(cities)'],
       });
 
       autocomplete.addListener('place_changed', () => {

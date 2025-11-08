@@ -21,7 +21,7 @@ export const usePlacesAutocomplete = ({ onPlaceSelect }: UsePlacesAutocompletePr
         autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
           componentRestrictions: { country: 'mx' },
           fields: ['geometry', 'formatted_address', 'address_components', 'name'],
-          types: ['geocode', 'establishment'],
+          types: ['(cities)'],
         });
 
         autocompleteRef.current.addListener('place_changed', () => {
