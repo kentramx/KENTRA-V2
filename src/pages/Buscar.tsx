@@ -1858,29 +1858,18 @@ const Buscar = () => {
                     <div className="bg-background border-2 border-border rounded-lg shadow-lg overflow-hidden animate-fade-in">
                       <Button
                         variant="ghost"
-                        size="icon"
-                        onClick={centerOnResults}
-                        disabled={visiblePropertiesCount === 0}
-                        className="w-full rounded-none border-b border-border hover:bg-accent transition-all hover:scale-105"
-                        title="Centrar en resultados"
-                      >
-                        <MapPin className="h-5 w-5" />
-                      </Button>
-                      
-                      <Button
-                        variant="ghost"
-                        size="icon"
+                        size="sm"
                         onClick={() => setMapType(prev => prev === 'roadmap' ? 'satellite' : 'roadmap')}
-                        className="w-full rounded-none border-b border-border hover:bg-accent transition-all hover:scale-105"
+                        className="h-8 w-8 p-0 rounded-none border-b border-border hover:bg-accent"
                         title={mapType === 'roadmap' ? 'Vista satélite' : 'Vista mapa'}
                       >
                         {mapType === 'roadmap' ? (
-                          <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <circle cx="12" cy="12" r="10"/>
                             <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                           </svg>
                         ) : (
-                          <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>
                           </svg>
                         )}
@@ -1888,12 +1877,12 @@ const Buscar = () => {
                       
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         onClick={centerOnMyLocation}
-                        className="w-full rounded-none hover:bg-accent transition-all hover:scale-105"
+                        className="h-8 w-8 p-0 rounded-none hover:bg-accent"
                         title="Mi ubicación"
                       >
-                        <svg className="h-5 w-5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <circle cx="12" cy="12" r="3"/>
                           <circle cx="12" cy="12" r="10"/>
                           <line x1="12" y1="2" x2="12" y2="4"/>
@@ -1907,13 +1896,13 @@ const Buscar = () => {
                     {/* Botón de filtro por viewport */}
                     <Button
                       variant={mapFilterActive ? "default" : "outline"}
-                      size="icon"
+                      size="sm"
                       onClick={() => setMapFilterActive(!mapFilterActive)}
-                      className="w-full transition-all hover:scale-105 animate-fade-in shadow-lg"
+                      className="h-8 w-8 p-0 shadow-lg"
                       title={mapFilterActive ? "Desactivar filtro de mapa" : "Filtrar por área visible"}
                     >
                       <svg 
-                        className={`h-5 w-5 transition-transform ${mapFilterActive ? 'scale-110' : ''}`}
+                        className={`h-4 w-4 ${mapFilterActive ? 'scale-110' : ''}`}
                         viewBox="0 0 24 24" 
                         fill="none" 
                         stroke="currentColor" 
