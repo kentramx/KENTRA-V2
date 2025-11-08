@@ -228,6 +228,7 @@ const Buscar = () => {
   const markerMapRef = useRef<Map<string, google.maps.Marker>>(new Map());
   const renderingRef = useRef<boolean>(false);
   const boundsListenerRef = useRef<google.maps.MapsEventListener | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   // Filtrar y ordenar búsquedas guardadas
   const filteredSavedSearches = savedSearches
@@ -883,6 +884,26 @@ const Buscar = () => {
         mapInstanceRef.current.addListener('tilesloaded', setMapReadyOnce);
         mapInstanceRef.current.addListener('projection_changed', setMapReadyOnce);
 
+        // Forzar reflow/resize del mapa por si el contenedor aún ajusta altura y marcar listo
+        setTimeout(() => {
+          if (!mapInstanceRef.current || !mapRef.current) return;
+          ((google.maps as any).event)?.trigger(mapInstanceRef.current, 'resize');
+          const center = mapInstanceRef.current.getCenter();
+          if (center) mapInstanceRef.current.setCenter(center);
+
+          // Inicializar ResizeObserver para futuros cambios de tamaño
+          if (!resizeObserverRef.current) {
+            resizeObserverRef.current = new ResizeObserver(() => {
+              if (!mapInstanceRef.current) return;
+              ((google.maps as any).event)?.trigger(mapInstanceRef.current, 'resize');
+            });
+            resizeObserverRef.current.observe(mapRef.current);
+          }
+
+          // Marcar listo si aún no lo está
+          if (!mapReadySet) setMapReadyOnce();
+        }, 200);
+
         // Timeout de seguridad más agresivo: 1.5s
         timeoutId = setTimeout(() => {
           if (isMounted && !mapReadySet) {
@@ -906,6 +927,12 @@ const Buscar = () => {
     return () => {
       isMounted = false;
       if (timeoutId) clearTimeout(timeoutId);
+      // Limpiar observer
+      if (resizeObserverRef.current && mapRef.current) {
+        resizeObserverRef.current.unobserve(mapRef.current);
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
     };
   }, []);
 
