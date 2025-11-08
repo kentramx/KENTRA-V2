@@ -834,6 +834,15 @@ const Buscar = () => {
           mapTypeId: mapType,
         });
 
+        // Forzar reflow/resize del mapa por si el contenedor aún ajusta altura
+        setTimeout(() => {
+          if (!mapInstanceRef.current) return;
+          // Forzar recalculo de tamaño y re-centrado
+          ((google.maps as any).event)?.trigger(mapInstanceRef.current, 'resize');
+          const center = mapInstanceRef.current.getCenter();
+          if (center) mapInstanceRef.current.setCenter(center);
+        }, 200);
+
         setMapLoadingProgress(85);
 
         let mapReadySet = false;

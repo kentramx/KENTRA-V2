@@ -63,7 +63,7 @@ export const loadGoogleMaps = (): Promise<typeof google.maps> => {
 
       // Crear y agregar el script estable con Places legacy y carga async
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps&language=es&region=MX&loading=async`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps&language=es&region=MX&v=weekly`;
       script.async = true;
       script.defer = true;
       script.setAttribute('data-google-maps', 'true');
