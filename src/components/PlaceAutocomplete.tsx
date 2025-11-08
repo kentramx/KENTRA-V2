@@ -64,90 +64,160 @@ export const PlaceAutocomplete = ({
   useEffect(() => {
     if (!isLoaded || !containerRef.current) return;
 
-    try {
-      // Inicializar SIEMPRE Autocomplete (legacy) para máxima compatibilidad
+    const initAutocomplete = async () => {
+      if (!containerRef.current) return;
+      
       containerRef.current.innerHTML = '';
 
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.placeholder = placeholder;
-      input.defaultValue = defaultValue;
-      input.className = showIcon 
-        ? 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9'
-        : 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
-
-      containerRef.current.appendChild(input);
-
-      // Detectar cuando el usuario comienza a escribir
-      if (onInputChange) {
-        input.addEventListener('input', onInputChange);
-      }
-
-      const autocomplete = new google.maps.places.Autocomplete(input, {
-        componentRestrictions: { country: 'mx' },
-        fields: ['address_components', 'formatted_address', 'geometry'],
-        types: ['(cities)'],
-      });
-
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-
-        if (!place || !place.address_components) {
-          toast({
-            title: '⚠️ Lugar incompleto',
-            description: 'Por favor selecciona una dirección de la lista de sugerencias',
-            variant: 'destructive',
+      try {
+        // 🆕 Intentar usar el nuevo Web Component oficial
+        const { PlaceAutocompleteElement } = await google.maps.importLibrary("places") as any;
+        
+        const placeAutocomplete = new PlaceAutocompleteElement({
+          componentRestrictions: { country: 'mx' },
+          requestedLanguage: 'es',
+          requestedRegion: 'MX',
+        });
+        
+        // Aplicar estilos personalizados
+        placeAutocomplete.className = showIcon 
+          ? 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9'
+          : 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+        
+        if (placeholder) placeAutocomplete.placeholder = placeholder;
+        if (defaultValue) placeAutocomplete.value = defaultValue;
+        
+        // Listener para cuando el usuario selecciona un lugar
+        placeAutocomplete.addEventListener('gmp-placeselect', async ({ place }: any) => {
+          if (!place) return;
+          
+          // Obtener los campos necesarios
+          await place.fetchFields({
+            fields: ['addressComponents', 'formattedAddress', 'location']
           });
-          return;
+          
+          let municipality = '';
+          let state = '';
+          
+          place.addressComponents?.forEach((component: any) => {
+            if (component.types.includes('locality')) {
+              municipality = component.longText;
+            }
+            if (component.types.includes('administrative_area_level_1')) {
+              state = component.longText;
+            }
+          });
+          
+          const location = {
+            address: place.formattedAddress || '',
+            municipality,
+            state,
+            lat: place.location?.lat(),
+            lng: place.location?.lng(),
+          };
+          
+          if (!municipality || !state) {
+            toast({
+              title: 'ℹ️ Información incompleta',
+              description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
+            });
+          }
+          
+          onPlaceSelectRef.current?.(location);
+          toast({ title: '📍 Ubicación seleccionada', description: `${location.municipality}, ${location.state}` });
+        });
+        
+        // Listener para detectar cuando el usuario escribe
+        if (onInputChange) {
+          placeAutocomplete.addEventListener('input', onInputChange);
+        }
+        
+        containerRef.current.appendChild(placeAutocomplete);
+        autocompleteRef.current = placeAutocomplete;
+        
+      } catch (error) {
+        // ⚙️ FALLBACK al método legacy si el nuevo API falla
+        console.warn('PlaceAutocompleteElement no disponible, usando fallback legacy:', error);
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = placeholder;
+        input.defaultValue = defaultValue;
+        input.className = showIcon 
+          ? 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9'
+          : 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+
+        containerRef.current.appendChild(input);
+
+        if (onInputChange) {
+          input.addEventListener('input', onInputChange);
         }
 
-        let municipality = '';
-        let state = '';
-
-        place.address_components.forEach((component) => {
-          if (component.types.includes('locality')) {
-            municipality = component.long_name;
-          }
-          if (component.types.includes('administrative_area_level_1')) {
-            state = component.long_name;
-          }
+        const autocomplete = new google.maps.places.Autocomplete(input, {
+          componentRestrictions: { country: 'mx' },
+          fields: ['address_components', 'formatted_address', 'geometry'],
+          types: ['(cities)'],
         });
 
-        const location = {
-          address: place.formatted_address || '',
-          municipality,
-          state,
-          lat: place.geometry?.location?.lat(),
-          lng: place.geometry?.location?.lng(),
-        };
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
 
-        if (!municipality || !state) {
-          toast({
-            title: 'ℹ️ Información incompleta',
-            description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
+          if (!place || !place.address_components) {
+            toast({
+              title: '⚠️ Lugar incompleto',
+              description: 'Por favor selecciona una dirección de la lista de sugerencias',
+              variant: 'destructive',
+            });
+            return;
+          }
+
+          let municipality = '';
+          let state = '';
+
+          place.address_components.forEach((component) => {
+            if (component.types.includes('locality')) {
+              municipality = component.long_name;
+            }
+            if (component.types.includes('administrative_area_level_1')) {
+              state = component.long_name;
+            }
           });
-        }
 
-        onPlaceSelectRef.current?.(location);
-        toast({ title: '📍 Ubicación seleccionada', description: `${location.municipality}, ${location.state}` });
-      });
+          const location = {
+            address: place.formatted_address || '',
+            municipality,
+            state,
+            lat: place.geometry?.location?.lat(),
+            lng: place.geometry?.location?.lng(),
+          };
 
-      autocompleteRef.current = autocomplete;
-    } catch (error) {
-      console.error('Error inicializando Autocomplete legacy:', error);
-      setLoadError('No se pudo inicializar el autocompletado');
-    }
+          if (!municipality || !state) {
+            toast({
+              title: 'ℹ️ Información incompleta',
+              description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
+            });
+          }
+
+          onPlaceSelectRef.current?.(location);
+          toast({ title: '📍 Ubicación seleccionada', description: `${location.municipality}, ${location.state}` });
+        });
+
+        autocompleteRef.current = autocomplete;
+      }
+    };
+
+    initAutocomplete();
 
     return () => {
       if (autocompleteRef.current) {
-        // @ts-ignore - puede ser instancia de Autocomplete
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        if (autocompleteRef.current instanceof HTMLElement) {
+          // Cleanup para Web Component
+          autocompleteRef.current.remove();
+        } else {
+          // Cleanup para legacy Autocomplete
+          google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        }
         autocompleteRef.current = null;
-      }
-      // Limpiar el event listener de input
-      const input = containerRef.current?.querySelector('input');
-      if (input && onInputChange) {
-        input.removeEventListener('input', onInputChange);
       }
     };
   }, [isLoaded, placeholder, defaultValue]);
