@@ -86,7 +86,11 @@ export function BasicGoogleMap({
         infoWindowRef.current = null;
       }
       if (clustererRef.current) {
-        clustererRef.current.clearMarkers();
+        try {
+          clustererRef.current.clearMarkers();
+        } catch (e) {
+          console.warn('Error clearing clusterer on unmount:', e);
+        }
         clustererRef.current = null;
       }
       markerRefs.current.forEach(m => m.setMap(null));
@@ -99,9 +103,13 @@ export function BasicGoogleMap({
     const map = mapRef.current;
     if (!map) return;
 
-    // Limpiar clusterer anterior si existe
+    // Limpiar clusterer anterior si existe - de forma segura
     if (clustererRef.current) {
-      clustererRef.current.clearMarkers();
+      try {
+        clustererRef.current.clearMarkers();
+      } catch (e) {
+        console.warn('Error clearing clusterer:', e);
+      }
       clustererRef.current = null;
     }
 
@@ -251,37 +259,52 @@ export function BasicGoogleMap({
     }
 
     // Si clustering está habilitado, crear el clusterer
+    // Esperar a que el mapa esté completamente listo antes de crear el clusterer
     if (enableClustering && markerRefs.current.length > 0) {
-      clustererRef.current = new MarkerClusterer({
-        map,
-        markers: markerRefs.current,
-        algorithm: new GridAlgorithm({ maxZoom: 15 }),
-        renderer: {
-          render: ({ count, position }) => {
-            // Personalizar el aspecto del cluster
-            const color = count > 50 ? '#e11d48' : count > 20 ? '#f97316' : count > 10 ? '#eab308' : '#0ea5e9';
-            
-            return new google.maps.Marker({
-              position,
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                fillColor: color,
-                fillOpacity: 0.8,
-                strokeColor: '#ffffff',
-                strokeWeight: 3,
-                scale: Math.min(20 + count / 2, 35),
+      // Usar idle event para asegurar que el mapa está completamente inicializado
+      const createClusterer = () => {
+        if (!mapRef.current) return;
+        
+        try {
+          clustererRef.current = new MarkerClusterer({
+            map: mapRef.current,
+            markers: markerRefs.current,
+            algorithm: new GridAlgorithm({ maxZoom: 15 }),
+            renderer: {
+              render: ({ count, position }) => {
+                // Personalizar el aspecto del cluster
+                const color = count > 50 ? '#e11d48' : count > 20 ? '#f97316' : count > 10 ? '#eab308' : '#0ea5e9';
+                
+                return new google.maps.Marker({
+                  position,
+                  icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: color,
+                    fillOpacity: 0.8,
+                    strokeColor: '#ffffff',
+                    strokeWeight: 3,
+                    scale: Math.min(20 + count / 2, 35),
+                  },
+                  label: {
+                    text: String(count),
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                  },
+                  zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+                });
               },
-              label: {
-                text: String(count),
-                color: '#ffffff',
-                fontSize: '14px',
-                fontWeight: 'bold',
-              },
-              zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
-            });
-          },
-        },
-      });
+            },
+          });
+        } catch (e) {
+          console.error('Error creating clusterer:', e);
+          // Fallback: agregar marcadores directamente
+          markerRefs.current.forEach(marker => marker.setMap(map));
+        }
+      };
+
+      // Esperar a que el mapa esté listo
+      google.maps.event.addListenerOnce(map, 'idle', createClusterer);
     } else {
       // Si clustering no está habilitado, agregar marcadores directamente al mapa
       markerRefs.current.forEach(marker => marker.setMap(map));
