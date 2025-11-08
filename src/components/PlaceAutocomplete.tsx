@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { MapPin, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
+import { placesCache } from '@/lib/placesCache';
 import { toast } from '@/hooks/use-toast';
 
 interface PlaceAutocompleteProps {
@@ -117,6 +118,11 @@ export const PlaceAutocomplete = ({
             lng: place.location?.lng(),
           };
           
+          // Guardar en caché
+          if (placeAutocomplete.value) {
+            placesCache.set(placeAutocomplete.value, location);
+          }
+          
           if (!municipality || !state) {
             toast({
               title: 'ℹ️ Información incompleta',
@@ -207,6 +213,11 @@ export const PlaceAutocomplete = ({
               lng: place.geometry?.location?.lng(),
             };
 
+            // Guardar en caché
+            if (input.value) {
+              placesCache.set(input.value, location);
+            }
+
             if (!municipality || !state) {
               toast({
                 title: 'ℹ️ Información incompleta',
@@ -287,6 +298,11 @@ export const PlaceAutocomplete = ({
             lat: place.geometry?.location?.lat(),
             lng: place.geometry?.location?.lng(),
           };
+
+          // Guardar en caché
+          if (input.value) {
+            placesCache.set(input.value, location);
+          }
 
           if (!municipality || !state) {
             toast({
