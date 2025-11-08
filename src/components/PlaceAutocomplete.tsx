@@ -144,7 +144,7 @@ export const PlaceAutocomplete = ({
         input.removeEventListener('input', onInputChange);
       }
     };
-  }, [isLoaded, placeholder, defaultValue, onPlaceSelect, onInputChange]);
+  }, [isLoaded, placeholder, defaultValue, onPlaceSelect]);
 
   if (loadError) {
     return (
