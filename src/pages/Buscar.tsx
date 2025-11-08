@@ -643,6 +643,35 @@ const Buscar = () => {
                   </SheetHeader>
                   <ScrollArea className="h-[calc(90vh-120px)] mt-4">
                     <div className="space-y-6 pr-4">
+                      {/* Tipo de Propiedad */}
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-sm">Tipo de propiedad</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { value: 'casa', label: '🏠 Casa' },
+                            { value: 'departamento', label: '🏢 Depto' },
+                            { value: 'terreno', label: '🌳 Terreno' },
+                            { value: 'oficina', label: '💼 Oficina' },
+                            { value: 'local', label: '🏪 Local' },
+                            { value: 'bodega', label: '📦 Bodega' },
+                            { value: 'edificio', label: '🏛️ Edificio' },
+                            { value: 'rancho', label: '🐎 Rancho' },
+                          ].map(tipo => (
+                            <Button
+                              key={tipo.value}
+                              variant={filters.tipo === tipo.value ? 'default' : 'outline'}
+                              size="sm"
+                              className="justify-start"
+                              onClick={() => setFilters(prev => ({ ...prev, tipo: prev.tipo === tipo.value ? '' : tipo.value }))}
+                            >
+                              {tipo.label}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
                       {/* Operación */}
                       <div className="space-y-3">
                         <h4 className="font-medium text-sm">Tipo de operación</h4>
@@ -714,35 +743,6 @@ const Buscar = () => {
 
                       <Separator />
 
-                      {/* Tipo de Propiedad */}
-                      <div className="space-y-3">
-                        <h4 className="font-medium text-sm">Tipo de propiedad</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {[
-                            { value: 'casa', label: '🏠 Casa' },
-                            { value: 'departamento', label: '🏢 Depto' },
-                            { value: 'terreno', label: '🌳 Terreno' },
-                            { value: 'oficina', label: '💼 Oficina' },
-                            { value: 'local', label: '🏪 Local' },
-                            { value: 'bodega', label: '📦 Bodega' },
-                            { value: 'edificio', label: '🏛️ Edificio' },
-                            { value: 'rancho', label: '🐎 Rancho' },
-                          ].map(tipo => (
-                            <Button
-                              key={tipo.value}
-                              variant={filters.tipo === tipo.value ? 'default' : 'outline'}
-                              size="sm"
-                              className="justify-start"
-                              onClick={() => setFilters(prev => ({ ...prev, tipo: prev.tipo === tipo.value ? '' : tipo.value }))}
-                            >
-                              {tipo.label}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <Separator />
-
                       {/* Ordenar */}
                       <div className="space-y-3">
                         <h4 className="font-medium text-sm">Ordenar por</h4>
@@ -785,7 +785,44 @@ const Buscar = () => {
 
               {/* Filtros Desktop - Popovers (ocultos en móvil) */}
               <div className="hidden lg:flex items-center gap-2">
-              {/* 2. Operación (Venta/Renta) */}
+              {/* 2. Tipo */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    {filters.tipo ? getTipoLabel(filters.tipo) : 'Tipo'}
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-96" align="start">
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm">Tipo de propiedad</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: 'casa', label: '🏠 Casa' },
+                        { value: 'departamento', label: '🏢 Depto' },
+                        { value: 'terreno', label: '🌳 Terreno' },
+                        { value: 'oficina', label: '💼 Oficina' },
+                        { value: 'local', label: '🏪 Local' },
+                        { value: 'bodega', label: '📦 Bodega' },
+                        { value: 'edificio', label: '🏛️ Edificio' },
+                        { value: 'rancho', label: '🐎 Rancho' },
+                      ].map(tipo => (
+                        <Button
+                          key={tipo.value}
+                          variant={filters.tipo === tipo.value ? 'default' : 'outline'}
+                          size="sm"
+                          className="justify-start"
+                          onClick={() => setFilters(prev => ({ ...prev, tipo: prev.tipo === tipo.value ? '' : tipo.value }))}
+                        >
+                          {tipo.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* 3. Operación (Venta/Renta) */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -810,7 +847,7 @@ const Buscar = () => {
                 </PopoverContent>
               </Popover>
 
-              {/* 3. Precio */}
+              {/* 4. Precio */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -838,7 +875,7 @@ const Buscar = () => {
                 </PopoverContent>
               </Popover>
 
-              {/* 4. Beds & Baths */}
+              {/* 5. Beds & Baths */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -879,43 +916,6 @@ const Buscar = () => {
                           </Button>
                         ))}
                       </div>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              {/* 5. Home Type */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    {filters.tipo ? getTipoLabel(filters.tipo) : 'Tipo'}
-                    <ChevronDown className="h-4 w-4 ml-1" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-96" align="start">
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-sm">Tipo de propiedad</h4>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { value: 'casa', label: '🏠 Casa' },
-                        { value: 'departamento', label: '🏢 Depto' },
-                        { value: 'terreno', label: '🌳 Terreno' },
-                        { value: 'oficina', label: '💼 Oficina' },
-                        { value: 'local', label: '🏪 Local' },
-                        { value: 'bodega', label: '📦 Bodega' },
-                        { value: 'edificio', label: '🏛️ Edificio' },
-                        { value: 'rancho', label: '🐎 Rancho' },
-                      ].map(tipo => (
-                        <Button
-                          key={tipo.value}
-                          variant={filters.tipo === tipo.value ? 'default' : 'outline'}
-                          size="sm"
-                          className="justify-start"
-                          onClick={() => setFilters(prev => ({ ...prev, tipo: prev.tipo === tipo.value ? '' : tipo.value }))}
-                        >
-                          {tipo.label}
-                        </Button>
-                      ))}
                     </div>
                   </div>
                 </PopoverContent>
