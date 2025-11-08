@@ -869,16 +869,16 @@ const Buscar = () => {
       const priceColor = getPriceColor(property.price);
       const iconSvg = getPropertyIcon(property.type, priceColor);
       
-      // Convertir SVG a data URL
-      const svgBlob = new Blob([iconSvg], { type: 'image/svg+xml' });
-      const svgUrl = URL.createObjectURL(svgBlob);
+      // Convertir SVG a data URI directamente sin blob
+      const encodedSvg = btoa(unescape(encodeURIComponent(iconSvg)));
+      const dataUri = `data:image/svg+xml;base64,${encodedSvg}`;
       
       const marker = new google.maps.Marker({
         position: { lat: Number(property.lat), lng: Number(property.lng) },
         title: property.title,
-        map: null, // No añadir al mapa inmediatamente
+        map: null,
         icon: {
-          url: svgUrl,
+          url: dataUri,
           scaledSize: new google.maps.Size(40, 40),
           anchor: new google.maps.Point(20, 40),
         },
@@ -896,7 +896,7 @@ const Buscar = () => {
           fontWeight: 'bold',
           className: 'marker-price-label'
         },
-        optimized: false,
+        optimized: true,
       });
 
       // Crear contenido del info window
@@ -1021,260 +1021,49 @@ const Buscar = () => {
       return marker;
     };
 
-    // Renderizado incremental por lotes
-    const BATCH_SIZE = 15; // Procesar 15 marcadores por lote
-    let currentBatch = 0;
+    // Renderizado directo sin batching ni animaciones
     const newMarkers: google.maps.Marker[] = [];
     
-    const renderBatch = () => {
-      const start = currentBatch * BATCH_SIZE;
-      const end = Math.min(start + BATCH_SIZE, propertiesWithCoords.length);
+    propertiesWithCoords.forEach(property => {
+      const marker = createMarker(property);
+      marker.setMap(mapInstanceRef.current);
+      newMarkers.push(marker);
+      markerMapRef.current.set(property.id, marker);
+    });
+
+    markersRef.current = newMarkers;
+    console.log('[Marcadores] Todos los marcadores creados:', newMarkers.length);
+    
+    setIsLoadingMarkers(false);
+    setMarkersLoadingProgress(100);
+
+    // Agregar clustering simple
+    if (newMarkers.length > 0) {
+      markerClustererRef.current = new MarkerClusterer({
+        map: mapInstanceRef.current,
+        markers: newMarkers,
+        algorithmOptions: {
+          maxZoom: 15,
+        },
+      });
+
+      // Ajustar bounds para mostrar todos los marcadores
+      const bounds = new google.maps.LatLngBounds();
+      newMarkers.forEach(marker => {
+        const position = marker.getPosition();
+        if (position) bounds.extend(position);
+      });
       
-      // Crear marcadores del lote actual
-      for (let i = start; i < end; i++) {
-        const property = propertiesWithCoords[i];
-        const marker = createMarker(property);
-        marker.setMap(mapInstanceRef.current);
-        marker.setOpacity(0); // Iniciar invisible
-        newMarkers.push(marker);
-        markerMapRef.current.set(property.id, marker);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.fitBounds(bounds);
       }
-      
-      // Actualizar progreso
-      const progress = Math.round((end / propertiesWithCoords.length) * 100);
-      setMarkersLoadingProgress(progress);
-      
-      console.log(`[Marcadores] Renderizado lote ${currentBatch + 1}: ${start}-${end} de ${propertiesWithCoords.length}`);
-      
-      currentBatch++;
-      
-      // Si hay más marcadores por renderizar, continuar en el siguiente frame
-      if (end < propertiesWithCoords.length) {
-        requestAnimationFrame(renderBatch);
-      } else {
-        // Finalización del renderizado
-        markersRef.current = newMarkers;
-        console.log('[Marcadores] Todos los marcadores creados:', newMarkers.length);
+    }
 
-        // Animación de entrada suave y escalonada para todos los marcadores
-        newMarkers.forEach((marker, index) => {
-          const delay = index * 20; // 20ms entre cada marcador
-          setTimeout(() => {
-            if (marker.getMap()) {
-              let opacity = 0;
-              const fadeIn = setInterval(() => {
-                opacity += 0.15;
-                marker.setOpacity(Math.min(opacity, 1));
-                if (opacity >= 1) {
-                  clearInterval(fadeIn);
-                  marker.setOpacity(1);
-                }
-              }, 25);
-            }
-          }, delay);
-        });
-
-        setIsLoadingMarkers(false);
-        setMarkersLoadingProgress(100);
-
-        // Agregar clustering con renderizado personalizado y animaciones
-        if (newMarkers.length > 0) {
-          // Función para obtener color y tamaño según densidad de cluster
-          const getClusterStyle = (count: number): { color: string; size: number; label: string } => {
-            if (count < 5) return { color: '#10B981', size: 50, label: 'Baja densidad' };
-            if (count < 10) return { color: '#3B82F6', size: 55, label: 'Media densidad' };
-            if (count < 20) return { color: '#F59E0B', size: 60, label: 'Alta densidad' };
-            if (count < 50) return { color: '#EF4444', size: 65, label: 'Muy alta densidad' };
-            return { color: '#DC2626', size: 70, label: 'Densidad extrema' };
-          };
-
-          // Crear renderer personalizado para clusters con diseño mejorado
-          const renderer = {
-            render: (cluster: any) => {
-              const count = cluster.count;
-              const position = cluster.position;
-              const style = getClusterStyle(count);
-              
-              // Crear SVG del cluster con estilo moderno y animaciones
-              const svg = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="${style.size + 20}" height="${style.size + 20}" viewBox="0 0 ${style.size + 20} ${style.size + 20}">
-                  <defs>
-                    <filter id="shadow-${count}" x="-50%" y="-50%" width="200%" height="200%">
-                      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
-                      <feOffset dx="0" dy="3" result="offsetblur"/>
-                      <feComponentTransfer>
-                        <feFuncA type="linear" slope="0.4"/>
-                      </feComponentTransfer>
-                      <feMerge>
-                        <feMergeNode/>
-                        <feMergeNode in="SourceGraphic"/>
-                      </feMerge>
-                    </filter>
-                    <radialGradient id="grad-${count}">
-                      <stop offset="0%" style="stop-color:${style.color};stop-opacity:1" />
-                      <stop offset="70%" style="stop-color:${style.color};stop-opacity:0.95" />
-                      <stop offset="100%" style="stop-color:${style.color};stop-opacity:0.85" />
-                    </radialGradient>
-                    <radialGradient id="pulse-${count}">
-                      <stop offset="0%" style="stop-color:${style.color};stop-opacity:0" />
-                      <stop offset="100%" style="stop-color:${style.color};stop-opacity:0.3" />
-                    </radialGradient>
-                  </defs>
-                  
-                  <!-- Anillo pulsante exterior -->
-                  <circle cx="${(style.size + 20) / 2}" cy="${(style.size + 20) / 2}" r="${style.size / 2 + 8}" 
-                          fill="url(#pulse-${count})" opacity="0.6">
-                    <animate attributeName="r" 
-                             from="${style.size / 2 + 5}" 
-                             to="${style.size / 2 + 12}" 
-                             dur="2s" 
-                             repeatCount="indefinite"/>
-                    <animate attributeName="opacity" 
-                             from="0.6" 
-                             to="0" 
-                             dur="2s" 
-                             repeatCount="indefinite"/>
-                  </circle>
-                  
-                  <!-- Círculo principal con gradiente -->
-                  <circle cx="${(style.size + 20) / 2}" cy="${(style.size + 20) / 2}" r="${style.size / 2 - 2}" 
-                          fill="url(#grad-${count})" 
-                          filter="url(#shadow-${count})" 
-                          stroke="white" 
-                          stroke-width="4"
-                          opacity="0.95"/>
-                  
-                  <!-- Círculo interior decorativo -->
-                  <circle cx="${(style.size + 20) / 2}" cy="${(style.size + 20) / 2}" r="${style.size / 2 - 8}" 
-                          fill="none" 
-                          stroke="white" 
-                          stroke-width="2"
-                          opacity="0.3"/>
-                  
-                  <!-- Texto del número -->
-                  <text x="${(style.size + 20) / 2}" y="${(style.size + 20) / 2}" 
-                        text-anchor="middle" 
-                        dominant-baseline="central" 
-                        font-family="system-ui, -apple-system, sans-serif" 
-                        font-size="${count > 99 ? '16' : '20'}" 
-                        font-weight="800" 
-                        fill="white"
-                        letter-spacing="0.5">
-                    ${count}
-                  </text>
-                  
-                  <!-- Icono de propiedades debajo del número -->
-                  <text x="${(style.size + 20) / 2}" y="${(style.size + 20) / 2 + 14}" 
-                        text-anchor="middle" 
-                        font-size="8" 
-                        fill="white"
-                        opacity="0.8"
-                        font-weight="600">
-                    PROPS
-                  </text>
-                </svg>
-              `;
-              
-              // Convertir SVG a data URL
-              const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
-              const svgUrl = URL.createObjectURL(svgBlob);
-              
-              const clusterMarker = new google.maps.Marker({
-                position,
-                icon: {
-                  url: svgUrl,
-                  scaledSize: new google.maps.Size(style.size + 20, style.size + 20),
-                  anchor: new google.maps.Point((style.size + 20) / 2, (style.size + 20) / 2),
-                },
-                zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
-                title: `${count} propiedades en esta zona`,
-              });
-
-              // Animación inicial de aparición
-              clusterMarker.setOpacity(0);
-              setTimeout(() => {
-                let opacity = 0;
-                const fadeIn = setInterval(() => {
-                  opacity += 0.2;
-                  clusterMarker.setOpacity(Math.min(opacity, 1));
-                  if (opacity >= 1) {
-                    clearInterval(fadeIn);
-                  }
-                }, 30);
-              }, 100);
-
-              // Hover effect en cluster
-              clusterMarker.addListener('mouseover', () => {
-                clusterMarker.setZIndex(Number(google.maps.Marker.MAX_ZINDEX) + count + 1000);
-              });
-
-              clusterMarker.addListener('mouseout', () => {
-                clusterMarker.setZIndex(Number(google.maps.Marker.MAX_ZINDEX) + count);
-              });
-              
-              return clusterMarker;
-            },
-          };
-
-          markerClustererRef.current = new MarkerClusterer({
-            map: mapInstanceRef.current,
-            markers: newMarkers,
-            renderer,
-            onClusterClick: (event, cluster, map) => {
-              // Animación suave al hacer clic en cluster
-              const bounds = cluster.bounds as google.maps.LatLngBounds;
-              
-              // Zoom con animación smooth
-              map.fitBounds(bounds, {
-                bottom: 150,
-                left: 150,
-                right: 150,
-                top: 150,
-              });
-              
-              // Incrementar zoom levemente para mejor visualización
-              setTimeout(() => {
-                const currentZoom = map.getZoom() || 12;
-                if (currentZoom < 18) {
-                  map.setZoom(currentZoom + 1);
-                }
-              }, 400);
-              
-              const style = getClusterStyle(cluster.count);
-              toast({
-                title: `🏘️ ${cluster.count} Propiedades`,
-                description: `${style.label} - Expandiendo área`,
-              });
-            },
-          });
-
-          // Ajustar bounds para mostrar todos los marcadores con throttling
-          const bounds = new google.maps.LatLngBounds();
-          newMarkers.forEach(marker => {
-            const position = marker.getPosition();
-            if (position) bounds.extend(position);
-          });
-          
-          // Throttled bounds update
-          const updateBounds = throttle(() => {
-            if (mapInstanceRef.current) {
-              mapInstanceRef.current.fitBounds(bounds);
-            }
-          }, 300);
-          
-          updateBounds();
-        }
-
-        // Actualizar contador de propiedades visibles
-        setVisiblePropertiesCount(propertiesWithCoords.length);
-        
-        // Liberar flag de renderizado
-        renderingRef.current = false;
-      }
-    };
-
-    // Iniciar renderizado por lotes
-    renderBatch();
+    // Actualizar contador de propiedades visibles
+    setVisiblePropertiesCount(propertiesWithCoords.length);
+    
+    // Liberar flag de renderizado
+    renderingRef.current = false;
   }, [filteredProperties, mapReady]);
 
   // Efecto para animar marcador cuando se hace hover sobre una tarjeta
