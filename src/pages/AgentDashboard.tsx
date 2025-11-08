@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import PropertyForm from '@/components/PropertyForm';
 import AgentPropertyList from '@/components/AgentPropertyList';
 import { AgentAnalytics } from '@/components/AgentAnalytics';
+import { DynamicBreadcrumbs } from '@/components/DynamicBreadcrumbs';
 
 const AgentDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -115,6 +116,15 @@ const AgentDashboard = () => {
       <Navbar />
 
       <main className="container mx-auto px-4 py-8">
+        {/* Breadcrumbs */}
+        <DynamicBreadcrumbs 
+          items={[
+            { label: 'Inicio', href: '/', active: false },
+            { label: 'Panel de Agente', href: '', active: true }
+          ]} 
+          className="mb-4" 
+        />
+
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
             Panel de Agente
