@@ -815,6 +815,19 @@ const Buscar = () => {
     // No cortar: aunque no crezca, seguimos para no colgarnos
   };
 
+  // Espera activa a que el mapa tenga proyección y bounds listos
+  const waitForMapReady = async (map: google.maps.Map, tries = 100, delayMs = 50) => {
+    for (let i = 0; i < tries; i++) {
+      const div = map.getDiv() as HTMLElement;
+      const hasSize = div && div.offsetWidth > 0 && div.offsetHeight > 0;
+      const hasProjection = !!map.getProjection?.();
+      const hasBounds = !!map.getBounds?.();
+      if (hasSize && hasProjection && hasBounds) return true;
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+    return false;
+  };
+
   // Inicializar mapa
   useEffect(() => {
     let isMounted = true;
@@ -893,6 +906,11 @@ const Buscar = () => {
         // Listeners adicionales para casos edge
         mapInstanceRef.current.addListener('tilesloaded', setMapReadyOnce);
         mapInstanceRef.current.addListener('projection_changed', setMapReadyOnce);
+
+        // Fallback: esperar activamente a que el mapa esté listo
+        void waitForMapReady(mapInstanceRef.current!).then((ok) => {
+          if (ok && !mapReadySet) setMapReadyOnce();
+        });
 
         // Forzar reflow/resize del mapa por si el contenedor aún ajusta altura y marcar listo
         setTimeout(() => {
