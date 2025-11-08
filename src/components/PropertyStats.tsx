@@ -78,45 +78,45 @@ export const PropertyStats = ({ properties, duration = 800 }: PropertyStatsProps
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fade-in">
       {/* Precio promedio */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg hover:shadow-md transition-shadow">
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/20">
-          <TrendingUp className="h-5 w-5 text-primary" />
+      <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 shrink-0">
+          <TrendingUp className="h-4 w-4 text-primary" />
         </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-xs text-muted-foreground font-medium truncate">
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <span className="text-xs text-muted-foreground font-medium">
             Precio promedio
           </span>
-          <span className="text-lg font-bold text-primary tabular-nums truncate">
+          <span className="text-base font-bold text-primary tabular-nums">
             {formatCurrency(displayAvg)}
           </span>
         </div>
       </div>
 
       {/* Precio mínimo */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 rounded-lg hover:shadow-md transition-shadow">
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/20">
-          <DollarSign className="h-5 w-5 text-emerald-600" />
+      <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 rounded-lg hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/20 shrink-0">
+          <DollarSign className="h-4 w-4 text-emerald-600" />
         </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-xs text-muted-foreground font-medium truncate">
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <span className="text-xs text-muted-foreground font-medium">
             Desde
           </span>
-          <span className="text-lg font-bold text-emerald-600 tabular-nums truncate">
+          <span className="text-base font-bold text-emerald-600 tabular-nums">
             {formatCurrency(displayMin)}
           </span>
         </div>
       </div>
 
       {/* Precio máximo */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 rounded-lg hover:shadow-md transition-shadow">
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-orange-500/20">
-          <ArrowUpDown className="h-5 w-5 text-orange-600" />
+      <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 rounded-lg hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-500/20 shrink-0">
+          <ArrowUpDown className="h-4 w-4 text-orange-600" />
         </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-xs text-muted-foreground font-medium truncate">
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <span className="text-xs text-muted-foreground font-medium">
             Hasta
           </span>
-          <span className="text-lg font-bold text-orange-600 tabular-nums truncate">
+          <span className="text-base font-bold text-orange-600 tabular-nums">
             {formatCurrency(displayMax)}
           </span>
         </div>
