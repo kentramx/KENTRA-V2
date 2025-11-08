@@ -530,36 +530,56 @@ const Buscar = () => {
 
                 <div>
                   <Label>Tipo de propiedad</Label>
-                  <Select value={filters.tipo} onValueChange={(value) => setFilters(prev => ({ ...prev, tipo: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Todos</SelectItem>
-                      <SelectItem value="casa">Casa</SelectItem>
-                      <SelectItem value="departamento">Departamento</SelectItem>
-                      <SelectItem value="terreno">Terreno</SelectItem>
-                      <SelectItem value="oficina">Oficina</SelectItem>
-                      <SelectItem value="local">Local</SelectItem>
-                      <SelectItem value="bodega">Bodega</SelectItem>
-                      <SelectItem value="edificio">Edificio</SelectItem>
-                      <SelectItem value="rancho">Rancho</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={filters.tipo || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, tipo: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="casa">Casa</SelectItem>
+                        <SelectItem value="departamento">Departamento</SelectItem>
+                        <SelectItem value="terreno">Terreno</SelectItem>
+                        <SelectItem value="oficina">Oficina</SelectItem>
+                        <SelectItem value="local">Local</SelectItem>
+                        <SelectItem value="bodega">Bodega</SelectItem>
+                        <SelectItem value="edificio">Edificio</SelectItem>
+                        <SelectItem value="rancho">Rancho</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {filters.tipo && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setFilters(prev => ({ ...prev, tipo: '' }))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 <div>
                   <Label>Tipo de operación</Label>
-                  <Select value={filters.listingType} onValueChange={(value) => setFilters(prev => ({ ...prev, listingType: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Todos</SelectItem>
-                      <SelectItem value="venta">Venta</SelectItem>
-                      <SelectItem value="renta">Renta</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={filters.listingType || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, listingType: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="venta">Venta</SelectItem>
+                        <SelectItem value="renta">Renta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {filters.listingType && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setFilters(prev => ({ ...prev, listingType: '' }))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -585,33 +605,53 @@ const Buscar = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label>Recámaras mínimas</Label>
-                  <Select value={filters.recamaras} onValueChange={(value) => setFilters(prev => ({ ...prev, recamaras: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Cualquiera" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Cualquiera</SelectItem>
-                      <SelectItem value="1">1+</SelectItem>
-                      <SelectItem value="2">2+</SelectItem>
-                      <SelectItem value="3">3+</SelectItem>
-                      <SelectItem value="4">4+</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={filters.recamaras || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, recamaras: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Cualquiera" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1+</SelectItem>
+                        <SelectItem value="2">2+</SelectItem>
+                        <SelectItem value="3">3+</SelectItem>
+                        <SelectItem value="4">4+</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {filters.recamaras && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setFilters(prev => ({ ...prev, recamaras: '' }))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 <div>
                   <Label>Baños mínimos</Label>
-                  <Select value={filters.banos} onValueChange={(value) => setFilters(prev => ({ ...prev, banos: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Cualquiera" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Cualquiera</SelectItem>
-                      <SelectItem value="1">1+</SelectItem>
-                      <SelectItem value="2">2+</SelectItem>
-                      <SelectItem value="3">3+</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={filters.banos || undefined} onValueChange={(value) => setFilters(prev => ({ ...prev, banos: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Cualquiera" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1+</SelectItem>
+                        <SelectItem value="2">2+</SelectItem>
+                        <SelectItem value="3">3+</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {filters.banos && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setFilters(prev => ({ ...prev, banos: '' }))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 <div>
