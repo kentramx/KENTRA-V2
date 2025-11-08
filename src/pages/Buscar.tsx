@@ -805,6 +805,16 @@ const Buscar = () => {
     }
   }, [hoveredPropertyId, mapReady]);
 
+  // Espera a que un elemento tenga ancho/alto > 0 antes de continuar
+  const waitForNonZeroSize = async (el: HTMLElement, tries = 60, delayMs = 50) => {
+    for (let i = 0; i < tries; i++) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) return;
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+    // No cortar: aunque no crezca, seguimos para no colgarnos
+  };
+
   // Inicializar mapa
   useEffect(() => {
     let isMounted = true;
@@ -819,12 +829,12 @@ const Buscar = () => {
         setMapLoadingProgress(40);
         
         if (!isMounted || !mapRef.current) return;
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        if (!mapRef.current) return;
+
+        // NUEVO: esperar a que el contenedor tenga tamaño real
+        await waitForNonZeroSize(mapRef.current, 60, 50); // ~3s máx
         setMapLoadingProgress(60);
 
-        // Crear mapa
+        // Crear mapa SOLO ahora que el contenedor tiene tamaño
         mapInstanceRef.current = new google.maps.Map(mapRef.current, {
           center: { lat: 19.4326, lng: -99.1332 },
           zoom: 12,
@@ -922,11 +932,22 @@ const Buscar = () => {
       }
     };
 
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && mapInstanceRef.current) {
+        // Forzar re-layout cuando el tab vuelve a ser visible
+        (google.maps as any).event?.trigger(mapInstanceRef.current, 'resize');
+        const c = mapInstanceRef.current.getCenter();
+        if (c) mapInstanceRef.current.setCenter(c);
+      }
+    };
+
     initMap();
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       isMounted = false;
       if (timeoutId) clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', handleVisibility);
       // Limpiar observer
       if (resizeObserverRef.current && mapRef.current) {
         resizeObserverRef.current.unobserve(mapRef.current);
