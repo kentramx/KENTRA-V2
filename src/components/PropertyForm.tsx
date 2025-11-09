@@ -6,25 +6,32 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Loader2, Upload, X, Plus, Trash2, Video } from 'lucide-react';
 import { z } from 'zod';
 import { LocationSearch } from '@/components/LocationSearch';
 
 const propertySchema = z.object({
-  title: z.string().min(5, 'El título debe tener al menos 5 caracteres').max(200),
-  description: z.string().min(20, 'La descripción debe tener al menos 20 caracteres').max(2000),
+  title: z.string().trim().min(5, 'El título debe tener al menos 5 caracteres').max(200, 'El título no puede exceder 200 caracteres'),
+  description: z.string().trim().min(20, 'La descripción debe tener al menos 20 caracteres').max(2000, 'La descripción no puede exceder 2000 caracteres'),
   price: z.number().positive('El precio debe ser mayor a 0'),
   type: z.enum(['casa', 'departamento', 'terreno', 'oficina', 'local', 'bodega', 'edificio', 'rancho']),
   listing_type: z.enum(['venta', 'renta']),
-  address: z.string().min(5, 'La dirección debe tener al menos 5 caracteres').max(300),
-  municipality: z.string().min(2, 'El municipio es requerido').max(100),
-  state: z.string().min(2, 'El estado es requerido').max(100),
+  address: z.string().trim().min(5, 'La dirección debe tener al menos 5 caracteres').max(300, 'La dirección no puede exceder 300 caracteres'),
+  municipality: z.string().trim().min(2, 'El municipio es requerido').max(100, 'El municipio no puede exceder 100 caracteres'),
+  state: z.string().trim().min(2, 'El estado es requerido').max(100, 'El estado no puede exceder 100 caracteres'),
   bedrooms: z.number().optional(),
   bathrooms: z.number().optional(),
   parking: z.number().optional(),
   sqft: z.number().optional(),
   lot_size: z.number().optional(),
+  video_url: z.string().trim().url('Debe ser una URL válida').optional().or(z.literal('')),
+  amenities: z.array(z.object({
+    category: z.string().trim().min(1).max(50),
+    items: z.array(z.string().trim().min(1).max(100))
+  })).optional(),
 });
 
 interface PropertyFormProps {
@@ -56,7 +63,28 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
     lot_size: '',
     lat: undefined as number | undefined,
     lng: undefined as number | undefined,
+    video_url: '',
   });
+
+  const [amenities, setAmenities] = useState<Array<{ category: string; items: string[] }>>([]);
+  const [newAmenityCategory, setNewAmenityCategory] = useState('');
+  const [newAmenityItem, setNewAmenityItem] = useState<{ [key: string]: string }>({});
+
+  const PREDEFINED_CATEGORIES = [
+    'Interior',
+    'Exterior', 
+    'Servicios',
+    'Seguridad',
+    'Recreación'
+  ];
+
+  const COMMON_AMENITIES: { [key: string]: string[] } = {
+    Interior: ['Cocina equipada', 'Closets', 'Aire acondicionado', 'Calefacción', 'Chimenea', 'Pisos de madera'],
+    Exterior: ['Jardín', 'Terraza', 'Balcón', 'Patio', 'Área de asador', 'Vista panorámica'],
+    Servicios: ['Internet/WiFi', 'TV por cable', 'Gas natural', 'Agua caliente', 'Cisterna', 'Tinaco'],
+    Seguridad: ['Seguridad 24/7', 'Cámaras de seguridad', 'Portón eléctrico', 'Cerca eléctrica', 'Caseta de vigilancia'],
+    Recreación: ['Alberca', 'Gimnasio', 'Área de juegos', 'Cancha deportiva', 'Salón de eventos', 'Jardín común']
+  };
 
   useEffect(() => {
     if (property) {
@@ -76,10 +104,72 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         lot_size: property.lot_size?.toString() || '',
         lat: property.lat,
         lng: property.lng,
+        video_url: property.video_url || '',
       });
       setExistingImages(property.images || []);
+      setAmenities(property.amenities || []);
     }
   }, [property]);
+
+  const addAmenityCategory = () => {
+    if (!newAmenityCategory.trim()) return;
+    
+    if (amenities.some(a => a.category === newAmenityCategory.trim())) {
+      toast({
+        title: 'Error',
+        description: 'Esta categoría ya existe',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setAmenities([...amenities, { category: newAmenityCategory.trim(), items: [] }]);
+    setNewAmenityCategory('');
+  };
+
+  const removeAmenityCategory = (category: string) => {
+    setAmenities(amenities.filter(a => a.category !== category));
+  };
+
+  const toggleAmenityItem = (category: string, item: string) => {
+    setAmenities(amenities.map(amenity => {
+      if (amenity.category === category) {
+        const itemExists = amenity.items.includes(item);
+        return {
+          ...amenity,
+          items: itemExists 
+            ? amenity.items.filter(i => i !== item)
+            : [...amenity.items, item]
+        };
+      }
+      return amenity;
+    }));
+  };
+
+  const addCustomAmenityItem = (category: string) => {
+    const item = newAmenityItem[category]?.trim();
+    if (!item) return;
+
+    setAmenities(amenities.map(amenity => {
+      if (amenity.category === category) {
+        if (amenity.items.includes(item)) {
+          toast({
+            title: 'Error',
+            description: 'Esta amenidad ya existe en la categoría',
+            variant: 'destructive',
+          });
+          return amenity;
+        }
+        return {
+          ...amenity,
+          items: [...amenity.items, item]
+        };
+      }
+      return amenity;
+    }));
+    
+    setNewAmenityItem({ ...newAmenityItem, [category]: '' });
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -133,6 +223,8 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         parking: formData.parking ? parseInt(formData.parking) : undefined,
         sqft: formData.sqft ? parseFloat(formData.sqft) : undefined,
         lot_size: formData.lot_size ? parseFloat(formData.lot_size) : undefined,
+        video_url: formData.video_url || undefined,
+        amenities: amenities.filter(a => a.items.length > 0),
       });
 
       let propertyId = property?.id;
@@ -393,6 +485,152 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
             rows={5}
             required
           />
+        </div>
+
+        {/* Video URL */}
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="video_url" className="flex items-center gap-2">
+            <Video className="h-4 w-4" />
+            Video Tour (YouTube o Vimeo)
+          </Label>
+          <Input
+            id="video_url"
+            type="url"
+            value={formData.video_url}
+            onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+            placeholder="https://www.youtube.com/watch?v=..."
+          />
+          <p className="text-xs text-muted-foreground">
+            Opcional: Agrega un link de YouTube o Vimeo para mostrar un tour virtual
+          </p>
+        </div>
+
+        {/* Amenidades */}
+        <div className="space-y-4 md:col-span-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-base">Amenidades</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Nueva categoría..."
+                value={newAmenityCategory}
+                onChange={(e) => setNewAmenityCategory(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAmenityCategory())}
+                className="w-40"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addAmenityCategory}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Quick add predefined categories */}
+          <div className="flex flex-wrap gap-2">
+            {PREDEFINED_CATEGORIES.filter(cat => !amenities.some(a => a.category === cat)).map(category => (
+              <Button
+                key={category}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setAmenities([...amenities, { category, items: [] }]);
+                }}
+              >
+                + {category}
+              </Button>
+            ))}
+          </div>
+
+          {/* Amenity categories */}
+          <div className="space-y-4">
+            {amenities.map((amenity) => (
+              <Card key={amenity.category}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-semibold">{amenity.category}</CardTitle>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeAmenityCategory(amenity.category)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* Common amenities for this category */}
+                  {COMMON_AMENITIES[amenity.category] && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {COMMON_AMENITIES[amenity.category].map(item => (
+                        <div key={item} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`${amenity.category}-${item}`}
+                            checked={amenity.items.includes(item)}
+                            onCheckedChange={() => toggleAmenityItem(amenity.category, item)}
+                          />
+                          <Label
+                            htmlFor={`${amenity.category}-${item}`}
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            {item}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Custom amenities */}
+                  {amenity.items.filter(item => !COMMON_AMENITIES[amenity.category]?.includes(item)).length > 0 && (
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">Amenidades personalizadas:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {amenity.items
+                          .filter(item => !COMMON_AMENITIES[amenity.category]?.includes(item))
+                          .map(item => (
+                            <div key={item} className="flex items-center gap-1 bg-muted px-2 py-1 rounded">
+                              <span className="text-sm">{item}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 w-5 p-0"
+                                onClick={() => toggleAmenityItem(amenity.category, item)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add custom amenity */}
+                  <div className="flex gap-2 pt-2">
+                    <Input
+                      placeholder="Agregar amenidad personalizada..."
+                      value={newAmenityItem[amenity.category] || ''}
+                      onChange={(e) => setNewAmenityItem({ ...newAmenityItem, [amenity.category]: e.target.value })}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomAmenityItem(amenity.category))}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addCustomAmenityItem(amenity.category)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
 
         <div className="space-y-2 md:col-span-2">
