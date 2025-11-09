@@ -106,6 +106,26 @@ const Buscar = () => {
     orden: (searchParams.get('orden') as any) || 'price_desc',
   });
   
+  // Sincronizar filters con searchParams cuando la URL cambia
+  useEffect(() => {
+    const newFilters = {
+      estado: searchParams.get('estado') || '',
+      municipio: searchParams.get('municipio') || '',
+      precioMin: searchParams.get('precioMin') || '',
+      precioMax: searchParams.get('precioMax') || '',
+      tipo: searchParams.get('tipo') || '',
+      listingType: searchParams.get('listingType') || '',
+      recamaras: searchParams.get('recamaras') || '',
+      banos: searchParams.get('banos') || '',
+      orden: (searchParams.get('orden') as any) || 'price_desc',
+    };
+    
+    // Solo actualizar si hay cambios reales para evitar loops infinitos
+    if (JSON.stringify(newFilters) !== JSON.stringify(filters)) {
+      setFilters(newFilters);
+    }
+  }, [searchParams]);
+  
   // Construir el valor de visualización para el input de ubicación
   const locationDisplayValue = filters.municipio && filters.estado
     ? `${filters.municipio}, ${filters.estado}`
