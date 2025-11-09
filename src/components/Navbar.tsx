@@ -26,11 +26,20 @@ const Navbar = () => {
     return user.email.charAt(0).toUpperCase();
   };
 
-  const handleListingTypeChange = (newListingType: "venta" | "renta") => {
+  const handleComprarClick = () => {
     const params = new URLSearchParams(searchParams);
-    params.set("listingType", newListingType);
-    navigate(`/buscar?${params.toString()}`);
+    params.set("listingType", "venta");
+    navigate(`/buscar?${params.toString()}`, { replace: true });
   };
+
+  const handleRentarClick = () => {
+    const params = new URLSearchParams(searchParams);
+    params.set("listingType", "renta");
+    navigate(`/buscar?${params.toString()}`, { replace: true });
+  };
+
+  const isComprarActive = !listingType || listingType === "venta";
+  const isRentarActive = listingType === "renta";
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -39,18 +48,18 @@ const Navbar = () => {
           {/* Left Navigation - Desktop */}
           <div className="hidden md:flex items-center gap-1">
             <Button 
-              variant={(listingType === "venta" || !listingType) ? "default" : "ghost"} 
+              variant={isComprarActive ? "default" : "ghost"} 
               size="sm"
-              className={(listingType === "venta" || !listingType) ? "shadow-sm" : ""}
-              onClick={() => handleListingTypeChange("venta")}
+              className={isComprarActive ? "shadow-sm" : ""}
+              onClick={handleComprarClick}
             >
               Comprar
             </Button>
             <Button 
-              variant={listingType === "renta" ? "default" : "ghost"} 
+              variant={isRentarActive ? "default" : "ghost"} 
               size="sm"
-              className={listingType === "renta" ? "shadow-sm" : ""}
-              onClick={() => handleListingTypeChange("renta")}
+              className={isRentarActive ? "shadow-sm" : ""}
+              onClick={handleRentarClick}
             >
               Rentar
             </Button>
