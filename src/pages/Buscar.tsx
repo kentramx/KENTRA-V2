@@ -1325,7 +1325,7 @@ const Buscar = () => {
                 )}
               </div>
 
-              <PropertyStats properties={filteredProperties} />
+              <PropertyStats properties={filteredProperties} listingType={filters.listingType} />
 
               {isFiltering ? (
                 // Skeletons mientras se está filtrando
