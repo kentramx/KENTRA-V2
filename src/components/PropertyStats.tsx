@@ -118,7 +118,7 @@ export const PropertyStats = ({ properties, listingType, duration = 800 }: Prope
             <span className="text-xs text-muted-foreground font-medium">
               Promedio venta
             </span>
-            <span className="text-base font-bold text-primary tabular-nums">
+            <span className="text-sm font-bold text-primary tabular-nums">
               {ventaProperties.length > 0 ? formatCurrency(displayAvgVenta) : 'N/A'}
             </span>
           </div>
@@ -133,7 +133,7 @@ export const PropertyStats = ({ properties, listingType, duration = 800 }: Prope
             <span className="text-xs text-muted-foreground font-medium">
               Promedio renta
             </span>
-            <span className="text-base font-bold text-violet-600 tabular-nums">
+            <span className="text-sm font-bold text-violet-600 tabular-nums">
               {rentaProperties.length > 0 ? formatCurrency(displayAvgRenta) : 'N/A'}
             </span>
           </div>
@@ -148,7 +148,7 @@ export const PropertyStats = ({ properties, listingType, duration = 800 }: Prope
             <span className="text-xs text-muted-foreground font-medium">
               Desde
             </span>
-            <span className="text-base font-bold text-emerald-600 tabular-nums">
+            <span className="text-sm font-bold text-emerald-600 tabular-nums">
               {formatCurrency(displayMin)}
             </span>
           </div>
@@ -163,7 +163,7 @@ export const PropertyStats = ({ properties, listingType, duration = 800 }: Prope
             <span className="text-xs text-muted-foreground font-medium">
               Hasta
             </span>
-            <span className="text-base font-bold text-orange-600 tabular-nums">
+            <span className="text-sm font-bold text-orange-600 tabular-nums">
               {formatCurrency(displayMax)}
             </span>
           </div>
@@ -184,7 +184,7 @@ export const PropertyStats = ({ properties, listingType, duration = 800 }: Prope
           <span className="text-xs text-muted-foreground font-medium">
             Precio promedio
           </span>
-          <span className="text-base font-bold text-primary tabular-nums">
+          <span className="text-sm font-bold text-primary tabular-nums">
             {formatCurrency(displayAvg)}
           </span>
         </div>
@@ -199,7 +199,7 @@ export const PropertyStats = ({ properties, listingType, duration = 800 }: Prope
           <span className="text-xs text-muted-foreground font-medium">
             Desde
           </span>
-          <span className="text-base font-bold text-emerald-600 tabular-nums">
+          <span className="text-sm font-bold text-emerald-600 tabular-nums">
             {formatCurrency(displayMin)}
           </span>
         </div>
@@ -214,7 +214,7 @@ export const PropertyStats = ({ properties, listingType, duration = 800 }: Prope
           <span className="text-xs text-muted-foreground font-medium">
             Hasta
           </span>
-          <span className="text-base font-bold text-orange-600 tabular-nums">
+          <span className="text-sm font-bold text-orange-600 tabular-nums">
             {formatCurrency(displayMax)}
           </span>
         </div>
