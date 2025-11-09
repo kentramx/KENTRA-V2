@@ -143,7 +143,7 @@ const PLANS: Plan[] = [
       'Landing por torre',
       'Campañas personalizadas',
       'Reporte semanal',
-      'Pauta publicitaria incluida',
+      'La pauta/publicidad la paga la desarrolladora',
       'Gestor de cuenta dedicado'
     ],
   },
