@@ -25,6 +25,7 @@ interface BasicGoogleMapProps {
   enableClustering?: boolean;
   onMarkerClick?: (markerId: string) => void;
   onFavoriteClick?: (markerId: string) => void;
+  disableAutoFit?: boolean;
 }
 
 export function BasicGoogleMap({
@@ -37,6 +38,7 @@ export function BasicGoogleMap({
   enableClustering = true,
   onMarkerClick,
   onFavoriteClick,
+  disableAutoFit = false,
 }: BasicGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -310,13 +312,15 @@ export function BasicGoogleMap({
       markerRefs.current.forEach(marker => marker.setMap(map));
     }
 
-    // Ajustar vista del mapa a los marcadores
-    if (markerRefs.current.length > 1) {
-      map.fitBounds(bounds);
-    } else if (markerRefs.current.length === 1) {
-      map.setCenter(markerRefs.current[0].getPosition()!);
+    // Ajustar vista del mapa a los marcadores solo si no está deshabilitado
+    if (!disableAutoFit) {
+      if (markerRefs.current.length > 1) {
+        map.fitBounds(bounds);
+      } else if (markerRefs.current.length === 1) {
+        map.setCenter(markerRefs.current[0].getPosition()!);
+      }
     }
-  }, [markers, enableClustering, onMarkerClick, onFavoriteClick]);
+  }, [markers, enableClustering, onMarkerClick, onFavoriteClick, disableAutoFit]);
 
   // Centrar el mapa cuando cambie la prop center
   useEffect(() => {
@@ -324,12 +328,18 @@ export function BasicGoogleMap({
     if (!map || !center) return;
     
     map.panTo(center);
-    // Ajustar zoom si está muy alejado
-    const currentZoom = map.getZoom();
-    if (currentZoom && currentZoom < 14) {
-      map.setZoom(14);
+    
+    // Solo ajustar zoom si disableAutoFit está activo
+    if (disableAutoFit) {
+      map.setZoom(zoom);
+    } else {
+      // Ajustar zoom si está muy alejado
+      const currentZoom = map.getZoom();
+      if (currentZoom && currentZoom < 14) {
+        map.setZoom(14);
+      }
     }
-  }, [center]);
+  }, [center, zoom, disableAutoFit]);
 
   if (error) {
     return (

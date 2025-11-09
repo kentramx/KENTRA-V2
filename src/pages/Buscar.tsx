@@ -106,8 +106,23 @@ const Buscar = () => {
     orden: (searchParams.get('orden') as any) || 'price_desc',
   });
   
+  // Estado para guardar coordenadas de la ubicación buscada
+  const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  
   // Sincronizar filters con searchParams cuando la URL cambia
   useEffect(() => {
+    // Cargar coordenadas desde URL si existen
+    const lat = searchParams.get('lat');
+    const lng = searchParams.get('lng');
+    if (lat && lng) {
+      setSearchCoordinates({ 
+        lat: parseFloat(lat), 
+        lng: parseFloat(lng) 
+      });
+    } else {
+      setSearchCoordinates(null);
+    }
+    
     const newFilters = {
       estado: searchParams.get('estado') || '',
       municipio: searchParams.get('municipio') || '',
@@ -294,9 +309,15 @@ const Buscar = () => {
     if (filters.recamaras) params.set('recamaras', filters.recamaras);
     if (filters.banos) params.set('banos', filters.banos);
     if (filters.orden !== 'price_desc') params.set('orden', filters.orden);
+    
+    // Agregar coordenadas si existen
+    if (searchCoordinates) {
+      params.set('lat', searchCoordinates.lat.toString());
+      params.set('lng', searchCoordinates.lng.toString());
+    }
 
     setSearchParams(params, { replace: true });
-  }, [filters, setSearchParams]);
+  }, [filters, searchCoordinates, setSearchParams]);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -609,6 +630,7 @@ const Buscar = () => {
           municipio: ''
         };
       });
+      setSearchCoordinates(null); // Limpiar coordenadas
     }
   };
 
@@ -618,6 +640,11 @@ const Buscar = () => {
       estado: location.state || prev.estado,
       municipio: location.municipality || prev.municipio,
     }));
+
+    // Guardar coordenadas de la búsqueda
+    if (location.lat && location.lng) {
+      setSearchCoordinates({ lat: location.lat, lng: location.lng });
+    }
 
     toast({
       title: 'Ubicación seleccionada',
@@ -640,11 +667,42 @@ const Buscar = () => {
       address: p.address,
     }));
 
-  const mapCenter = hoveredProperty && hoveredProperty.lat && hoveredProperty.lng
-    ? { lat: hoveredProperty.lat, lng: hoveredProperty.lng }
-    : (mapMarkers.length > 0
-        ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
-        : { lat: 19.4326, lng: -99.1332 });
+  // Detectar si hay algún filtro activo
+  const hasActiveFilters = !!(
+    filters.estado || 
+    filters.municipio || 
+    filters.tipo || 
+    filters.listingType || 
+    filters.precioMin || 
+    filters.precioMax || 
+    filters.recamaras || 
+    filters.banos
+  );
+
+  // Calcular centro del mapa con prioridades:
+  // 1. Coordenadas de búsqueda (si existen)
+  // 2. Propiedad en hover (si existe)
+  // 3. Vista completa de México (si no hay filtros)
+  // 4. Centro de México por defecto
+  const mapCenter = searchCoordinates
+    ? searchCoordinates
+    : (hoveredProperty && hoveredProperty.lat && hoveredProperty.lng
+        ? { lat: hoveredProperty.lat, lng: hoveredProperty.lng }
+        : (hasActiveFilters && mapMarkers.length > 0
+            ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
+            : { lat: 23.6345, lng: -102.5528 })); // Centro geográfico de México
+
+  // Calcular zoom del mapa:
+  // - Sin filtros: zoom alejado para ver todo México (zoom 5)
+  // - Con búsqueda específica: zoom cercano (zoom 12)
+  // - Con hover: zoom medio-cercano (zoom 14)
+  const mapZoom = searchCoordinates 
+    ? 12 
+    : (hoveredProperty 
+        ? 14 
+        : (hasActiveFilters 
+            ? 12 
+            : 5)); // Vista completa de México
 
   const getBreadcrumbItems = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = [
@@ -724,6 +782,7 @@ const Buscar = () => {
                     estado: '',
                     municipio: ''
                   }));
+                  setSearchCoordinates(null); // Limpiar coordenadas
                 }}
                 title="Limpiar ubicación"
               >
@@ -1148,6 +1207,7 @@ const Buscar = () => {
                       banos: '',
                       orden: 'price_desc',
                     });
+                    setSearchCoordinates(null); // Limpiar coordenadas
                     setPriceRange([MIN_PRICE, MAX_PRICE]);
                   }}
                 >
@@ -1392,12 +1452,13 @@ const Buscar = () => {
           <div className="lg:sticky lg:top-20">
             <BasicGoogleMap
               center={mapCenter}
-              zoom={12}
+              zoom={mapZoom}
               markers={mapMarkers}
               height="calc(100vh - 8rem)"
               className="rounded-lg overflow-hidden shadow-lg"
               onMarkerClick={handleMarkerClick}
               onFavoriteClick={handleFavoriteClick}
+              disableAutoFit={!hasActiveFilters || !!searchCoordinates}
             />
           </div>
         </div>
