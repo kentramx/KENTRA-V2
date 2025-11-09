@@ -1255,6 +1255,15 @@ const Buscar = () => {
               onMarkerClick={handleMarkerClick}
               onFavoriteClick={handleFavoriteClick}
               disableAutoFit={!hasActiveFilters || !!searchCoordinates}
+              hoveredMarkerId={hoveredProperty?.id || null}
+              onMarkerHover={(markerId) => {
+                if (markerId) {
+                  const property = filteredProperties.find(p => p.id === markerId);
+                  setHoveredProperty(property || null);
+                } else {
+                  setHoveredProperty(null);
+                }
+              }}
             />
           </div>
 
@@ -1333,6 +1342,7 @@ const Buscar = () => {
                         parking={property.parking || undefined}
                         sqft={property.sqft || undefined}
                         imageUrl={property.images?.[0]?.url}
+                        isHovered={hoveredProperty?.id === property.id}
                       />
                     </div>
                   ))}

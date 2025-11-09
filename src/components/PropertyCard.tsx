@@ -21,6 +21,7 @@ interface PropertyCardProps {
   imageUrl?: string;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
+  isHovered?: boolean;
 }
 
 const PropertyCard = ({
@@ -39,6 +40,7 @@ const PropertyCard = ({
   imageUrl,
   isFavorite = false,
   onToggleFavorite,
+  isHovered = false,
 }: PropertyCardProps) => {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("es-MX", {
@@ -64,7 +66,7 @@ const PropertyCard = ({
   };
 
   return (
-    <Card className="group overflow-hidden transition-all hover:shadow-lg">
+    <Card className={`group overflow-hidden transition-all hover:shadow-lg ${isHovered ? 'ring-2 ring-primary shadow-xl scale-[1.02]' : ''}`}>
       <Link to={`/propiedad/${id}`}>
         <div className="relative aspect-[4/3] overflow-hidden">
           <img

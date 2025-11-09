@@ -26,6 +26,8 @@ interface BasicGoogleMapProps {
   onMarkerClick?: (markerId: string) => void;
   onFavoriteClick?: (markerId: string) => void;
   disableAutoFit?: boolean;
+  hoveredMarkerId?: string | null;
+  onMarkerHover?: (markerId: string | null) => void;
 }
 
 export function BasicGoogleMap({
@@ -39,10 +41,12 @@ export function BasicGoogleMap({
   onMarkerClick,
   onFavoriteClick,
   disableAutoFit = false,
+  hoveredMarkerId = null,
+  onMarkerHover,
 }: BasicGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const markerRefs = useRef<google.maps.Marker[]>([]);
+  const markerRefs = useRef<Map<string, google.maps.Marker>>(new Map());
   const clustererRef = useRef<MarkerClusterer | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +100,7 @@ export function BasicGoogleMap({
         clustererRef.current = null;
       }
       markerRefs.current.forEach(m => m.setMap(null));
-      markerRefs.current = [];
+      markerRefs.current.clear();
       mapRef.current = null;
     };
   }, []);
@@ -117,7 +121,7 @@ export function BasicGoogleMap({
 
     // Limpiar marcadores anteriores
     markerRefs.current.forEach(m => m.setMap(null));
-    markerRefs.current = [];
+    markerRefs.current.clear();
 
     if (!markers || markers.length === 0) return;
 
@@ -130,10 +134,27 @@ export function BasicGoogleMap({
     
     // Crear nuevos marcadores
     for (const m of markers) {
-      if (typeof m.lat !== 'number' || typeof m.lng !== 'number') continue;
+      if (typeof m.lat !== 'number' || typeof m.lng !== 'number' || !m.id) continue;
       
       const marker = new google.maps.Marker({ 
         position: { lat: m.lat, lng: m.lng },
+        animation: undefined,
+      });
+      
+      // Guardar referencia del marcador con su id
+      markerRefs.current.set(m.id, marker);
+      
+      // Agregar hover listeners al marcador
+      marker.addListener('mouseover', () => {
+        if (onMarkerHover) {
+          onMarkerHover(m.id || null);
+        }
+      });
+      
+      marker.addListener('mouseout', () => {
+        if (onMarkerHover) {
+          onMarkerHover(null);
+        }
       });
       
       // Agregar click listener al marcador
@@ -256,13 +277,15 @@ export function BasicGoogleMap({
         });
       });
       
-      markerRefs.current.push(marker);
       bounds.extend(marker.getPosition()!);
     }
+    
+    // Convertir Map a Array para el clusterer
+    const markerArray = Array.from(markerRefs.current.values());
 
     // Si clustering está habilitado, crear el clusterer
     // Esperar a que el mapa esté completamente listo antes de crear el clusterer
-    if (enableClustering && markerRefs.current.length > 0) {
+    if (enableClustering && markerArray.length > 0) {
       // Usar idle event para asegurar que el mapa está completamente inicializado
       const createClusterer = () => {
         if (!mapRef.current) return;
@@ -270,7 +293,7 @@ export function BasicGoogleMap({
         try {
           clustererRef.current = new MarkerClusterer({
             map: mapRef.current,
-            markers: markerRefs.current,
+            markers: markerArray,
             algorithm: new GridAlgorithm({ maxZoom: 15 }),
             renderer: {
               render: ({ count, position }) => {
@@ -301,7 +324,7 @@ export function BasicGoogleMap({
         } catch (e) {
           console.error('Error creating clusterer:', e);
           // Fallback: agregar marcadores directamente
-          markerRefs.current.forEach(marker => marker.setMap(map));
+          markerArray.forEach(marker => marker.setMap(map));
         }
       };
 
@@ -309,18 +332,42 @@ export function BasicGoogleMap({
       google.maps.event.addListenerOnce(map, 'idle', createClusterer);
     } else {
       // Si clustering no está habilitado, agregar marcadores directamente al mapa
-      markerRefs.current.forEach(marker => marker.setMap(map));
+      markerArray.forEach(marker => marker.setMap(map));
     }
 
     // Ajustar vista del mapa a los marcadores solo si no está deshabilitado
     if (!disableAutoFit) {
-      if (markerRefs.current.length > 1) {
+      if (markerArray.length > 1) {
         map.fitBounds(bounds);
-      } else if (markerRefs.current.length === 1) {
-        map.setCenter(markerRefs.current[0].getPosition()!);
+      } else if (markerArray.length === 1) {
+        map.setCenter(markerArray[0].getPosition()!);
       }
     }
-  }, [markers, enableClustering, onMarkerClick, onFavoriteClick, disableAutoFit]);
+  }, [markers, enableClustering, onMarkerClick, onFavoriteClick, disableAutoFit, onMarkerHover]);
+  
+  // Efecto para resaltar el marcador cuando se hace hover sobre una tarjeta
+  useEffect(() => {
+    markerRefs.current.forEach((marker, markerId) => {
+      if (markerId === hoveredMarkerId) {
+        // Resaltar el marcador
+        marker.setAnimation(google.maps.Animation.BOUNCE);
+        marker.setZIndex(1000);
+        marker.setIcon({
+          path: google.maps.SymbolPath.CIRCLE,
+          fillColor: '#0ea5e9',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 3,
+          scale: 12,
+        });
+      } else {
+        // Restaurar el marcador a su estado normal
+        marker.setAnimation(null);
+        marker.setZIndex(undefined);
+        marker.setIcon(undefined);
+      }
+    });
+  }, [hoveredMarkerId]);
 
   // Centrar el mapa cuando cambie la prop center
   useEffect(() => {
