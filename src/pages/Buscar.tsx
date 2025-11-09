@@ -157,6 +157,8 @@ const Buscar = () => {
   const [estados] = useState<string[]>(mexicoStates);
   const [municipios, setMunicipios] = useState<string[]>([]);
   const [hoveredProperty, setHoveredProperty] = useState<Property | null>(null);
+  const propertyCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const hoverFromMap = useRef(false);
 
   const filteredSavedSearches = savedSearches
     .filter(search => 
@@ -168,6 +170,21 @@ const Buscar = () => {
       }
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
+  
+  // Auto-scroll a la tarjeta cuando se hace hover sobre un marcador del mapa
+  useEffect(() => {
+    if (hoveredProperty && hoverFromMap.current) {
+      const cardElement = propertyCardRefs.current.get(hoveredProperty.id);
+      if (cardElement) {
+        cardElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
+    }
+    // Reset flag después de hacer scroll
+    hoverFromMap.current = false;
+  }, [hoveredProperty]);
 
   useEffect(() => {
     if (user) {
@@ -1258,6 +1275,7 @@ const Buscar = () => {
               hoveredMarkerId={hoveredProperty?.id || null}
               onMarkerHover={(markerId) => {
                 if (markerId) {
+                  hoverFromMap.current = true;
                   const property = filteredProperties.find(p => p.id === markerId);
                   setHoveredProperty(property || null);
                 } else {
@@ -1325,7 +1343,17 @@ const Buscar = () => {
                   {filteredProperties.map((property) => (
                     <div
                       key={property.id}
-                      onMouseEnter={() => setHoveredProperty(property)}
+                      ref={(el) => {
+                        if (el) {
+                          propertyCardRefs.current.set(property.id, el);
+                        } else {
+                          propertyCardRefs.current.delete(property.id);
+                        }
+                      }}
+                      onMouseEnter={() => {
+                        hoverFromMap.current = false;
+                        setHoveredProperty(property);
+                      }}
                       onMouseLeave={() => setHoveredProperty(null)}
                     >
                       <PropertyCard
