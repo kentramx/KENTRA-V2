@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -83,6 +83,9 @@ const Buscar = () => {
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
   
+  // Flag para prevenir sobrescritura durante sincronización URL -> estado
+  const syncingFromUrl = useRef(false);
+  
   const MIN_PRICE = 0;
   const MAX_PRICE = 100;
   const [priceRange, setPriceRange] = useState<[number, number]>([MIN_PRICE, MAX_PRICE]);
@@ -111,6 +114,8 @@ const Buscar = () => {
   
   // Sincronizar filters con searchParams cuando la URL cambia
   useEffect(() => {
+    syncingFromUrl.current = true;
+    
     // Cargar coordenadas desde URL si existen
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
@@ -138,6 +143,8 @@ const Buscar = () => {
     // Solo actualizar si hay cambios reales para evitar loops infinitos
     if (JSON.stringify(newFilters) !== JSON.stringify(filters)) {
       setFilters(newFilters);
+    } else {
+      syncingFromUrl.current = false;
     }
   }, [searchParams]);
   
@@ -298,6 +305,12 @@ const Buscar = () => {
   };
 
   useEffect(() => {
+    // Si estamos sincronizando desde URL, no sobrescribir
+    if (syncingFromUrl.current) {
+      syncingFromUrl.current = false;
+      return;
+    }
+    
     const params = new URLSearchParams();
     
     if (filters.estado) params.set('estado', filters.estado);
@@ -316,8 +329,12 @@ const Buscar = () => {
       params.set('lng', searchCoordinates.lng.toString());
     }
 
-    setSearchParams(params, { replace: true });
-  }, [filters, searchCoordinates, setSearchParams]);
+    const next = params.toString();
+    const current = searchParams.toString();
+    if (next !== current) {
+      setSearchParams(params, { replace: true });
+    }
+  }, [filters, searchCoordinates, searchParams, setSearchParams]);
 
   useEffect(() => {
     const fetchProperties = async () => {
