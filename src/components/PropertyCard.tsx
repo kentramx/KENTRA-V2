@@ -48,30 +48,32 @@ const PropertyCard = ({
     }).format(price);
   };
 
+  // Get property type label
+  const getTypeLabel = () => {
+    const labels: Record<string, string> = {
+      casa: 'Casa',
+      departamento: 'Condo',
+      terreno: 'Terreno',
+      oficina: 'Oficina',
+      local: 'Local',
+      bodega: 'Bodega',
+      edificio: 'Edificio',
+      rancho: 'Rancho'
+    };
+    return labels[type] || type;
+  };
+
   return (
     <Card className="group overflow-hidden transition-all hover:shadow-lg">
       <Link to={`/propiedad/${id}`}>
         <div className="relative aspect-[4/3] overflow-hidden">
           <img
             src={imageUrl || propertyPlaceholder}
-            alt={title}
+            alt={`${bedrooms} bd, ${bathrooms} ba - ${getTypeLabel()}`}
             loading="lazy"
             decoding="async"
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
           />
-          <div className="absolute left-3 top-3 flex gap-2">
-            <Badge 
-              className={listingType === 'renta' 
-                ? "bg-accent text-accent-foreground" 
-                : "bg-secondary text-secondary-foreground"
-              }
-            >
-              {listingType === 'renta' ? 'Renta' : 'Venta'}
-            </Badge>
-            <Badge className="bg-primary/90 text-primary-foreground">
-              {type}
-            </Badge>
-          </div>
           {onToggleFavorite && (
             <Button
               variant="ghost"
@@ -90,45 +92,29 @@ const PropertyCard = ({
         </div>
       </Link>
 
-      <CardContent className="p-4">
-        <Link to={`/propiedad/${id}`}>
-          <p className="mb-3 text-2xl font-bold text-primary">
+      <CardContent className="p-4 space-y-2">
+        <Link to={`/propiedad/${id}`} className="block">
+          <p className="text-2xl font-bold text-foreground mb-1">
             {formatPrice(price)}
           </p>
-          <p className="text-sm text-muted-foreground mb-2">
+          
+          {/* Zillow-style characteristics */}
+          <p className="text-sm text-muted-foreground">
+            {bedrooms && <span className="font-medium">{bedrooms} bd</span>}
+            {bedrooms && bathrooms && <span className="mx-1.5">|</span>}
+            {bathrooms && <span className="font-medium">{bathrooms} ba</span>}
+            {(bedrooms || bathrooms) && sqft && <span className="mx-1.5">|</span>}
+            {sqft && <span className="font-medium">{sqft} m²</span>}
+            {(bedrooms || bathrooms || sqft) && <span className="mx-1.5">-</span>}
+            <span className="font-medium">{getTypeLabel()}</span>
+            <span> {listingType === 'renta' ? 'en renta' : 'en venta'}</span>
+          </p>
+
+          <p className="text-sm text-muted-foreground line-clamp-1">
             {address}, {municipality}, {state}
           </p>
         </Link>
       </CardContent>
-
-      <CardFooter className="border-t border-border p-4">
-        <div className="flex w-full gap-4 text-sm text-muted-foreground">
-          {bedrooms && (
-            <div className="flex items-center gap-1">
-              <Bed className="h-4 w-4" />
-              <span>{bedrooms}</span>
-            </div>
-          )}
-          {bathrooms && (
-            <div className="flex items-center gap-1">
-              <Bath className="h-4 w-4" />
-              <span>{bathrooms}</span>
-            </div>
-          )}
-          {parking && (
-            <div className="flex items-center gap-1">
-              <Car className="h-4 w-4" />
-              <span>{parking}</span>
-            </div>
-          )}
-          {sqft && (
-            <div className="flex items-center gap-1">
-              <Maximize className="h-4 w-4" />
-              <span>{sqft} m²</span>
-            </div>
-          )}
-        </div>
-      </CardFooter>
     </Card>
   );
 };

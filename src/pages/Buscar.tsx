@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
 import BasicGoogleMap from '@/components/BasicGoogleMap';
 import Navbar from '@/components/Navbar';
+import PropertyCard from '@/components/PropertyCard';
 import { PropertyImageGallery } from '@/components/PropertyImageGallery';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -769,44 +770,41 @@ const Buscar = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 pt-20 pb-8">
-        {/* Breadcrumbs */}
-        <DynamicBreadcrumbs items={getBreadcrumbItems()} className="mb-4" />
-
-        {/* Barra de búsqueda estilo Zillow */}
-        <Card className="mb-4 shadow-sm border-border/40">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap">
-          {/* 1. Búsqueda de ubicación */}
-          <div className="min-w-[280px] flex-1 lg:flex-initial relative">
-            <PlaceAutocomplete
-              key={`location-${locationDisplayValue || 'empty'}`}
-              onPlaceSelect={handlePlaceSelect}
-              onInputChange={handleSearchInputChange as (value: string) => void}
-              placeholder="Ciudad, código postal o dirección..."
-              defaultValue={locationDisplayValue}
-              showIcon={true}
-              label=""
-            />
-            {locationDisplayValue && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 z-20"
-                onClick={() => {
-                  setFilters(prev => ({
-                    ...prev,
-                    estado: '',
-                    municipio: ''
-                  }));
-                  setSearchCoordinates(null); // Limpiar coordenadas
-                }}
-                title="Limpiar ubicación"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+      <div className="pt-16">
+        {/* Barra de búsqueda y filtros compacta estilo Zillow */}
+        <div className="border-b bg-background sticky top-16 z-30">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Búsqueda de ubicación */}
+              <div className="min-w-[240px] flex-1 lg:flex-initial relative">
+                <PlaceAutocomplete
+                  key={`location-${locationDisplayValue || 'empty'}`}
+                  onPlaceSelect={handlePlaceSelect}
+                  onInputChange={handleSearchInputChange as (value: string) => void}
+                  placeholder="Ciudad, código postal..."
+                  defaultValue={locationDisplayValue}
+                  showIcon={true}
+                  label=""
+                />
+                {locationDisplayValue && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 z-20"
+                    onClick={() => {
+                      setFilters(prev => ({
+                        ...prev,
+                        estado: '',
+                        municipio: ''
+                      }));
+                      setSearchCoordinates(null);
+                    }}
+                    title="Limpiar ubicación"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
 
               <Separator orientation="vertical" className="h-8 hidden lg:block" />
 
@@ -1166,13 +1164,12 @@ const Buscar = () => {
               {/* Espaciador */}
               <div className="flex-1 hidden lg:block" />
 
-              {/* 7. Save search button */}
+              {/* Save search button */}
               {user && (
                 <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="default" size="sm" className="hidden lg:flex">
-                      <Save className="h-4 w-4 mr-2" />
-                      Guardar
+                    <Button variant="ghost" size="sm" className="hidden lg:flex">
+                      <Save className="h-4 w-4" />
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -1195,17 +1192,17 @@ const Buscar = () => {
               )}
             </div>
 
-            {/* Chips de filtros activos - solo si hay filtros */}
+            {/* Chips de filtros activos */}
             {activeFiltersCount > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 pt-3 mt-3 border-t border-border/40">
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
                 {getActiveFilterChips().map(chip => (
                   <Badge 
                     key={chip.key} 
                     variant="secondary" 
-                    className="gap-1 text-xs py-0 h-6 px-2 hover:bg-secondary/80 transition-colors"
+                    className="gap-1 text-xs py-0 h-6 px-2"
                   >
                     {chip.label}
-                    <X className="h-3 w-3 cursor-pointer hover:text-destructive transition-colors" onClick={chip.removeFilter} />
+                    <X className="h-3 w-3 cursor-pointer" onClick={chip.removeFilter} />
                   </Badge>
                 ))}
                 <Button
@@ -1224,7 +1221,7 @@ const Buscar = () => {
                       banos: '',
                       orden: 'price_desc',
                     });
-                    setSearchCoordinates(null); // Limpiar coordenadas
+                    setSearchCoordinates(null);
                     setPriceRange([MIN_PRICE, MAX_PRICE]);
                   }}
                 >
@@ -1232,116 +1229,75 @@ const Buscar = () => {
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Layout de dos columnas */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Panel izquierdo: Lista */}
-          <div>
-            {/* Búsquedas guardadas */}
-            {user && savedSearches.length > 0 && (
-              <Card className="mb-6">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Star className="h-4 w-4" />
-                      <Label className="font-semibold">Búsquedas guardadas</Label>
-                    </div>
-                  </div>
+        {/* Layout estilo Zillow: Mapa a la izquierda, lista a la derecha */}
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-140px)]">
+          {/* Mapa a la izquierda - 50% width */}
+          <div className="hidden lg:block lg:w-1/2 relative">
+            {/* Contador de resultados sobre el mapa */}
+            <div className="absolute top-4 left-4 z-10 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border">
+              <p className="text-sm font-medium">
+                <span className="font-bold text-lg">{filteredProperties.length}</span>
+                <span className="text-muted-foreground ml-1">
+                  {filteredProperties.length === 1 ? 'propiedad' : 'propiedades'}
+                </span>
+              </p>
+            </div>
 
-                  <div className="flex items-center gap-2 mb-3">
-                    <Input
-                      placeholder="Buscar búsqueda..."
-                      value={savedSearchQuery}
-                      onChange={(e) => setSavedSearchQuery(e.target.value)}
-                    />
+            <BasicGoogleMap
+              center={mapCenter}
+              zoom={mapZoom}
+              markers={mapMarkers}
+              height="100%"
+              className="h-full w-full"
+              onMarkerClick={handleMarkerClick}
+              onFavoriteClick={handleFavoriteClick}
+              disableAutoFit={!hasActiveFilters || !!searchCoordinates}
+            />
+          </div>
 
-                    <Select value={savedSearchSort} onValueChange={(v: 'date' | 'name') => setSavedSearchSort(v)}>
-                      <SelectTrigger className="w-auto">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="date">Fecha</SelectItem>
-                        <SelectItem value="name">Nombre</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {filteredSavedSearches.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                      <p className="text-sm">No se encontraron búsquedas</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {filteredSavedSearches.map((search) => (
-                        <div
-                          key={search.id}
-                          className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors animate-fade-in"
-                        >
-                          <button
-                            onClick={() => handleLoadSearch(search.filters)}
-                            className="flex-1 text-left"
-                          >
-                            <p className="font-medium">{search.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(search.created_at).toLocaleDateString('es-MX', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })}
-                            </p>
-                          </button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteSearch(search.id, search.name)}
-                            className="hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Lista de propiedades */}
-            <div className="space-y-4">
-              {/* Contador de resultados con indicador de filtrado */}
-              <div className="flex items-center gap-3">
-                <AnimatedCounter 
-                  value={filteredProperties.length} 
-                  label={filteredProperties.length === 1 ? 'propiedad' : 'propiedades'}
-                />
-                {isFiltering && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground animate-fade-in">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Filtrando...</span>
-                  </div>
-                )}
-              </div>
-
+          {/* Lista de propiedades a la derecha - 50% width con scroll */}
+          <div className="w-full lg:w-1/2 overflow-y-auto">
+            <div className="p-4 space-y-4">
+              {/* Stats */}
               <PropertyStats properties={filteredProperties} listingType={filters.listingType} />
 
+              {/* Búsquedas guardadas - compacto */}
+              {user && savedSearches.length > 0 && (
+                <Card>
+                  <CardContent className="p-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-between"
+                      onClick={() => {
+                        const element = document.getElementById('saved-searches');
+                        element?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4" />
+                        <span className="text-sm font-medium">
+                          {savedSearches.length} búsqueda{savedSearches.length !== 1 ? 's' : ''} guardada{savedSearches.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               {isFiltering ? (
-                // Skeletons mientras se está filtrando
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
                     <Card key={i} className="animate-pulse">
-                      <CardContent className="p-4">
-                        <Skeleton className="w-full h-48 mb-4 rounded-lg" />
-                        <Skeleton className="h-6 w-3/4 mb-2" />
-                        <Skeleton className="h-4 w-1/2 mb-3" />
-                        <Skeleton className="h-8 w-1/3 mb-3" />
-                        <div className="flex gap-4">
-                          <Skeleton className="h-4 w-16" />
-                          <Skeleton className="h-4 w-16" />
-                          <Skeleton className="h-4 w-16" />
-                        </div>
+                      <div className="aspect-[4/3] bg-muted" />
+                      <CardContent className="p-3 space-y-2">
+                        <Skeleton className="h-6 w-24" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-2/3" />
                       </CardContent>
                     </Card>
                   ))}
@@ -1356,130 +1312,107 @@ const Buscar = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-4 max-h-[800px] overflow-y-auto pr-2">
-                  {filteredProperties.map((property, index) => (
-                    <Link
+                <div className="grid gap-3">
+                  {filteredProperties.map((property) => (
+                    <div
                       key={property.id}
-                      to={`/propiedad/${property.id}`}
-                      id={`property-${property.id}`}
+                      onMouseEnter={() => setHoveredProperty(property)}
+                      onMouseLeave={() => setHoveredProperty(null)}
                     >
-                      <Card
-                        className="cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] animate-fade-in"
-                        style={{ animationDelay: `${index * 50}ms` }}
-                        onClick={() => handlePropertyClick(property)}
-                        onMouseEnter={() => setHoveredProperty(property)}
-                        onMouseLeave={() => setHoveredProperty(null)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="mb-4 relative">
-                            <PropertyImageGallery
-                              images={property.images || []}
-                              title={property.title}
-                              type={property.type}
-                            />
-                            <div className="absolute top-3 left-3 z-10">
-                              <Badge 
-                                variant={property.listing_type === 'venta' ? 'default' : 'secondary'}
-                                className={`
-                                  font-semibold text-sm px-3 py-1.5 shadow-lg backdrop-blur-sm
-                                  ${property.listing_type === 'venta' 
-                                    ? 'bg-emerald-500/90 hover:bg-emerald-600/90 text-white border-emerald-400' 
-                                    : 'bg-blue-500/90 hover:bg-blue-600/90 text-white border-blue-400'
-                                  }
-                                  transition-all hover:scale-105 animate-fade-in
-                                `}
-                              >
-                                {property.listing_type === 'venta' ? (
-                                  <>
-                                    <Tag className="h-3.5 w-3.5 mr-1" />
-                                    En Venta
-                                  </>
-                                ) : (
-                                  <>
-                                    <TrendingUp className="h-3.5 w-3.5 mr-1" />
-                                    En Renta
-                                  </>
-                                )}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          <div className="space-y-3">
-                            <div>
-                              <div className="flex items-start justify-between gap-2 mb-1">
-                                <h3 className="font-semibold text-lg hover:text-primary transition-colors line-clamp-1 flex-1">
-                                  {property.title}
-                                </h3>
-                                <Badge 
-                                  variant="outline"
-                                  className={`
-                                    text-xs px-2 py-0.5 flex-shrink-0
-                                    ${property.listing_type === 'venta' 
-                                      ? 'border-emerald-500 text-emerald-600 bg-emerald-50' 
-                                      : 'border-blue-500 text-blue-600 bg-blue-50'
-                                    }
-                                  `}
-                                >
-                                  {property.listing_type === 'venta' ? 'Venta' : 'Renta'}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                                <MapPin className="h-3 w-3 flex-shrink-0" />
-                                <span className="line-clamp-1">
-                                  {property.municipality}, {property.state}
-                                </span>
-                              </p>
-                            </div>
-
-                            <p className="text-2xl font-bold text-primary">
-                              {formatPrice(property.price)}
-                            </p>
-
-                            <div className="flex gap-4 text-sm text-muted-foreground">
-                              {property.bedrooms && (
-                                <span className="flex items-center gap-1">
-                                  <Bed className="h-4 w-4" />
-                                  {property.bedrooms}
-                                </span>
-                              )}
-                              {property.bathrooms && (
-                                <span className="flex items-center gap-1">
-                                  <Bath className="h-4 w-4" />
-                                  {property.bathrooms}
-                                </span>
-                              )}
-                              {property.parking && (
-                                <span className="flex items-center gap-1">
-                                  <Car className="h-4 w-4" />
-                                  {property.parking}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
+                      <PropertyCard
+                        id={property.id}
+                        title={property.title}
+                        price={property.price}
+                        type={property.type}
+                        listingType={property.listing_type}
+                        address={property.address}
+                        municipality={property.municipality}
+                        state={property.state}
+                        bedrooms={property.bedrooms || undefined}
+                        bathrooms={property.bathrooms || undefined}
+                        parking={property.parking || undefined}
+                        sqft={property.sqft || undefined}
+                        imageUrl={property.images?.[0]?.url}
+                      />
+                    </div>
                   ))}
+                </div>
+              )}
+
+              {/* Búsquedas guardadas expandido */}
+              {user && savedSearches.length > 0 && (
+                <div id="saved-searches" className="pt-8">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Star className="h-4 w-4" />
+                          <Label className="font-semibold">Búsquedas guardadas</Label>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-3">
+                        <Input
+                          placeholder="Buscar..."
+                          value={savedSearchQuery}
+                          onChange={(e) => setSavedSearchQuery(e.target.value)}
+                        />
+                        <Select value={savedSearchSort} onValueChange={(v: 'date' | 'name') => setSavedSearchSort(v)}>
+                          <SelectTrigger className="w-auto">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="date">Fecha</SelectItem>
+                            <SelectItem value="name">Nombre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {filteredSavedSearches.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                          <p className="text-sm">No se encontraron búsquedas</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {filteredSavedSearches.map((search) => (
+                            <div
+                              key={search.id}
+                              className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                            >
+                              <button
+                                onClick={() => handleLoadSearch(search.filters)}
+                                className="flex-1 text-left"
+                              >
+                                <p className="font-medium text-sm">{search.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(search.created_at).toLocaleDateString('es-MX', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </p>
+                              </button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteSearch(search.id, search.name)}
+                                className="hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               )}
             </div>
           </div>
-
-          {/* Panel derecho: Mapa */}
-          <div className="lg:sticky lg:top-20">
-            <BasicGoogleMap
-              center={mapCenter}
-              zoom={mapZoom}
-              markers={mapMarkers}
-              height="calc(100vh - 8rem)"
-              className="rounded-lg overflow-hidden shadow-lg"
-              onMarkerClick={handleMarkerClick}
-              onFavoriteClick={handleFavoriteClick}
-              disableAutoFit={!hasActiveFilters || !!searchCoordinates}
-            />
-          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 };
