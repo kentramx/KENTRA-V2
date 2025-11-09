@@ -124,3 +124,11 @@ All colors MUST be HSL.
   margin-top: -50px !important;
   display: inline-block !important;
 }
+
+/* Forzar ancho del web component de Google Places */
+gmp-place-autocomplete {
+  display: block;
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box;
+}

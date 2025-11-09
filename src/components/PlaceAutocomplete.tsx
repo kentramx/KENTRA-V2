@@ -111,10 +111,15 @@ export const PlaceAutocomplete = ({
           requestedRegion: 'MX',
         });
         
-        // Aplicar estilos personalizados
-        placeAutocomplete.className = showIcon 
-          ? 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9'
-          : 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+        // Aplicar estilos personalizados y forzar ancho completo
+        placeAutocomplete.style.display = 'block';
+        placeAutocomplete.style.width = '100%';
+        placeAutocomplete.style.maxWidth = 'none';
+        placeAutocomplete.style.boxSizing = 'border-box';
+
+        const baseClasses =
+          'h-12 w-full rounded-full border-2 border-primary/60 bg-background px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50';
+        placeAutocomplete.className = showIcon ? `${baseClasses} pl-12` : baseClasses;
         
         if (placeholder) placeAutocomplete.placeholder = placeholder;
         if (defaultValue) placeAutocomplete.value = defaultValue;
@@ -320,14 +325,14 @@ export const PlaceAutocomplete = ({
   }
 
   return (
-    <div className={label ? "space-y-2" : ""}>
-      {label && <Label htmlFor={id}>{label}</Label>}
-      <div className="relative">
-        {showIcon && <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />}
+      <div className={label ? "space-y-2" : ""}>
+        {label && <Label htmlFor={id}>{label}</Label>}
+        <div className="relative w-full">
+        {showIcon && <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10 pointer-events-none" />}
         
         {/* Contenedor para Web Component cuando esté disponible */}
         {useWebComponent === true && (
-          <div ref={webComponentContainerRef} />
+          <div ref={webComponentContainerRef} className="w-full" />
         )}
         
         {/* Input normal para legacy autocomplete o mientras se carga */}
@@ -338,10 +343,10 @@ export const PlaceAutocomplete = ({
             type="text"
             placeholder={placeholder}
             defaultValue={defaultValue}
-            className={showIcon 
-              ? 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-9'
-              : 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
-            }
+              className={showIcon 
+                ? 'h-12 w-full rounded-full border-2 border-primary/60 bg-background px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 pl-12'
+                : 'h-12 w-full rounded-full border-2 border-primary/60 bg-background px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50'
+              }
           />
         )}
       </div>

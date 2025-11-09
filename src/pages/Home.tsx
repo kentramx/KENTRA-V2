@@ -345,7 +345,7 @@ const Home = () => {
                 </TabsList>
                 
                 <TabsContent value="search" className="mt-4">
-                  <div className="flex gap-1 rounded-lg bg-white p-2 shadow-2xl w-full max-w-2xl mx-auto">
+                  <div className="flex gap-1 rounded-lg bg-white p-2 shadow-2xl w-full max-w-3xl mx-auto">
                     <div className="flex items-center flex-1 min-w-0">
                       <PlaceAutocomplete
                         onPlaceSelect={handlePlaceSelect}
@@ -357,7 +357,7 @@ const Home = () => {
                     <Button
                       onClick={handleSearch}
                       size="lg"
-                      className="bg-secondary hover:bg-secondary/90"
+                      className="bg-secondary hover:bg-secondary/90 shrink-0"
                     >
                       <Search className="mr-2 h-5 w-5" />
                       Buscar
