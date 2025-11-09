@@ -119,17 +119,24 @@ const Pricing = () => {
   };
 
   const getPlanPrice = (plan: Plan) => {
-    const price = isYearly ? plan.price_yearly : plan.price_monthly;
-    if (price === 0) return 'Gratis';
-    if (isYearly) return `$${(price / 12).toFixed(0)}/mes`;
-    return `$${price}/mes`;
+    if (plan.price_monthly === 0) return 'Gratis';
+    return `$${plan.price_monthly.toLocaleString('es-MX')}/mes`;
+  };
+
+  const getYearlyPriceDisplay = (plan: Plan) => {
+    if (plan.price_yearly === 0) return null;
+    const monthlyEquivalent = Math.round(plan.price_yearly / 12);
+    return {
+      total: plan.price_yearly.toLocaleString('es-MX'),
+      monthly: monthlyEquivalent.toLocaleString('es-MX')
+    };
   };
 
   const getPlanSavings = (plan: Plan) => {
     if (plan.price_yearly === 0) return null;
     const monthlyCost = plan.price_monthly * 12;
     const savings = ((monthlyCost - plan.price_yearly) / monthlyCost) * 100;
-    return savings > 0 ? `Ahorra ${savings.toFixed(0)}%` : null;
+    return savings > 0 ? Math.round(savings) : null;
   };
 
   if (loading) {
@@ -174,23 +181,23 @@ const Pricing = () => {
             </p>
 
             {/* Toggle Mensual/Anual */}
-            <div className="flex items-center justify-center gap-4">
-              <Label htmlFor="billing-toggle" className={!isYearly ? 'font-semibold' : ''}>
-                Mensual
-              </Label>
-              <Switch
-                id="billing-toggle"
-                checked={isYearly}
-                onCheckedChange={setIsYearly}
-              />
-              <Label htmlFor="billing-toggle" className={isYearly ? 'font-semibold' : ''}>
-                Anual
-              </Label>
-              {isYearly && (
-                <Badge variant="secondary" className="ml-2">
-                  Ahorra hasta 17%
-                </Badge>
-              )}
+            <div className="flex flex-col items-center justify-center gap-3">
+              <div className="flex items-center gap-4">
+                <Label htmlFor="billing-toggle" className={!isYearly ? 'font-semibold' : ''}>
+                  Mensual (sin compromiso)
+                </Label>
+                <Switch
+                  id="billing-toggle"
+                  checked={isYearly}
+                  onCheckedChange={setIsYearly}
+                />
+                <Label htmlFor="billing-toggle" className={isYearly ? 'font-semibold' : ''}>
+                  Ahorrar 12% (opcional)
+                </Label>
+              </div>
+              <p className="text-sm text-muted-foreground max-w-md text-center">
+                Puedes cancelar cuando quieras. El pago anual es opcional solo para quienes desean ahorrar.
+              </p>
             </div>
           </div>
 
@@ -198,7 +205,8 @@ const Pricing = () => {
           <div className="grid md:grid-cols-4 gap-6 mb-12">
             {enhancedPlans.map((plan) => {
               const features = plan.features || {};
-              const savings = isYearly ? getPlanSavings(plan) : null;
+              const yearlyDisplay = getYearlyPriceDisplay(plan);
+              const savingsPercent = getPlanSavings(plan);
 
               return (
                 <Card
@@ -217,16 +225,39 @@ const Pricing = () => {
                     <CardTitle className="text-2xl">{plan.display_name}</CardTitle>
                     <CardDescription>{plan.description}</CardDescription>
                     <div className="mt-4">
-                      <div className="text-4xl font-bold text-foreground">
-                        {getPlanPrice(plan)}
-                      </div>
-                      {isYearly && savings && (
-                        <div className="text-sm text-primary font-medium mt-1">{savings}</div>
-                      )}
-                      {isYearly && plan.price_yearly > 0 && (
-                        <div className="text-sm text-muted-foreground mt-1">
-                          ${plan.price_yearly} facturado anualmente
-                        </div>
+                      {!isYearly ? (
+                        <>
+                          <div className="text-sm text-muted-foreground mb-1">Mensual:</div>
+                          <div className="text-4xl font-bold text-foreground">
+                            {getPlanPrice(plan)}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {yearlyDisplay && (
+                            <>
+                              <div className="text-sm text-muted-foreground mb-1">
+                                Pago adelantado para ahorrar:
+                              </div>
+                              <div className="text-3xl font-bold text-foreground">
+                                ${yearlyDisplay.total}
+                              </div>
+                              <div className="text-sm text-muted-foreground mt-2">
+                                (equivale a ${yearlyDisplay.monthly}/mes)
+                              </div>
+                              {savingsPercent && (
+                                <Badge variant="secondary" className="mt-2">
+                                  Ahorras {savingsPercent}%
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                          {!yearlyDisplay && (
+                            <div className="text-4xl font-bold text-foreground">
+                              {getPlanPrice(plan)}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </CardHeader>
