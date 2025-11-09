@@ -9,6 +9,7 @@ import { NotificationPermissionBanner } from "@/components/NotificationPermissio
 import Home from "./pages/Home";
 import PropertyDetail from "./pages/PropertyDetail";
 import Favorites from "./pages/Favorites";
+import ComparePage from "./pages/ComparePage";
 import AgentDashboard from "./pages/AgentDashboard";
 import AgentProfile from "./pages/AgentProfile";
 import UserProfile from "./pages/UserProfile";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/notificaciones" element={<NotificationSettings />} />
               <Route path="/buscar" element={<Buscar />} />
               <Route path="/favoritos" element={<Favorites />} />
+              <Route path="/comparar" element={<ComparePage />} />
               <Route path="/panel-agente" element={<AgentDashboard />} />
               <Route path="/mensajes" element={<MessagesPage />} />
               <Route path="/instalar" element={<InstallPWA />} />

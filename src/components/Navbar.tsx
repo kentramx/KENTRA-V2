@@ -10,16 +10,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Home, Heart, User, PlusCircle, LogOut, Search, Building } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Home, Heart, User, PlusCircle, LogOut, Search, Building, GitCompare } from "lucide-react";
 import { MessageBadge } from "./MessageBadge";
 import { MobileMenu } from "./MobileMenu";
 import { ThemeToggle } from "./ThemeToggle";
+import { usePropertyCompare } from "@/hooks/usePropertyCompare";
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const listingType = searchParams.get("listingType");
+  const { compareList } = usePropertyCompare();
 
   const getUserInitials = () => {
     if (!user?.email) return "U";
@@ -87,6 +90,19 @@ const Navbar = () => {
                     <Heart className="h-5 w-5" />
                   </Button>
                 </Link>
+                <Link to="/comparar">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 relative">
+                    <GitCompare className="h-5 w-5" />
+                    {compareList.length > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                      >
+                        {compareList.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
@@ -143,6 +159,19 @@ const Navbar = () => {
             {user ? (
               <>
                 <MessageBadge />
+                <Link to="/comparar">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 relative">
+                    <GitCompare className="h-5 w-5" />
+                    {compareList.length > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                      >
+                        {compareList.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
