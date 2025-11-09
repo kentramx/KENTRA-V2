@@ -28,13 +28,6 @@ const Navbar = () => {
 
   const handleListingTypeChange = (newListingType: "venta" | "renta") => {
     const params = new URLSearchParams(searchParams);
-    
-    // Si estamos cambiando al tipo que ya está activo, no hacer nada
-    const currentType = listingType || "venta"; // Por defecto "venta"
-    if (currentType === newListingType && params.has("listingType")) {
-      return;
-    }
-    
     params.set("listingType", newListingType);
     navigate(`/buscar?${params.toString()}`);
   };
