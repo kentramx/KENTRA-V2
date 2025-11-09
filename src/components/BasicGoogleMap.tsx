@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
 import { MarkerClusterer, GridAlgorithm } from '@googlemaps/markerclusterer';
+import { Plus, Minus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type LatLng = { lat: number; lng: number };
 type BasicMarker = LatLng & { 
@@ -341,6 +343,25 @@ export function BasicGoogleMap({
     }
   }, [center, zoom, disableAutoFit]);
 
+  // Funciones de zoom
+  const handleZoomIn = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const currentZoom = map.getZoom();
+    if (currentZoom !== undefined) {
+      map.setZoom(currentZoom + 1);
+    }
+  };
+
+  const handleZoomOut = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const currentZoom = map.getZoom();
+    if (currentZoom !== undefined) {
+      map.setZoom(currentZoom - 1);
+    }
+  };
+
   if (error) {
     return (
       <div className="flex h-full items-center justify-center text-destructive text-sm">
@@ -351,7 +372,33 @@ export function BasicGoogleMap({
 
   const style = typeof height === 'number' ? { height: `${height}px` } : { height };
 
-  return <div ref={containerRef} className={className} style={{ width: '100%', ...style }} />;
+  return (
+    <div className="relative w-full" style={style}>
+      <div ref={containerRef} className={className} style={{ width: '100%', height: '100%' }} />
+      
+      {/* Controles de Zoom */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+        <Button
+          onClick={handleZoomIn}
+          size="icon"
+          variant="secondary"
+          className="h-10 w-10 rounded-lg shadow-lg hover:shadow-xl transition-shadow bg-background border border-border"
+          title="Acercar"
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+        <Button
+          onClick={handleZoomOut}
+          size="icon"
+          variant="secondary"
+          className="h-10 w-10 rounded-lg shadow-lg hover:shadow-xl transition-shadow bg-background border border-border"
+          title="Alejar"
+        >
+          <Minus className="h-5 w-5" />
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export default BasicGoogleMap;
