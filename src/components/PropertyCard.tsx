@@ -102,41 +102,30 @@ const PropertyCard = ({
       </CardContent>
 
       <CardFooter className="border-t border-border p-4">
-        <div className="flex w-full items-center text-base font-medium text-foreground">
+        <div className="flex w-full gap-4 text-sm text-muted-foreground">
           {bedrooms && (
-            <>
-              <span className="flex items-center gap-1.5">
-                <span className="text-lg font-semibold">{bedrooms}</span>
-                <span className="text-sm text-muted-foreground">bd</span>
-              </span>
-            </>
+            <div className="flex items-center gap-1">
+              <Bed className="h-4 w-4" />
+              <span>{bedrooms}</span>
+            </div>
           )}
           {bathrooms && (
-            <>
-              {bedrooms && <span className="mx-3 text-muted-foreground/40">|</span>}
-              <span className="flex items-center gap-1.5">
-                <span className="text-lg font-semibold">{bathrooms}</span>
-                <span className="text-sm text-muted-foreground">ba</span>
-              </span>
-            </>
+            <div className="flex items-center gap-1">
+              <Bath className="h-4 w-4" />
+              <span>{bathrooms}</span>
+            </div>
           )}
           {parking && (
-            <>
-              {(bedrooms || bathrooms) && <span className="mx-3 text-muted-foreground/40">|</span>}
-              <span className="flex items-center gap-1.5">
-                <span className="text-lg font-semibold">{parking}</span>
-                <span className="text-sm text-muted-foreground">est</span>
-              </span>
-            </>
+            <div className="flex items-center gap-1">
+              <Car className="h-4 w-4" />
+              <span>{parking}</span>
+            </div>
           )}
           {sqft && (
-            <>
-              {(bedrooms || bathrooms || parking) && <span className="mx-3 text-muted-foreground/40">|</span>}
-              <span className="flex items-center gap-1.5">
-                <span className="text-lg font-semibold">{sqft.toLocaleString('es-MX')}</span>
-                <span className="text-sm text-muted-foreground">m²</span>
-              </span>
-            </>
+            <div className="flex items-center gap-1">
+              <Maximize className="h-4 w-4" />
+              <span>{sqft} m²</span>
+            </div>
           )}
         </div>
       </CardFooter>
