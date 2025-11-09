@@ -103,6 +103,11 @@ const Buscar = () => {
     banos: searchParams.get('banos') || '',
     orden: (searchParams.get('orden') as any) || 'price_desc',
   });
+  
+  // Construir el valor de visualización para el input de ubicación
+  const locationDisplayValue = filters.municipio && filters.estado
+    ? `${filters.municipio}, ${filters.estado}`
+    : filters.estado || '';
 
   const [estados] = useState<string[]>(mexicoStates);
   const [municipios, setMunicipios] = useState<string[]>([]);
@@ -665,6 +670,7 @@ const Buscar = () => {
               onPlaceSelect={handlePlaceSelect}
               onInputChange={handleSearchInputChange}
               placeholder="Ciudad, código postal o dirección..."
+              defaultValue={locationDisplayValue}
               showIcon={true}
               label=""
             />

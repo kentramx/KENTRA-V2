@@ -52,6 +52,15 @@ const Home = () => {
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
+  // Estado para almacenar la ubicación seleccionada del autocomplete
+  const [selectedLocation, setSelectedLocation] = useState<{
+    address: string;
+    municipality: string;
+    state: string;
+    lat?: number;
+    lng?: number;
+  } | null>(null);
+  
   // Advanced filters
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
@@ -68,23 +77,9 @@ const Home = () => {
     lat?: number;
     lng?: number;
   }) => {
-    const params = new URLSearchParams();
-    
-    params.set('listingType', listingType);
-    if (propertyType && propertyType !== 'all') params.set('tipo', propertyType);
-    if (location.state) params.set('estado', location.state);
-    if (location.municipality) params.set('municipio', location.municipality);
-    if (priceMin) params.set('precioMin', priceMin);
-    if (priceMax) params.set('precioMax', priceMax);
-    if (bedrooms && bedrooms !== 'all') params.set('recamaras', bedrooms);
-    if (bathrooms && bathrooms !== 'all') params.set('banos', bathrooms);
-    if (parking && parking !== 'all') params.set('estacionamiento', parking);
-    
-    if (!location.state && !location.municipality && location.address) {
-      params.set('busqueda', location.address);
-    }
-
-    navigate(`/buscar?${params.toString()}`);
+    // Solo guardar la ubicación seleccionada y actualizar el texto visible
+    setSelectedLocation(location);
+    setSearchQuery(location.address);
   };
 
   const handleMapLocationSelect = (location: {
@@ -100,7 +95,13 @@ const Home = () => {
     const params = new URLSearchParams();
     params.set('listingType', listingType);
     if (propertyType && propertyType !== 'all') params.set('tipo', propertyType);
-    if (searchQuery) params.set('busqueda', encodeURIComponent(searchQuery));
+    
+    // Usar la ubicación seleccionada del autocomplete si existe
+    if (selectedLocation) {
+      if (selectedLocation.state) params.set('estado', selectedLocation.state);
+      if (selectedLocation.municipality) params.set('municipio', selectedLocation.municipality);
+    }
+    
     if (priceMin) params.set('precioMin', priceMin);
     if (priceMax) params.set('precioMax', priceMax);
     if (bedrooms && bedrooms !== 'all') params.set('recamaras', bedrooms);
