@@ -2,8 +2,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Heart, Bed, Bath, Car, Maximize } from "lucide-react";
 import propertyPlaceholder from "@/assets/property-placeholder.jpg";
 
 interface PropertyCardProps {
@@ -43,8 +42,6 @@ const PropertyCard = ({
   onToggleFavorite,
   isHovered = false,
 }: PropertyCardProps) => {
-  const { toast } = useToast();
-
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("es-MX", {
       style: "currency",
@@ -66,34 +63,6 @@ const PropertyCard = ({
       rancho: 'Rancho'
     };
     return labels[type] || type;
-  };
-
-  const handleShareWhatsApp = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const url = `${window.location.origin}/propiedad/${id}`;
-    const whatsappMessage = `🏡 *${title}*\n\n💰 ${formatPrice(price)}\n📍 ${municipality}, ${state}\n\n🔗 Ver más: ${url}`;
-    const encoded = encodeURIComponent(whatsappMessage);
-    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
-
-    const deep = `whatsapp://send?text=${encoded}`;
-    const wa = `https://wa.me/?text=${encoded}`;
-
-    if (isMobile) {
-      window.location.href = deep;
-      setTimeout(() => {
-        window.location.href = wa;
-      }, 600);
-    } else {
-      try {
-        window.location.href = deep;
-      } catch {}
-
-      setTimeout(async () => {
-        window.location.assign(wa);
-      }, 700);
-    }
   };
 
   return (
@@ -148,18 +117,6 @@ const PropertyCard = ({
           </p>
         </Link>
       </CardContent>
-
-      <CardFooter className="p-4 pt-0">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full gap-2"
-          onClick={handleShareWhatsApp}
-        >
-          <Share2 className="h-4 w-4" />
-          Compartir por WhatsApp
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
