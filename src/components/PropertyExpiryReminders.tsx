@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -10,8 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Bell, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
-import { format } from 'date-fns';
+import { Loader2, Bell, CheckCircle, AlertTriangle, Clock, TrendingUp, Timer, BarChart3 } from 'lucide-react';
+import { format, differenceInHours, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface ExpiryReminder {
@@ -31,9 +31,21 @@ interface PropertyExpiryRemindersProps {
   agentId: string;
 }
 
+interface ReminderStats {
+  totalReminders: number;
+  renewedAfterReminder: number;
+  renewalRate: number;
+  averageResponseTimeHours: number;
+  averageResponseTimeDays: number;
+  remindersBy7Days: number;
+  remindersBy3Days: number;
+  remindersBy1Day: number;
+}
+
 export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProps) => {
   const [reminders, setReminders] = useState<ExpiryReminder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<ReminderStats | null>(null);
 
   useEffect(() => {
     fetchReminders();
@@ -67,11 +79,65 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
       })) || [];
 
       setReminders(formattedData);
+      calculateStats(formattedData);
     } catch (error) {
       console.error('Error fetching reminders:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateStats = (remindersData: ExpiryReminder[]) => {
+    if (remindersData.length === 0) {
+      setStats(null);
+      return;
+    }
+
+    let renewedCount = 0;
+    let totalResponseTimeHours = 0;
+    let responsesCount = 0;
+    let reminders7Days = 0;
+    let reminders3Days = 0;
+    let reminders1Day = 0;
+
+    remindersData.forEach((reminder) => {
+      // Contar por urgencia
+      if (reminder.days_before === 7) reminders7Days++;
+      if (reminder.days_before === 3) reminders3Days++;
+      if (reminder.days_before === 1) reminders1Day++;
+
+      const sentDate = new Date(reminder.sent_at);
+      const lastRenewedDate = reminder.property?.last_renewed_at 
+        ? new Date(reminder.property.last_renewed_at) 
+        : null;
+
+      // Si se renovó después del recordatorio
+      if (lastRenewedDate && lastRenewedDate > sentDate) {
+        renewedCount++;
+        
+        // Calcular tiempo de respuesta
+        const responseTimeHours = differenceInHours(lastRenewedDate, sentDate);
+        totalResponseTimeHours += responseTimeHours;
+        responsesCount++;
+      }
+    });
+
+    const renewalRate = (renewedCount / remindersData.length) * 100;
+    const averageResponseTimeHours = responsesCount > 0 
+      ? totalResponseTimeHours / responsesCount 
+      : 0;
+    const averageResponseTimeDays = averageResponseTimeHours / 24;
+
+    setStats({
+      totalReminders: remindersData.length,
+      renewedAfterReminder: renewedCount,
+      renewalRate,
+      averageResponseTimeHours,
+      averageResponseTimeDays,
+      remindersBy7Days: reminders7Days,
+      remindersBy3Days: reminders3Days,
+      remindersBy1Day: reminders1Day,
+    });
   };
 
   const getReminderBadge = (daysB: number) => {
@@ -175,8 +241,8 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
         <Bell className="h-5 w-5 text-primary" />
         <div>
           <h3 className="text-lg font-semibold text-foreground">
@@ -187,6 +253,130 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
           </p>
         </div>
       </div>
+
+      {/* Estadísticas */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Tasa de Renovación */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Tasa de Renovación
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">
+                {stats.renewalRate.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.renewedAfterReminder} de {stats.totalReminders} renovadas después del recordatorio
+              </p>
+              <div className="mt-3 flex items-center gap-2 text-xs">
+                <Badge variant="secondary" className="text-xs">
+                  📅 7d: {stats.remindersBy7Days}
+                </Badge>
+                <Badge variant="default" className="text-xs bg-yellow-500">
+                  ⏰ 3d: {stats.remindersBy3Days}
+                </Badge>
+                <Badge variant="destructive" className="text-xs">
+                  🚨 1d: {stats.remindersBy1Day}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tiempo Promedio de Respuesta */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Tiempo Promedio de Respuesta
+              </CardTitle>
+              <Timer className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">
+                {stats.averageResponseTimeDays < 1 
+                  ? `${stats.averageResponseTimeHours.toFixed(1)}h`
+                  : `${stats.averageResponseTimeDays.toFixed(1)}d`
+                }
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Desde el recordatorio hasta la renovación
+              </p>
+              {stats.renewedAfterReminder > 0 && (
+                <div className="mt-3">
+                  <div className="flex items-center gap-2">
+                    {stats.averageResponseTimeHours < 24 ? (
+                      <Badge variant="default" className="bg-green-500 text-white text-xs">
+                        ⚡ Respuesta rápida
+                      </Badge>
+                    ) : stats.averageResponseTimeDays < 3 ? (
+                      <Badge variant="secondary" className="text-xs">
+                        ✓ Respuesta buena
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        Respuesta tardía
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Efectividad por Urgencia */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Efectividad por Urgencia
+              </CardTitle>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {stats.remindersBy7Days > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">7 días antes:</span>
+                    <span className="font-semibold">
+                      {((reminders.filter(r => r.days_before === 7 && 
+                        r.property?.last_renewed_at && 
+                        new Date(r.property.last_renewed_at) > new Date(r.sent_at)).length / 
+                        stats.remindersBy7Days) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                )}
+                {stats.remindersBy3Days > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">3 días antes:</span>
+                    <span className="font-semibold">
+                      {((reminders.filter(r => r.days_before === 3 && 
+                        r.property?.last_renewed_at && 
+                        new Date(r.property.last_renewed_at) > new Date(r.sent_at)).length / 
+                        stats.remindersBy3Days) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                )}
+                {stats.remindersBy1Day > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">1 día antes:</span>
+                    <span className="font-semibold">
+                      {((reminders.filter(r => r.days_before === 1 && 
+                        r.property?.last_renewed_at && 
+                        new Date(r.property.last_renewed_at) > new Date(r.sent_at)).length / 
+                        stats.remindersBy1Day) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                % de renovaciones por tipo de recordatorio
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card>
         <Table>
