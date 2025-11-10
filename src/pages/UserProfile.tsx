@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { DynamicBreadcrumbs } from "@/components/DynamicBreadcrumbs";
+import { WhatsAppConfigSection } from "@/components/WhatsAppConfigSection";
 import {
   Loader2,
   User,
@@ -320,6 +321,17 @@ const UserProfile = () => {
                 </Form>
               </CardContent>
             </Card>
+
+            <div className="mt-6">
+              <WhatsAppConfigSection 
+                userId={user?.id || ""} 
+                initialData={{
+                  whatsapp_number: profile?.whatsapp_number,
+                  whatsapp_enabled: profile?.whatsapp_enabled,
+                  whatsapp_business_hours: profile?.whatsapp_business_hours
+                }}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="searches" className="mt-6">
