@@ -4,11 +4,13 @@ import Navbar from "@/components/Navbar";
 import { AdminRoleManagement } from "@/components/AdminRoleManagement";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { useRequire2FA } from "@/hooks/useRequire2FA";
 
 const AdminRoles = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isSuperAdmin, loading } = useAdminCheck();
+  const { requirementMet, checking: checking2FA } = useRequire2FA();
 
   useEffect(() => {
     if (!loading && !isSuperAdmin) {
@@ -16,7 +18,7 @@ const AdminRoles = () => {
     }
   }, [isSuperAdmin, loading, navigate]);
 
-  if (loading) {
+  if (loading || checking2FA) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -32,7 +34,7 @@ const AdminRoles = () => {
     );
   }
 
-  if (!isSuperAdmin || !user) {
+  if (!isSuperAdmin || !user || !requirementMet) {
     return null;
   }
 

@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -14,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { DynamicBreadcrumbs } from "@/components/DynamicBreadcrumbs";
 import { WhatsAppConfigSection } from "@/components/WhatsAppConfigSection";
+import { TwoFactorAuth } from "@/components/TwoFactorAuth";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import {
   Loader2,
@@ -29,6 +31,7 @@ import {
   DollarSign,
   FileText,
   ScrollText,
+  Lock,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -59,6 +62,7 @@ interface SavedSearch {
 const UserProfile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAdmin, isSuperAdmin, adminRole, loading: adminLoading } = useAdminCheck();
   const [profile, setProfile] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -66,6 +70,9 @@ const UserProfile = () => {
   const [loading, setLoading] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
+  
+  // Leer el parámetro tab de la URL
+  const activeTab = searchParams.get('tab') || 'profile';
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -245,8 +252,8 @@ const UserProfile = () => {
 
         <h1 className="text-3xl font-bold mb-8">Mi Perfil</h1>
 
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs value={activeTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile">
               <User className="mr-2 h-4 w-4" />
               Información Personal
@@ -258,6 +265,10 @@ const UserProfile = () => {
             <TabsTrigger value="notifications">
               <Bell className="mr-2 h-4 w-4" />
               Notificaciones
+            </TabsTrigger>
+            <TabsTrigger value="security">
+              <Lock className="mr-2 h-4 w-4" />
+              Seguridad
             </TabsTrigger>
             <TabsTrigger value="advanced">
               <Settings className="mr-2 h-4 w-4" />
@@ -601,6 +612,26 @@ const UserProfile = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="security" className="mt-6">
+            <div className="space-y-6">
+              <TwoFactorAuth 
+                isAdminRole={isSuperAdmin || isAdmin}
+                userRole={userRole}
+              />
+              
+              {(isSuperAdmin || isAdmin) && (
+                <Alert>
+                  <Shield className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Recomendación de seguridad:</strong> Como administrador de la plataforma,
+                    se recomienda encarecidamente mantener 2FA habilitado para proteger datos sensibles
+                    y funcionalidades administrativas críticas.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="advanced" className="mt-6">

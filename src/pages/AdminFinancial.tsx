@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { FinancialDashboard } from "@/components/FinancialDashboard";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { useRequire2FA } from "@/hooks/useRequire2FA";
 
 const AdminFinancial = () => {
   const navigate = useNavigate();
   const { isSuperAdmin, loading } = useAdminCheck();
+  const { requirementMet, checking: checking2FA } = useRequire2FA();
 
   useEffect(() => {
     if (!loading && !isSuperAdmin) {
@@ -14,7 +16,7 @@ const AdminFinancial = () => {
     }
   }, [isSuperAdmin, loading, navigate]);
 
-  if (loading) {
+  if (loading || checking2FA) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -30,7 +32,7 @@ const AdminFinancial = () => {
     );
   }
 
-  if (!isSuperAdmin) {
+  if (!isSuperAdmin || !requirementMet) {
     return null;
   }
 
