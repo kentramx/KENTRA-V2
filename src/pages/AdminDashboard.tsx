@@ -104,7 +104,7 @@ const AdminDashboard = () => {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      let query = (supabase as any)
         .from('properties')
         .select(`
           *,
@@ -142,38 +142,38 @@ const AdminDashboard = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      const { count: newCount } = await supabase
+      const { count: newCount } = await (supabase as any)
         .from('properties')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pendiente_aprobacion')
         .eq('resubmission_count', 0);
       
-      const { count: resubmittedCount } = await supabase
+      const { count: resubmittedCount } = await (supabase as any)
         .from('properties')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pendiente_aprobacion')
         .gt('resubmission_count', 0);
       
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
-      const { count: oldCount } = await supabase
+      const { count: oldCount } = await (supabase as any)
         .from('properties')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pendiente_aprobacion')
         .lt('created_at', threeDaysAgo);
       
-      const { count: approvedToday } = await supabase
+      const { count: approvedToday } = await (supabase as any)
         .from('property_moderation_history')
         .select('*', { count: 'exact', head: true })
         .eq('action', 'approved')
         .gte('created_at', today);
       
-      const { count: rejectedToday } = await supabase
+      const { count: rejectedToday } = await (supabase as any)
         .from('property_moderation_history')
         .select('*', { count: 'exact', head: true })
         .eq('action', 'rejected')
         .gte('created_at', today);
       
-      const { data: avgTime } = await supabase.rpc('get_avg_review_time_minutes');
+      const { data: avgTime } = await (supabase as any).rpc('get_avg_review_time_minutes');
       
       setMetrics({
         new: newCount || 0,
@@ -202,7 +202,7 @@ const AdminDashboard = () => {
 
       if (updateError) throw updateError;
 
-      const { error: historyError } = await supabase
+      const { error: historyError } = await (supabase as any)
         .from('property_moderation_history')
         .insert({
           property_id: property.id,
@@ -267,7 +267,7 @@ const AdminDashboard = () => {
 
       if (updateError) throw updateError;
 
-      const { error: historyError } = await supabase
+      const { error: historyError } = await (supabase as any)
         .from('property_moderation_history')
         .insert({
           property_id: rejectProperty.id,

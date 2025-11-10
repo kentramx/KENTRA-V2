@@ -131,16 +131,16 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
 
   const handleResubmitProperty = async (propertyId: string) => {
     try {
-      const { data, error } = await supabase.rpc('resubmit_property', {
+      const { data, error } = await supabase.rpc('resubmit_property' as any, {
         property_id: propertyId
       });
       
       if (error) throw error;
       
-      if (!data.success) {
+      if (!data?.success) {
         toast({
           title: 'Error',
-          description: data.error,
+          description: data?.error || 'Error desconocido',
           variant: 'destructive',
         });
         return;
@@ -148,7 +148,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
       
       toast({
         title: '✅ Reenviada',
-        description: `Propiedad reenviada para revisión. Te quedan ${data.remaining_attempts} intentos.`,
+        description: `Propiedad reenviada para revisión. Te quedan ${data?.remaining_attempts || 0} intentos.`,
       });
       
       fetchProperties();
@@ -164,7 +164,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
 
   const handleReactivateProperty = async (propertyId: string) => {
     try {
-      const { error } = await supabase.rpc('reactivate_property', {
+      const { error } = await supabase.rpc('reactivate_property' as any, {
         property_id: propertyId
       });
       

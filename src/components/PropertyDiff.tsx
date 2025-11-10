@@ -18,14 +18,14 @@ const PropertyDiff = ({ property }: PropertyDiffProps) => {
 
   const fetchPreviousVersion = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('property_moderation_history')
         .select('previous_data, rejection_reason')
         .eq('property_id', property.id)
         .eq('action', 'rejected')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setPreviousData(data);
