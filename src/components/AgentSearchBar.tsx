@@ -29,7 +29,7 @@ const AgentSearchBar: React.FC<AgentSearchBarProps> = ({
   const handleStateChange = (value: string) => {
     onFiltersChange({
       ...filters,
-      state: value,
+      state: value === "all" ? "" : value,
       municipality: "", // Reset municipality when state changes
     });
   };
@@ -37,7 +37,7 @@ const AgentSearchBar: React.FC<AgentSearchBarProps> = ({
   const handleFilterChange = (key: string, value: any) => {
     onFiltersChange({
       ...filters,
-      [key]: value,
+      [key]: key === "municipality" && value === "all" ? "" : value,
     });
   };
 
@@ -52,12 +52,12 @@ const AgentSearchBar: React.FC<AgentSearchBarProps> = ({
         {/* Estado */}
         <div className="space-y-2">
           <Label htmlFor="state">Estado</Label>
-          <Select value={filters.state} onValueChange={handleStateChange}>
+          <Select value={filters.state || "all"} onValueChange={handleStateChange}>
             <SelectTrigger id="state">
               <SelectValue placeholder="Todos los estados" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos los estados</SelectItem>
+              <SelectItem value="all">Todos los estados</SelectItem>
               {mexicoStates.map((state) => (
                 <SelectItem key={state} value={state}>
                   {state}
@@ -71,7 +71,7 @@ const AgentSearchBar: React.FC<AgentSearchBarProps> = ({
         <div className="space-y-2">
           <Label htmlFor="municipality">Municipio/Ciudad</Label>
           <Select
-            value={filters.municipality}
+            value={filters.municipality || "all"}
             onValueChange={(value) => handleFilterChange("municipality", value)}
             disabled={!filters.state}
           >
@@ -79,7 +79,7 @@ const AgentSearchBar: React.FC<AgentSearchBarProps> = ({
               <SelectValue placeholder="Todos los municipios" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos los municipios</SelectItem>
+              <SelectItem value="all">Todos los municipios</SelectItem>
               {municipalities.map((municipality) => (
                 <SelectItem key={municipality} value={municipality}>
                   {municipality}
