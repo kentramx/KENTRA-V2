@@ -7,11 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ArrowUpIcon, ArrowDownIcon, TrendingUp, DollarSign, CreditCard, Users, Calendar, Download, Search } from 'lucide-react';
+import { ArrowUpIcon, ArrowDownIcon, TrendingUp, DollarSign, CreditCard, Users, Calendar as CalendarIcon, Download, Search } from 'lucide-react';
 import { format, subDays, subWeeks, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface DailyRevenue {
   date: string;
@@ -82,6 +85,7 @@ const PERIOD_OPTIONS = [
   { value: '3m', label: 'Últimos 3 meses' },
   { value: '6m', label: 'Últimos 6 meses' },
   { value: '1y', label: 'Último año' },
+  { value: 'custom', label: 'Rango personalizado' },
 ];
 
 export function FinancialDashboard() {
@@ -92,15 +96,21 @@ export function FinancialDashboard() {
   const [period, setPeriod] = useState('30d');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [customStartDate, setCustomStartDate] = useState<Date>();
+  const [customEndDate, setCustomEndDate] = useState<Date>();
 
   useEffect(() => {
     fetchFinancialData();
     fetchRecentTransactions();
-  }, [period]);
+  }, [period, customStartDate, customEndDate]);
 
   const getDateRange = () => {
     const end = new Date();
     let start = new Date();
+
+    if (period === 'custom' && customStartDate && customEndDate) {
+      return { start: customStartDate, end: customEndDate };
+    }
 
     switch (period) {
       case '7d':
@@ -238,7 +248,7 @@ export function FinancialDashboard() {
           <h2 className="text-3xl font-bold">Panel Financiero</h2>
           <p className="text-muted-foreground">Análisis completo de ingresos y transacciones</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-[180px]">
               <SelectValue />
@@ -251,6 +261,62 @@ export function FinancialDashboard() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* Date Range Picker */}
+          {period === 'custom' && (
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[160px] justify-start text-left font-normal",
+                      !customStartDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customStartDate ? format(customStartDate, "dd/MM/yyyy", { locale: es }) : "Fecha inicio"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customStartDate}
+                    onSelect={setCustomStartDate}
+                    disabled={(date) => date > new Date() || (customEndDate && date > customEndDate)}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[160px] justify-start text-left font-normal",
+                      !customEndDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customEndDate ? format(customEndDate, "dd/MM/yyyy", { locale: es }) : "Fecha fin"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customEndDate}
+                    onSelect={setCustomEndDate}
+                    disabled={(date) => date > new Date() || (customStartDate && date < customStartDate)}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+
           <Button onClick={exportToCSV} variant="outline" size="icon">
             <Download className="h-4 w-4" />
           </Button>
