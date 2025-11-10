@@ -11,8 +11,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Loader2, Bell, CheckCircle, AlertTriangle, Clock, TrendingUp, Timer, BarChart3 } from 'lucide-react';
-import { format, differenceInHours, differenceInDays } from 'date-fns';
+import { format, differenceInHours, differenceInDays, startOfMonth, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface ExpiryReminder {
   id: string;
@@ -42,10 +43,26 @@ interface ReminderStats {
   remindersBy1Day: number;
 }
 
+interface MonthlyData {
+  month: string;
+  recordatorios: number;
+  renovadas: number;
+  tasaRenovacion: number;
+}
+
+interface UrgencyData {
+  urgencia: string;
+  enviados: number;
+  renovadas: number;
+  efectividad: number;
+}
+
 export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProps) => {
   const [reminders, setReminders] = useState<ExpiryReminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<ReminderStats | null>(null);
+  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+  const [urgencyData, setUrgencyData] = useState<UrgencyData[]>([]);
 
   useEffect(() => {
     fetchReminders();
@@ -80,6 +97,8 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
 
       setReminders(formattedData);
       calculateStats(formattedData);
+      calculateMonthlyData(formattedData);
+      calculateUrgencyData(formattedData);
     } catch (error) {
       console.error('Error fetching reminders:', error);
     } finally {
@@ -138,6 +157,85 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
       remindersBy3Days: reminders3Days,
       remindersBy1Day: reminders1Day,
     });
+  };
+
+  const calculateMonthlyData = (remindersData: ExpiryReminder[]) => {
+    if (remindersData.length === 0) {
+      setMonthlyData([]);
+      return;
+    }
+
+    // Obtener últimos 6 meses
+    const monthsMap = new Map<string, { recordatorios: number; renovadas: number }>();
+    const now = new Date();
+
+    // Inicializar últimos 6 meses
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = subMonths(now, i);
+      const monthKey = format(monthDate, 'MMM yyyy', { locale: es });
+      monthsMap.set(monthKey, { recordatorios: 0, renovadas: 0 });
+    }
+
+    // Llenar datos
+    remindersData.forEach((reminder) => {
+      const sentDate = new Date(reminder.sent_at);
+      const monthKey = format(sentDate, 'MMM yyyy', { locale: es });
+
+      if (monthsMap.has(monthKey)) {
+        const data = monthsMap.get(monthKey)!;
+        data.recordatorios++;
+
+        const lastRenewedDate = reminder.property?.last_renewed_at 
+          ? new Date(reminder.property.last_renewed_at) 
+          : null;
+        
+        if (lastRenewedDate && lastRenewedDate > sentDate) {
+          data.renovadas++;
+        }
+      }
+    });
+
+    // Convertir a array
+    const chartData: MonthlyData[] = Array.from(monthsMap.entries()).map(([month, data]) => ({
+      month,
+      recordatorios: data.recordatorios,
+      renovadas: data.renovadas,
+      tasaRenovacion: data.recordatorios > 0 ? (data.renovadas / data.recordatorios) * 100 : 0,
+    }));
+
+    setMonthlyData(chartData);
+  };
+
+  const calculateUrgencyData = (remindersData: ExpiryReminder[]) => {
+    if (remindersData.length === 0) {
+      setUrgencyData([]);
+      return;
+    }
+
+    const urgencies = [
+      { days: 7, label: '7 días antes' },
+      { days: 3, label: '3 días antes' },
+      { days: 1, label: '1 día antes' },
+    ];
+
+    const chartData: UrgencyData[] = urgencies.map(({ days, label }) => {
+      const filtered = remindersData.filter(r => r.days_before === days);
+      const renewed = filtered.filter(r => {
+        const lastRenewedDate = r.property?.last_renewed_at 
+          ? new Date(r.property.last_renewed_at) 
+          : null;
+        return lastRenewedDate && lastRenewedDate > new Date(r.sent_at);
+      });
+
+      return {
+        urgencia: label,
+        enviados: filtered.length,
+        renovadas: renewed.length,
+        efectividad: filtered.length > 0 ? (renewed.length / filtered.length) * 100 : 0,
+      };
+    });
+
+    setUrgencyData(chartData);
   };
 
   const getReminderBadge = (daysB: number) => {
@@ -373,6 +471,140 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
               <p className="text-xs text-muted-foreground mt-2">
                 % de renovaciones por tipo de recordatorio
               </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Gráficos */}
+      {monthlyData.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Gráfico de Tendencia Mensual */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Tendencia de Renovación (últimos 6 meses)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="month" 
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    style={{ fontSize: '12px' }}
+                  />
+                  <YAxis 
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    style={{ fontSize: '12px' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      color: 'hsl(var(--foreground))',
+                    }}
+                    formatter={(value: number, name: string) => {
+                      if (name === 'tasaRenovacion') return [`${value.toFixed(1)}%`, 'Tasa de Renovación'];
+                      return [value, name === 'recordatorios' ? 'Recordatorios' : 'Renovadas'];
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ fontSize: '12px' }}
+                    formatter={(value) => {
+                      if (value === 'recordatorios') return 'Recordatorios Enviados';
+                      if (value === 'renovadas') return 'Propiedades Renovadas';
+                      return 'Tasa de Renovación (%)';
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="recordatorios" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(var(--primary))' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="renovadas" 
+                    stroke="hsl(142 76% 36%)" 
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(142 76% 36%)' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="tasaRenovacion" 
+                    stroke="hsl(217 91% 60%)" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={{ fill: 'hsl(217 91% 60%)' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Efectividad por Urgencia */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Efectividad por Tipo de Recordatorio
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={urgencyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="urgencia" 
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    style={{ fontSize: '12px' }}
+                  />
+                  <YAxis 
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    style={{ fontSize: '12px' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      color: 'hsl(var(--foreground))',
+                    }}
+                    formatter={(value: number, name: string) => {
+                      if (name === 'efectividad') return [`${value.toFixed(1)}%`, 'Efectividad'];
+                      return [value, name === 'enviados' ? 'Enviados' : 'Renovadas'];
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ fontSize: '12px' }}
+                    formatter={(value) => {
+                      if (value === 'enviados') return 'Recordatorios Enviados';
+                      if (value === 'renovadas') return 'Propiedades Renovadas';
+                      return 'Efectividad (%)';
+                    }}
+                  />
+                  <Bar 
+                    dataKey="enviados" 
+                    fill="hsl(var(--primary))" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    dataKey="renovadas" 
+                    fill="hsl(142 76% 36%)" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    dataKey="efectividad" 
+                    fill="hsl(217 91% 60%)" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>
