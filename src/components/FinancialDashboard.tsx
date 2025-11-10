@@ -264,13 +264,13 @@ export function FinancialDashboard() {
 
           {/* Date Range Picker */}
           {period === 'custom' && (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-[160px] justify-start text-left font-normal",
+                      "w-full sm:w-[160px] justify-start text-left font-normal",
                       !customStartDate && "text-muted-foreground"
                     )}
                   >
@@ -295,7 +295,7 @@ export function FinancialDashboard() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-[160px] justify-start text-left font-normal",
+                      "w-full sm:w-[160px] justify-start text-left font-normal",
                       !customEndDate && "text-muted-foreground"
                     )}
                   >
