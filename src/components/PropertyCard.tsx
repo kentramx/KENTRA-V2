@@ -2,7 +2,9 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart, Bed, Bath, Car, Maximize } from "lucide-react";
+import { Heart, Share2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { trackWhatsAppInteraction } from "@/utils/whatsappTracking";
 import propertyPlaceholder from "@/assets/property-placeholder.jpg";
 
 interface PropertyCardProps {
@@ -22,6 +24,7 @@ interface PropertyCardProps {
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   isHovered?: boolean;
+  agentId: string;
 }
 
 const PropertyCard = ({
@@ -41,7 +44,10 @@ const PropertyCard = ({
   isFavorite = false,
   onToggleFavorite,
   isHovered = false,
+  agentId,
 }: PropertyCardProps) => {
+  const { toast } = useToast();
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("es-MX", {
       style: "currency",
@@ -50,7 +56,6 @@ const PropertyCard = ({
     }).format(price);
   };
 
-  // Get property type label
   const getTypeLabel = () => {
     const labels: Record<string, string> = {
       casa: 'Casa',
@@ -63,6 +68,31 @@ const PropertyCard = ({
       rancho: 'Rancho'
     };
     return labels[type] || type;
+  };
+
+  const handleShareWhatsApp = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    // Track interaction
+    await trackWhatsAppInteraction({
+      agentId,
+      propertyId: id,
+      interactionType: 'share_property',
+    });
+
+    const url = `${window.location.origin}/propiedad/${id}`;
+    const whatsappMessage = `🏡 *${title}*\n\n💰 ${formatPrice(price)}\n📍 ${municipality}, ${state}\n\n🔗 Ver más: ${url}`;
+    const encoded = encodeURIComponent(whatsappMessage);
+    
+    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+    const waUrl = isMobile ? `whatsapp://send?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+    
+    window.open(waUrl, '_blank');
+    
+    toast({
+      title: 'Compartiendo por WhatsApp',
+      description: 'Se abrirá WhatsApp para compartir',
+    });
   };
 
   return (
@@ -117,6 +147,18 @@ const PropertyCard = ({
           </p>
         </Link>
       </CardContent>
+      
+      <CardFooter className="p-4 pt-0">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={handleShareWhatsApp}
+        >
+          <Share2 className="h-4 w-4 mr-2" />
+          Compartir por WhatsApp
+        </Button>
+      </CardFooter>
     </Card>
   );
 };

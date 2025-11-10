@@ -42,6 +42,7 @@ interface Property {
   parking?: number;
   sqft?: number;
   images?: { url: string }[];
+  agent_id: string;
 }
 
 const Home = () => {
@@ -146,6 +147,7 @@ const Home = () => {
             bathrooms,
             parking,
             sqft,
+            agent_id,
             images (url)
           `)
           .eq('status', 'activa')
@@ -440,6 +442,7 @@ const Home = () => {
                       parking={property.parking}
                       sqft={property.sqft}
                       imageUrl={property.images?.[0]?.url}
+                      agentId={property.agent_id}
                     />
                   </div>
                 ))}

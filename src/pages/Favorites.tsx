@@ -21,6 +21,7 @@ interface Property {
   bathrooms?: number;
   parking?: number;
   sqft?: number;
+  agent_id: string;
 }
 
 interface FavoriteWithProperty {
@@ -67,7 +68,8 @@ const Favorites = () => {
             bedrooms,
             bathrooms,
             parking,
-            sqft
+            sqft,
+            agent_id
           )
         `)
         .order('created_at', { ascending: false });
@@ -181,6 +183,7 @@ const Favorites = () => {
                   sqft={property.sqft}
                   isFavorite={true}
                   onToggleFavorite={() => handleRemoveFavorite(property.id)}
+                  agentId={property.agent_id}
                 />
               );
             })}

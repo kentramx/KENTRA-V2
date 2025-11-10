@@ -322,6 +322,13 @@ const PropertyDetail = () => {
           });
           break;
         case 'whatsapp': {
+          // Track WhatsApp share interaction
+          const { trackWhatsAppInteraction } = await import('@/utils/whatsappTracking');
+          await trackWhatsAppInteraction({
+            agentId: property.agent_id,
+            propertyId: property.id,
+            interactionType: 'share_property',
+          });
           const whatsappMessage = `🏡 *${property.title}*\n\n💰 ${text}\n📍 ${property.municipality}, ${property.state}\n\n🔗 Ver más: ${url}`;
           const encoded = encodeURIComponent(whatsappMessage);
           const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
@@ -836,6 +843,7 @@ const PropertyDetail = () => {
                     imageUrl={similar.images?.[0]?.url || propertyPlaceholder}
                     isFavorite={false}
                     onToggleFavorite={() => {}}
+                    agentId={similar.agent_id}
                   />
                 ))}
               </div>

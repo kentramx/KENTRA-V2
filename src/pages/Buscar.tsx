@@ -47,6 +47,7 @@ interface Property {
   images: { url: string; position: number }[];
   created_at: string | null;
   sqft: number | null;
+  agent_id: string;
 }
 
 interface Filters {
@@ -422,7 +423,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       .select(`
         id, title, price, bedrooms, bathrooms, parking, 
         lat, lng, address, state, municipality, type, listing_type,
-        created_at, sqft,
+        created_at, sqft, agent_id,
         images (url, position)
       `)
           .eq('status', 'activa')
@@ -1464,6 +1465,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                             sqft={property.sqft || undefined}
                             imageUrl={property.images?.[0]?.url}
                             isHovered={hoveredProperty?.id === property.id}
+                            agentId={property.agent_id}
                           />
                         </div>
                       ));

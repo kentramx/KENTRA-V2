@@ -283,6 +283,7 @@ const AgentProfile = () => {
                     parking={property.parking}
                     sqft={property.sqft}
                     imageUrl={property.images?.[0]?.url}
+                    agentId={property.agent_id}
                   />
                 ))}
               </div>
