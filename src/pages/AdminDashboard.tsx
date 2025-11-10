@@ -215,9 +215,25 @@ const AdminDashboard = () => {
 
       if (historyError) throw historyError;
 
+      // Enviar notificación por email al agente
+      try {
+        await supabase.functions.invoke('send-moderation-notification', {
+          body: {
+            agentEmail: property.profiles?.email,
+            agentName: property.profiles?.name || 'Agente',
+            propertyTitle: property.title,
+            action: 'approved',
+          },
+        });
+        console.log('Email notification sent successfully');
+      } catch (emailError) {
+        console.error('Error sending email notification:', emailError);
+        // No fallar la aprobación si el email falla
+      }
+
       toast({
         title: '✅ Aprobada',
-        description: 'La propiedad ha sido aprobada y está visible públicamente',
+        description: 'La propiedad ha sido aprobada y el agente ha sido notificado por email',
       });
 
       fetchProperties();
@@ -281,9 +297,26 @@ const AdminDashboard = () => {
 
       if (historyError) throw historyError;
 
+      // Enviar notificación por email al agente
+      try {
+        await supabase.functions.invoke('send-moderation-notification', {
+          body: {
+            agentEmail: rejectProperty.profiles?.email,
+            agentName: rejectProperty.profiles?.name || 'Agente',
+            propertyTitle: rejectProperty.title,
+            action: 'rejected',
+            rejectionReason: rejectionData,
+          },
+        });
+        console.log('Email notification sent successfully');
+      } catch (emailError) {
+        console.error('Error sending email notification:', emailError);
+        // No fallar el rechazo si el email falla
+      }
+
       toast({
         title: '❌ Rechazada',
-        description: 'La propiedad ha sido rechazada. El agente podrá corregirla y reenviarla.',
+        description: 'La propiedad ha sido rechazada y el agente ha sido notificado por email',
       });
 
       setRejectProperty(null);

@@ -22,7 +22,14 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log("Received moderation notification request");
     const { agentEmail, agentName, propertyTitle, action, rejectionReason }: NotificationRequest = await req.json();
+    
+    console.log(`Sending ${action} notification to ${agentEmail} for property: ${propertyTitle}`);
+
+    if (!agentEmail) {
+      throw new Error("Agent email is required");
+    }
 
     let subject = '';
     let html = '';
@@ -69,6 +76,7 @@ const handler = async (req: Request): Promise<Response> => {
       `;
     }
 
+    console.log("Sending email via Resend...");
     const emailResponse = await resend.emails.send({
       from: "Kentra <noreply@kentra.com.mx>",
       to: [agentEmail],
@@ -78,14 +86,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify(emailResponse), {
+    return new Response(JSON.stringify({ success: true, data: emailResponse }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
     console.error("Error in send-moderation-notification:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ success: false, error: error.message }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
