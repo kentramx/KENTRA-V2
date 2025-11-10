@@ -28,6 +28,7 @@ interface BadgeData {
   icon: string;
   color: string;
   priority: number;
+  is_secret?: boolean;
 }
 
 interface AgentStats {
@@ -74,7 +75,7 @@ const AgentProfile = () => {
       // Fetch agent badges
       const { data: badgesData, error: badgesError } = await supabase
         .from("user_badges")
-        .select("badge_code, badge_definitions(code, name, description, icon, color, priority)")
+        .select("badge_code, badge_definitions(code, name, description, icon, color, priority, is_secret)")
         .eq("user_id", id);
 
       if (!badgesError && badgesData) {

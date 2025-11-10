@@ -20,6 +20,7 @@ interface BadgeData {
   icon: string;
   color: string;
   priority: number;
+  is_secret?: boolean;
 }
 
 interface LeaderboardAgent {
@@ -63,7 +64,7 @@ const Leaderboard = () => {
           agent_reviews:agent_reviews!agent_id(rating),
           user_badges(
             badge_code,
-            badge_definitions(code, name, description, icon, color, priority)
+            badge_definitions(code, name, description, icon, color, priority, is_secret)
           )
         `)
         .eq("user_roles.role", "agent");

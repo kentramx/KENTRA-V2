@@ -202,6 +202,7 @@ export type Database = {
           description: string
           icon: string
           id: string
+          is_secret: boolean | null
           name: string
           priority: number
           requirements: Json
@@ -213,6 +214,7 @@ export type Database = {
           description: string
           icon: string
           id?: string
+          is_secret?: boolean | null
           name: string
           priority?: number
           requirements?: Json
@@ -224,6 +226,7 @@ export type Database = {
           description?: string
           icon?: string
           id?: string
+          is_secret?: boolean | null
           name?: string
           priority?: number
           requirements?: Json

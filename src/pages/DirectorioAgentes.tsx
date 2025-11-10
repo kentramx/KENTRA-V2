@@ -13,6 +13,7 @@ interface BadgeData {
   icon: string;
   color: string;
   priority: number;
+  is_secret?: boolean;
 }
 
 interface AgentData {
@@ -73,7 +74,7 @@ const DirectorioAgentes = () => {
           ),
           user_badges(
             badge_code,
-            badge_definitions(code, name, description, icon, color, priority)
+            badge_definitions(code, name, description, icon, color, priority, is_secret)
           )
         `)
         .eq("user_roles.role", "agent");
@@ -170,7 +171,7 @@ const DirectorioAgentes = () => {
           // Fetch badges for agency owner
           const { data: ownerBadges } = await supabase
             .from("user_badges")
-            .select("badge_code, badge_definitions(code, name, description, icon, color, priority)")
+            .select("badge_code, badge_definitions(code, name, description, icon, color, priority, is_secret)")
             .eq("user_id", agency.owner_id);
 
           const badges = ownerBadges?.map((ub: any) => ub.badge_definitions).filter(Boolean) || [];

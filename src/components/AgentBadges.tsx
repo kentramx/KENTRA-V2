@@ -9,6 +9,7 @@ interface BadgeData {
   icon: string;
   color: string;
   priority: number;
+  is_secret?: boolean;
 }
 
 interface AgentBadgesProps {
@@ -55,14 +56,20 @@ const AgentBadges = ({ badges, maxVisible = 3, size = "md" }: AgentBadgesProps) 
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge
-              className={`bg-gradient-to-r ${badge.color} text-white border-0 shadow-sm ${getSizeClasses()} flex items-center gap-1`}
+              className={`bg-gradient-to-r ${badge.color} text-white border-0 shadow-sm ${getSizeClasses()} flex items-center gap-1 ${
+                badge.is_secret ? 'animate-pulse ring-2 ring-yellow-400 ring-offset-2' : ''
+              }`}
             >
               <IconComponent className={getIconSize()} />
               <span className="font-medium">{badge.name}</span>
+              {badge.is_secret && <Icons.Lock className="h-2.5 w-2.5 ml-0.5" />}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            <p className="font-medium">{badge.name}</p>
+            <p className="font-medium">
+              {badge.name}
+              {badge.is_secret && <span className="ml-2 text-yellow-400">★ Secreto</span>}
+            </p>
             <p className="text-xs text-muted-foreground">{badge.description}</p>
           </TooltipContent>
         </Tooltip>
