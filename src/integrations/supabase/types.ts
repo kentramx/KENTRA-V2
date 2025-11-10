@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notification_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          notify_on_bypass: boolean
+          notify_on_downgrade: boolean
+          notify_on_upgrade: boolean
+          updated_at: string
+          use_email: boolean
+          use_sound: boolean
+          use_toast: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notify_on_bypass?: boolean
+          notify_on_downgrade?: boolean
+          notify_on_upgrade?: boolean
+          updated_at?: string
+          use_email?: boolean
+          use_sound?: boolean
+          use_toast?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notify_on_bypass?: boolean
+          notify_on_downgrade?: boolean
+          notify_on_upgrade?: boolean
+          updated_at?: string
+          use_email?: boolean
+          use_sound?: boolean
+          use_toast?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       agencies: {
         Row: {
           address: string | null

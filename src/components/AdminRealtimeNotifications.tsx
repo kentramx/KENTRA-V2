@@ -26,10 +26,52 @@ interface AdminRealtimeNotificationsProps {
   isAdmin: boolean;
 }
 
+interface NotificationPreferences {
+  notify_on_bypass: boolean;
+  notify_on_upgrade: boolean;
+  notify_on_downgrade: boolean;
+  use_toast: boolean;
+  use_sound: boolean;
+  use_email: boolean;
+}
+
 export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNotificationsProps) => {
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<RealtimeNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [preferences, setPreferences] = useState<NotificationPreferences>({
+    notify_on_bypass: true,
+    notify_on_upgrade: true,
+    notify_on_downgrade: false,
+    use_toast: true,
+    use_sound: false,
+    use_email: false,
+  });
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const fetchPreferences = async () => {
+      const { data } = await supabase
+        .from('admin_notification_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (data) {
+        setPreferences({
+          notify_on_bypass: data.notify_on_bypass,
+          notify_on_upgrade: data.notify_on_upgrade,
+          notify_on_downgrade: data.notify_on_downgrade,
+          use_toast: data.use_toast,
+          use_sound: data.use_sound,
+          use_email: data.use_email,
+        });
+      }
+    };
+
+    fetchPreferences();
+  }, [isAdmin, userId]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -64,6 +106,12 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
     setUnreadCount(notifications.filter(n => !n.read).length);
   }, [notifications]);
 
+  const playNotificationSound = () => {
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVq/m7qxdGAg+ltzy');
+    audio.volume = 0.3;
+    audio.play().catch(e => console.log('Could not play sound:', e));
+  };
+
   const handleNewChange = async (change: any) => {
     const metadata = change.metadata || {};
     
@@ -71,6 +119,14 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
     const isBypassed = metadata.bypassed_cooldown === true;
     const isAdminChange = metadata.changed_by_admin === true;
     
+    // Verificar si el tipo de evento está habilitado en preferencias
+    const shouldNotify = 
+      (isBypassed && preferences.notify_on_bypass) ||
+      (change.change_type === 'upgrade' && preferences.notify_on_upgrade) ||
+      (change.change_type === 'downgrade' && preferences.notify_on_downgrade);
+
+    if (!shouldNotify) return;
+
     // Obtener nombre del usuario
     const { data: profile } = await supabase
       .from('profiles')
@@ -94,11 +150,13 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
         read: false,
       };
 
-      toast({
-        title: '⚠️ Bypass de Cooldown Detectado',
-        description: notification.message,
-        duration: 8000,
-      });
+      if (preferences.use_toast) {
+        toast({
+          title: '⚠️ Bypass de Cooldown Detectado',
+          description: notification.message,
+          duration: 8000,
+        });
+      }
     }
     // Upgrade significativo
     else if (change.change_type === 'upgrade') {
@@ -111,11 +169,13 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
         read: false,
       };
 
-      toast({
-        title: '📈 Nuevo Upgrade',
-        description: notification.message,
-        duration: 5000,
-      });
+      if (preferences.use_toast) {
+        toast({
+          title: '📈 Nuevo Upgrade',
+          description: notification.message,
+          duration: 5000,
+        });
+      }
     }
     // Downgrade (puede indicar problema)
     else if (change.change_type === 'downgrade') {
@@ -130,7 +190,12 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
     }
 
     if (notification) {
-      setNotifications(prev => [notification!, ...prev].slice(0, 20)); // Mantener últimas 20
+      setNotifications(prev => [notification!, ...prev].slice(0, 20));
+      
+      // Reproducir sonido si está habilitado
+      if (preferences.use_sound) {
+        playNotificationSound();
+      }
     }
   };
 
@@ -185,6 +250,14 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
             <Shield className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Notificaciones Admin</h3>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.location.href = '/admin/notification-settings'}
+            className="h-8 w-8"
+          >
+            <Bell className="h-4 w-4" />
+          </Button>
           <div className="flex gap-2">
             {unreadCount > 0 && (
               <Button

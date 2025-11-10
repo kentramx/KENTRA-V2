@@ -114,6 +114,9 @@ const Navbar = () => {
                     )}
                   </Button>
                 </Link>
+                {isAdmin && (
+                  <AdminRealtimeNotifications userId={user.id} isAdmin={isAdmin} />
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
@@ -133,6 +136,12 @@ const Navbar = () => {
                           <DropdownMenuItem className="cursor-pointer">
                             <Badge className="mr-2 bg-purple-600">Admin</Badge>
                             Panel de Auditoría
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link to="/admin/notification-settings">
+                          <DropdownMenuItem className="cursor-pointer">
+                            <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                            Notificaciones
                           </DropdownMenuItem>
                         </Link>
                         <DropdownMenuSeparator />
@@ -224,6 +233,12 @@ const Navbar = () => {
                           <DropdownMenuItem className="cursor-pointer">
                             <Badge className="mr-2 bg-purple-600">Admin</Badge>
                             Panel de Auditoría
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link to="/admin/notification-settings">
+                          <DropdownMenuItem className="cursor-pointer">
+                            <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                            Notificaciones
                           </DropdownMenuItem>
                         </Link>
                         <DropdownMenuSeparator />
