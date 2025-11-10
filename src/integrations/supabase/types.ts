@@ -665,6 +665,44 @@ export type Database = {
           },
         ]
       }
+      property_assignment_history: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          id: string
+          new_agent_id: string
+          notes: string | null
+          previous_agent_id: string | null
+          property_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          id?: string
+          new_agent_id: string
+          notes?: string | null
+          previous_agent_id?: string | null
+          property_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          id?: string
+          new_agent_id?: string
+          notes?: string | null
+          previous_agent_id?: string | null
+          property_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_assignment_history_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       property_expiration_log: {
         Row: {
           agent_id: string

@@ -12,6 +12,7 @@ import { PlanStatusCard } from '@/components/PlanStatusCard';
 import { AgencyTeamManagement } from '@/components/AgencyTeamManagement';
 import { AgencyInventory } from '@/components/AgencyInventory';
 import { AgencyAnalytics } from '@/components/AgencyAnalytics';
+import { PropertyAssignmentHistory } from '@/components/PropertyAssignmentHistory';
 
 const AgencyDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -130,14 +131,16 @@ const AgencyDashboard = () => {
               {activeTab === 'team' && 'Gestión de Equipo'}
               {activeTab === 'inventory' && 'Inventario Compartido'}
               {activeTab === 'analytics' && 'Reportes Consolidados'}
+              {activeTab === 'history' && 'Historial de Asignaciones'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="inventory">Inventario</TabsTrigger>
                 <TabsTrigger value="team">Equipo</TabsTrigger>
                 <TabsTrigger value="analytics">Reportes</TabsTrigger>
+                <TabsTrigger value="history">Historial</TabsTrigger>
               </TabsList>
 
               <TabsContent value="inventory" className="mt-6">
@@ -153,6 +156,10 @@ const AgencyDashboard = () => {
 
               <TabsContent value="analytics" className="mt-6">
                 <AgencyAnalytics agencyId={agency.id} />
+              </TabsContent>
+
+              <TabsContent value="history" className="mt-6">
+                <PropertyAssignmentHistory agencyId={agency.id} />
               </TabsContent>
             </Tabs>
           </CardContent>
