@@ -9,8 +9,8 @@ import {
   Section,
   Text,
   Hr,
-} from 'npm:@react-email/components@0.0.22';
-import * as React from 'npm:react@18.3.1';
+} from '@react-email/components';
+import * as React from 'react';
 
 interface RejectedEmailProps {
   agentName: string;
@@ -37,7 +37,7 @@ export const RejectedEmail = ({
         
         <Section style={content}>
           <Text style={paragraph}>
-            Tu propiedad <strong style={propertyTitle}>{propertyTitle}</strong> ha sido revisada 
+            Tu propiedad <strong style={propertyTitleStyle}>{propertyTitle}</strong> ha sido revisada 
             por nuestro equipo de moderación y requiere algunas <strong>correcciones</strong> antes 
             de ser publicada.
           </Text>
@@ -154,7 +154,7 @@ const paragraph = {
   margin: '16px 0',
 };
 
-const propertyTitle = {
+const propertyTitleStyle = {
   color: '#f5576c',
 };
 

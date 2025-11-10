@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import React from 'npm:react@18.3.1';
-import { Resend } from 'npm:resend@2.0.0';
-import { renderAsync } from 'npm:@react-email/components@0.0.22';
+import React from 'react';
+import { Resend } from 'resend';
+import { renderAsync } from '@react-email/components';
 import { ApprovedEmail } from './_templates/approved-email.tsx';
 import { RejectedEmail } from './_templates/rejected-email.tsx';
 

@@ -820,6 +820,38 @@ export type Database = {
         }
         Relationships: []
       }
+      property_expiry_reminders: {
+        Row: {
+          agent_id: string
+          days_before: number
+          id: string
+          property_id: string
+          sent_at: string
+        }
+        Insert: {
+          agent_id: string
+          days_before: number
+          id?: string
+          property_id: string
+          sent_at?: string
+        }
+        Update: {
+          agent_id?: string
+          days_before?: number
+          id?: string
+          property_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_expiry_reminders_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       property_views: {
         Row: {
           id: string

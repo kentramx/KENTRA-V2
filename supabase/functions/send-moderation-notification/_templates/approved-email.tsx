@@ -9,8 +9,8 @@ import {
   Section,
   Text,
   Hr,
-} from 'npm:@react-email/components@0.0.22';
-import * as React from 'npm:react@18.3.1';
+} from '@react-email/components';
+import * as React from 'react';
 
 interface ApprovedEmailProps {
   agentName: string;
@@ -32,7 +32,7 @@ export const ApprovedEmail = ({
         
         <Section style={content}>
           <Text style={paragraph}>
-            Tu propiedad <strong style={propertyTitle}>{propertyTitle}</strong> ha sido aprobada 
+            Tu propiedad <strong style={propertyTitleStyle}>{propertyTitle}</strong> ha sido aprobada 
             y ya está <strong>visible públicamente</strong> en nuestra plataforma.
           </Text>
 
@@ -134,7 +134,7 @@ const paragraph = {
   margin: '16px 0',
 };
 
-const propertyTitle = {
+const propertyTitleStyle = {
   color: '#667eea',
 };
 
