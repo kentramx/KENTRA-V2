@@ -20,6 +20,7 @@ import PropertyDiff from '@/components/PropertyDiff';
 import AdminModerationMetrics from '@/components/AdminModerationMetrics';
 import { AdminRoleManagement } from '@/components/AdminRoleManagement';
 import { SuperAdminMetrics } from '@/components/SuperAdminMetrics';
+import AIPreModerationBadge from '@/components/AIPreModerationBadge';
 
 const REJECTION_REASONS = [
   { code: 'incomplete_info', label: 'Información incompleta' },
@@ -465,7 +466,7 @@ const AdminDashboard = () => {
                               <p className="text-sm text-muted-foreground">
                                 {property.municipality}, {property.state}
                               </p>
-                              <div className="flex gap-2 mt-2">
+                              <div className="flex gap-2 mt-2 flex-wrap">
                                 <Badge variant="outline">{property.type}</Badge>
                                 <Badge variant="outline">{property.listing_type}</Badge>
                                 {property.resubmission_count > 0 && (
@@ -473,6 +474,12 @@ const AdminDashboard = () => {
                                     Reenvío #{property.resubmission_count}
                                   </Badge>
                                 )}
+                                <AIPreModerationBadge 
+                                  score={property.ai_moderation_score}
+                                  status={property.ai_moderation_status}
+                                  notes={property.ai_moderation_notes}
+                                  moderatedAt={property.ai_moderated_at}
+                                />
                               </div>
                               <p className="text-sm mt-2">
                                 <strong>Agente:</strong> {property.profiles?.name || 'N/A'}

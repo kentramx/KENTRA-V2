@@ -241,6 +241,66 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
       });
 
       let propertyId = property?.id;
+      let aiModerationData = null;
+
+      // 🤖 AI PRE-MODERATION para propiedades NUEVAS
+      if (!property) {
+        toast({
+          title: '🤖 Analizando con IA...',
+          description: 'Revisando la calidad de tu propiedad',
+        });
+
+        try {
+          const { data: aiResult, error: aiError } = await supabase.functions.invoke(
+            'ai-premoderate-property',
+            {
+              body: {
+                title: autoTitle,
+                description: validatedData.description,
+                price: validatedData.price,
+                type: validatedData.type,
+                listing_type: validatedData.listing_type,
+                address: validatedData.address,
+                municipality: validatedData.municipality,
+                state: validatedData.state,
+                bedrooms: validatedData.bedrooms,
+                bathrooms: validatedData.bathrooms,
+                sqft: validatedData.sqft,
+                amenities: validatedData.amenities,
+              }
+            }
+          );
+
+          if (aiError) {
+            console.error('AI pre-moderation error:', aiError);
+            // Continuar sin bloquear si falla la IA
+          } else if (aiResult?.success && aiResult?.result) {
+            aiModerationData = {
+              ai_moderation_score: aiResult.result.score,
+              ai_moderation_status: aiResult.result.status,
+              ai_moderation_notes: `${aiResult.result.notes}\n\nProblemas: ${aiResult.result.issues.join(', ')}\nSugerencias: ${aiResult.result.suggestions.join(', ')}`,
+              ai_moderated_at: new Date().toISOString(),
+            };
+
+            // Mostrar feedback al usuario
+            if (aiResult.result.status === 'reject') {
+              toast({
+                title: '⚠️ Atención',
+                description: `La IA detectó posibles problemas: ${aiResult.result.issues.join(', ')}. Tu propiedad será revisada por un moderador.`,
+                variant: 'destructive',
+              });
+            } else if (aiResult.result.status === 'pass' && aiResult.result.score >= 90) {
+              toast({
+                title: '✨ Excelente calidad',
+                description: `Tu propiedad obtuvo ${aiResult.result.score}/100. Alta probabilidad de aprobación rápida.`,
+              });
+            }
+          }
+        } catch (aiCatchError) {
+          console.error('AI invocation failed:', aiCatchError);
+          // Continuar sin bloquear
+        }
+      }
 
       // Create or update property
       if (property) {
@@ -257,6 +317,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
           agent_id: user?.id,
           status: 'pendiente_aprobacion', // Nueva propiedad = pendiente
           last_renewed_at: new Date().toISOString(),
+          ...aiModerationData, // Agregar datos de moderación IA si existen
         };
 
         const { data, error } = await supabase

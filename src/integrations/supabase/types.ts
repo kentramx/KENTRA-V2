@@ -652,6 +652,12 @@ export type Database = {
           address: string
           agency_id: string | null
           agent_id: string
+          ai_moderated_at: string | null
+          ai_moderation_notes: string | null
+          ai_moderation_score: number | null
+          ai_moderation_status:
+            | Database["public"]["Enums"]["ai_moderation_status"]
+            | null
           amenities: Json | null
           bathrooms: number | null
           bedrooms: number | null
@@ -680,6 +686,12 @@ export type Database = {
           address: string
           agency_id?: string | null
           agent_id: string
+          ai_moderated_at?: string | null
+          ai_moderation_notes?: string | null
+          ai_moderation_score?: number | null
+          ai_moderation_status?:
+            | Database["public"]["Enums"]["ai_moderation_status"]
+            | null
           amenities?: Json | null
           bathrooms?: number | null
           bedrooms?: number | null
@@ -708,6 +720,12 @@ export type Database = {
           address?: string
           agency_id?: string | null
           agent_id?: string
+          ai_moderated_at?: string | null
+          ai_moderation_notes?: string | null
+          ai_moderation_score?: number | null
+          ai_moderation_status?:
+            | Database["public"]["Enums"]["ai_moderation_status"]
+            | null
           amenities?: Json | null
           bathrooms?: number | null
           bedrooms?: number | null
@@ -1223,6 +1241,7 @@ export type Database = {
       renew_property: { Args: { property_id: string }; Returns: undefined }
     }
     Enums: {
+      ai_moderation_status: "pass" | "review" | "reject" | "pending"
       app_role:
         | "buyer"
         | "agent"
@@ -1368,6 +1387,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      ai_moderation_status: ["pass", "review", "reject", "pending"],
       app_role: [
         "buyer",
         "agent",

@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.get-user-by-email]
 verify_jwt = true
+
+[functions.ai-premoderate-property]
+verify_jwt = true
