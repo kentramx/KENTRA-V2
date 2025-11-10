@@ -210,7 +210,7 @@ Criterios:
           isManipulated: false,
           isBlurry: false,
           isDark: false,
-          detectedIssues: [`Error: ${imageError.message}`],
+          detectedIssues: [`Error: ${imageError instanceof Error ? imageError.message : String(imageError)}`],
           aiNotes: 'Error en análisis. Requiere revisión manual.',
         };
       }

@@ -92,14 +92,11 @@ const AdminSubscriptionChanges = () => {
 
     try {
       const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
+        .rpc('has_admin_access', { _user_id: user.id });
 
       if (error) throw error;
 
-      if (data.role !== 'admin') {
+      if (!data) {
         toast({
           title: 'Acceso denegado',
           description: 'No tienes permisos para acceder a esta página',

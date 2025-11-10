@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import React from 'npm:react@18.3.1';
-import { Resend } from 'npm:resend@2.0.0';
-import { renderAsync } from 'npm:@react-email/components@0.0.22';
+import { Resend } from 'https://esm.sh/resend@2.0.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
-import { ExpiryReminderEmail } from './_templates/expiry-reminder-email.tsx';
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -99,20 +96,73 @@ const handler = async (req: Request): Promise<Response> => {
 
         console.log(`📤 Sending ${reminder.days}-day reminder to ${agentEmail} for property: ${property.title}`);
 
-        // Render React Email template
-        const html = await renderAsync(
-          React.createElement(ExpiryReminderEmail, {
-            agentName,
-            propertyTitle: property.title,
-            daysUntilExpiry: reminder.days,
-            expiryDate: expiryDate.toLocaleDateString('es-MX', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric'
-            }),
-            renewUrl: `https://kentra.com.mx/agent/dashboard`
-          })
-        );
+        // Build HTML email manually
+        const urgencyColor = reminder.days === 1 ? '#ef4444' : reminder.days === 3 ? '#f97316' : '#eab308';
+        const urgencyText = reminder.days === 1 ? 'URGENTE' : reminder.days === 3 ? 'Importante' : 'Recordatorio';
+        
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background-color: #f3f4f6;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    
+    <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px 20px; text-align: center;">
+      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Kentra</h1>
+    </div>
+
+    <div style="padding: 40px 30px;">
+      <div style="background-color: ${urgencyColor}; color: white; padding: 12px 20px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 24px;">
+        ${urgencyText}: Tu propiedad expira en ${reminder.days} día${reminder.days > 1 ? 's' : ''}
+      </div>
+
+      <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
+        Hola <strong>${agentName}</strong>,
+      </p>
+
+      <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
+        Tu propiedad <strong>"${property.title}"</strong> expirará el <strong>${expiryDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>.
+      </p>
+
+      <div style="background-color: #f9fafb; border-left: 4px solid ${urgencyColor}; padding: 16px; border-radius: 4px; margin: 24px 0;">
+        <p style="color: #374151; font-size: 14px; line-height: 1.6; margin: 0;">
+          <strong>⚠️ Importante:</strong> Si no renuevas tu propiedad antes de la fecha de expiración, se pausará automáticamente y dejará de ser visible en búsquedas. Podrás reactivarla con un clic cuando lo necesites.
+        </p>
+      </div>
+
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="https://kentra.com.mx/agent/dashboard" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">
+          Renovar Propiedad Ahora
+        </a>
+      </div>
+
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 24px; margin-top: 32px;">
+        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-bottom: 8px;">
+          <strong>¿Necesitas ayuda?</strong>
+        </p>
+        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0;">
+          Contáctanos en <a href="mailto:contact@kentra.com.mx" style="color: #6366f1; text-decoration: none;">contact@kentra.com.mx</a>
+        </p>
+      </div>
+    </div>
+
+    <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+      <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px 0;">
+        © ${new Date().getFullYear()} Kentra. Todos los derechos reservados.
+      </p>
+      <div style="margin-top: 12px;">
+        <a href="https://www.instagram.com/kentra.mx" style="color: #6366f1; text-decoration: none; margin: 0 8px; font-size: 12px;">Instagram</a>
+        <a href="https://www.facebook.com/profile.php?id=61583478575484" style="color: #6366f1; text-decoration: none; margin: 0 8px; font-size: 12px;">Facebook</a>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
+        `;
 
         // Send email via Resend
         const emailResponse = await resend.emails.send({
