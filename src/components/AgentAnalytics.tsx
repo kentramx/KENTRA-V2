@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { WhatsAppAnalytics } from "./WhatsAppAnalytics";
 import {
   LineChart,
   Line,
@@ -408,10 +409,11 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Resumen</TabsTrigger>
           <TabsTrigger value="performance">Rendimiento</TabsTrigger>
           <TabsTrigger value="trends">Tendencias</TabsTrigger>
+          <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -525,6 +527,10 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="whatsapp" className="space-y-4">
+          <WhatsAppAnalytics agentId={agentId} />
         </TabsContent>
       </Tabs>
     </div>

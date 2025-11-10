@@ -771,7 +771,15 @@ const PropertyDetail = () => {
                       <Button 
                         className="w-full" 
                         variant="outline"
-                        onClick={() => {
+                        onClick={async () => {
+                          // Track WhatsApp contact interaction
+                          const { trackWhatsAppInteraction } = await import('@/utils/whatsappTracking');
+                          await trackWhatsAppInteraction({
+                            agentId: agent.id,
+                            propertyId: property.id,
+                            interactionType: 'contact_agent',
+                          });
+
                           const message = WhatsAppTemplates.property(
                             property.title,
                             `${property.municipality}, ${property.state}`
