@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import { DynamicBreadcrumbs } from '@/components/DynamicBreadcrumbs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Check, Info, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -154,7 +155,7 @@ const PricingDesarrolladora = () => {
           </div>
 
           {/* Contact Info */}
-          <Card>
+          <Card className="mb-12">
             <CardHeader>
               <CardTitle>¿Listo para empezar?</CardTitle>
               <CardDescription>
@@ -177,6 +178,95 @@ const PricingDesarrolladora = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* FAQ Section */}
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-center mb-8">Preguntas Frecuentes</h2>
+            <Accordion type="single" collapsible className="w-full space-y-4">
+              <AccordionItem value="item-1" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Qué incluye el landing por torre o desarrollo?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Cada torre o fraccionamiento tendrá su propia landing page personalizada con 
+                  la identidad de tu proyecto, galería de imágenes, ubicación, amenidades, 
+                  plantas disponibles, y formulario de contacto integrado. Todo optimizado 
+                  para conversión de leads.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-2" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Cómo funciona la calificación de leads?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Utilizamos un sistema de scoring que evalúa el comportamiento de cada lead: 
+                  páginas visitadas, tiempo en el sitio, propiedades consultadas, formularios 
+                  completados, etc. Esto te permite priorizar a los prospectos más interesados 
+                  y optimizar el trabajo de tu equipo de ventas.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-3" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Los reportes semanales qué información incluyen?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Recibirás reportes semanales con: número de leads generados, calificación 
+                  de cada lead, propiedades más consultadas, tasas de conversión, origen del 
+                  tráfico, y recomendaciones de optimización. Todo presentado en formato 
+                  ejecutivo fácil de compartir con tu equipo.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-4" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿El precio incluye la pauta publicitaria?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  No, el precio del plan cubre la plataforma, landing pages, gestión de leads, 
+                  y reportes. La pauta publicitaria (Facebook Ads, Google Ads, etc.) la paga 
+                  directamente la desarrolladora según su presupuesto y estrategia de marketing. 
+                  Nosotros podemos asesorarte en la estrategia.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-5" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Puedo gestionar múltiples proyectos?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Sí, el plan permite gestionar múltiples proyectos simultáneamente. 
+                  Cada proyecto puede tener sus propias landing pages, inventario de unidades, 
+                  y tracking de leads independiente. Ideal para desarrolladoras con varios 
+                  proyectos en diferentes ubicaciones.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-6" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Qué es la personalización de marca completa?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Incluye la aplicación de tu identidad corporativa en todas las landing pages: 
+                  colores, tipografías, logos, y estilo visual. También puedes tener un dominio 
+                  personalizado para cada proyecto (ej: tudesarrollo.com) y branded email marketing.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-7" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Cómo funciona el soporte prioritario dedicado?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Tendrás un gerente de cuenta exclusivo disponible por WhatsApp, email, y 
+                  videollamadas. Te ayudará con configuración de campañas, optimización de 
+                  conversión, capacitación del equipo, y resolución inmediata de cualquier 
+                  incidencia. Respuesta garantizada en menos de 2 horas hábiles.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
         </div>
       </main>
     </div>

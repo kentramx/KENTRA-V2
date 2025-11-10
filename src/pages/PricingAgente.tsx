@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Check, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -205,7 +206,7 @@ const PricingAgente = () => {
           </div>
 
           {/* Nota de renovación */}
-          <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+          <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 mb-12">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <div className="bg-amber-500 text-white p-2 rounded-lg shrink-0">
@@ -225,6 +226,92 @@ const PricingAgente = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* FAQ Section */}
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-center mb-8">Preguntas Frecuentes</h2>
+            <Accordion type="single" collapsible className="w-full space-y-4">
+              <AccordionItem value="item-1" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Qué significa "propiedades activas simultáneas"?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Los planes ofrecen slots de propiedades activas, no un límite total. 
+                  Puedes tener ese número de propiedades publicadas al mismo tiempo. 
+                  Cuando una se vende o renta, liberas el slot para publicar otra nueva. 
+                  Con rotación normal, publicas muchas más propiedades al año que tu límite de slots.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-2" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Qué pasa si no renuevo una propiedad en 30 días?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Si no renuevas una propiedad en 30 días, se pausa automáticamente. 
+                  Puedes reactivarla con un clic cuando desees. Las propiedades no se eliminan, 
+                  solo se pausan para mantener la información actualizada.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-3" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Puedo cancelar mi suscripción en cualquier momento?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Sí, puedes cancelar tu suscripción mensual en cualquier momento sin compromiso. 
+                  Si elegiste el pago anual, tu suscripción seguirá activa hasta el final del 
+                  período prepagado, pero no se renovará automáticamente.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-4" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Cuál es la diferencia entre pago mensual y anual?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  El pago mensual es sin compromiso y puedes cancelar cuando quieras. 
+                  El pago anual es opcional y te permite ahorrar un 12% pagando por adelantado 
+                  el año completo. Ambas opciones incluyen exactamente las mismas características.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-5" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Puedo cambiar de plan después?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Sí, puedes actualizar o cambiar tu plan en cualquier momento. 
+                  Si actualizas a un plan superior, el cambio es inmediato. 
+                  Si cambias a un plan inferior, el cambio se aplicará al inicio del siguiente ciclo de facturación.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-6" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Qué incluyen las propiedades destacadas?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Las propiedades destacadas aparecen en posiciones prioritarias en los resultados 
+                  de búsqueda y en la página principal, aumentando significativamente su visibilidad 
+                  y la probabilidad de recibir consultas. El número de propiedades destacadas varía 
+                  según tu plan.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-7" className="border rounded-lg px-6">
+                <AccordionTrigger className="text-left font-semibold">
+                  ¿Cómo funciona la renovación mensual de propiedades?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Cada propiedad debe renovarse cada 30 días con un simple clic. 
+                  Esto confirma que la información está actualizada y la propiedad sigue disponible. 
+                  Es un proceso rápido que puedes hacer desde tu panel de control. 
+                  Te notificaremos cuando una propiedad esté próxima a pausarse.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
         </div>
       </main>
     </div>
