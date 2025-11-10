@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, DollarSign, Home, TrendingUp, Calendar, Activity } from "lucide-react";
+import { Users, DollarSign, Home, TrendingUp, TrendingDown, Calendar, Activity } from "lucide-react";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, subYears } from "date-fns";
 import { es } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 
 interface KPIData {
   totalUsers: number;
@@ -14,6 +15,12 @@ interface KPIData {
   conversionRate: number;
   newUsersThisMonth: number;
   totalRevenue: number;
+  // Previous period comparisons
+  lastMonthUsers: number;
+  lastYearUsers: number;
+  lastMonthRevenue: number;
+  lastMonthProperties: number;
+  lastMonthConversion: number;
 }
 
 interface MonthlyData {
@@ -45,20 +52,43 @@ export const SuperAdminMetrics = () => {
     try {
       setLoading(true);
 
+      const now = new Date();
+      const startOfThisMonth = startOfMonth(now);
+      const endOfThisMonth = endOfMonth(now);
+      
+      // Previous periods
+      const startOfLastMonth = startOfMonth(subMonths(now, 1));
+      const endOfLastMonth = endOfMonth(subMonths(now, 1));
+      const startOfLastYear = startOfMonth(subYears(now, 1));
+      const endOfLastYear = endOfMonth(subYears(now, 1));
+
       // Total users
       const { count: totalUsers } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
       // New users this month
-      const startOfThisMonth = startOfMonth(new Date());
       const { count: newUsersThisMonth } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .gte('created_at', startOfThisMonth.toISOString());
+        .gte('created_at', startOfThisMonth.toISOString())
+        .lte('created_at', endOfThisMonth.toISOString());
+
+      // Users last month (for MoM comparison)
+      const { count: lastMonthUsers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfLastMonth.toISOString())
+        .lte('created_at', endOfLastMonth.toISOString());
+
+      // Users same month last year (for YoY comparison)
+      const { count: lastYearUsers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfLastYear.toISOString())
+        .lte('created_at', endOfLastYear.toISOString());
 
       // Monthly revenue (current month)
-      const endOfThisMonth = endOfMonth(new Date());
       const { data: monthlyPayments } = await supabase
         .from('payment_history')
         .select('amount')
@@ -68,6 +98,16 @@ export const SuperAdminMetrics = () => {
 
       const monthlyRevenue = monthlyPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
+      // Revenue last month (for MoM comparison)
+      const { data: lastMonthPayments } = await supabase
+        .from('payment_history')
+        .select('amount')
+        .eq('status', 'succeeded')
+        .gte('created_at', startOfLastMonth.toISOString())
+        .lte('created_at', endOfLastMonth.toISOString());
+
+      const lastMonthRevenue = lastMonthPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+
       // Total revenue (all time)
       const { data: allPayments } = await supabase
         .from('payment_history')
@@ -76,11 +116,18 @@ export const SuperAdminMetrics = () => {
 
       const totalRevenue = allPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
-      // Active properties
+      // Active properties (current)
       const { count: activeProperties } = await supabase
         .from('properties')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'activa');
+
+      // Active properties last month (for MoM comparison)
+      const { count: lastMonthProperties } = await supabase
+        .from('properties')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'activa')
+        .lte('created_at', endOfLastMonth.toISOString());
 
       // Conversion rate: users with subscriptions / total agents
       const { count: totalAgents } = await supabase
@@ -97,6 +144,23 @@ export const SuperAdminMetrics = () => {
         ? (subscribedUsers || 0) / totalAgents * 100 
         : 0;
 
+      // Conversion rate last month (for MoM comparison)
+      const { count: totalAgentsLastMonth } = await supabase
+        .from('user_roles')
+        .select('*', { count: 'exact', head: true })
+        .in('role', ['agent', 'agency'])
+        .lte('created_at', endOfLastMonth.toISOString());
+
+      const { count: subscribedUsersLastMonth } = await supabase
+        .from('user_subscriptions')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .lte('created_at', endOfLastMonth.toISOString());
+
+      const lastMonthConversion = totalAgentsLastMonth && totalAgentsLastMonth > 0
+        ? (subscribedUsersLastMonth || 0) / totalAgentsLastMonth * 100
+        : 0;
+
       setKpiData({
         totalUsers: totalUsers || 0,
         monthlyRevenue,
@@ -104,6 +168,11 @@ export const SuperAdminMetrics = () => {
         conversionRate,
         newUsersThisMonth: newUsersThisMonth || 0,
         totalRevenue,
+        lastMonthUsers: lastMonthUsers || 0,
+        lastYearUsers: lastYearUsers || 0,
+        lastMonthRevenue,
+        lastMonthProperties: lastMonthProperties || 0,
+        lastMonthConversion,
       });
 
       // Monthly trends (last 6 months)
@@ -211,6 +280,41 @@ export const SuperAdminMetrics = () => {
 
   if (!kpiData) return null;
 
+  // Calculate growth percentages
+  const usersMoMGrowth = kpiData.lastMonthUsers > 0 
+    ? ((kpiData.newUsersThisMonth - kpiData.lastMonthUsers) / kpiData.lastMonthUsers * 100)
+    : 0;
+  
+  const usersYoYGrowth = kpiData.lastYearUsers > 0
+    ? ((kpiData.newUsersThisMonth - kpiData.lastYearUsers) / kpiData.lastYearUsers * 100)
+    : 0;
+
+  const revenueMoMGrowth = kpiData.lastMonthRevenue > 0
+    ? ((kpiData.monthlyRevenue - kpiData.lastMonthRevenue) / kpiData.lastMonthRevenue * 100)
+    : 0;
+
+  const propertiesMoMGrowth = kpiData.lastMonthProperties > 0
+    ? ((kpiData.activeProperties - kpiData.lastMonthProperties) / kpiData.lastMonthProperties * 100)
+    : 0;
+
+  const conversionMoMGrowth = kpiData.lastMonthConversion > 0
+    ? kpiData.conversionRate - kpiData.lastMonthConversion
+    : 0;
+
+  const GrowthIndicator = ({ value, showPercentage = true }: { value: number; showPercentage?: boolean }) => {
+    const isPositive = value >= 0;
+    const Icon = isPositive ? TrendingUp : TrendingDown;
+    const colorClass = isPositive ? 'text-green-600' : 'text-red-600';
+    const bgClass = isPositive ? 'bg-green-50' : 'bg-red-50';
+    
+    return (
+      <Badge variant="outline" className={`${bgClass} ${colorClass} border-none`}>
+        <Icon className="h-3 w-3 mr-1" />
+        {isPositive && '+'}{value.toFixed(1)}{showPercentage && '%'}
+      </Badge>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
@@ -221,10 +325,16 @@ export const SuperAdminMetrics = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData.totalUsers.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              +{kpiData.newUsersThisMonth} este mes
-            </p>
+            <div className="text-2xl font-bold mb-2">{kpiData.totalUsers.toLocaleString()}</div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs text-muted-foreground">Este mes:</span>
+              <span className="text-sm font-semibold">{kpiData.newUsersThisMonth}</span>
+              <GrowthIndicator value={usersMoMGrowth} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">vs año anterior:</span>
+              <GrowthIndicator value={usersYoYGrowth} />
+            </div>
           </CardContent>
         </Card>
 
@@ -234,11 +344,15 @@ export const SuperAdminMetrics = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold mb-2">
               ${kpiData.monthlyRevenue.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Total: ${kpiData.totalRevenue.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs text-muted-foreground">vs mes anterior:</span>
+              <GrowthIndicator value={revenueMoMGrowth} />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Total acumulado: ${kpiData.totalRevenue.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </p>
           </CardContent>
         </Card>
@@ -249,9 +363,13 @@ export const SuperAdminMetrics = () => {
             <Home className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData.activeProperties.toLocaleString()}</div>
+            <div className="text-2xl font-bold mb-2">{kpiData.activeProperties.toLocaleString()}</div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs text-muted-foreground">vs mes anterior:</span>
+              <GrowthIndicator value={propertiesMoMGrowth} />
+            </div>
             <p className="text-xs text-muted-foreground">
-              En la plataforma
+              En la plataforma actualmente
             </p>
           </CardContent>
         </Card>
@@ -259,10 +377,15 @@ export const SuperAdminMetrics = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tasa de Conversión</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData.conversionRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold mb-2">{kpiData.conversionRate.toFixed(1)}%</div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs text-muted-foreground">vs mes anterior:</span>
+              <GrowthIndicator value={conversionMoMGrowth} showPercentage={false} />
+              <span className="text-xs">pts</span>
+            </div>
             <p className="text-xs text-muted-foreground">
               Agentes con suscripción activa
             </p>
@@ -285,14 +408,14 @@ export const SuperAdminMetrics = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Revenue Promedio</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold mb-1">
               ${(kpiData.totalRevenue / Math.max(kpiData.totalUsers, 1)).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </div>
             <p className="text-xs text-muted-foreground">
-              Por usuario
+              Por usuario (lifetime value)
             </p>
           </CardContent>
         </Card>
