@@ -1226,7 +1226,13 @@ export type Database = {
       renew_property: { Args: { property_id: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "buyer" | "agent" | "agency" | "admin"
+      app_role:
+        | "buyer"
+        | "agent"
+        | "agency"
+        | "admin"
+        | "super_admin"
+        | "moderator"
       property_status: "activa" | "vendida" | "rentada" | "pausada"
       property_type:
         | "casa"
@@ -1366,7 +1372,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["buyer", "agent", "agency", "admin"],
+      app_role: [
+        "buyer",
+        "agent",
+        "agency",
+        "admin",
+        "super_admin",
+        "moderator",
+      ],
       property_status: ["activa", "vendida", "rentada", "pausada"],
       property_type: [
         "casa",
