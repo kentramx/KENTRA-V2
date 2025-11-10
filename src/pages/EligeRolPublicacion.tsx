@@ -93,8 +93,12 @@ const EligeRolPublicacion = () => {
             setShowLimitModal(true);
           }
         } else {
-          // NO tiene suscripción - ir a pricing
-          navigate(`/pricing?role=${targetRole}&action=new_property`);
+          // NO tiene suscripción - mostrar información
+          toast({
+            title: 'Suscripción requerida',
+            description: `Para publicar como ${targetRole === 'agent' ? 'Agente' : 'Inmobiliaria'}, necesitas un plan activo. Contacta con nosotros para más información.`,
+            variant: 'destructive',
+          });
         }
       }
     } catch (error) {
@@ -225,10 +229,7 @@ const EligeRolPublicacion = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => navigate('/pricing?role=agent')}>
-              Ver Planes de Agente
-            </AlertDialogAction>
+            <AlertDialogCancel>Entendido</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -246,10 +247,7 @@ const EligeRolPublicacion = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => navigate('/pricing')}>
-              Ver Planes
-            </AlertDialogAction>
+            <AlertDialogCancel>Entendido</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

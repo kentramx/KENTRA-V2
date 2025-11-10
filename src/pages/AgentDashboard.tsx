@@ -110,15 +110,6 @@ const AgentDashboard = () => {
           title: 'Límite alcanzado',
           description: validation?.[0]?.reason || 'No puedes publicar más propiedades',
           variant: 'destructive',
-          action: (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/pricing')}
-            >
-              Ver Planes
-            </Button>
-          ),
         });
         return;
       }

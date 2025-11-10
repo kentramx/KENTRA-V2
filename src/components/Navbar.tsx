@@ -89,7 +89,7 @@ const Navbar = () => {
                 if (user) {
                   navigate('/elige-rol-publicacion');
                 } else {
-                  navigate('/pricing');
+                  navigate('/auth?redirect=/elige-rol-publicacion');
                 }
               }}
             >
@@ -178,7 +178,7 @@ const Navbar = () => {
                 if (user) {
                   navigate('/elige-rol-publicacion');
                 } else {
-                  navigate('/pricing');
+                  navigate('/auth?redirect=/elige-rol-publicacion');
                 }
               }}
             >
