@@ -42,12 +42,13 @@ const signupSchema = z.object({
 });
 
 const Auth = () => {
-  const { signIn, signInWithGoogle, signUp, resetPassword, updatePassword, user } = useAuth();
+  const { signIn, signInWithGoogle, signUp, resetPassword, updatePassword, resendConfirmationEmail, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState<'auth' | 'forgot' | 'reset'>('auth');
+  const [view, setView] = useState<'auth' | 'forgot' | 'reset' | 'verify'>('auth');
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string>('');
 
   const redirect = searchParams.get('redirect');
   const pendingRole = searchParams.get('role');
@@ -101,7 +102,9 @@ const Auth = () => {
         if (error.message.includes('Invalid login credentials')) {
           errorMessage = 'Correo o contraseña incorrectos';
         } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = 'Por favor confirma tu correo electrónico';
+          setUnverifiedEmail(email);
+          setView('verify');
+          return;
         }
         
         toast({
@@ -299,6 +302,36 @@ const Auth = () => {
     }
   };
 
+  const handleResendConfirmation = async () => {
+    if (!unverifiedEmail) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await resendConfirmationEmail(unverifiedEmail);
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'No se pudo reenviar el correo de confirmación',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Correo enviado',
+          description: 'Revisa tu bandeja de entrada para confirmar tu cuenta',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Ocurrió un error inesperado',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-md">
@@ -319,6 +352,7 @@ const Auth = () => {
             <CardDescription className="text-center">
               {view === 'forgot' && 'Recupera tu contraseña'}
               {view === 'reset' && 'Crea una nueva contraseña'}
+              {view === 'verify' && 'Verifica tu correo electrónico'}
               {view === 'auth' && 'Tu plataforma de bienes raíces en México'}
             </CardDescription>
           </CardHeader>
@@ -381,6 +415,45 @@ const Auth = () => {
                     {loading ? 'Actualizando...' : 'Actualizar contraseña'}
                   </Button>
                 </form>
+              </div>
+            )}
+
+            {view === 'verify' && (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4">
+                  <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                    Correo no verificado
+                  </h3>
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    Tu cuenta aún no ha sido verificada. Por favor revisa tu correo electrónico <strong>{unverifiedEmail}</strong> y haz clic en el enlace de confirmación.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground text-center">
+                    ¿No recibiste el correo?
+                  </p>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={handleResendConfirmation}
+                    disabled={loading}
+                  >
+                    {loading ? 'Enviando...' : 'Reenviar correo de confirmación'}
+                  </Button>
+                </div>
+
+                <Button
+                  variant="link"
+                  className="w-full"
+                  onClick={() => {
+                    setView('auth');
+                    setUnverifiedEmail('');
+                  }}
+                  disabled={loading}
+                >
+                  Volver al inicio de sesión
+                </Button>
               </div>
             )}
 
