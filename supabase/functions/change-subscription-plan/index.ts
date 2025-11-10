@@ -38,12 +38,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { newPlanId, billingCycle } = await req.json();
+    const { newPlanId, billingCycle, previewOnly } = await req.json();
 
     console.log('Changing subscription plan:', {
       userId: user.id,
       newPlanId,
       billingCycle,
+      previewOnly: previewOnly || false,
     });
 
     // Get current subscription
@@ -100,7 +101,53 @@ Deno.serve(async (req) => {
       currentSub.stripe_subscription_id
     );
 
-    // Update subscription with proration
+    // If preview only, calculate proration without applying changes
+    if (previewOnly) {
+      const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
+        customer: currentSub.stripe_customer_id,
+        subscription: currentSub.stripe_subscription_id,
+        subscription_items: [{
+          id: stripeSubscription.items.data[0].id,
+          price: newPriceId,
+        }],
+        subscription_proration_behavior: 'create_prorations',
+      });
+
+      // Calculate current plan price for comparison
+      const currentPlan = currentSub.subscription_plans;
+      const currentPrice = currentSub.billing_cycle === 'yearly'
+        ? Number(currentPlan.price_yearly)
+        : Number(currentPlan.price_monthly);
+      
+      const newPrice = billingCycle === 'yearly'
+        ? Number(newPlan.price_yearly)
+        : Number(newPlan.price_monthly);
+
+      const isUpgrade = newPrice > currentPrice;
+      const isDowngrade = newPrice < currentPrice;
+
+      console.log('Preview calculated:', {
+        proratedAmount: upcomingInvoice.amount_due,
+        isUpgrade,
+        isDowngrade,
+      });
+
+      return new Response(
+        JSON.stringify({ 
+          preview: true,
+          proratedAmount: upcomingInvoice.amount_due / 100, // Convert from cents
+          proratedCurrency: upcomingInvoice.currency.toUpperCase(),
+          isUpgrade,
+          isDowngrade,
+          currentPrice,
+          newPrice,
+          nextBillingDate: new Date(upcomingInvoice.period_end * 1000).toISOString(),
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Apply the subscription change
     const updatedSubscription = await stripe.subscriptions.update(
       currentSub.stripe_subscription_id,
       {
@@ -132,19 +179,12 @@ Deno.serve(async (req) => {
       console.error('Database update error:', updateError);
     }
 
-    // Get upcoming invoice to show proration details
-    const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
-      customer: currentSub.stripe_customer_id,
-    });
-
     console.log('Subscription updated successfully');
 
     return new Response(
       JSON.stringify({ 
         success: true,
         subscription: updatedSubscription,
-        proratedAmount: upcomingInvoice.amount_due,
-        proratedCurrency: upcomingInvoice.currency,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

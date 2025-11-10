@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, TrendingUp, TrendingDown, Check } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 
 interface ChangePlanDialogProps {
@@ -33,6 +35,16 @@ interface Plan {
   features: any;
 }
 
+interface ProrationPreview {
+  proratedAmount: number;
+  proratedCurrency: string;
+  isUpgrade: boolean;
+  isDowngrade: boolean;
+  currentPrice: number;
+  newPrice: number;
+  nextBillingDate: string;
+}
+
 export const ChangePlanDialog = ({
   open,
   onOpenChange,
@@ -44,11 +56,13 @@ export const ChangePlanDialog = ({
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>(
     currentBillingCycle as 'monthly' | 'yearly'
   );
+  const [preview, setPreview] = useState<ProrationPreview | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -87,6 +101,48 @@ export const ChangePlanDialog = ({
     }
   };
 
+  const fetchProrationPreview = async (planId: string, cycle: 'monthly' | 'yearly') => {
+    if (planId === currentPlanId && cycle === currentBillingCycle) {
+      setPreview(null);
+      return;
+    }
+
+    try {
+      setLoadingPreview(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No hay sesión activa');
+      }
+
+      const response = await supabase.functions.invoke('change-subscription-plan', {
+        body: {
+          newPlanId: planId,
+          billingCycle: cycle,
+          previewOnly: true,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) throw response.error;
+
+      setPreview(response.data);
+    } catch (error) {
+      console.error('Error fetching preview:', error);
+      setPreview(null);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedPlanId && open) {
+      fetchProrationPreview(selectedPlanId, billingCycle);
+    }
+  }, [selectedPlanId, billingCycle, open]);
+
   const handleChangePlan = async () => {
     if (!selectedPlanId) {
       toast({
@@ -118,6 +174,7 @@ export const ChangePlanDialog = ({
         body: {
           newPlanId: selectedPlanId,
           billingCycle: billingCycle,
+          previewOnly: false,
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -272,14 +329,71 @@ export const ChangePlanDialog = ({
               </div>
             </RadioGroup>
 
+            {/* Proration Preview */}
+            {selectedPlanId && selectedPlanId !== currentPlanId && (
+              <div className="p-4 border-2 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1">
+                    <p className="font-semibold text-lg mb-2">
+                      Preview del cambio de plan
+                    </p>
+                    
+                    {loadingPreview ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">Calculando prorrateo...</span>
+                      </div>
+                    ) : preview ? (
+                      <div className="space-y-3">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-3xl font-bold text-primary">
+                            ${preview.proratedAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })} {preview.proratedCurrency}
+                          </span>
+                        </div>
+                        
+                        <div className="text-sm space-y-1">
+                          {preview.isUpgrade && (
+                            <>
+                              <p className="text-green-700 dark:text-green-400 font-medium">
+                                ✓ Upgrade - Se cargará ahora
+                              </p>
+                              <p className="text-muted-foreground">
+                                Pagarás la diferencia prorrateada por el tiempo restante del período actual.
+                              </p>
+                            </>
+                          )}
+                          {preview.isDowngrade && (
+                            <>
+                              <p className="text-blue-700 dark:text-blue-400 font-medium">
+                                ↓ Downgrade - Crédito aplicado
+                              </p>
+                              <p className="text-muted-foreground">
+                                El crédito se aplicará automáticamente a tu próxima factura.
+                              </p>
+                            </>
+                          )}
+                          <p className="text-muted-foreground mt-2">
+                            <strong>Próxima facturación:</strong>{' '}
+                            {format(new Date(preview.nextBillingDate), "d 'de' MMMM, yyyy", { locale: es })}
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Proration Notice */}
-            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-sm text-blue-900 dark:text-blue-100">
-                <strong>💡 Prorrateo automático:</strong> Si cambias a un plan más caro, solo pagarás 
-                la diferencia prorrateada por el tiempo restante. Si cambias a un plan más económico, 
-                el crédito se aplicará a tu próxima factura.
-              </p>
-            </div>
+            {!selectedPlanId || selectedPlanId === currentPlanId ? (
+              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  <strong>💡 Prorrateo automático:</strong> Si cambias a un plan más caro, solo pagarás 
+                  la diferencia prorrateada por el tiempo restante. Si cambias a un plan más económico, 
+                  el crédito se aplicará a tu próxima factura.
+                </p>
+              </div>
+            ) : null}
           </div>
         )}
 
