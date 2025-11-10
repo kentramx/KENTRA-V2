@@ -164,6 +164,14 @@ const Navbar = () => {
                           </Link>
                         )}
                         {isSuperAdmin && (
+                          <Link to="/admin/role-audit">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Auditoría de Roles
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
                           <Link to="/admin/subscription-changes">
                             <DropdownMenuItem className="cursor-pointer">
                               <Badge className="mr-2 bg-purple-600">Admin</Badge>
@@ -289,6 +297,14 @@ const Navbar = () => {
                             <DropdownMenuItem className="cursor-pointer">
                               <Badge className="mr-2 bg-purple-600">Admin</Badge>
                               Gestión de Roles
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
+                          <Link to="/admin/role-audit">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Auditoría de Roles
                             </DropdownMenuItem>
                           </Link>
                         )}
