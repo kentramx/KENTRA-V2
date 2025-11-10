@@ -601,51 +601,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-6">
-            <div>
-              <h3 className="font-semibold text-lg mb-3">Kentra</h3>
-              <p className="text-muted-foreground text-sm">
-                Tu plataforma de confianza para encontrar la propiedad perfecta en
-                México.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg mb-3">Enlaces Rápidos</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <button
-                    onClick={() => navigate("/buscar")}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Buscar Propiedades
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => navigate("/publicar")}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Publicar Propiedad
-                  </button>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg mb-3">Mantente Informado</h3>
-              <p className="text-muted-foreground text-sm mb-3">
-                Recibe las últimas propiedades directamente en tu correo
-              </p>
-              <NewsletterForm />
-            </div>
-          </div>
-          <div className="text-center text-muted-foreground text-sm pt-6 border-t border-border">
-            <p>© 2025 Kentra. Todos los derechos reservados.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

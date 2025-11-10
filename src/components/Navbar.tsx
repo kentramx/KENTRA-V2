@@ -18,6 +18,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { usePropertyCompare } from "@/hooks/usePropertyCompare";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { AdminRealtimeNotifications } from "./AdminRealtimeNotifications";
+import { SocialLinks } from "./SocialLinks";
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
@@ -181,6 +182,7 @@ const Navbar = () => {
               </>
             ) : (
               <>
+                <SocialLinks className="hidden lg:flex" />
                 <ThemeToggle />
                 <Link to="/auth">
                   <Button size="sm">Iniciar Sesión</Button>

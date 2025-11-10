@@ -31,6 +31,7 @@ import Leaderboard from "./pages/Leaderboard";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import AdminSubscriptionChanges from "./pages/AdminSubscriptionChanges";
 import AdminNotificationSettings from "./pages/AdminNotificationSettings";
+import { Footer } from "@/components/Footer";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <Footer />
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
