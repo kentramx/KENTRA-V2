@@ -14,6 +14,7 @@ import { AgentAnalytics } from '@/components/AgentAnalytics';
 import { DynamicBreadcrumbs } from '@/components/DynamicBreadcrumbs';
 import { PlanStatusCard } from '@/components/PlanStatusCard';
 import { SubscriptionManagement } from '@/components/SubscriptionManagement';
+import { PropertyExpiryReminders } from '@/components/PropertyExpiryReminders';
 
 const AgentDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -228,9 +229,10 @@ const AgentDashboard = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="list">Mis Propiedades</TabsTrigger>
                 <TabsTrigger value="analytics">Analíticas</TabsTrigger>
+                <TabsTrigger value="reminders">Recordatorios</TabsTrigger>
                 <TabsTrigger value="subscription">Suscripción</TabsTrigger>
                 <TabsTrigger value="form">
                   {editingProperty ? 'Editar' : 'Nueva'} Propiedad
@@ -243,6 +245,10 @@ const AgentDashboard = () => {
 
               <TabsContent value="analytics" className="mt-6">
                 <AgentAnalytics agentId={user?.id || ''} />
+              </TabsContent>
+
+              <TabsContent value="reminders" className="mt-6">
+                <PropertyExpiryReminders agentId={user?.id || ''} />
               </TabsContent>
 
               <TabsContent value="subscription" className="mt-6">
