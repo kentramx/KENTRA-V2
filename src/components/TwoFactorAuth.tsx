@@ -78,10 +78,8 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
         setTotpSecret(data.totp.secret);
         setFactorId(data.id);
         
-        // Generar QR code con el URI
-        const qrCodeUrl = data.totp.qr_code;
-        const qrDataUrl = await QRCode.toDataURL(qrCodeUrl);
-        setQrCode(qrDataUrl);
+        // El QR code ya viene como SVG completo de Supabase, usarlo directamente
+        setQrCode(data.totp.qr_code);
 
         toast({
           title: "Código QR generado",
@@ -280,7 +278,10 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
                 </p>
                 {qrCode && (
                   <div className="flex justify-center p-4 bg-white rounded-lg">
-                    <img src={qrCode} alt="QR Code" className="w-48 h-48" />
+                    <div 
+                      className="w-48 h-48" 
+                      dangerouslySetInnerHTML={{ __html: qrCode }}
+                    />
                   </div>
                 )}
               </div>
