@@ -33,6 +33,9 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import AdminSubscriptionChanges from "./pages/AdminSubscriptionChanges";
 import AdminNotificationSettings from "./pages/AdminNotificationSettings";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminFinancial from "./pages/AdminFinancial";
+import AdminKPIs from "./pages/AdminKPIs";
+import AdminRoles from "./pages/AdminRoles";
 import { Footer } from "@/components/Footer";
 
 const queryClient = new QueryClient();
@@ -73,6 +76,9 @@ const App = () => (
               <Route path="/admin/subscription-changes" element={<AdminSubscriptionChanges />} />
               <Route path="/admin/notification-settings" element={<AdminNotificationSettings />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/financiero" element={<AdminFinancial />} />
+              <Route path="/admin/kpis" element={<AdminKPIs />} />
+              <Route path="/admin/roles" element={<AdminRoles />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

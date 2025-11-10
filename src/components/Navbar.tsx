@@ -140,25 +140,45 @@ const Navbar = () => {
                           </DropdownMenuItem>
                         </Link>
                         {isSuperAdmin && (
-                          <Link to="/admin/dashboard?tab=financiero">
+                          <Link to="/admin/financiero">
                             <DropdownMenuItem className="cursor-pointer">
                               <Badge className="mr-2 bg-purple-600">Admin</Badge>
                               Panel Financiero
                             </DropdownMenuItem>
                           </Link>
                         )}
-                        <Link to="/admin/subscription-changes">
-                          <DropdownMenuItem className="cursor-pointer">
-                            <Badge className="mr-2 bg-purple-600">Admin</Badge>
-                            Panel de Auditoría
-                          </DropdownMenuItem>
-                        </Link>
-                        <Link to="/admin/notification-settings">
-                          <DropdownMenuItem className="cursor-pointer">
-                            <Badge className="mr-2 bg-purple-600">Admin</Badge>
-                            Notificaciones
-                          </DropdownMenuItem>
-                        </Link>
+                        {isSuperAdmin && (
+                          <Link to="/admin/kpis">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              KPIs de Negocio
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
+                          <Link to="/admin/roles">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Gestión de Roles
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
+                          <Link to="/admin/subscription-changes">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Panel de Auditoría
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
+                          <Link to="/admin/notification-settings">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Notificaciones
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
                         <DropdownMenuSeparator />
                       </>
                     )}
@@ -249,25 +269,45 @@ const Navbar = () => {
                           </DropdownMenuItem>
                         </Link>
                         {isSuperAdmin && (
-                          <Link to="/admin/dashboard?tab=financiero">
+                          <Link to="/admin/financiero">
                             <DropdownMenuItem className="cursor-pointer">
                               <Badge className="mr-2 bg-purple-600">Admin</Badge>
                               Panel Financiero
                             </DropdownMenuItem>
                           </Link>
                         )}
-                        <Link to="/admin/subscription-changes">
-                          <DropdownMenuItem className="cursor-pointer">
-                            <Badge className="mr-2 bg-purple-600">Admin</Badge>
-                            Panel de Auditoría
-                          </DropdownMenuItem>
-                        </Link>
-                        <Link to="/admin/notification-settings">
-                          <DropdownMenuItem className="cursor-pointer">
-                            <Badge className="mr-2 bg-purple-600">Admin</Badge>
-                            Notificaciones
-                          </DropdownMenuItem>
-                        </Link>
+                        {isSuperAdmin && (
+                          <Link to="/admin/kpis">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              KPIs de Negocio
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
+                          <Link to="/admin/roles">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Gestión de Roles
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
+                          <Link to="/admin/subscription-changes">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Panel de Auditoría
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
+                          <Link to="/admin/notification-settings">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Notificaciones
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
                         <DropdownMenuSeparator />
                       </>
                     )}

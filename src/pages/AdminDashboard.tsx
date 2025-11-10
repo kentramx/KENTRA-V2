@@ -19,9 +19,6 @@ import { useAdminCheck } from '@/hooks/useAdminCheck';
 import QualityChecklist from '@/components/QualityChecklist';
 import PropertyDiff from '@/components/PropertyDiff';
 import AdminModerationMetrics from '@/components/AdminModerationMetrics';
-import { SuperAdminMetrics } from '@/components/SuperAdminMetrics';
-import { AdminRoleManagement } from '@/components/AdminRoleManagement';
-import { FinancialDashboard } from '@/components/FinancialDashboard';
 import AIPreModerationBadge from '@/components/AIPreModerationBadge';
 import AutoApprovalStats from '@/components/AutoApprovalStats';
 import ImageQualityBadge from '@/components/ImageQualityBadge';
@@ -50,9 +47,9 @@ const AdminDashboard = () => {
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Leer la pestaña activa de la URL (si existe) o usar 'new' por defecto
+  // Leer la pestaña activa de la URL (si existe) o usar 'nuevas' por defecto
   const tabFromUrl = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(tabFromUrl || 'new');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'nuevas');
   
   const [rejectProperty, setRejectProperty] = useState<any>(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -83,10 +80,11 @@ const AdminDashboard = () => {
     }
   }, [isAdmin, adminLoading, navigate]);
 
-  // Sincronizar activeTab con el parámetro tab de la URL
+  // Sincronizar activeTab con el parámetro tab de la URL (solo pestañas de moderación)
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && tabParam !== activeTab) {
+    const validTabs = ['nuevas', 'reenviadas', 'antiguas', 'metricas'];
+    if (tabParam && validTabs.includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -136,11 +134,11 @@ const AdminDashboard = () => {
         .eq('status', 'pendiente_aprobacion')
         .order('created_at', { ascending: false });
 
-      if (activeTab === 'new') {
+      if (activeTab === 'nuevas') {
         query = query.eq('resubmission_count', 0);
-      } else if (activeTab === 'resubmitted') {
+      } else if (activeTab === 'reenviadas') {
         query = query.gt('resubmission_count', 0).order('resubmission_count', { ascending: false });
-      } else if (activeTab === 'old') {
+      } else if (activeTab === 'antiguas') {
         const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
         query = query.lt('created_at', threeDaysAgo);
       }
@@ -438,36 +436,21 @@ const AdminDashboard = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="new">
+            <TabsTrigger value="nuevas">
               Nuevas ({metrics.new})
             </TabsTrigger>
-            <TabsTrigger value="resubmitted">
+            <TabsTrigger value="reenviadas">
               Reenviadas - Alta Prioridad ({metrics.resubmitted})
             </TabsTrigger>
-            <TabsTrigger value="old">
+            <TabsTrigger value="antiguas">
               Antiguas ({metrics.old})
             </TabsTrigger>
-            <TabsTrigger value="metrics">
+            <TabsTrigger value="metricas">
               Métricas y Tendencias
             </TabsTrigger>
-            {isSuperAdmin && (
-              <TabsTrigger value="financiero">
-                💰 Panel Financiero
-              </TabsTrigger>
-            )}
-            {isSuperAdmin && (
-              <TabsTrigger value="kpis">
-                📊 KPIs de Negocio
-              </TabsTrigger>
-            )}
-            {isSuperAdmin && (
-              <TabsTrigger value="roles">
-                👥 Gestión de Roles
-              </TabsTrigger>
-            )}
           </TabsList>
 
-          <TabsContent value="new" className="space-y-4">
+          <TabsContent value="nuevas" className="space-y-4">
             {properties.length === 0 ? (
               <Alert>
                 <CheckCircle className="h-4 w-4" />
@@ -564,7 +547,7 @@ const AdminDashboard = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="resubmitted" className="space-y-4">
+          <TabsContent value="reenviadas" className="space-y-4">
             {properties.length === 0 ? (
               <Alert>
                 <CheckCircle className="h-4 w-4" />
@@ -661,7 +644,7 @@ const AdminDashboard = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="old" className="space-y-4">
+          <TabsContent value="antiguas" className="space-y-4">
             {properties.length === 0 ? (
               <Alert>
                 <CheckCircle className="h-4 w-4" />
@@ -758,30 +741,9 @@ const AdminDashboard = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="metrics">
+          <TabsContent value="metricas">
             <AdminModerationMetrics />
           </TabsContent>
-
-          {isSuperAdmin && (
-            <TabsContent value="financiero">
-              <FinancialDashboard />
-            </TabsContent>
-          )}
-
-          {isSuperAdmin && (
-            <TabsContent value="kpis">
-              <SuperAdminMetrics />
-            </TabsContent>
-          )}
-
-          {isSuperAdmin && (
-            <TabsContent value="roles">
-              <AdminRoleManagement 
-                currentUserId={user?.id || ''} 
-                isSuperAdmin={isSuperAdmin} 
-              />
-            </TabsContent>
-          )}
         </Tabs>
       </div>
 
