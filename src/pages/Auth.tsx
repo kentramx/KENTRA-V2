@@ -61,16 +61,21 @@ const Auth = () => {
     }
   }, [mode]);
 
-  // Redirect after successful auth
+  // Redirect after successful auth (pero NO si estamos en modo reset)
   useEffect(() => {
+    // Si estamos en modo reset, NO redirigir - el usuario necesita cambiar su contraseña primero
+    if (mode === 'reset') {
+      return;
+    }
+    
     if (user && redirect) {
       navigate(redirect);
-    } else if (user) {
+    } else if (user && view !== 'reset') {
       navigate('/');
     }
-  }, [user, redirect, navigate]);
+  }, [user, redirect, navigate, mode, view]);
 
-  if (user) {
+  if (user && view !== 'reset') {
     return null;
   }
 
