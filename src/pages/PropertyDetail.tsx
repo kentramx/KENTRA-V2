@@ -340,17 +340,37 @@ const PropertyDetail = () => {
             }
           }
 
-          // 2) Fallback según plataforma
+          const deep = `whatsapp://send?text=${encoded}`;
+          const wa = `https://wa.me/?text=${encoded}`; // evita api.whatsapp.com
+          const web = `https://web.whatsapp.com/send?text=${encoded}`;
+
           if (isMobile) {
-            // Deep link a la app y fallback a wa.me si no abre
-            window.location.href = `whatsapp://send?text=${encoded}`;
+            // Móvil: deep link y fallback a wa.me
+            window.location.href = deep;
             setTimeout(() => {
-              // Si la app no abrió, usamos wa.me
-              window.location.href = `https://wa.me/?text=${encoded}`;
+              window.location.href = wa;
             }, 600);
           } else {
-            // Escritorio: redirigir en la misma pestaña para evitar pop-up blockers
-            window.location.assign(`https://api.whatsapp.com/send?text=${encoded}`);
+            // Escritorio: intenta abrir la app y luego WhatsApp Web (sin api.whatsapp.com)
+            try {
+              window.location.href = deep;
+            } catch {}
+
+            setTimeout(async () => {
+              try {
+                window.location.assign(wa);
+              } catch {
+                window.location.assign(web);
+              }
+              // Último recurso: copiar al portapapeles
+              try {
+                await navigator.clipboard.writeText(whatsappMessage);
+                toast({
+                  title: 'Mensaje copiado',
+                  description: 'Abre WhatsApp (Web o app) y pega el mensaje.',
+                });
+              } catch {}
+            }, 700);
           }
           break;
         }
