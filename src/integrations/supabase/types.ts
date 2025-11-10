@@ -867,6 +867,50 @@ export type Database = {
           },
         ]
       }
+      property_moderation_history: {
+        Row: {
+          action: Database["public"]["Enums"]["moderation_action"]
+          admin_id: string | null
+          agent_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          previous_data: Json | null
+          property_id: string
+          rejection_reason: Json | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["moderation_action"]
+          admin_id?: string | null
+          agent_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          previous_data?: Json | null
+          property_id: string
+          rejection_reason?: Json | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["moderation_action"]
+          admin_id?: string | null
+          agent_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          previous_data?: Json | null
+          property_id?: string
+          rejection_reason?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_moderation_history_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       property_views: {
         Row: {
           id: string
@@ -1208,6 +1252,15 @@ export type Database = {
           total_views: number
         }[]
       }
+      get_auto_approval_stats: {
+        Args: never
+        Returns: {
+          auto_approved_by_ai: number
+          auto_approved_legacy: number
+          avg_ai_score_auto_approved: number
+          total_auto_approved: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -1249,6 +1302,11 @@ export type Database = {
         | "admin"
         | "super_admin"
         | "moderator"
+      moderation_action:
+        | "approved"
+        | "rejected"
+        | "resubmitted"
+        | "auto_approved"
       property_status: "activa" | "vendida" | "rentada" | "pausada"
       property_type:
         | "casa"
@@ -1395,6 +1453,12 @@ export const Constants = {
         "admin",
         "super_admin",
         "moderator",
+      ],
+      moderation_action: [
+        "approved",
+        "rejected",
+        "resubmitted",
+        "auto_approved",
       ],
       property_status: ["activa", "vendida", "rentada", "pausada"],
       property_type: [

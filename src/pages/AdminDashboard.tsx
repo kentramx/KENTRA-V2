@@ -21,6 +21,7 @@ import AdminModerationMetrics from '@/components/AdminModerationMetrics';
 import { AdminRoleManagement } from '@/components/AdminRoleManagement';
 import { SuperAdminMetrics } from '@/components/SuperAdminMetrics';
 import AIPreModerationBadge from '@/components/AIPreModerationBadge';
+import AutoApprovalStats from '@/components/AutoApprovalStats';
 
 const REJECTION_REASONS = [
   { code: 'incomplete_info', label: 'Información incompleta' },
@@ -410,6 +411,11 @@ const AdminDashboard = () => {
               <p className="text-sm text-muted-foreground">Rechazadas hoy</p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Estadísticas de Auto-Aprobación Inteligente */}
+        <div className="mb-6">
+          <AutoApprovalStats />
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
