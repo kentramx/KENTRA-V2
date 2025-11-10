@@ -6,6 +6,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
+interface BadgeData {
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  priority: number;
+}
+
 interface AgentData {
   id: string;
   name: string;
@@ -20,6 +29,7 @@ interface AgentData {
   logo_url?: string;
   plan_name: string | null;
   plan_level: string | null;
+  badges: BadgeData[];
 }
 
 const DirectorioAgentes = () => {
@@ -60,6 +70,10 @@ const DirectorioAgentes = () => {
           user_subscriptions!inner(
             status,
             subscription_plans(display_name, name)
+          ),
+          user_badges(
+            badge_code,
+            badge_definitions(code, name, description, icon, color, priority)
           )
         `)
         .eq("user_roles.role", "agent");
@@ -109,6 +123,7 @@ const DirectorioAgentes = () => {
         ).pop() : "";
 
         const subscription = profile.user_subscriptions?.[0];
+        const badges = profile.user_badges?.map((ub: any) => ub.badge_definitions).filter(Boolean) || [];
 
         return {
           id: profile.id,
@@ -123,6 +138,7 @@ const DirectorioAgentes = () => {
           is_verified: profile.is_verified || false,
           plan_name: subscription?.subscription_plans?.display_name || null,
           plan_level: subscription?.subscription_plans?.name || null,
+          badges,
         };
       });
 
@@ -151,6 +167,14 @@ const DirectorioAgentes = () => {
 
           const subscription = agency.user_subscriptions?.[0];
 
+          // Fetch badges for agency owner
+          const { data: ownerBadges } = await supabase
+            .from("user_badges")
+            .select("badge_code, badge_definitions(code, name, description, icon, color, priority)")
+            .eq("user_id", agency.owner_id);
+
+          const badges = ownerBadges?.map((ub: any) => ub.badge_definitions).filter(Boolean) || [];
+
           return {
             id: agency.id,
             name: agency.name,
@@ -165,6 +189,7 @@ const DirectorioAgentes = () => {
             logo_url: agency.logo_url,
             plan_name: subscription?.subscription_plans?.display_name || null,
             plan_level: subscription?.subscription_plans?.name || null,
+            badges,
           };
         })
       );
@@ -205,12 +230,24 @@ const DirectorioAgentes = () => {
         return 0;
       };
 
-      // Apply sorting - prioritize by plan level first
+      // Función para calcular score de badges
+      const getBadgeScore = (badges: BadgeData[]) => {
+        if (!badges || badges.length === 0) return 0;
+        return badges.reduce((sum, badge) => sum + badge.priority, 0);
+      };
+
+      // Apply sorting - prioritize by badge score, then plan level, then secondary sort
       combinedData.sort((a, b) => {
+        const aBadgeScore = getBadgeScore(a.badges);
+        const bBadgeScore = getBadgeScore(b.badges);
+        
+        // First sort by badge score (highest priority badges first)
+        if (aBadgeScore !== bBadgeScore) return bBadgeScore - aBadgeScore;
+        
         const aLevel = getPlanLevel(a.plan_level);
         const bLevel = getPlanLevel(b.plan_level);
         
-        // First sort by plan level (featured agents first)
+        // Second sort by plan level (featured agents first)
         if (aLevel !== bLevel) return bLevel - aLevel;
         
         // Then apply secondary sorting

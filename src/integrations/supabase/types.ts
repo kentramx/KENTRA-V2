@@ -194,6 +194,42 @@ export type Database = {
           },
         ]
       }
+      badge_definitions: {
+        Row: {
+          code: string
+          color: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          name: string
+          priority: number
+          requirements: Json
+        }
+        Insert: {
+          code: string
+          color: string
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          name: string
+          priority?: number
+          requirements?: Json
+        }
+        Update: {
+          code?: string
+          color?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          priority?: number
+          requirements?: Json
+        }
+        Relationships: []
+      }
       conversation_participants: {
         Row: {
           conversation_id: string
@@ -952,6 +988,38 @@ export type Database = {
         }
         Relationships: []
       }
+      user_badges: {
+        Row: {
+          badge_code: string
+          earned_at: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          badge_code: string
+          earned_at?: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          badge_code?: string
+          earned_at?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_code_fkey"
+            columns: ["badge_code"]
+            isOneToOne: false
+            referencedRelation: "badge_definitions"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           granted_at: string | null
@@ -1069,6 +1137,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_assign_badges: { Args: { p_user_id: string }; Returns: undefined }
       can_create_property: {
         Args: { user_uuid: string }
         Returns: {

@@ -3,6 +3,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MapPin, Star, Home, ShieldCheck } from "lucide-react";
+import AgentBadges from "@/components/AgentBadges";
+
+interface BadgeData {
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  priority: number;
+}
 
 interface AgentCardProps {
   id: string;
@@ -17,6 +27,7 @@ interface AgentCardProps {
   logo_url?: string;
   plan_name: string | null;
   plan_level: string | null;
+  badges?: BadgeData[];
 }
 
 const AgentCard = ({
@@ -32,6 +43,7 @@ const AgentCard = ({
   logo_url,
   plan_name,
   plan_level,
+  badges = [],
 }: AgentCardProps) => {
   const getInitials = (name: string) => {
     return name
@@ -105,7 +117,13 @@ const AgentCard = ({
             </div>
           )}
 
-          <div className="space-y-2 mb-4">
+          <div className="space-y-3 mb-4">
+            {badges && badges.length > 0 && (
+              <div className="mb-2">
+                <AgentBadges badges={badges} maxVisible={2} size="sm" />
+              </div>
+            )}
+
             {avg_rating !== null && total_reviews > 0 && (
               <div className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import PropertyCard from "@/components/PropertyCard";
 import { AgentReviews } from "@/components/AgentReviews";
+import AgentBadges from "@/components/AgentBadges";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,15 @@ import {
   Loader2,
 } from "lucide-react";
 
+interface BadgeData {
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  priority: number;
+}
+
 interface AgentStats {
   totalProperties: number;
   activeProperties: number;
@@ -33,6 +43,7 @@ const AgentProfile = () => {
   const navigate = useNavigate();
   const [agent, setAgent] = useState<any>(null);
   const [properties, setProperties] = useState<any[]>([]);
+  const [badges, setBadges] = useState<BadgeData[]>([]);
   const [stats, setStats] = useState<AgentStats>({
     totalProperties: 0,
     activeProperties: 0,
@@ -59,6 +70,20 @@ const AgentProfile = () => {
 
       if (agentError) throw agentError;
       setAgent(agentData);
+
+      // Fetch agent badges
+      const { data: badgesData, error: badgesError } = await supabase
+        .from("user_badges")
+        .select("badge_code, badge_definitions(code, name, description, icon, color, priority)")
+        .eq("user_id", id);
+
+      if (!badgesError && badgesData) {
+        const fetchedBadges = badgesData.map((ub: any) => ub.badge_definitions).filter(Boolean);
+        setBadges(fetchedBadges);
+      }
+
+      // Auto-assign badges based on current stats
+      await supabase.rpc("auto_assign_badges", { p_user_id: id });
 
       // Fetch agent properties
       const { data: propertiesData, error: propertiesError } = await supabase
@@ -160,6 +185,12 @@ const AgentProfile = () => {
                   )}
                 </div>
                 
+                {badges && badges.length > 0 && (
+                  <div className="mb-4">
+                    <AgentBadges badges={badges} maxVisible={5} size="md" />
+                  </div>
+                )}
+
                 {stats.totalReviews > 0 && (
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex">
