@@ -19,6 +19,7 @@ import QualityChecklist from '@/components/QualityChecklist';
 import PropertyDiff from '@/components/PropertyDiff';
 import AdminModerationMetrics from '@/components/AdminModerationMetrics';
 import { AdminRoleManagement } from '@/components/AdminRoleManagement';
+import { SuperAdminMetrics } from '@/components/SuperAdminMetrics';
 
 const REJECTION_REASONS = [
   { code: 'incomplete_info', label: 'Información incompleta' },
@@ -425,6 +426,11 @@ const AdminDashboard = () => {
               Métricas y Tendencias
             </TabsTrigger>
             {isSuperAdmin && (
+              <TabsTrigger value="kpis">
+                KPIs de Negocio
+              </TabsTrigger>
+            )}
+            {isSuperAdmin && (
               <TabsTrigger value="roles">
                 Gestión de Roles
               </TabsTrigger>
@@ -519,6 +525,12 @@ const AdminDashboard = () => {
           <TabsContent value="metrics">
             <AdminModerationMetrics />
           </TabsContent>
+
+          {isSuperAdmin && (
+            <TabsContent value="kpis">
+              <SuperAdminMetrics />
+            </TabsContent>
+          )}
 
           {isSuperAdmin && (
             <TabsContent value="roles">
