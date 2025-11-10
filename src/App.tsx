@@ -23,6 +23,9 @@ import NotFound from "./pages/NotFound";
 import MapPreloader from "@/components/MapPreloader";
 import EligeRolPublicacion from "./pages/EligeRolPublicacion";
 import Publicar from "./pages/Publicar";
+import PricingAgente from "./pages/PricingAgente";
+import PricingInmobiliaria from "./pages/PricingInmobiliaria";
+import PricingDesarrolladora from "./pages/PricingDesarrolladora";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +55,9 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/elige-rol-publicacion" element={<EligeRolPublicacion />} />
               <Route path="/publicar" element={<Publicar />} />
+              <Route path="/pricing-agente" element={<PricingAgente />} />
+              <Route path="/pricing-inmobiliaria" element={<PricingInmobiliaria />} />
+              <Route path="/pricing-desarrolladora" element={<PricingDesarrolladora />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
