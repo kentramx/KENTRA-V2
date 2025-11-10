@@ -448,7 +448,201 @@ const AdminDashboard = () => {
             )}
           </TabsList>
 
-          <TabsContent value={activeTab} className="space-y-4">
+          <TabsContent value="new" className="space-y-4">
+            {properties.length === 0 ? (
+              <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription>
+                  No hay propiedades pendientes en esta categoría
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {properties.map((property) => (
+                  <Card key={property.id}>
+                    <CardContent className="pt-6">
+                      <div className="flex gap-4">
+                        {property.images?.[0] && (
+                          <img
+                            src={property.images[0].url}
+                            alt={property.title}
+                            className="h-32 w-32 rounded object-cover"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-semibold text-lg">{property.title}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {property.municipality}, {property.state}
+                              </p>
+                              <div className="flex gap-2 mt-2 flex-wrap">
+                                <Badge variant="outline">{property.type}</Badge>
+                                <Badge variant="outline">{property.listing_type}</Badge>
+                                {property.resubmission_count > 0 && (
+                                  <Badge variant="destructive">
+                                    Reenvío #{property.resubmission_count}
+                                  </Badge>
+                                )}
+                                <AIPreModerationBadge 
+                                  score={property.ai_moderation_score}
+                                  status={property.ai_moderation_status}
+                                  notes={property.ai_moderation_notes}
+                                  moderatedAt={property.ai_moderated_at}
+                                />
+                                <ImageQualityBadge 
+                                  averageQuality={property.images_quality_avg}
+                                  analyzedCount={property.images_analyzed_count}
+                                  hasInappropriate={property.has_inappropriate_images}
+                                  hasManipulated={property.has_manipulated_images}
+                                />
+                              </div>
+                              <p className="text-sm mt-2">
+                                <strong>Agente:</strong> {property.profiles?.name || 'N/A'}
+                              </p>
+                              <p className="text-sm">
+                                <strong>Precio:</strong> {new Intl.NumberFormat('es-MX', {
+                                  style: 'currency',
+                                  currency: 'MXN',
+                                }).format(property.price)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleApprove(property)}
+                            disabled={processing}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Aprobar
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setRejectProperty(property)}
+                            disabled={processing}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Rechazar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setViewProperty(property)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ver Detalles
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="resubmitted" className="space-y-4">
+            {properties.length === 0 ? (
+              <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription>
+                  No hay propiedades pendientes en esta categoría
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {properties.map((property) => (
+                  <Card key={property.id}>
+                    <CardContent className="pt-6">
+                      <div className="flex gap-4">
+                        {property.images?.[0] && (
+                          <img
+                            src={property.images[0].url}
+                            alt={property.title}
+                            className="h-32 w-32 rounded object-cover"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-semibold text-lg">{property.title}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {property.municipality}, {property.state}
+                              </p>
+                              <div className="flex gap-2 mt-2 flex-wrap">
+                                <Badge variant="outline">{property.type}</Badge>
+                                <Badge variant="outline">{property.listing_type}</Badge>
+                                {property.resubmission_count > 0 && (
+                                  <Badge variant="destructive">
+                                    Reenvío #{property.resubmission_count}
+                                  </Badge>
+                                )}
+                                <AIPreModerationBadge 
+                                  score={property.ai_moderation_score}
+                                  status={property.ai_moderation_status}
+                                  notes={property.ai_moderation_notes}
+                                  moderatedAt={property.ai_moderated_at}
+                                />
+                                <ImageQualityBadge 
+                                  averageQuality={property.images_quality_avg}
+                                  analyzedCount={property.images_analyzed_count}
+                                  hasInappropriate={property.has_inappropriate_images}
+                                  hasManipulated={property.has_manipulated_images}
+                                />
+                              </div>
+                              <p className="text-sm mt-2">
+                                <strong>Agente:</strong> {property.profiles?.name || 'N/A'}
+                              </p>
+                              <p className="text-sm">
+                                <strong>Precio:</strong> {new Intl.NumberFormat('es-MX', {
+                                  style: 'currency',
+                                  currency: 'MXN',
+                                }).format(property.price)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleApprove(property)}
+                            disabled={processing}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Aprobar
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setRejectProperty(property)}
+                            disabled={processing}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Rechazar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setViewProperty(property)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ver Detalles
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="old" className="space-y-4">
             {properties.length === 0 ? (
               <Alert>
                 <CheckCircle className="h-4 w-4" />
