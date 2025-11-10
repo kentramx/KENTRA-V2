@@ -85,13 +85,7 @@ const Navbar = () => {
             <Button 
               size="sm" 
               className="shadow-sm"
-              onClick={() => {
-                if (user) {
-                  navigate('/elige-rol-publicacion');
-                } else {
-                  navigate('/auth?redirect=/elige-rol-publicacion');
-                }
-              }}
+              onClick={() => navigate('/publicar')}
             >
               <Building className="h-4 w-4 mr-2" />
               Publicar Propiedad
@@ -174,13 +168,7 @@ const Navbar = () => {
               size="icon" 
               variant="default" 
               className="h-9 w-9 shadow-sm"
-              onClick={() => {
-                if (user) {
-                  navigate('/elige-rol-publicacion');
-                } else {
-                  navigate('/auth?redirect=/elige-rol-publicacion');
-                }
-              }}
+              onClick={() => navigate('/publicar')}
             >
               <Building className="h-5 w-5" />
             </Button>
