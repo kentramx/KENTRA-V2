@@ -39,17 +39,10 @@ const Auth = () => {
   const redirect = searchParams.get('redirect');
   const pendingRole = searchParams.get('role');
 
-  // Process pending role selection after successful auth
+  // Redirect after successful auth
   useEffect(() => {
     if (user && redirect) {
-      const storedRole = localStorage.getItem('pendingRoleSelection');
-      if (storedRole) {
-        localStorage.removeItem('pendingRoleSelection');
-        // User is authenticated and has a pending role, redirect to process it
-        navigate(redirect);
-      } else {
-        navigate(redirect);
-      }
+      navigate(redirect);
     } else if (user) {
       navigate('/');
     }
