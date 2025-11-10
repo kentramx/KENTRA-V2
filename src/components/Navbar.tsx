@@ -142,7 +142,7 @@ const Navbar = () => {
                         {isSuperAdmin && (
                           <Link to="/admin/dashboard?tab=financiero">
                             <DropdownMenuItem className="cursor-pointer">
-                              <DollarSign className="mr-2 h-4 w-4 text-green-600" />
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
                               Panel Financiero
                             </DropdownMenuItem>
                           </Link>
@@ -251,7 +251,7 @@ const Navbar = () => {
                         {isSuperAdmin && (
                           <Link to="/admin/dashboard?tab=financiero">
                             <DropdownMenuItem className="cursor-pointer">
-                              <DollarSign className="mr-2 h-4 w-4 text-green-600" />
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
                               Panel Financiero
                             </DropdownMenuItem>
                           </Link>
