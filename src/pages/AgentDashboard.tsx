@@ -56,6 +56,12 @@ const AgentDashboard = () => {
         return;
       }
 
+      // Si es agencia, redirigir al dashboard de inmobiliaria
+      if (roleData.role === 'agency') {
+        navigate('/panel-inmobiliaria');
+        return;
+      }
+
       setUserRole(roleData.role);
 
       // Get profile data

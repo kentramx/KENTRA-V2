@@ -11,6 +11,7 @@ import PropertyDetail from "./pages/PropertyDetail";
 import Favorites from "./pages/Favorites";
 import ComparePage from "./pages/ComparePage";
 import AgentDashboard from "./pages/AgentDashboard";
+import AgencyDashboard from "./pages/AgencyDashboard";
 import AgentProfile from "./pages/AgentProfile";
 import UserProfile from "./pages/UserProfile";
 import NotificationSettings from "./pages/NotificationSettings";
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/favoritos" element={<Favorites />} />
               <Route path="/comparar" element={<ComparePage />} />
               <Route path="/panel-agente" element={<AgentDashboard />} />
+              <Route path="/panel-inmobiliaria" element={<AgencyDashboard />} />
               <Route path="/mensajes" element={<MessagesPage />} />
               <Route path="/instalar" element={<InstallPWA />} />
               <Route path="/setup-demo" element={<SetupDemo />} />
