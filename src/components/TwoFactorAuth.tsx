@@ -50,9 +50,26 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
   const startEnrollment = async () => {
     setEnrolling(true);
     try {
+      // Primero verificar si ya existen factores no verificados y eliminarlos
+      const { data: existingFactors } = await supabase.auth.mfa.listFactors();
+      
+      if (existingFactors?.totp) {
+        // Eliminar todos los factores no verificados
+        for (const factor of existingFactors.totp) {
+          if (factor.status !== 'verified') {
+            try {
+              await supabase.auth.mfa.unenroll({ factorId: factor.id });
+            } catch (unenrollError) {
+              console.error('Error eliminando factor no verificado:', unenrollError);
+            }
+          }
+        }
+      }
+
+      // Crear nuevo factor con nombre único usando timestamp
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
-        friendlyName: 'Kentra Admin MFA'
+        friendlyName: `Kentra Admin MFA ${Date.now()}`
       });
 
       if (error) throw error;
