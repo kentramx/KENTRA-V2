@@ -323,10 +323,25 @@ const PropertyDetail = () => {
           break;
         case 'whatsapp':
           const whatsappMessage = `🏡 *${property.title}*\n\n💰 ${text}\n📍 ${property.municipality}, ${property.state}\n\n🔗 Ver más: ${url}`;
-          window.open(
-            `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappMessage)}`, 
-            '_blank'
-          );
+          const encoded = encodeURIComponent(whatsappMessage);
+          const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+          const deepLink = `whatsapp://send?text=${encoded}`;
+          const waLink = `https://wa.me/?text=${encoded}`;
+          const webLink = `https://web.whatsapp.com/send?text=${encoded}`;
+
+          try {
+            if (isMobile) {
+              // Intenta abrir la app; si falla, cae a wa.me
+              window.location.href = deepLink;
+              setTimeout(() => window.open(waLink, '_blank'), 500);
+            } else {
+              // En desktop intenta Web WhatsApp; si está bloqueado, usa wa.me
+              const win = window.open(webLink, '_blank');
+              if (!win) window.location.href = waLink;
+            }
+          } catch {
+            window.open(waLink, '_blank');
+          }
           break;
         case 'facebook':
           window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
