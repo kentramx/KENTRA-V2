@@ -59,26 +59,29 @@ const DirectorioAgentes = () => {
     setError(null);
 
     try {
-      // Fetch individual agents
+      // Primero obtener los IDs de usuarios con rol 'agent'
+      const { data: agentRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "agent");
+
+      const agentIds = agentRoles?.map(r => r.user_id) || [];
+
+      // Fetch individual agents usando los IDs obtenidos
       let agentsQuery = supabase
         .from("profiles")
         .select(`
           id,
           name,
           is_verified,
-          user_roles!inner(role),
           properties(id, status, state, municipality),
           agent_reviews:agent_reviews!agent_id(rating),
-          user_subscriptions(
-            status,
-            subscription_plans(display_name, name)
-          ),
           user_badges(
             badge_code,
             badge_definitions(code, name, description, icon, color, priority, is_secret)
           )
         `)
-        .eq("user_roles.role", "agent");
+        .in("id", agentIds);
 
       // Fetch agencies
       let agenciesQuery = supabase
@@ -91,11 +94,7 @@ const DirectorioAgentes = () => {
           is_verified,
           logo_url,
           owner_id,
-          agency_agents!inner(agent_id),
-          user_subscriptions!owner_id(
-            status,
-            subscription_plans(display_name, name)
-          )
+          agency_agents!inner(agent_id)
         `);
 
       const [agentsResult, agenciesResult] = await Promise.all([
@@ -105,6 +104,17 @@ const DirectorioAgentes = () => {
 
       if (agentsResult.error) throw agentsResult.error;
       if (agenciesResult.error) throw agenciesResult.error;
+
+      // Obtener suscripciones de los agentes
+      const { data: agentSubscriptions } = await supabase
+        .from("user_subscriptions")
+        .select("user_id, status, subscription_plans(display_name, name)")
+        .in("user_id", agentIds)
+        .eq("status", "active");
+
+      const subscriptionMap = new Map(
+        agentSubscriptions?.map(sub => [sub.user_id, sub]) || []
+      );
 
       // Process agents
       const processedAgents: AgentData[] = (agentsResult.data || []).map((profile: any) => {
@@ -124,14 +134,14 @@ const DirectorioAgentes = () => {
           municipalities.filter((m: string) => m === a).length - municipalities.filter((m: string) => m === b).length
         ).pop() : "";
 
-        const subscription = profile.user_subscriptions?.[0];
+        const subscription = subscriptionMap.get(profile.id);
         const badges = profile.user_badges?.map((ub: any) => ub.badge_definitions).filter(Boolean) || [];
 
         return {
           id: profile.id,
           name: profile.name,
           type: 'agent',
-          role: profile.user_roles?.[0]?.role || 'agent',
+          role: 'agent',
           city: mostFrequentCity,
           state: mostFrequentState,
           active_properties: activeProperties.length,
@@ -143,6 +153,20 @@ const DirectorioAgentes = () => {
           badges,
         };
       });
+
+      // Obtener owner_ids de las agencias
+      const ownerIds = agenciesResult.data?.map(a => a.owner_id) || [];
+
+      // Obtener suscripciones de los owners de las agencias
+      const { data: agencySubscriptions } = await supabase
+        .from("user_subscriptions")
+        .select("user_id, status, subscription_plans(display_name, name)")
+        .in("user_id", ownerIds)
+        .eq("status", "active");
+
+      const agencySubscriptionMap = new Map(
+        agencySubscriptions?.map(sub => [sub.user_id, sub]) || []
+      );
 
       // Process agencies
       const processedAgencies: AgentData[] = await Promise.all(
@@ -167,7 +191,7 @@ const DirectorioAgentes = () => {
             ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
             : null;
 
-          const subscription = agency.user_subscriptions?.[0];
+          const subscription = agencySubscriptionMap.get(agency.owner_id);
 
           // Fetch badges for agency owner
           const { data: ownerBadges } = await supabase
