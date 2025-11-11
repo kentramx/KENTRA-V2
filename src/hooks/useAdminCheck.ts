@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+const IMPERSONATION_KEY = 'kentra_impersonated_role';
+
 export const useAdminCheck = () => {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -23,6 +25,24 @@ export const useAdminCheck = () => {
     }
 
     try {
+      // Check if impersonating a non-admin role
+      const impersonatedRole = localStorage.getItem(IMPERSONATION_KEY);
+      if (impersonatedRole && ['buyer', 'agent', 'agency'].includes(impersonatedRole)) {
+        // Verify user is actually super admin before allowing impersonation
+        const { data: isSuperData } = await (supabase.rpc as any)('is_super_admin', {
+          _user_id: user.id,
+        });
+
+        if (isSuperData) {
+          // Simulate non-admin role
+          setIsAdmin(false);
+          setIsSuperAdmin(false);
+          setAdminRole(null);
+          setLoading(false);
+          return;
+        }
+      }
+
       // Verificar acceso administrativo general usando has_admin_access
       const { data: hasAccessData, error: accessError } = await (supabase.rpc as any)('has_admin_access', {
         _user_id: user.id,
@@ -46,12 +66,21 @@ export const useAdminCheck = () => {
             setIsSuperAdmin(Boolean(isSuperData));
           }
 
+          // Check if impersonating moderator
+          if (impersonatedRole === 'moderator' && isSuperData) {
+            setIsAdmin(true);
+            setIsSuperAdmin(false);
+            setAdminRole('moderator');
+            setLoading(false);
+            return;
+          }
+
           // Obtener el rol específico
           const { data: roleData } = await supabase
             .from('user_roles')
             .select('role')
             .eq('user_id', user.id)
-            .in('role', ['super_admin', 'moderator', 'admin'] as any)
+            .in('role', ['super_admin', 'moderator'] as any)
             .single();
 
           if (roleData) {

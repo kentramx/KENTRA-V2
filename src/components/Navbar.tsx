@@ -31,6 +31,8 @@ import { usePropertyCompare } from "@/hooks/usePropertyCompare";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { AdminRealtimeNotifications } from "./AdminRealtimeNotifications";
 import { SocialLinks } from "./SocialLinks";
+import { RoleImpersonationSelector } from "./RoleImpersonationSelector";
+import { ImpersonationBanner } from "./ImpersonationBanner";
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
@@ -97,9 +99,11 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between gap-4">
+    <>
+      <ImpersonationBanner />
+      <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center justify-between gap-4">
           {/* Left Navigation - Desktop */}
           <div className="hidden md:flex items-center gap-1">
             <Button 
@@ -127,7 +131,8 @@ const Navbar = () => {
           </Link>
 
           {/* Right Navigation - Desktop */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-3">
+            <RoleImpersonationSelector />
             <Button
               size="sm" 
               className="shadow-sm"
@@ -450,6 +455,7 @@ const Navbar = () => {
         </AlertDialogContent>
       </AlertDialog>
     </nav>
+    </>
   );
 };
 
