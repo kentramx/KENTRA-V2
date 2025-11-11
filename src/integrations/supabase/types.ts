@@ -271,7 +271,7 @@ export type Database = {
           buyer_id: string
           created_at: string
           id: string
-          property_id: string
+          property_id: string | null
           updated_at: string
         }
         Insert: {
@@ -279,7 +279,7 @@ export type Database = {
           buyer_id: string
           created_at?: string
           id?: string
-          property_id: string
+          property_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -287,7 +287,7 @@ export type Database = {
           buyer_id?: string
           created_at?: string
           id?: string
-          property_id?: string
+          property_id?: string | null
           updated_at?: string
         }
         Relationships: [

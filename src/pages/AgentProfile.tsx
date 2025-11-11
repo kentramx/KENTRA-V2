@@ -6,6 +6,7 @@ import { getWhatsAppUrl, WhatsAppTemplates } from "@/utils/whatsapp";
 import Navbar from "@/components/Navbar";
 import PropertyCard from "@/components/PropertyCard";
 import { AgentReviews } from "@/components/AgentReviews";
+import { ContactAgentDialog } from "@/components/ContactAgentDialog";
 import AgentBadges from "@/components/AgentBadges";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -263,10 +264,10 @@ const AgentProfile = () => {
 
                   {/* Usuarios autenticados: Mensaje interno */}
                   {user && (
-                    <Button variant="outline" size="sm">
-                      <Mail className="mr-2 h-4 w-4" />
-                      Mensaje Interno
-                    </Button>
+                    <ContactAgentDialog 
+                      agentId={agent.id} 
+                      agentName={agent.name} 
+                    />
                   )}
                 </div>
               </div>
