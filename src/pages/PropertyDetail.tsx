@@ -767,10 +767,22 @@ const PropertyDetail = () => {
                       </div>
                     )}
 
-                    {agent.whatsapp_enabled && agent.whatsapp_number && (
+                    {/* Usuarios NO autenticados */}
+                    {!user && (
                       <Button 
                         className="w-full" 
-                        variant="outline"
+                        variant="default"
+                        onClick={() => navigate('/auth?redirect=' + window.location.pathname)}
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Iniciar sesión para contactar
+                      </Button>
+                    )}
+
+                    {/* Usuarios autenticados: WhatsApp */}
+                    {user && agent.whatsapp_enabled && agent.whatsapp_number && (
+                      <Button 
+                        className="w-full bg-green-600 hover:bg-green-700" 
                         onClick={async () => {
                           // Track WhatsApp contact interaction
                           const { trackWhatsAppInteraction } = await import('@/utils/whatsappTracking');
@@ -789,14 +801,29 @@ const PropertyDetail = () => {
                         }}
                       >
                         <MessageCircle className="mr-2 h-4 w-4" />
-                        Contactar por WhatsApp
+                        WhatsApp
                       </Button>
                     )}
 
-                    <ContactPropertyDialog
-                      property={property}
-                      agentId={agent.id}
-                    />
+                    {/* Usuarios autenticados: Teléfono directo */}
+                    {user && agent.phone && (
+                      <Button 
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => window.open(`tel:${agent.phone}`, '_self')}
+                      >
+                        <Phone className="mr-2 h-4 w-4" />
+                        Llamar: {agent.phone}
+                      </Button>
+                    )}
+
+                    {/* Usuarios autenticados: Mensaje interno */}
+                    {user && (
+                      <ContactPropertyDialog
+                        property={property}
+                        agentId={agent.id}
+                      />
+                    )}
 
                     <Button 
                       variant="outline"
