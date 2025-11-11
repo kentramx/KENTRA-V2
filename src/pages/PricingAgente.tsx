@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Check, Info, Rocket, Zap, Crown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -171,28 +172,42 @@ const PricingAgente = () => {
             </p>
 
             {/* Toggle */}
-            <div className="flex items-center justify-center gap-4">
-              <button
-                onClick={() => setPricingPeriod('monthly')}
-                className={`text-base px-4 py-2 rounded-lg transition-colors ${
-                  pricingPeriod === 'monthly'
-                    ? 'bg-primary text-primary-foreground font-semibold'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Mensual
-              </button>
-              <button
-                onClick={() => setPricingPeriod('annual')}
-                className={`text-base px-4 py-2 rounded-lg transition-colors ${
-                  pricingPeriod === 'annual'
-                    ? 'bg-primary text-primary-foreground font-semibold'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Anual -17%
-              </button>
-            </div>
+            <TooltipProvider>
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={() => setPricingPeriod('monthly')}
+                  className={`text-base px-4 py-2 rounded-lg transition-colors ${
+                    pricingPeriod === 'monthly'
+                      ? 'bg-primary text-primary-foreground font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Mensual
+                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setPricingPeriod('annual')}
+                      className={`text-base px-4 py-2 rounded-lg transition-colors ${
+                        pricingPeriod === 'annual'
+                          ? 'bg-primary text-primary-foreground font-semibold'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Anual -17%
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-semibold mb-2">Ahorro con pago anual:</p>
+                    <ul className="space-y-1 text-sm">
+                      <li>• Start: ${((249 * 12) - 2480).toLocaleString('es-MX')} MXN</li>
+                      <li>• Pro: ${((599 * 12) - 5966).toLocaleString('es-MX')} MXN</li>
+                      <li>• Elite: ${((999 * 12) - 9950).toLocaleString('es-MX')} MXN</li>
+                    </ul>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
             <p className="text-sm text-muted-foreground mt-4">
               Puedes cancelar cuando quieras. El pago anual es opcional solo si deseas ahorrar.
             </p>
