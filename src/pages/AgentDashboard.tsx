@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
@@ -19,10 +19,13 @@ import { PropertyExpiryReminders } from '@/components/PropertyExpiryReminders';
 const AgentDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('list');
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get('tab') === 'form' ? 'form' : 'list'
+  );
   const [editingProperty, setEditingProperty] = useState<any>(null);
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>('');

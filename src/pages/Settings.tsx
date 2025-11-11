@@ -51,6 +51,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import RoleChangeDialog from "@/components/RoleChangeDialog";
 
 const accountSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
@@ -78,6 +79,7 @@ const Settings = () => {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [savingAccount, setSavingAccount] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const accountForm = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
@@ -127,6 +129,17 @@ const Settings = () => {
       });
 
       setEmailNotifications(profileData.email_notifications ?? true);
+
+      // Obtener rol del usuario
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (roleData) {
+        setUserRole(roleData.role);
+      }
     } catch (error) {
       console.error("Error fetching user data:", error);
       toast.error("No se pudo cargar la información del perfil");
@@ -317,6 +330,34 @@ const Settings = () => {
                           El correo electrónico no se puede modificar
                         </p>
                       </div>
+
+                      {/* Role Change Section */}
+                      {userRole && ['agent', 'agency', 'buyer'].includes(userRole) && (
+                        <>
+                          <Separator />
+                          <div>
+                            <Label>Tipo de Cuenta</Label>
+                            <div className="flex items-center justify-between mt-2 gap-4">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">
+                                  {userRole === 'agent' && 'Agente Independiente'}
+                                  {userRole === 'agency' && 'Inmobiliaria'}
+                                  {userRole === 'buyer' && 'Particular'}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {userRole === 'agent' && 'Opera como agente individual'}
+                                  {userRole === 'agency' && 'Gestiona equipo de agentes'}
+                                  {userRole === 'buyer' && '¿Tu negocio ha crecido? Cambia tu tipo de cuenta'}
+                                </p>
+                              </div>
+                              <RoleChangeDialog 
+                                currentRole={userRole as 'buyer' | 'agent' | 'agency'} 
+                                onRoleChanged={fetchUserData}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
 
                       <Button type="submit" disabled={savingAccount}>
                         {savingAccount ? (

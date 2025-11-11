@@ -1326,6 +1326,10 @@ export type Database = {
           reason: string
         }[]
       }
+      change_user_role: {
+        Args: { new_role: Database["public"]["Enums"]["app_role"] }
+        Returns: Json
+      }
       get_agent_stats: {
         Args: { agent_uuid: string }
         Returns: {

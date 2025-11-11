@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
@@ -18,11 +18,14 @@ import { SubscriptionManagement } from '@/components/SubscriptionManagement';
 const AgencyDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [agency, setAgency] = useState<any>(null);
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState('inventory');
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get('tab') === 'form' ? 'inventory' : 'inventory'
+  );
 
   useEffect(() => {
     if (!authLoading && !user) {

@@ -1,6 +1,8 @@
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +11,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Home, Heart, User, PlusCircle, LogOut, Search, Building, GitCompare, Settings, DollarSign } from "lucide-react";
@@ -27,6 +39,21 @@ const Navbar = () => {
   const listingType = searchParams.get("listingType");
   const { compareList } = usePropertyCompare();
   const { isAdmin, isSuperAdmin } = useAdminCheck();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data }) => {
+          setUserRole(data?.role || 'buyer');
+        });
+    }
+  }, [user]);
 
   const getUserInitials = () => {
     if (!user?.email) return "U";
@@ -47,6 +74,27 @@ const Navbar = () => {
 
   const isComprarActive = !listingType || listingType === "venta";
   const isRentarActive = listingType === "renta";
+
+  const handlePublicarClick = () => {
+    if (!user) {
+      navigate('/auth?redirect=/panel-agente&action=publicar');
+      return;
+    }
+    
+    // Usuario autenticado - verificar rol y redirigir
+    switch(userRole) {
+      case 'agent':
+        navigate('/panel-agente?tab=form');
+        break;
+      case 'agency':
+        navigate('/panel-inmobiliaria?tab=form');
+        break;
+      case 'buyer':
+      default:
+        setShowUpgradeDialog(true);
+        break;
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -83,7 +131,7 @@ const Navbar = () => {
             <Button
               size="sm" 
               className="shadow-sm"
-              onClick={() => navigate('/publicar')}
+              onClick={handlePublicarClick}
             >
               <Building className="h-4 w-4 mr-2" />
               Publicar Propiedad
@@ -234,7 +282,7 @@ const Navbar = () => {
               size="icon" 
               variant="default" 
               className="h-9 w-9 shadow-sm"
-              onClick={() => navigate('/publicar')}
+              onClick={handlePublicarClick}
             >
               <Building className="h-5 w-5" />
             </Button>
@@ -370,6 +418,37 @@ const Navbar = () => {
           </div>
         </div>
       </div>
+
+      {/* Upgrade Dialog for Buyers */}
+      <AlertDialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Conviértete en Agente o Inmobiliaria</AlertDialogTitle>
+            <AlertDialogDescription>
+              Para publicar propiedades necesitas cambiar tu tipo de cuenta a agente o inmobiliaria.
+              Puedes hacerlo desde tu configuración o ver los planes disponibles.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setShowUpgradeDialog(false);
+                navigate('/configuracion?section=account');
+              }}
+            >
+              Cambiar Tipo de Cuenta
+            </Button>
+            <AlertDialogAction onClick={() => {
+              setShowUpgradeDialog(false);
+              navigate('/publicar');
+            }}>
+              Ver Planes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </nav>
   );
 };
