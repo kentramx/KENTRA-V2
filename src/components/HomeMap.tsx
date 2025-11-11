@@ -174,37 +174,25 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
   }
 
   return (
-    <div className="relative w-full" style={{ height }}>
-      {/* Contador de resultados sobre el mapa */}
-      <div className="absolute top-4 left-4 z-10 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border">
-        <p className="text-sm font-medium">
-          <span className="font-bold text-lg text-foreground">{properties.length}</span>
-          <span className="text-muted-foreground ml-1">
-            {properties.length === 1 ? 'propiedad' : 'propiedades'}
-          </span>
-        </p>
-      </div>
-
-      <BasicGoogleMap
-        center={mapCenter}
-        zoom={mapZoom}
-        markers={mapMarkers}
-        height={height}
-        className="h-full w-full"
-        onMarkerClick={handleMarkerClick}
-        onFavoriteClick={handleFavoriteClick}
-        disableAutoFit={!hasActiveFilters || !!searchCoordinates}
-        hoveredMarkerId={hoveredProperty?.id || null}
-        onMarkerHover={(markerId) => {
-          if (markerId) {
-            const property = properties.find(p => p.id === markerId);
-            setHoveredProperty(property || null);
-          } else {
-            setHoveredProperty(null);
-          }
-        }}
-      />
-    </div>
+    <BasicGoogleMap
+      center={mapCenter}
+      zoom={mapZoom}
+      markers={mapMarkers}
+      height={height}
+      className="h-full w-full"
+      onMarkerClick={handleMarkerClick}
+      onFavoriteClick={handleFavoriteClick}
+      disableAutoFit={!hasActiveFilters || !!searchCoordinates}
+      hoveredMarkerId={hoveredProperty?.id || null}
+      onMarkerHover={(markerId) => {
+        if (markerId) {
+          const property = properties.find(p => p.id === markerId);
+          setHoveredProperty(property || null);
+        } else {
+          setHoveredProperty(null);
+        }
+      }}
+    />
   );
 };
 
