@@ -328,8 +328,11 @@ export function BasicGoogleMap({
         }
       };
 
-      // Esperar a que el mapa esté listo
-      google.maps.event.addListenerOnce(map, 'idle', createClusterer);
+      // Intentar crear inmediatamente y añadir un fallback en 'idle' por si el mapa aún no está listo
+      createClusterer();
+      if (!clustererRef.current) {
+        google.maps.event.addListenerOnce(map, 'idle', createClusterer);
+      }
     } else {
       // Si clustering no está habilitado, agregar marcadores directamente al mapa
       markerArray.forEach(marker => marker.setMap(map));
