@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useFacebookPixel } from "@/hooks/useFacebookPixel";
 
 interface ContactPropertyDialogProps {
   property: any;
@@ -41,6 +42,7 @@ export const ContactPropertyDialog = ({
   const [reason, setReason] = useState("info");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const { trackEvent } = useFacebookPixel();
 
   const handleSend = async () => {
     if (!user) {
@@ -95,6 +97,13 @@ export const ContactPropertyDialog = ({
       });
 
       if (messageError) throw messageError;
+
+      // Track Facebook Pixel: Contact
+      trackEvent('Contact', {
+        content_name: 'Contacto sobre Propiedad',
+        content_category: 'property_inquiry',
+        content_ids: [property.id],
+      });
 
       toast.success("Mensaje enviado correctamente");
       setOpen(false);

@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Home } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: 'Correo electrónico inválido' }),
@@ -49,6 +50,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<'auth' | 'forgot' | 'reset' | 'verify'>('auth');
   const [unverifiedEmail, setUnverifiedEmail] = useState<string>('');
+  const { trackEvent } = useFacebookPixel();
 
   const redirect = searchParams.get('redirect');
   const pendingRole = searchParams.get('role');
@@ -173,6 +175,12 @@ const Auth = () => {
           variant: 'destructive',
         });
       } else {
+        // Track Facebook Pixel: CompleteRegistration
+        trackEvent('CompleteRegistration', {
+          content_name: role === 'agent' ? 'Agente' : role === 'agency' ? 'Agencia' : 'Comprador',
+          content_category: 'signup',
+        });
+
         const roleText = role === 'agent' ? 'agente inmobiliario' : role === 'agency' ? 'agencia inmobiliaria' : 'comprador';
         const actionText = pendingRole ? 'Continuemos con tu publicación' : 'Tu cuenta ha sido creada exitosamente';
         toast({

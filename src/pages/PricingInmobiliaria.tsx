@@ -10,12 +10,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Check, Info, Building2, TrendingUp, Crown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 
 const PricingInmobiliaria = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'annual'>('annual');
+  const { trackEvent } = useFacebookPixel();
 
   // Cargar preferencia de pricing desde localStorage al iniciar
   useEffect(() => {
@@ -106,6 +108,16 @@ const PricingInmobiliaria = () => {
       navigate('/auth?redirect=/pricing-inmobiliaria');
       return;
     }
+
+    // Track Facebook Pixel: InitiateCheckout
+    const plan = plans.find(p => p.id === planId);
+    const planPrice = pricingPeriod === 'annual' ? plan?.annualPrice : plan?.monthlyPrice;
+    trackEvent('InitiateCheckout', {
+      content_name: plan?.name || 'Plan Inmobiliaria',
+      content_category: 'subscription',
+      value: planPrice || 0,
+      currency: 'MXN',
+    });
 
     try {
       toast({

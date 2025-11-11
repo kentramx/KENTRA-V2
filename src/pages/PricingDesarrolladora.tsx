@@ -9,12 +9,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Check, Info, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 
 const PricingDesarrolladora = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'annual'>('annual');
+  const { trackEvent } = useFacebookPixel();
 
   // Cargar preferencia de pricing desde localStorage al iniciar
   useEffect(() => {
@@ -43,6 +45,14 @@ const PricingDesarrolladora = () => {
       navigate('/auth?redirect=/pricing-desarrolladora');
       return;
     }
+
+    // Track Facebook Pixel: Lead
+    trackEvent('Lead', {
+      content_name: 'Plan Desarrolladora',
+      content_category: 'enterprise_inquiry',
+      value: 18000,
+      currency: 'MXN',
+    });
 
     try {
       toast({

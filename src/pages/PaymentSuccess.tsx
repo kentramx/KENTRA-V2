@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Loader2, ArrowRight, Calendar, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useFacebookPixel } from '@/hooks/useFacebookPixel';
 
 interface SubscriptionDetails {
   planName: string;
@@ -26,6 +27,7 @@ const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
+  const { trackEvent } = useFacebookPixel();
 
   useEffect(() => {
     const payment = searchParams.get('payment');
@@ -58,7 +60,7 @@ const PaymentSuccess = () => {
       if (subError) throw subError;
 
       if (userSub && userSub.plan) {
-        setSubscription({
+        const subscriptionData = {
           planName: userSub.plan.name,
           planDisplayName: userSub.plan.display_name,
           price: userSub.billing_cycle === 'yearly' 
@@ -68,6 +70,16 @@ const PaymentSuccess = () => {
           currentPeriodEnd: userSub.current_period_end,
           features: userSub.plan.features,
           status: userSub.status,
+        };
+        
+        setSubscription(subscriptionData);
+
+        // Track Facebook Pixel: Purchase
+        trackEvent('Purchase', {
+          content_name: subscriptionData.planDisplayName,
+          content_category: 'subscription',
+          value: subscriptionData.price,
+          currency: 'MXN',
         });
       }
     } catch (error) {

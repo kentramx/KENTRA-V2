@@ -8,6 +8,17 @@ interface TrackWhatsAppParams {
   interactionType: WhatsAppInteractionType;
 }
 
+// Declare Facebook Pixel function
+declare global {
+  interface Window {
+    fbq?: (
+      command: string,
+      eventName: string,
+      parameters?: Record<string, any>
+    ) => void;
+  }
+}
+
 export const trackWhatsAppInteraction = async ({
   agentId,
   propertyId,
@@ -19,6 +30,15 @@ export const trackWhatsAppInteraction = async ({
     if (!user) {
       console.log('Usuario no autenticado, no se registra interacción');
       return;
+    }
+
+    // Track Facebook Pixel: Contact via WhatsApp
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'Contact', {
+        content_name: interactionType === 'contact_agent' ? 'Contacto WhatsApp Agente' : 'Compartir Propiedad WhatsApp',
+        content_category: 'whatsapp_interaction',
+        content_ids: propertyId ? [propertyId] : [],
+      });
     }
 
     const { error } = await supabase
