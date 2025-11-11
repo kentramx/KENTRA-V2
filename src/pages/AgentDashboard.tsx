@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAgentProperties } from '@/hooks/useAgentProperties';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,8 +31,15 @@ const AgentDashboard = () => {
   const [editingProperty, setEditingProperty] = useState<any>(null);
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>('');
-  const [activePropertiesCount, setActivePropertiesCount] = useState(0);
   const [featuredCount, setFeaturedCount] = useState(0);
+
+  // Fetch properties con React Query
+  const { data: allProperties = [] } = useAgentProperties(user?.id);
+  
+  // Calcular counts desde los datos
+  const activePropertiesCount = useMemo(() => {
+    return allProperties.filter(p => p.status === 'activa').length;
+  }, [allProperties]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -92,8 +100,8 @@ const AgentDashboard = () => {
         setSubscriptionInfo(subInfo[0]);
       }
 
-      // Get property counts
-      await fetchPropertyCounts();
+      // Get featured properties count
+      await fetchFeaturedCount();
     } catch (error) {
       console.error('Error checking agent status:', error);
       navigate('/');
@@ -102,21 +110,10 @@ const AgentDashboard = () => {
     }
   };
 
-  const fetchPropertyCounts = async () => {
+  const fetchFeaturedCount = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('properties')
-        .select('status, id', { count: 'exact' })
-        .eq('agent_id', user.id);
-
-      if (error) throw error;
-
-      const activeCount = data?.filter(p => p.status === 'activa').length || 0;
-      setActivePropertiesCount(activeCount);
-
-      // Get featured properties count
       const { count: featuredCountData } = await supabase
         .from('featured_properties')
         .select('*', { count: 'exact', head: true })
@@ -126,7 +123,7 @@ const AgentDashboard = () => {
 
       setFeaturedCount(featuredCountData || 0);
     } catch (error) {
-      console.error('Error fetching property counts:', error);
+      console.error('Error fetching featured count:', error);
     }
   };
 

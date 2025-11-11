@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAgentProperties } from '@/hooks/useAgentProperties';
+import { useDeleteProperty } from '@/hooks/usePropertyMutations';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -37,41 +40,29 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [properties, setProperties] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [featuredProperties, setFeaturedProperties] = useState<Set<string>>(new Set());
   const [featureProperty, setFeatureProperty] = useState<any>(null);
 
+  // Fetch properties con React Query
+  const { data: properties = [], isLoading: loading, refetch } = useAgentProperties(user?.id);
+  
+  // Mutation para delete
+  const deletePropertyMutation = useDeleteProperty();
+
   useEffect(() => {
-    fetchProperties();
+    fetchFeaturedProperties();
   }, [user]);
 
-  const fetchProperties = async () => {
+  const fetchFeaturedProperties = async () => {
+    if (!user) return;
+    
     try {
-      const { data, error } = await supabase
-        .from('properties')
-        .select(`
-          *,
-          images (
-            id,
-            url,
-            position
-          )
-        `)
-        .eq('agent_id', user?.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setProperties(data || []);
-
-      // Fetch featured properties
       const { data: featuredData } = await supabase
         .from('featured_properties')
         .select('property_id')
-        .eq('agent_id', user?.id)
+        .eq('agent_id', user.id)
         .eq('status', 'active')
         .gt('end_date', new Date().toISOString());
 
@@ -79,14 +70,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
         setFeaturedProperties(new Set(featuredData.map(f => f.property_id)));
       }
     } catch (error) {
-      console.error('Error fetching properties:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar las propiedades',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+      console.error('Error fetching featured properties:', error);
     }
   };
 
@@ -118,7 +102,9 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
         description: 'Tu propiedad ha sido renovada por 30 días más',
       });
       
-      fetchProperties();
+      // Invalidar caché de React Query
+      queryClient.invalidateQueries({ queryKey: ['agent-properties', user?.id] });
+      fetchFeaturedProperties();
     } catch (error) {
       console.error('Error renewing property:', error);
       toast({
@@ -151,7 +137,8 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
         description: `Propiedad reenviada para revisión. Te quedan ${data?.remaining_attempts || 0} intentos.`,
       });
       
-      fetchProperties();
+      // Invalidar caché de React Query
+      queryClient.invalidateQueries({ queryKey: ['agent-properties', user?.id] });
     } catch (error) {
       console.error('Error resubmitting property:', error);
       toast({
@@ -175,7 +162,8 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
         description: 'Tu propiedad ha sido reactivada exitosamente',
       });
       
-      fetchProperties();
+      // Invalidar caché de React Query
+      queryClient.invalidateQueries({ queryKey: ['agent-properties', user?.id] });
     } catch (error) {
       console.error('Error reactivating property:', error);
       toast({
@@ -189,7 +177,6 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
   const handleDelete = async () => {
     if (!deleteId) return;
 
-    setDeleting(true);
     try {
       // Get property images to delete from storage
       const property = properties.find(p => p.id === deleteId);
@@ -204,20 +191,9 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
         }
       }
 
-      // Delete property (images will cascade delete due to FK)
-      const { error } = await supabase
-        .from('properties')
-        .delete()
-        .eq('id', deleteId);
-
-      if (error) throw error;
-
-      setProperties(prev => prev.filter(p => p.id !== deleteId));
-      
-      toast({
-        title: 'Eliminado',
-        description: 'La propiedad ha sido eliminada correctamente',
-      });
+      // Delete property usando mutation
+      await deletePropertyMutation.mutateAsync(deleteId);
+      fetchFeaturedProperties();
     } catch (error) {
       console.error('Error deleting property:', error);
       toast({
@@ -226,7 +202,6 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
         variant: 'destructive',
       });
     } finally {
-      setDeleting(false);
       setDeleteId(null);
     }
   };
@@ -309,7 +284,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
                   {formatPrice(property.price)}
                 </TableCell>
                 <TableCell>
-                  {property.status === 'pendiente_aprobacion' ? (
+                  {(property.status as any) === 'pendiente_aprobacion' ? (
                     <Tooltip>
                       <TooltipTrigger>
                         <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
@@ -320,7 +295,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
                         Tu propiedad está siendo revisada por un administrador
                       </TooltipContent>
                     </Tooltip>
-                  ) : property.status === 'pausada' && property.rejection_reason ? (
+                  ) : property.status === 'pausada' && (property as any).rejection_reason ? (
                     <Tooltip>
                       <TooltipTrigger>
                         <Badge variant="destructive">
@@ -328,12 +303,12 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
                         </Badge>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p className="font-semibold">{property.rejection_reason.label}</p>
-                        {property.rejection_reason.details && (
-                          <p className="text-xs mt-1">{property.rejection_reason.details}</p>
+                        <p className="font-semibold">{(property as any).rejection_reason.label}</p>
+                        {(property as any).rejection_reason.details && (
+                          <p className="text-xs mt-1">{(property as any).rejection_reason.details}</p>
                         )}
                         <p className="text-xs mt-2 text-muted-foreground">
-                          Reenvíos: {property.resubmission_count || 0}/3
+                          Reenvíos: {(property as any).resubmission_count || 0}/3
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -397,7 +372,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
                       variant="ghost"
                       size="icon"
                       onClick={() => onEdit(property)}
-                      disabled={property.status === 'pendiente_aprobacion'}
+                      disabled={(property.status as any) === 'pendiente_aprobacion'}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -405,24 +380,24 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
                       variant="ghost"
                       size="icon"
                       onClick={() => setDeleteId(property.id)}
-                      disabled={property.status === 'pendiente_aprobacion'}
+                      disabled={(property.status as any) === 'pendiente_aprobacion'}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                     
-                    {property.status === 'pausada' && property.rejection_reason && (
+                    {property.status === 'pausada' && (property as any).rejection_reason && (
                       <Button
                         variant="default"
                         size="sm"
                         onClick={() => handleResubmitProperty(property.id)}
-                        disabled={property.resubmission_count >= 3}
+                        disabled={(property as any).resubmission_count >= 3}
                       >
                         <RefreshCw className="h-3 w-3 mr-1" />
-                        Reenviar ({3 - (property.resubmission_count || 0)})
+                        Reenviar ({3 - ((property as any).resubmission_count || 0)})
                       </Button>
                     )}
                     
-                    {property.status === 'pausada' && !property.rejection_reason && (
+                    {property.status === 'pausada' && !(property as any).rejection_reason && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -443,7 +418,10 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
         property={featureProperty}
         open={!!featureProperty}
         onOpenChange={(open) => !open && setFeatureProperty(null)}
-        onSuccess={fetchProperties}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['agent-properties', user?.id] });
+          fetchFeaturedProperties();
+        }}
         subscriptionInfo={subscriptionInfo}
       />
 
@@ -457,13 +435,13 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={deletePropertyMutation.isPending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={deletePropertyMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? (
+              {deletePropertyMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Eliminando...

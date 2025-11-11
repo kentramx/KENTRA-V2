@@ -11,9 +11,10 @@ export const useAgentProperties = (agentId: string | undefined, statusFilter?: s
         .from('properties')
         .select(`
           id, title, price, bedrooms, bathrooms, type, listing_type,
-          status, created_at, expires_at, last_renewed_at,
-          ai_moderation_score, ai_moderation_status,
-          images (url, position)
+          status, created_at, expires_at, last_renewed_at, address,
+          state, municipality, sqft, parking, description, video_url,
+          ai_moderation_score, ai_moderation_status, agent_id,
+          images (id, url, position)
         `)
         .eq('agent_id', agentId)
         .order('created_at', { ascending: false });
