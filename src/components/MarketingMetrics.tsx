@@ -116,15 +116,46 @@ export const MarketingMetrics = () => {
         end_date: endDate.toISOString(),
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching marketing metrics:", error);
+        throw error;
+      }
 
-      setMetrics(data as unknown as MetricsData);
+      // Validar y normalizar datos
+      const rawData = data as any;
+      const normalizedData: MetricsData = {
+        total_events: rawData?.total_events || 0,
+        conversions: rawData?.conversions || 0,
+        total_value: rawData?.total_value || 0,
+        events_by_type: rawData?.events_by_type || [],
+        daily_trend: rawData?.daily_trend || [],
+        funnel_data: rawData?.funnel_data || {
+          view_content: 0,
+          initiate_checkout: 0,
+          purchase: 0,
+        },
+      };
+
+      setMetrics(normalizedData);
     } catch (error) {
       console.error("Error fetching marketing metrics:", error);
       toast({
         title: "Error",
         description: "No se pudieron cargar las métricas de marketing",
         variant: "destructive",
+      });
+      // Establecer métricas vacías en caso de error
+      setMetrics({
+        total_events: 0,
+        conversions: 0,
+        total_value: 0,
+        events_by_type: [],
+        daily_trend: [],
+        funnel_data: {
+          view_content: 0,
+          initiate_checkout: 0,
+          purchase: 0,
+        },
       });
     } finally {
       setLoading(false);
