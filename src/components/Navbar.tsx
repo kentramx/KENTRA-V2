@@ -252,12 +252,14 @@ const Navbar = () => {
                         Configuración
                       </DropdownMenuItem>
                     </Link>
-                    <Link to="/panel-agente">
-                      <DropdownMenuItem className="cursor-pointer">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Mis Propiedades
-                    </DropdownMenuItem>
-                  </Link>
+                    {(userRole === 'agent' || userRole === 'agency') && (
+                      <Link to={userRole === 'agency' ? '/panel-inmobiliaria' : '/panel-agente'}>
+                        <DropdownMenuItem className="cursor-pointer">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          {userRole === 'agency' ? 'Panel de Inmobiliaria' : 'Mis Propiedades'}
+                        </DropdownMenuItem>
+                      </Link>
+                    )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
@@ -404,12 +406,14 @@ const Navbar = () => {
                         Mi Perfil
                       </DropdownMenuItem>
                     </Link>
-                    <Link to="/panel-agente">
-                      <DropdownMenuItem className="cursor-pointer">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Mis Propiedades
-                      </DropdownMenuItem>
-                    </Link>
+                    {(userRole === 'agent' || userRole === 'agency') && (
+                      <Link to={userRole === 'agency' ? '/panel-inmobiliaria' : '/panel-agente'}>
+                        <DropdownMenuItem className="cursor-pointer">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          {userRole === 'agency' ? 'Panel de Inmobiliaria' : 'Mis Propiedades'}
+                        </DropdownMenuItem>
+                      </Link>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
