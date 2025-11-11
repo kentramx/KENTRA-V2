@@ -283,13 +283,10 @@ export function BasicGoogleMap({
     // Convertir Map a Array para el clusterer
     const markerArray = Array.from(markerRefs.current.values());
 
-    // Si clustering está habilitado, crear el clusterer
-    // Esperar a que el mapa esté completamente listo antes de crear el clusterer
+    // Si clustering está habilitado, crear el clusterer de forma robusta (sin depender solo de 'idle')
     if (enableClustering && markerArray.length > 0) {
-      // Usar idle event para asegurar que el mapa está completamente inicializado
       const createClusterer = () => {
         if (!mapRef.current) return;
-        
         try {
           clustererRef.current = new MarkerClusterer({
             map: mapRef.current,
@@ -297,9 +294,7 @@ export function BasicGoogleMap({
             algorithm: new GridAlgorithm({ maxZoom: 15 }),
             renderer: {
               render: ({ count, position }) => {
-                // Personalizar el aspecto del cluster
                 const color = count > 50 ? '#e11d48' : count > 20 ? '#f97316' : count > 10 ? '#eab308' : '#0ea5e9';
-                
                 return new google.maps.Marker({
                   position,
                   icon: {
@@ -328,8 +323,14 @@ export function BasicGoogleMap({
         }
       };
 
-      // Esperar a que el mapa esté listo
-      google.maps.event.addListenerOnce(map, 'idle', createClusterer);
+      // Crear inmediatamente
+      createClusterer();
+      // Y como respaldo, volver a intentar en el próximo 'idle' si aún no existe
+      google.maps.event.addListenerOnce(map, 'idle', () => {
+        if (!clustererRef.current) {
+          createClusterer();
+        }
+      });
     } else {
       // Si clustering no está habilitado, agregar marcadores directamente al mapa
       markerArray.forEach(marker => marker.setMap(map));
