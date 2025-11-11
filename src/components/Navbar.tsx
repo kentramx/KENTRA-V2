@@ -203,12 +203,20 @@ const Navbar = () => {
                           </Link>
                         )}
                         {isSuperAdmin && (
-                          <Link to="/admin/kpis">
-                            <DropdownMenuItem className="cursor-pointer">
-                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
-                              KPIs de Negocio
-                            </DropdownMenuItem>
-                          </Link>
+                          <>
+                            <Link to="/admin/kpis">
+                              <DropdownMenuItem className="cursor-pointer">
+                                <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                                KPIs de Negocio
+                              </DropdownMenuItem>
+                            </Link>
+                            <Link to="/admin/marketing">
+                              <DropdownMenuItem className="cursor-pointer">
+                                <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                                Dashboard de Marketing
+                              </DropdownMenuItem>
+                            </Link>
+                          </>
                         )}
                         {isSuperAdmin && (
                           <Link to="/admin/roles">
@@ -353,12 +361,20 @@ const Navbar = () => {
                           </Link>
                         )}
                         {isSuperAdmin && (
-                          <Link to="/admin/kpis">
-                            <DropdownMenuItem className="cursor-pointer">
-                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
-                              KPIs de Negocio
-                            </DropdownMenuItem>
-                          </Link>
+                          <>
+                            <Link to="/admin/kpis">
+                              <DropdownMenuItem className="cursor-pointer">
+                                <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                                KPIs de Negocio
+                              </DropdownMenuItem>
+                            </Link>
+                            <Link to="/admin/marketing">
+                              <DropdownMenuItem className="cursor-pointer">
+                                <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                                Dashboard de Marketing
+                              </DropdownMenuItem>
+                            </Link>
+                          </>
                         )}
                         {isSuperAdmin && (
                           <Link to="/admin/roles">
