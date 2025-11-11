@@ -7,7 +7,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { NotificationPermissionBanner } from "@/components/NotificationPermissionBanner";
 import { useTracking } from "@/hooks/useTracking";
 import Home from "./pages/Home";
 import PropertyDetail from "./pages/PropertyDetail";
@@ -116,7 +115,6 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <NotificationPermissionBanner />
         <MapPreloader />
         <BrowserRouter>
           <AuthProvider>
