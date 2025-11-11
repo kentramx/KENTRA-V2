@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import BasicGoogleMap from "@/components/BasicGoogleMap";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface Property {
   id: string;
@@ -23,6 +25,11 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
   const navigate = useNavigate();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [hoveredProperty, setHoveredProperty] = useState<Property | null>(null);
+  const searchCoordinates: { lat: number; lng: number } | null = null;
+  const hasActiveFilters = false;
 
   // Fetch de propiedades - IDÉNTICO a Buscar.tsx
   useEffect(() => {
@@ -75,23 +82,81 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
       address: p.address,
     }));
 
-  // Centro del mapa - IDÉNTICO a Buscar.tsx (sin filtros activos)
-  const mapCenter = mapMarkers.length > 0
-    ? { lat: 23.6345, lng: -102.5528 } // Centro geográfico de México
-    : { lat: 23.6345, lng: -102.5528 };
+  // Centro del mapa y zoom - lógicos idénticos a Buscar.tsx
+  const mapCenter = searchCoordinates
+    ? searchCoordinates
+    : (hoveredProperty && hoveredProperty.lat && hoveredProperty.lng
+        ? { lat: hoveredProperty.lat, lng: hoveredProperty.lng }
+        : (hasActiveFilters && mapMarkers.length > 0
+            ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
+            : { lat: 23.6345, lng: -102.5528 }));
 
-  // Zoom del mapa - IDÉNTICO a Buscar.tsx (sin filtros = vista completa de México)
-  const mapZoom = 5; // Vista completa de México
+  const mapZoom = searchCoordinates 
+    ? 12 
+    : (hoveredProperty 
+        ? 14 
+        : (hasActiveFilters 
+            ? 12 
+            : 5));
 
   const handleMarkerClick = (id: string) => {
     navigate(`/propiedad/${id}`);
   };
 
   const handleFavoriteClick = async (propertyId: string) => {
-    // Esta función no se usa en Home, pero la dejamos para compatibilidad
-    console.log('Favorite clicked:', propertyId);
-  };
+    if (!user) {
+      toast({
+        title: 'Inicia sesión',
+        description: 'Debes iniciar sesión para agregar favoritos',
+        variant: 'destructive',
+      });
+      return;
+    }
 
+    try {
+      // Verificar si ya está en favoritos
+      const { data: existing } = await supabase
+        .from('favorites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('property_id', propertyId)
+        .maybeSingle();
+
+      if (existing) {
+        // Eliminar de favoritos
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('id', existing.id);
+
+        if (error) throw error;
+
+        toast({
+          title: 'Eliminado de favoritos',
+          description: 'La propiedad se eliminó de tus favoritos',
+        });
+      } else {
+        // Agregar a favoritos
+        const { error } = await supabase
+          .from('favorites')
+          .insert([{ user_id: user.id, property_id: propertyId }]);
+
+        if (error) throw error;
+
+        toast({
+          title: '⭐ Agregado a favoritos',
+          description: 'La propiedad se agregó a tus favoritos',
+        });
+      }
+    } catch (error) {
+      console.error('Error managing favorite:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar favoritos',
+        variant: 'destructive',
+      });
+    }
+  };
   if (loading) {
     return (
       <div className="flex items-center justify-center rounded-lg bg-muted/20" style={{ height }}>
@@ -117,8 +182,16 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
       className="h-full w-full"
       onMarkerClick={handleMarkerClick}
       onFavoriteClick={handleFavoriteClick}
-      disableAutoFit={false}
-      hoveredMarkerId={null}
+      disableAutoFit={!hasActiveFilters || !!searchCoordinates}
+      hoveredMarkerId={hoveredProperty?.id || null}
+      onMarkerHover={(markerId) => {
+        if (markerId) {
+          const property = properties.find(p => p.id === markerId);
+          setHoveredProperty(property || null);
+        } else {
+          setHoveredProperty(null);
+        }
+      }}
     />
   );
 };
