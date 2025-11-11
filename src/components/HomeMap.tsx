@@ -28,8 +28,6 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [hoveredProperty, setHoveredProperty] = useState<Property | null>(null);
-  const searchCoordinates: { lat: number; lng: number } | null = null;
-  const hasActiveFilters = false;
 
   // Fetch de propiedades - IDÉNTICO a Buscar.tsx
   useEffect(() => {
@@ -82,22 +80,12 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
       address: p.address,
     }));
 
-  // Centro del mapa y zoom - lógicos idénticos a Buscar.tsx
-  const mapCenter = searchCoordinates
-    ? searchCoordinates
-    : (hoveredProperty && hoveredProperty.lat && hoveredProperty.lng
-        ? { lat: hoveredProperty.lat, lng: hoveredProperty.lng }
-        : (hasActiveFilters && mapMarkers.length > 0
-            ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
-            : { lat: 23.6345, lng: -102.5528 }));
+  // Centro del mapa y zoom - centrado en México
+  const mapCenter = hoveredProperty && hoveredProperty.lat && hoveredProperty.lng
+    ? { lat: hoveredProperty.lat, lng: hoveredProperty.lng }
+    : { lat: 23.6345, lng: -102.5528 };
 
-  const mapZoom = searchCoordinates 
-    ? 12 
-    : (hoveredProperty 
-        ? 14 
-        : (hasActiveFilters 
-            ? 12 
-            : 5));
+  const mapZoom = hoveredProperty ? 14 : 5;
 
   const handleMarkerClick = (id: string) => {
     navigate(`/propiedad/${id}`);
@@ -182,7 +170,7 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
       className="h-full w-full"
       onMarkerClick={handleMarkerClick}
       onFavoriteClick={handleFavoriteClick}
-      disableAutoFit={!hasActiveFilters || !!searchCoordinates}
+      disableAutoFit={true}
       hoveredMarkerId={hoveredProperty?.id || null}
       onMarkerHover={(markerId) => {
         if (markerId) {
