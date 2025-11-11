@@ -13,7 +13,7 @@ import PropertyCard from "@/components/PropertyCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { NewsletterForm } from "@/components/NewsletterForm";
-import BasicGoogleMap from "@/components/BasicGoogleMap";
+import HomeMap from "@/components/HomeMap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -387,38 +387,7 @@ const Home = () => {
                 </TabsContent>
                 
                 <TabsContent value="map" className="mt-4">
-                  {featuredProperties.length === 0 ? (
-                    <div className="flex items-center justify-center h-[450px] bg-muted/20 rounded-lg">
-                      <p className="text-muted-foreground">No hay propiedades para mostrar en el mapa</p>
-                    </div>
-                  ) : (
-                    <BasicGoogleMap
-                      center={
-                        featuredProperties.find(p => p.lat && p.lng)
-                          ? { lat: featuredProperties.find(p => p.lat && p.lng)!.lat!, lng: featuredProperties.find(p => p.lat && p.lng)!.lng! }
-                          : { lat: 23.6345, lng: -102.5528 }
-                      }
-                      zoom={6}
-                      height="450px"
-                      markers={featuredProperties
-                        .filter(p => p.lat && p.lng)
-                        .map(p => ({
-                          id: p.id,
-                          lat: p.lat!,
-                          lng: p.lng!,
-                          title: p.title,
-                          price: p.price,
-                          bedrooms: p.bedrooms,
-                          bathrooms: p.bathrooms,
-                          images: p.images,
-                          listing_type: p.listing_type as 'venta' | 'renta',
-                          address: `${p.address}, ${p.municipality}, ${p.state}`,
-                        }))}
-                      enableClustering={true}
-                      onMarkerClick={(markerId) => navigate(`/propiedad/${markerId}`)}
-                      disableAutoFit={false}
-                    />
-                  )}
+                  <HomeMap height="450px" />
                 </TabsContent>
               </Tabs>
             </div>
