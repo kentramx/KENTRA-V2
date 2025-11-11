@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Phone, Info } from "lucide-react";
+import { Phone, Info, Globe } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { whatsappSchema, type WhatsAppFormData, formatPhoneDisplay } from "@/utils/whatsapp";
+import { whatsappSchema, type WhatsAppFormData, formatPhoneDisplay, formatWhatsAppNumber } from "@/utils/whatsapp";
+import { COUNTRY_CODES, detectCountryFromNumber, extractLocalNumber, getCountryByCode } from "@/data/countryCodes";
 
 interface WhatsAppConfigSectionProps {
   userId: string;
@@ -24,6 +26,15 @@ interface WhatsAppConfigSectionProps {
 export const WhatsAppConfigSection = ({ userId, initialData }: WhatsAppConfigSectionProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
+  // Detectar país del número inicial
+  const initialCountryCode = initialData?.whatsapp_number 
+    ? detectCountryFromNumber(initialData.whatsapp_number)
+    : "MX";
+  
+  const initialLocalNumber = initialData?.whatsapp_number
+    ? extractLocalNumber(initialData.whatsapp_number, initialCountryCode)
+    : "";
+
   const {
     register,
     handleSubmit,
@@ -33,7 +44,8 @@ export const WhatsAppConfigSection = ({ userId, initialData }: WhatsAppConfigSec
   } = useForm<WhatsAppFormData>({
     resolver: zodResolver(whatsappSchema),
     defaultValues: {
-      whatsapp_number: initialData?.whatsapp_number || "",
+      country_code: initialCountryCode,
+      whatsapp_number: initialLocalNumber,
       whatsapp_enabled: initialData?.whatsapp_enabled ?? true,
       whatsapp_business_hours: initialData?.whatsapp_business_hours || ""
     }
@@ -41,15 +53,20 @@ export const WhatsAppConfigSection = ({ userId, initialData }: WhatsAppConfigSec
 
   const whatsappEnabled = watch("whatsapp_enabled");
   const currentNumber = watch("whatsapp_number");
+  const currentCountryCode = watch("country_code");
+  const selectedCountry = getCountryByCode(currentCountryCode);
 
   const onSubmit = async (data: WhatsAppFormData) => {
     setIsLoading(true);
 
     try {
+      // Formatear el número completo con código de país
+      const fullNumber = formatWhatsAppNumber(data.whatsapp_number, data.country_code);
+      
       const { error } = await supabase
         .from("profiles")
         .update({
-          whatsapp_number: data.whatsapp_number,
+          whatsapp_number: fullNumber,
           whatsapp_enabled: data.whatsapp_enabled,
           whatsapp_business_hours: data.whatsapp_business_hours || null
         })
@@ -89,27 +106,70 @@ export const WhatsAppConfigSection = ({ userId, initialData }: WhatsAppConfigSec
 
           <div className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="country_code" className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                País
+              </Label>
+              <Select
+                value={currentCountryCode}
+                onValueChange={(value) => setValue("country_code", value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="country_code">
+                  <SelectValue placeholder="Selecciona un país" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {COUNTRY_CODES.map((country) => (
+                    <SelectItem key={country.code} value={country.code}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{country.flag}</span>
+                        <span>{country.name}</span>
+                        <span className="text-muted-foreground text-sm">({country.dialCode})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="whatsapp_number">
                 Número de WhatsApp <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="whatsapp_number"
-                type="tel"
-                placeholder="5512345678"
-                {...register("whatsapp_number")}
-                disabled={isLoading}
-                className={errors.whatsapp_number ? "border-destructive" : ""}
-              />
+              <div className="flex gap-2">
+                <div className="flex items-center justify-center bg-muted px-3 rounded-l-md border border-r-0 min-w-[70px]">
+                  <span className="text-sm font-medium flex items-center gap-1">
+                    <span className="text-base">{selectedCountry.flag}</span>
+                    <span>{selectedCountry.dialCode}</span>
+                  </span>
+                </div>
+                <Input
+                  id="whatsapp_number"
+                  type="tel"
+                  placeholder={selectedCountry.placeholder}
+                  {...register("whatsapp_number")}
+                  disabled={isLoading}
+                  className={errors.whatsapp_number ? "border-destructive rounded-l-none" : "rounded-l-none"}
+                />
+              </div>
               {errors.whatsapp_number && (
                 <p className="text-sm text-destructive">{errors.whatsapp_number.message}</p>
               )}
               <p className="text-sm text-muted-foreground">
-                Ingresa tu número de 10 dígitos sin espacios ni guiones
+                {selectedCountry.minLength === selectedCountry.maxLength 
+                  ? `Ingresa ${selectedCountry.minLength} dígitos sin espacios ni guiones`
+                  : `Ingresa entre ${selectedCountry.minLength} y ${selectedCountry.maxLength} dígitos`
+                }
               </p>
-              {currentNumber && !errors.whatsapp_number && (
-                <p className="text-sm text-muted-foreground">
-                  Formato: {formatPhoneDisplay(currentNumber)}
-                </p>
+              {currentNumber && !errors.whatsapp_number && currentNumber.length >= selectedCountry.minLength && (
+                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Formato completo: <span className="font-medium text-foreground">
+                      {formatPhoneDisplay(formatWhatsAppNumber(currentNumber, currentCountryCode), currentCountryCode)}
+                    </span>
+                  </p>
+                </div>
               )}
             </div>
 

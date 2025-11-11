@@ -1,73 +1,82 @@
 import { z } from 'zod';
+import { getCountryByCode } from '@/data/countryCodes';
 
 /**
- * Schema de validación para número de WhatsApp mexicano
+ * Schema de validación para número de WhatsApp internacional
  */
 export const whatsappSchema = z.object({
+  country_code: z.string().default("MX"),
   whatsapp_number: z.string()
     .trim()
-    .regex(/^(\+?52)?[1-9]\d{9}$/, {
-      message: "Ingresa un número válido de 10 dígitos (ejemplo: 5512345678)"
-    })
-    .transform(val => {
-      // Remover cualquier carácter que no sea número
-      const cleaned = val.replace(/\D/g, '');
-      // Si empieza con 52, removerlo para normalizarlo
-      return cleaned.startsWith('52') ? cleaned.slice(2) : cleaned;
+    .min(1, "El número de WhatsApp es requerido")
+    .refine((val) => {
+      // Solo números permitidos
+      return /^\d+$/.test(val.replace(/\D/g, ''));
+    }, {
+      message: "Solo se permiten números"
     }),
   whatsapp_enabled: z.boolean().default(true),
   whatsapp_business_hours: z.string().max(100).optional()
+}).refine((data) => {
+  // Validar según el país seleccionado
+  const country = getCountryByCode(data.country_code);
+  const cleaned = data.whatsapp_number.replace(/\D/g, '');
+  
+  // Verificar longitud
+  if (cleaned.length < country.minLength || cleaned.length > country.maxLength) {
+    return false;
+  }
+  
+  // Verificar patrón específico del país
+  return country.pattern.test(cleaned);
+}, (data) => {
+  const country = getCountryByCode(data.country_code);
+  return {
+    message: `Número inválido para ${country.name}. ${
+      country.minLength === country.maxLength 
+        ? `Debe tener ${country.minLength} dígitos` 
+        : `Debe tener entre ${country.minLength} y ${country.maxLength} dígitos`
+    }`,
+    path: ["whatsapp_number"]
+  };
 });
 
 export type WhatsAppFormData = z.infer<typeof whatsappSchema>;
 
 /**
- * Formatea un número de teléfono mexicano para WhatsApp
- * @param number - Número de teléfono (puede incluir o no el código de país)
- * @returns Número formateado con código de país +52
+ * Formatea un número de teléfono para WhatsApp con código de país
+ * @param number - Número de teléfono local (sin código de país)
+ * @param countryCode - Código del país (ej: "MX", "US", "ES")
+ * @returns Número formateado con código de país
  */
-export const formatWhatsAppNumber = (number: string): string => {
+export const formatWhatsAppNumber = (number: string, countryCode: string = "MX"): string => {
   if (!number) return '';
   
-  // Remover todos los caracteres no numéricos
+  const country = getCountryByCode(countryCode);
   const cleaned = number.replace(/\D/g, '');
   
-  // Si ya tiene el código de país 52, retornarlo con +
-  if (cleaned.startsWith('52') && cleaned.length === 12) {
-    return `+${cleaned}`;
-  }
-  
-  // Si es un número de 10 dígitos, agregar +52
-  if (cleaned.length === 10) {
-    return `+52${cleaned}`;
-  }
-  
-  // Si no cumple con el formato esperado, retornar vacío
-  return '';
+  return `${country.dialCode}${cleaned}`;
 };
 
 /**
- * Valida si un número es un teléfono mexicano válido
- * @param number - Número a validar
+ * Valida si un número es válido para el país especificado
+ * @param number - Número a validar (local, sin código de país)
+ * @param countryCode - Código del país
  * @returns true si es válido, false si no
  */
-export const isValidMexicanPhone = (number: string): boolean => {
+export const isValidPhoneForCountry = (number: string, countryCode: string): boolean => {
   if (!number) return false;
   
+  const country = getCountryByCode(countryCode);
   const cleaned = number.replace(/\D/g, '');
   
-  // Debe ser 10 dígitos (sin código de país) o 12 dígitos (con 52)
-  if (cleaned.length === 10) {
-    // No debe empezar con 0 o 1
-    return /^[2-9]\d{9}$/.test(cleaned);
+  // Verificar longitud
+  if (cleaned.length < country.minLength || cleaned.length > country.maxLength) {
+    return false;
   }
   
-  if (cleaned.length === 12 && cleaned.startsWith('52')) {
-    const localNumber = cleaned.slice(2);
-    return /^[2-9]\d{9}$/.test(localNumber);
-  }
-  
-  return false;
+  // Verificar patrón específico del país
+  return country.pattern.test(cleaned);
 };
 
 /**
@@ -94,17 +103,55 @@ export const getWhatsAppUrl = (phoneNumber: string, message: string): string => 
 };
 
 /**
- * Formatea un número para mostrar en UI (con guiones)
- * @param number - Número a formatear
- * @returns Número formateado para mostrar (ej: +52 55-1234-5678)
+ * Formatea un número para mostrar en UI con formato apropiado
+ * @param number - Número completo con código de país o número local
+ * @param countryCode - Código del país (opcional, se detectará si no se proporciona)
+ * @returns Número formateado para mostrar
  */
-export const formatPhoneDisplay = (number: string): string => {
-  const formatted = formatWhatsAppNumber(number);
+export const formatPhoneDisplay = (number: string, countryCode?: string): string => {
+  if (!number) return '';
   
-  if (!formatted || formatted.length !== 13) return number;
+  const cleaned = number.replace(/\D/g, '');
   
-  // +52 XX-XXXX-XXXX
-  return `${formatted.slice(0, 3)} ${formatted.slice(3, 5)}-${formatted.slice(5, 9)}-${formatted.slice(9)}`;
+  // Detectar país si no se proporciona
+  let detectedCountry = countryCode;
+  if (!detectedCountry) {
+    // Intentar detectar del número completo
+    if (cleaned.startsWith('52') && cleaned.length === 12) {
+      detectedCountry = 'MX';
+    } else if (cleaned.startsWith('1') && cleaned.length === 11) {
+      detectedCountry = 'US';
+    } else if (cleaned.startsWith('34') && cleaned.length === 11) {
+      detectedCountry = 'ES';
+    } else {
+      detectedCountry = 'MX'; // Default
+    }
+  }
+  
+  const country = getCountryByCode(detectedCountry);
+  const dialCode = country.dialCode;
+  
+  // Extraer número local
+  let localNumber = cleaned;
+  const prefix = dialCode.replace('+', '');
+  if (cleaned.startsWith(prefix)) {
+    localNumber = cleaned.slice(prefix.length);
+  }
+  
+  // Formatear según el país
+  if (country.code === 'MX' && localNumber.length === 10) {
+    // +52 55-1234-5678
+    return `${dialCode} ${localNumber.slice(0, 2)}-${localNumber.slice(2, 6)}-${localNumber.slice(6)}`;
+  } else if ((country.code === 'US' || country.code === 'CA') && localNumber.length === 10) {
+    // +1 (202) 555-1234
+    return `${dialCode} (${localNumber.slice(0, 3)}) ${localNumber.slice(3, 6)}-${localNumber.slice(6)}`;
+  } else if (country.code === 'ES' && localNumber.length === 9) {
+    // +34 612 34 56 78
+    return `${dialCode} ${localNumber.slice(0, 3)} ${localNumber.slice(3, 5)} ${localNumber.slice(5, 7)} ${localNumber.slice(7)}`;
+  } else {
+    // Formato genérico: +XX XXXXXXXXX
+    return `${dialCode} ${localNumber}`;
+  }
 };
 
 /**
