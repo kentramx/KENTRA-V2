@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { getWhatsAppUrl, WhatsAppTemplates } from "@/utils/whatsapp";
 import Navbar from "@/components/Navbar";
 import PropertyCard from "@/components/PropertyCard";
 import { AgentReviews } from "@/components/AgentReviews";
@@ -19,6 +21,7 @@ import {
   Mail,
   CheckCircle2,
   Loader2,
+  MessageCircle,
 } from "lucide-react";
 
 interface BadgeData {
@@ -42,6 +45,7 @@ interface AgentStats {
 const AgentProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [agent, setAgent] = useState<any>(null);
   const [properties, setProperties] = useState<any[]>([]);
   const [badges, setBadges] = useState<BadgeData[]>([]);
@@ -214,16 +218,56 @@ const AgentProfile = () => {
                 )}
 
                 <div className="flex flex-wrap gap-3">
-                  {agent.phone && (
-                    <Button variant="outline" size="sm">
-                      <Phone className="mr-2 h-4 w-4" />
-                      {agent.phone}
+                  {/* Usuarios NO autenticados */}
+                  {!user && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => navigate('/auth?redirect=' + window.location.pathname)}
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      Iniciar sesión para contactar
                     </Button>
                   )}
-                  <Button variant="outline" size="sm">
-                    <Mail className="mr-2 h-4 w-4" />
-                    Contactar
-                  </Button>
+
+                  {/* Usuarios autenticados: WhatsApp */}
+                  {user && agent.whatsapp_number && agent.whatsapp_enabled && (
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      onClick={() => {
+                        const whatsappUrl = getWhatsAppUrl(
+                          agent.whatsapp_number,
+                          WhatsAppTemplates.agent(agent.name)
+                        );
+                        window.open(whatsappUrl, '_blank');
+                      }}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      WhatsApp
+                    </Button>
+                  )}
+
+                  {/* Usuarios autenticados: Teléfono directo */}
+                  {user && agent.phone && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(`tel:${agent.phone}`, '_self')}
+                    >
+                      <Phone className="mr-2 h-4 w-4" />
+                      Llamar: {agent.phone}
+                    </Button>
+                  )}
+
+                  {/* Usuarios autenticados: Mensaje interno */}
+                  {user && (
+                    <Button variant="outline" size="sm">
+                      <Mail className="mr-2 h-4 w-4" />
+                      Mensaje Interno
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
