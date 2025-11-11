@@ -101,8 +101,7 @@ const DirectorioAgentes = () => {
           city,
           is_verified,
           logo_url,
-          owner_id,
-          agency_agents!inner(agent_id)
+          owner_id
         `);
 
       const [agentsResult, agenciesResult] = await Promise.all([
@@ -200,20 +199,24 @@ const DirectorioAgentes = () => {
       // Process agencies
       const processedAgencies: AgentData[] = await Promise.all(
         (agenciesResult.data || []).map(async (agency: any) => {
-          const agentIds = agency.agency_agents?.map((aa: any) => aa.agent_id) || [];
-          
-          // Fetch properties for agency agents
+          // Fetch properties for this agency directly by agency_id
           const { data: properties } = await supabase
             .from("properties")
             .select("id, status, agent_id")
-            .in("agent_id", agentIds)
+            .eq("agency_id", agency.id)
             .eq("status", "activa");
 
-          // Fetch reviews for agency agents
-          const { data: reviews } = await supabase
-            .from("agent_reviews")
-            .select("rating")
-            .in("agent_id", agentIds);
+          // Derive unique agent ids from properties to fetch reviews
+          const agentIdsForReviews = Array.from(new Set((properties || []).map((p: any) => p.agent_id))).filter(Boolean);
+
+          let reviews: any[] = [];
+          if (agentIdsForReviews.length > 0) {
+            const { data: reviewsData } = await supabase
+              .from("agent_reviews")
+              .select("rating")
+              .in("agent_id", agentIdsForReviews);
+            reviews = reviewsData || [];
+          }
 
           const activeProperties = properties?.length || 0;
           const avgRating = reviews && reviews.length > 0
