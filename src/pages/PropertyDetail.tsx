@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useProperty } from "@/hooks/useProperty";
+import { useSimilarProperties } from "@/hooks/useSimilarProperties";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,16 +58,21 @@ const PropertyDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [property, setProperty] = useState<any>(null);
-  const [agent, setAgent] = useState<any>(null);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [reviewsKey, setReviewsKey] = useState(0);
-  const [similarProperties, setSimilarProperties] = useState<any[]>([]);
-  const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [agentStats, setAgentStats] = useState<any>(null);
   const { toast } = useToast();
   const { addToCompare, isInCompare, removeFromCompare } = usePropertyCompare();
+
+  // Fetch con React Query
+  const { data: property, isLoading: loading, error: propertyError } = useProperty(id);
+  const agent = property?.agent;
+  const { data: similarProperties = [], isLoading: loadingSimilar } = useSimilarProperties(
+    id,
+    property?.type,
+    property?.state,
+    4
+  );
 
   const handleReviewSubmitted = () => {
     setReviewsKey(prev => prev + 1);
@@ -73,13 +80,29 @@ const PropertyDetail = () => {
 
   useEffect(() => {
     if (id) {
-      fetchProperty();
       trackPropertyView();
       if (user) {
         checkFavorite();
       }
     }
   }, [id, user]);
+
+  useEffect(() => {
+    if (property?.agent_id) {
+      fetchAgentStats(property.agent_id);
+    }
+  }, [property?.agent_id]);
+
+  useEffect(() => {
+    if (propertyError) {
+      toast({
+        title: "Error",
+        description: "No se pudo cargar la propiedad",
+        variant: "destructive",
+      });
+      navigate("/buscar");
+    }
+  }, [propertyError]);
 
   const trackPropertyView = async () => {
     try {
@@ -206,80 +229,6 @@ const PropertyDetail = () => {
     }
   };
 
-  const fetchProperty = async () => {
-    try {
-      const { data: propertyData, error: propertyError } = await supabase
-        .from("properties")
-        .select(
-          `
-          *,
-          images (
-            url
-          )
-        `
-        )
-        .eq("id", id)
-        .single();
-
-      if (propertyError) throw propertyError;
-
-      setProperty(propertyData);
-
-      if (propertyData.agent_id) {
-        const { data: agentData } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", propertyData.agent_id)
-          .maybeSingle();
-
-        if (agentData) {
-          setAgent(agentData);
-          fetchAgentStats(propertyData.agent_id);
-        }
-      }
-
-      // Fetch similar properties
-      fetchSimilarProperties(propertyData);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "No se pudo cargar la propiedad",
-        variant: "destructive",
-      });
-      navigate("/buscar");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSimilarProperties = async (currentProperty: any) => {
-    setLoadingSimilar(true);
-    try {
-      const priceRange = currentProperty.price * 0.2;
-      const minPrice = currentProperty.price - priceRange;
-      const maxPrice = currentProperty.price + priceRange;
-
-      const { data, error } = await supabase
-        .from("properties")
-        .select(`
-          *,
-          images (url)
-        `)
-        .eq("state", currentProperty.state)
-        .eq("municipality", currentProperty.municipality)
-        .neq("id", currentProperty.id)
-        .gte("price", minPrice)
-        .lte("price", maxPrice)
-        .limit(4);
-
-      if (error) throw error;
-      setSimilarProperties(data || []);
-    } catch (error) {
-      console.error("Error fetching similar properties:", error);
-    } finally {
-      setLoadingSimilar(false);
-    }
-  };
 
   const fetchAgentStats = async (agentId: string) => {
     try {
@@ -627,7 +576,7 @@ const PropertyDetail = () => {
               </Card>
 
               {/* Amenities */}
-              <PropertyAmenities amenities={property.amenities || []} />
+              <PropertyAmenities amenities={property.amenities as any || []} />
 
               {/* Investment Metrics */}
               <PropertyInvestmentMetrics
@@ -643,7 +592,7 @@ const PropertyDetail = () => {
               <PropertyTimeline
                 createdAt={property.created_at}
                 updatedAt={property.updated_at}
-                priceHistory={property.price_history || []}
+                priceHistory={property.price_history as any || []}
                 currentPrice={property.price}
               />
 

@@ -39,7 +39,18 @@ import AdminFinancial from "./pages/AdminFinancial";
 import AdminKPIs from "./pages/AdminKPIs";
 import { Footer } from "@/components/Footer";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutos - datos considerados frescos
+      gcTime: 30 * 60 * 1000, // 30 minutos - mantener en caché (antes cacheTime)
+      retry: 1, // Solo 1 reintento en caso de fallo
+      refetchOnWindowFocus: false, // No refetch al cambiar de ventana
+      refetchOnMount: false, // No refetch al montar si hay datos en caché
+      refetchOnReconnect: false, // No refetch al reconectar internet
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

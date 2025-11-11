@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import BasicGoogleMap from "@/components/BasicGoogleMap";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useProperties } from "@/hooks/useProperties";
 
 interface Property {
   id: string;
@@ -17,52 +18,20 @@ interface Property {
   state: string;
   municipality: string;
   type: string;
-  listing_type: "venta" | "renta";
+  listing_type: string;
   images: { url: string; position: number }[];
 }
 
 const HomeMap = ({ height = "450px" }: { height?: string }) => {
   const navigate = useNavigate();
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
   const [hoveredProperty, setHoveredProperty] = useState<Property | null>(null);
 
-  // Fetch de propiedades - IDÉNTICO a Buscar.tsx
-  useEffect(() => {
-    const fetchProperties = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('properties')
-          .select(`
-            id, title, price, bedrooms, bathrooms, parking, 
-            lat, lng, address, state, municipality, type, listing_type,
-            created_at, sqft, agent_id,
-            images (url, position)
-          `)
-          .eq('status', 'activa')
-          .order('position', { foreignTable: 'images', ascending: true })
-          .limit(1000);
-
-        if (error) throw error;
-
-        const propertiesWithSortedImages = data?.map(property => ({
-          ...property,
-          type: property.type === 'local_comercial' ? 'local' : property.type,
-          images: (property.images || []).sort((a: any, b: any) => a.position - b.position)
-        })) as Property[] || [];
-
-        setProperties(propertiesWithSortedImages);
-      } catch (error) {
-        console.error('Error fetching properties:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProperties();
-  }, []);
+  // Fetch de propiedades con React Query
+  const { data: properties = [], isLoading: loading } = useProperties({
+    status: ['activa']
+  });
 
   // Creación de markers - IDÉNTICO a Buscar.tsx
   const mapMarkers = properties
@@ -76,7 +45,7 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
       bedrooms: p.bedrooms,
       bathrooms: p.bathrooms,
       images: p.images,
-      listing_type: p.listing_type,
+      listing_type: p.listing_type as "venta" | "renta",
       address: p.address,
     }));
 
@@ -174,7 +143,7 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
       hoveredMarkerId={hoveredProperty?.id || null}
       onMarkerHover={(markerId) => {
         if (markerId) {
-          const property = properties.find(p => p.id === markerId);
+          const property = properties.find(p => p.id === markerId) as Property | undefined;
           setHoveredProperty(property || null);
         } else {
           setHoveredProperty(null);
