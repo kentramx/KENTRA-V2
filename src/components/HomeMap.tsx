@@ -102,7 +102,7 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
       zoom={6}
       height={height}
       markers={markers}
-      enableClustering={true}
+      enableClustering={false}
       onMarkerClick={(id) => navigate(`/propiedad/${id}`)}
       disableAutoFit={false}
     />
