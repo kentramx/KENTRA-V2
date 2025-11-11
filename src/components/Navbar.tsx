@@ -80,12 +80,6 @@ const Navbar = () => {
 
           {/* Right Navigation - Desktop */}
           <div className="hidden md:flex items-center gap-1">
-            <Link to="/agentes">
-              <Button variant="ghost" size="sm">
-                <Search className="h-4 w-4 mr-2" />
-                Buscar Inmobiliarias
-              </Button>
-            </Link>
             <Button
               size="sm" 
               className="shadow-sm"
@@ -97,24 +91,6 @@ const Navbar = () => {
             {user ? (
               <>
                 <MessageBadge />
-                <Link to="/favoritos">
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <Heart className="h-5 w-5" />
-                  </Button>
-                </Link>
-                <Link to="/comparar">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 relative">
-                    <GitCompare className="h-5 w-5" />
-                    {compareList.length > 0 && (
-                      <Badge 
-                        variant="destructive" 
-                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                      >
-                        {compareList.length}
-                      </Badge>
-                    )}
-                  </Button>
-                </Link>
                 {isAdmin && (
                   <AdminRealtimeNotifications userId={user.id} isAdmin={isAdmin} />
                 )}
@@ -128,7 +104,33 @@ const Navbar = () => {
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Acciones Rápidas</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <Link to="/agentes">
+                      <DropdownMenuItem className="cursor-pointer">
+                        <Search className="mr-2 h-4 w-4" />
+                        Buscar Inmobiliarias
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link to="/favoritos">
+                      <DropdownMenuItem className="cursor-pointer">
+                        <Heart className="mr-2 h-4 w-4" />
+                        Favoritos
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link to="/comparar">
+                      <DropdownMenuItem className="cursor-pointer">
+                        <GitCompare className="mr-2 h-4 w-4" />
+                        Comparar Propiedades
+                        {compareList.length > 0 && (
+                          <Badge variant="secondary" className="ml-auto">
+                            {compareList.length}
+                          </Badge>
+                        )}
+                      </DropdownMenuItem>
+                    </Link>
+                    <DropdownMenuSeparator />
                     <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {isAdmin && (
@@ -242,19 +244,6 @@ const Navbar = () => {
                 {isAdmin && (
                   <AdminRealtimeNotifications userId={user.id} isAdmin={isAdmin} />
                 )}
-                <Link to="/comparar">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 relative">
-                    <GitCompare className="h-5 w-5" />
-                    {compareList.length > 0 && (
-                      <Badge 
-                        variant="destructive" 
-                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                      >
-                        {compareList.length}
-                      </Badge>
-                    )}
-                  </Button>
-                </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
@@ -266,6 +255,32 @@ const Navbar = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Acciones Rápidas</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <Link to="/agentes">
+                      <DropdownMenuItem className="cursor-pointer">
+                        <Search className="mr-2 h-4 w-4" />
+                        Buscar Inmobiliarias
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link to="/favoritos">
+                      <DropdownMenuItem className="cursor-pointer">
+                        <Heart className="mr-2 h-4 w-4" />
+                        Favoritos
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link to="/comparar">
+                      <DropdownMenuItem className="cursor-pointer">
+                        <GitCompare className="mr-2 h-4 w-4" />
+                        Comparar Propiedades
+                        {compareList.length > 0 && (
+                          <Badge variant="secondary" className="ml-auto">
+                            {compareList.length}
+                          </Badge>
+                        )}
+                      </DropdownMenuItem>
+                    </Link>
+                    <DropdownMenuSeparator />
                     <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {isAdmin && (
