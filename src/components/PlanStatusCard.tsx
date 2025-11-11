@@ -43,8 +43,8 @@ export const PlanStatusCard = ({ subscriptionInfo, userRole }: PlanStatusCardPro
             Sin Plan Activo
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground mb-4">
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">
             Necesitas una suscripción activa para publicar propiedades como agente.
           </p>
           <Button 
@@ -53,6 +53,68 @@ export const PlanStatusCard = ({ subscriptionInfo, userRole }: PlanStatusCardPro
           >
             Ver Planes Disponibles
           </Button>
+          
+          {/* Preview de planes disponibles */}
+          <div className="pt-4 border-t space-y-3">
+            <p className="text-sm font-medium text-muted-foreground">
+              {userRole === 'agency' ? 'Planes para Inmobiliarias:' : 'Planes para Agentes:'}
+            </p>
+            {userRole === 'agency' ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg bg-background border">
+                  <p className="font-semibold text-sm mb-2">Plan Start</p>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <p>✓ 5 agentes</p>
+                    <p>✓ 50 propiedades</p>
+                    <p>✓ 5 destacadas</p>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-background border">
+                  <p className="font-semibold text-sm mb-2">Plan Grow</p>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <p>✓ 10 agentes</p>
+                    <p>✓ 120 propiedades</p>
+                    <p>✓ 12 destacadas</p>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-background border">
+                  <p className="font-semibold text-sm mb-2">Plan Pro</p>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <p>✓ 20 agentes</p>
+                    <p>✓ 250 propiedades</p>
+                    <p>✓ 25 destacadas</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg bg-background border">
+                  <p className="font-semibold text-sm mb-2">Plan Básico</p>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <p>✓ 4 propiedades activas</p>
+                    <p>✓ 1 destacada</p>
+                    <p>✓ Soporte básico</p>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-background border">
+                  <p className="font-semibold text-sm mb-2">Plan Pro</p>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <p>✓ 10 propiedades activas</p>
+                    <p>✓ 3 destacadas</p>
+                    <p>✓ Autopublicación</p>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-background border">
+                  <p className="font-semibold text-sm mb-2">Plan Elite</p>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <p>✓ 20 propiedades activas</p>
+                    <p>✓ 6 destacadas</p>
+                    <p>✓ Reportes avanzados</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
