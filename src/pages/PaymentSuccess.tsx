@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Loader2, ArrowRight, Calendar, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useFacebookPixel } from '@/hooks/useFacebookPixel';
+import { useTracking } from '@/hooks/useTracking';
 
 interface SubscriptionDetails {
   planName: string;
@@ -27,7 +27,7 @@ const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
-  const { trackEvent } = useFacebookPixel();
+  const { trackEvent } = useTracking();
 
   useEffect(() => {
     const payment = searchParams.get('payment');

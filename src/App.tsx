@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { NotificationPermissionBanner } from "@/components/NotificationPermissionBanner";
+import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 import Home from "./pages/Home";
 import PropertyDetail from "./pages/PropertyDetail";
 import Favorites from "./pages/Favorites";
@@ -53,17 +56,19 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <NotificationPermissionBanner />
-        <MapPreloader />
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
+// Componente interno para trackear pageviews
+const AppContent = () => {
+  const location = useLocation();
+  const { trackPageView } = useGoogleAnalytics();
+
+  useEffect(() => {
+    // Trackear pageview en cada cambio de ruta
+    trackPageView(location.pathname + location.search);
+  }, [location, trackPageView]);
+
+  return (
+    <>
+      <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/propiedad/:id" element={<PropertyDetail />} />
               <Route path="/agente/:id" element={<AgentProfile />} />
@@ -98,6 +103,21 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Footer />
+    </>
+  );
+};
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <NotificationPermissionBanner />
+        <MapPreloader />
+        <BrowserRouter>
+          <AuthProvider>
+            <AppContent />
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

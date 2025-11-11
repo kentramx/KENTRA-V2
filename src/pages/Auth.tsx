@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Home } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useFacebookPixel } from '@/hooks/useFacebookPixel';
+import { useTracking } from '@/hooks/useTracking';
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: 'Correo electrónico inválido' }),
@@ -50,7 +50,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<'auth' | 'forgot' | 'reset' | 'verify'>('auth');
   const [unverifiedEmail, setUnverifiedEmail] = useState<string>('');
-  const { trackEvent } = useFacebookPixel();
+  const { trackEvent } = useTracking();
 
   const redirect = searchParams.get('redirect');
   const pendingRole = searchParams.get('role');

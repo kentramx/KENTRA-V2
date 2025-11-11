@@ -9,14 +9,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Check, Info, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFacebookPixel } from '@/hooks/useFacebookPixel';
+import { useTracking } from '@/hooks/useTracking';
 
 const PricingDesarrolladora = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'annual'>('annual');
-  const { trackEvent } = useFacebookPixel();
+  const { trackEvent } = useTracking();
 
   // Cargar preferencia de pricing desde localStorage al iniciar
   useEffect(() => {

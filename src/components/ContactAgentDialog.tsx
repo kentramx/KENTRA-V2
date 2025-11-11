@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useFacebookPixel } from "@/hooks/useFacebookPixel";
+import { useTracking } from '@/hooks/useTracking';
 
 interface ContactAgentDialogProps {
   agentId: string;
@@ -41,7 +41,7 @@ export const ContactAgentDialog = ({
   const [reason, setReason] = useState("properties");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const { trackEvent } = useFacebookPixel();
+  const { trackEvent } = useTracking();
 
   const handleSend = async () => {
     if (!user) {

@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useFacebookPixel } from "@/hooks/useFacebookPixel";
+import { useTracking } from '@/hooks/useTracking';
 
 interface ContactPropertyDialogProps {
   property: any;
@@ -42,7 +42,7 @@ export const ContactPropertyDialog = ({
   const [reason, setReason] = useState("info");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const { trackEvent } = useFacebookPixel();
+  const { trackEvent } = useTracking();
 
   const handleSend = async () => {
     if (!user) {

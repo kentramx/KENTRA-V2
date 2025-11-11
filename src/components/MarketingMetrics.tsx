@@ -99,6 +99,7 @@ export const MarketingMetrics = () => {
   const [recentEvents, setRecentEvents] = useState<ConversionEvent[]>([]);
   const [dateRange, setDateRange] = useState<string>("30");
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("all");
+  const [eventSourceFilter, setEventSourceFilter] = useState<string>("all");
 
   useEffect(() => {
     fetchMetrics();
@@ -174,6 +175,10 @@ export const MarketingMetrics = () => {
         query = query.eq("event_type", eventTypeFilter);
       }
 
+      if (eventSourceFilter !== "all") {
+        query = query.eq("event_source", eventSourceFilter);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
@@ -186,7 +191,7 @@ export const MarketingMetrics = () => {
 
   useEffect(() => {
     fetchRecentEvents();
-  }, [eventTypeFilter]);
+  }, [eventTypeFilter, eventSourceFilter]);
 
   if (loading) {
     return (
@@ -430,19 +435,34 @@ export const MarketingMetrics = () => {
             <CardHeader>
               <CardTitle>Eventos Recientes</CardTitle>
               <CardDescription>Últimos 50 eventos de conversión</CardDescription>
-              <div className="flex items-center gap-2 mt-4">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Filtrar por tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los eventos</SelectItem>
-                    {Object.entries(EVENT_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex flex-wrap items-center gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Filtrar por tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los eventos</SelectItem>
+                      {Object.entries(EVENT_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <Select value={eventSourceFilter} onValueChange={setEventSourceFilter}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Filtrar por fuente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas las fuentes</SelectItem>
+                      <SelectItem value="facebook_pixel">Facebook Pixel</SelectItem>
+                      <SelectItem value="google_analytics">Google Analytics</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -452,6 +472,7 @@ export const MarketingMetrics = () => {
                     <TableRow>
                       <TableHead>Fecha/Hora</TableHead>
                       <TableHead>Tipo de Evento</TableHead>
+                      <TableHead>Fuente</TableHead>
                       <TableHead>Usuario</TableHead>
                       <TableHead>Contenido</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
@@ -474,6 +495,13 @@ export const MarketingMetrics = () => {
                               {EVENT_LABELS[event.event_type] || event.event_type}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={event.event_source === 'facebook_pixel' ? 'default' : 'secondary'}
+                            >
+                              {event.event_source === 'facebook_pixel' ? 'FB' : 'GA4'}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-xs">
                             {event.user_email || "Anónimo"}
                             {event.user_role && (
@@ -492,7 +520,7 @@ export const MarketingMetrics = () => {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                           No hay eventos registrados
                         </TableCell>
                       </TableRow>
