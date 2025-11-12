@@ -443,6 +443,7 @@ const PricingInmobiliaria = () => {
           planName={selectedPlan.name || ''}
           planPrice={selectedPlan.planPrice || 0}
           billingCycle={pricingPeriod === 'annual' ? 'yearly' : 'monthly'}
+          userType="agency"
           onConfirm={handleConfirmWithUpsells}
         />
       )}

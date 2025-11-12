@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Star, Loader2 } from 'lucide-react';
+import { Plus, Star, Users, GraduationCap, LayoutTemplate, BarChart3, Loader2 } from 'lucide-react';
 
 interface Upsell {
   id: string;
@@ -30,16 +30,17 @@ interface UpsellDialogProps {
   planName: string;
   planPrice: number;
   billingCycle: 'monthly' | 'yearly';
+  userType: 'agent' | 'agency';
   onConfirm: (selectedUpsells: Upsell[]) => Promise<void>;
 }
 
-const UPSELLS: Upsell[] = [
+const AGENT_UPSELLS: Upsell[] = [
   {
     id: 'property_slot',
     name: 'Slot Adicional de Propiedad',
     description: 'Agrega 1 propiedad activa adicional a tu plan',
     price: 49,
-    stripePriceId: 'price_property_slot_monthly', // Usuario debe crear esto en Stripe
+    stripePriceId: 'price_property_slot_monthly',
     icon: Plus,
     badge: 'Más Popular',
     recurring: true,
@@ -47,11 +48,52 @@ const UPSELLS: Upsell[] = [
   {
     id: 'featured_7days',
     name: 'Destacar Propiedad 7 Días',
-    description: 'Destaca 1 propiedad por 7 días (pago único)',
+    description: 'Destaca 1 propiedad por 7 días en resultados de búsqueda',
     price: 59,
-    stripePriceId: 'price_featured_7days', // Usuario debe crear esto en Stripe
+    stripePriceId: 'price_featured_7days',
     icon: Star,
     recurring: false,
+  },
+];
+
+const AGENCY_UPSELLS: Upsell[] = [
+  {
+    id: 'extra_agents',
+    name: 'Agentes Adicionales',
+    description: 'Agrega +5 agentes a tu equipo inmobiliario',
+    price: 1500,
+    stripePriceId: 'price_extra_agents_monthly',
+    icon: Users,
+    badge: 'Más Popular',
+    recurring: true,
+  },
+  {
+    id: 'premium_training',
+    name: 'Capacitación Premium',
+    description: 'Sesión de capacitación personalizada para tu equipo (2 horas)',
+    price: 2500,
+    stripePriceId: 'price_premium_training',
+    icon: GraduationCap,
+    recurring: false,
+  },
+  {
+    id: 'custom_landing',
+    name: 'Landing Page Personalizada',
+    description: 'Página personalizada con tu branding para destacar tu inmobiliaria',
+    price: 3500,
+    stripePriceId: 'price_custom_landing',
+    icon: LayoutTemplate,
+    badge: 'Premium',
+    recurring: false,
+  },
+  {
+    id: 'advanced_analytics',
+    name: 'Reportes Avanzados',
+    description: 'Dashboard con métricas detalladas y análisis de rendimiento',
+    price: 800,
+    stripePriceId: 'price_advanced_analytics_monthly',
+    icon: BarChart3,
+    recurring: true,
   },
 ];
 
@@ -61,10 +103,14 @@ export const UpsellDialog = ({
   planName,
   planPrice,
   billingCycle,
+  userType,
   onConfirm,
 }: UpsellDialogProps) => {
   const [selectedUpsells, setSelectedUpsells] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Seleccionar upsells según tipo de usuario
+  const UPSELLS = userType === 'agent' ? AGENT_UPSELLS : AGENCY_UPSELLS;
 
   const handleToggleUpsell = (upsellId: string) => {
     setSelectedUpsells((prev) =>
@@ -79,6 +125,8 @@ export const UpsellDialog = ({
     try {
       const selected = UPSELLS.filter((u) => selectedUpsells.includes(u.id));
       await onConfirm(selected);
+    } catch (error) {
+      console.error('Error confirming upsells:', error);
     } finally {
       setLoading(false);
     }

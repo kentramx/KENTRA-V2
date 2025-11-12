@@ -423,6 +423,7 @@ const PricingAgente = () => {
           planName={selectedPlan.name || ''}
           planPrice={selectedPlan.planPrice || 0}
           billingCycle={pricingPeriod === 'annual' ? 'yearly' : 'monthly'}
+          userType="agent"
           onConfirm={handleConfirmWithUpsells}
         />
       )}
