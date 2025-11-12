@@ -85,6 +85,7 @@ const DirectorioAgentes = () => {
         .select(`
           id,
           name,
+          avatar_url,
           is_verified,
           phone_verified,
           whatsapp_verified,
@@ -182,6 +183,7 @@ const DirectorioAgentes = () => {
           is_verified: profile.is_verified || false,
           phone_verified: profile.phone_verified || false,
           whatsapp_verified: profile.whatsapp_verified || false,
+          avatar_url: profile.avatar_url,
           plan_name: subscription?.subscription_plans?.display_name || "Sin Plan",
           plan_level: subscription?.subscription_plans?.name || null,
           badges,

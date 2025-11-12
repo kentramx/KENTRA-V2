@@ -884,6 +884,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
+          bio: string | null
+          city: string | null
           created_at: string | null
           email_notifications: boolean | null
           id: string
@@ -894,6 +897,7 @@ export type Database = {
           phone_verification_expires_at: string | null
           phone_verified: boolean | null
           phone_verified_at: string | null
+          state: string | null
           updated_at: string | null
           whatsapp_business_hours: string | null
           whatsapp_enabled: boolean | null
@@ -902,6 +906,9 @@ export type Database = {
           whatsapp_verified_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
           created_at?: string | null
           email_notifications?: boolean | null
           id: string
@@ -912,6 +919,7 @@ export type Database = {
           phone_verification_expires_at?: string | null
           phone_verified?: boolean | null
           phone_verified_at?: string | null
+          state?: string | null
           updated_at?: string | null
           whatsapp_business_hours?: string | null
           whatsapp_enabled?: boolean | null
@@ -920,6 +928,9 @@ export type Database = {
           whatsapp_verified_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
           created_at?: string | null
           email_notifications?: boolean | null
           id?: string
@@ -930,6 +941,7 @@ export type Database = {
           phone_verification_expires_at?: string | null
           phone_verified?: boolean | null
           phone_verified_at?: string | null
+          state?: string | null
           updated_at?: string | null
           whatsapp_business_hours?: string | null
           whatsapp_enabled?: boolean | null

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Star, Home, ShieldCheck, Smartphone, MessageCircle } from "lucide-react";
 import AgentBadges from "@/components/AgentBadges";
 
@@ -27,6 +27,7 @@ interface AgentCardProps {
   phone_verified?: boolean;
   whatsapp_verified?: boolean;
   logo_url?: string;
+  avatar_url?: string;
   plan_name: string | null;
   plan_level: string | null;
   badges?: BadgeData[];
@@ -45,6 +46,7 @@ const AgentCard = ({
   phone_verified,
   whatsapp_verified,
   logo_url,
+  avatar_url,
   plan_name,
   plan_level,
   badges = [],
@@ -85,13 +87,13 @@ const AgentCard = ({
         <Link to={linkTo} className="block">
           <div className="flex items-start gap-4 mb-4">
             <Avatar className="h-16 w-16 border-2 border-border">
-              {logo_url ? (
-                <img src={logo_url} alt={name} className="object-cover" />
-              ) : (
-                <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
-                  {getInitials(name)}
-                </AvatarFallback>
-              )}
+              <AvatarImage 
+                src={type === 'agency' ? logo_url : avatar_url} 
+                alt={name} 
+              />
+              <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
+                {getInitials(name)}
+              </AvatarFallback>
             </Avatar>
 
             <div className="flex-1 min-w-0">

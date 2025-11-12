@@ -12,7 +12,7 @@ import AgentBadges from "@/components/AgentBadges";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DynamicBreadcrumbs } from "@/components/DynamicBreadcrumbs";
 import {
   ArrowLeft,
@@ -73,7 +73,7 @@ const AgentProfile = () => {
       // Fetch agent profile
       const { data: agentData, error: agentError } = await supabase
         .from("profiles")
-        .select("*, is_verified, phone_verified, whatsapp_verified")
+        .select("*, is_verified, phone_verified, whatsapp_verified, avatar_url, bio, city, state")
         .eq("id", id)
         .single();
 
@@ -177,15 +177,31 @@ const AgentProfile = () => {
         <Card className="mb-8">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-6 items-start">
-              <Avatar className="h-24 w-24">
-                <AvatarFallback className="text-3xl">
+              <Avatar className="h-24 w-24 border-2 border-border">
+                <AvatarImage src={agent.avatar_url} alt={agent.name} />
+                <AvatarFallback className="text-3xl bg-primary/10 text-primary">
                   {agent.name?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               
               <div className="flex-1">
                 <div className="mb-2">
-                  <h1 className="text-3xl font-bold mb-3">{agent.name}</h1>
+                  <h1 className="text-3xl font-bold mb-2">{agent.name}</h1>
+                  
+                  {/* Ubicación */}
+                  {(agent.city || agent.state) && (
+                    <p className="text-muted-foreground mb-3 flex items-center gap-1">
+                      <span>📍</span>
+                      {[agent.city, agent.state].filter(Boolean).join(", ")}
+                    </p>
+                  )}
+                  
+                  {/* Biografía */}
+                  {agent.bio && (
+                    <p className="text-muted-foreground mb-4 leading-relaxed">
+                      {agent.bio}
+                    </p>
+                  )}
                   
                   <div className="flex items-center gap-2 flex-wrap">
                     {agent.is_verified && (

@@ -18,7 +18,11 @@ import { WhatsAppConfigSection } from "@/components/WhatsAppConfigSection";
 import { TwoFactorAuth } from "@/components/TwoFactorAuth";
 import { PhoneVerification } from "@/components/PhoneVerification";
 import { IdentityVerification } from "@/components/IdentityVerification";
+import { AvatarUpload } from "@/components/AvatarUpload";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { mexicoStates, mexicoMunicipalities } from "@/data/mexicoLocations";
 import {
   Loader2,
   User,
@@ -54,6 +58,9 @@ import {
 const profileSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
   phone: z.string().max(20).optional(),
+  bio: z.string().max(500, "La biografía no puede exceder 500 caracteres").optional(),
+  state: z.string().optional(),
+  city: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -86,6 +93,9 @@ const UserProfile = () => {
     defaultValues: {
       name: "",
       phone: "",
+      bio: "",
+      state: "",
+      city: "",
     },
   });
 
@@ -118,6 +128,9 @@ const UserProfile = () => {
       form.reset({
         name: profileData.name || "",
         phone: profileData.phone || "",
+        bio: profileData.bio || "",
+        state: profileData.state || "",
+        city: profileData.city || "",
       });
 
       // Obtener el rol real desde user_roles
@@ -160,6 +173,9 @@ const UserProfile = () => {
         .update({
           name: data.name,
           phone: data.phone || null,
+          bio: data.bio || null,
+          state: data.state || null,
+          city: data.city || null,
         })
         .eq("id", user?.id);
 
@@ -316,10 +332,27 @@ const UserProfile = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Información Personal</CardTitle>
+                <CardDescription>
+                  Actualiza tu información de perfil que será visible públicamente
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Avatar Upload */}
+                    <div className="flex justify-center py-4">
+                      <AvatarUpload
+                        userId={user?.id || ""}
+                        currentAvatarUrl={profile?.avatar_url}
+                        userName={profile?.name || "Usuario"}
+                        onUploadComplete={(url) => {
+                          setProfile({ ...profile, avatar_url: url });
+                        }}
+                      />
+                    </div>
+
+                    <Separator />
+
                     <FormField
                       control={form.control}
                       name="name"
@@ -327,12 +360,98 @@ const UserProfile = () => {
                         <FormItem>
                           <FormLabel>Nombre Completo</FormLabel>
                           <FormControl>
-                            <Input placeholder="Tu nombre" {...field} />
+                            <Input placeholder="Tu nombre completo" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="bio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Biografía (opcional)</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Cuéntanos sobre ti y tu experiencia en el sector inmobiliario..."
+                              className="min-h-[100px] resize-none"
+                              maxLength={500}
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
+                          <p className="text-sm text-muted-foreground">
+                            {field.value?.length || 0}/500 caracteres
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="state"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Estado (opcional)</FormLabel>
+                            <Select
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                form.setValue("city", "");
+                              }}
+                              value={field.value || ""}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona un estado" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {mexicoStates.map((state) => (
+                                  <SelectItem key={state} value={state}>
+                                    {state}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Ciudad/Municipio (opcional)</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value || ""}
+                              disabled={!form.watch("state")}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona una ciudad" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {form.watch("state") &&
+                                  mexicoMunicipalities[form.watch("state") || ""]?.map((city) => (
+                                    <SelectItem key={city} value={city}>
+                                      {city}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
                     <FormField
                       control={form.control}
@@ -342,7 +461,7 @@ const UserProfile = () => {
                           <FormLabel>Teléfono (opcional)</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="+524771234567" 
+                              placeholder="+525512345678" 
                               {...field} 
                               value={field.value || ""}
                             />
