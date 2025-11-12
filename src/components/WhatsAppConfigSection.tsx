@@ -29,6 +29,7 @@ interface WhatsAppConfigSectionProps {
 
 export const WhatsAppConfigSection = ({ userId, initialData, onDataRefresh }: WhatsAppConfigSectionProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isAutoVerifying, setIsAutoVerifying] = useState(false);
 
   // Detectar país del número inicial
   const initialCountryCode = initialData?.whatsapp_number 
@@ -38,6 +39,9 @@ export const WhatsAppConfigSection = ({ userId, initialData, onDataRefresh }: Wh
   const initialLocalNumber = initialData?.whatsapp_number
     ? extractLocalNumber(initialData.whatsapp_number, initialCountryCode)
     : "";
+
+  // Guardar el número inicial completo para comparación
+  const initialFullNumber = initialData?.whatsapp_number || null;
 
   const {
     register,
@@ -60,6 +64,38 @@ export const WhatsAppConfigSection = ({ userId, initialData, onDataRefresh }: Wh
   const currentCountryCode = watch("country_code");
   const selectedCountry = getCountryByCode(currentCountryCode);
 
+  const autoVerifyWhatsApp = async (phoneNumber: string) => {
+    setIsAutoVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-whatsapp-number');
+
+      if (error) {
+        console.error('Error auto-verifying WhatsApp:', error);
+        return;
+      }
+
+      if (data.hasWhatsApp) {
+        toast.success("¡WhatsApp verificado automáticamente!", {
+          description: "Tu número tiene WhatsApp activo",
+        });
+      } else {
+        toast.warning("WhatsApp no disponible", {
+          description: "Este número no tiene WhatsApp activo. Verifica el número o instala WhatsApp.",
+        });
+      }
+
+      // Actualizar datos después de verificación
+      if (onDataRefresh) {
+        onDataRefresh();
+      }
+    } catch (error) {
+      console.error('Unexpected error during auto-verification:', error);
+      // No mostrar error al usuario ya que es un proceso automático opcional
+    } finally {
+      setIsAutoVerifying(false);
+    }
+  };
+
   const onSubmit = async (data: WhatsAppFormData) => {
     setIsLoading(true);
 
@@ -67,6 +103,9 @@ export const WhatsAppConfigSection = ({ userId, initialData, onDataRefresh }: Wh
       // Formatear el número completo con código de país
       const fullNumber = formatWhatsAppNumber(data.whatsapp_number, data.country_code);
       
+      // Detectar si el número cambió
+      const numberChanged = initialFullNumber !== fullNumber;
+
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -79,6 +118,22 @@ export const WhatsAppConfigSection = ({ userId, initialData, onDataRefresh }: Wh
       if (error) throw error;
 
       toast.success("Configuración de WhatsApp actualizada");
+
+      // Auto-verificar si el número es nuevo o cambió
+      if (numberChanged && data.whatsapp_number.length >= 8) {
+        // Pequeño delay para que la actualización se complete
+        setTimeout(() => {
+          toast.info("Verificando WhatsApp automáticamente...", {
+            description: "Esto tomará solo unos segundos",
+          });
+          autoVerifyWhatsApp(fullNumber);
+        }, 500);
+      }
+
+      // Actualizar datos del perfil
+      if (onDataRefresh) {
+        onDataRefresh();
+      }
     } catch (error) {
       console.error("Error updating WhatsApp config:", error);
       toast.error("Error al actualizar la configuración");
@@ -104,9 +159,21 @@ export const WhatsAppConfigSection = ({ userId, initialData, onDataRefresh }: Wh
             <Info className="h-4 w-4" />
             <AlertDescription>
               Al habilitar WhatsApp, los usuarios podrán contactarte directamente desde tus propiedades.
-              Esto puede aumentar significativamente tus oportunidades de venta.
+              {initialFullNumber ? 
+                " Verificamos automáticamente si tu número tiene WhatsApp activo cuando lo cambias." :
+                " Tu número será verificado automáticamente después de guardarlo."
+              }
             </AlertDescription>
           </Alert>
+
+          {isAutoVerifying && (
+            <Alert className="bg-blue-50 border-blue-200">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                Verificando WhatsApp automáticamente... Por favor espera.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="space-y-4">
             <div className="space-y-2">
@@ -221,8 +288,8 @@ export const WhatsAppConfigSection = ({ userId, initialData, onDataRefresh }: Wh
             </Alert>
           )}
 
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? "Guardando..." : "Guardar Configuración"}
+          <Button type="submit" disabled={isLoading || isAutoVerifying} className="w-full">
+            {isLoading ? "Guardando..." : isAutoVerifying ? "Verificando WhatsApp..." : "Guardar Configuración"}
           </Button>
         </form>
 
