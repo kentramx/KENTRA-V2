@@ -46,63 +46,8 @@ const PricingInmobiliaria = () => {
     }
   }, []);
 
-  const plans = [
-    {
-      id: 'dcdc3a80-6203-4346-9144-a27935c1d3ed',
-      name: 'Inmobiliaria Start',
-      slug: 'start',
-      monthlyPrice: 5900,
-      annualPrice: 60888,
-      annualMonthlyEquivalent: 5074,
-      features: [
-        'Hasta 5 agentes',
-        'Pool de 50 propiedades activas (no caducan mientras se renueven cada 30 días)',
-        'Sitio inmobiliaria',
-        'Página individual por agente',
-        'Ruteo automático de leads',
-      ],
-      popular: false,
-      buttonText: 'Empezar con Start',
-      icon: Building2,
-    },
-    {
-      id: '3da21adc-8248-48b2-bbc2-b7a69d886646',
-      name: 'Inmobiliaria Grow',
-      slug: 'grow',
-      monthlyPrice: 9900,
-      annualPrice: 102168,
-      annualMonthlyEquivalent: 8514,
-      features: [
-        'Hasta 10 agentes',
-        'Pool de 120 propiedades activas (no caducan mientras se renueven cada 30 días)',
-        'Métricas y rendimiento del equipo',
-        'Visibilidad prioritaria',
-        'Todo lo incluido en Start',
-      ],
-      popular: true,
-      buttonText: 'Activar plan Grow',
-      icon: TrendingUp,
-    },
-    {
-      id: '2c1e2283-e9b6-439e-8cc5-37af2d669458',
-      name: 'Inmobiliaria Pro',
-      slug: 'pro',
-      monthlyPrice: 15900,
-      annualPrice: 164088,
-      annualMonthlyEquivalent: 13674,
-      features: [
-        'Hasta 20 agentes',
-        'Pool de 250 propiedades activas (no caducan mientras se renueven cada 30 días)',
-        'Roles y permisos',
-        'Visibilidad preferencial',
-        'Acompañamiento dedicado',
-        'Todo lo incluido en Grow',
-      ],
-      popular: false,
-      buttonText: 'Subir a Pro',
-      icon: Crown,
-    },
-  ];
+  // Planes temporalmente deshabilitados - próximamente nueva información
+  const plans: any[] = [];
 
   const [upsellDialogOpen, setUpsellDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);

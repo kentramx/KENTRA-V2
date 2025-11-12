@@ -48,61 +48,8 @@ const PricingAgente = () => {
     }
   }, []);
 
-  const plans = [
-    {
-      id: '49d3847c-3dda-4f35-80a2-b4a66018100b',
-      name: 'Agente Start',
-      slug: 'basico',
-      monthlyPrice: 249,
-      annualPrice: 2570,
-      annualMonthlyEquivalent: 214.17,
-      features: [
-        'Hasta 4 propiedades activas',
-        'Perfil profesional básico',
-        'Leads directo a WhatsApp',
-        'Estadísticas esenciales',
-      ],
-      popular: false,
-      buttonText: 'Empezar con Start',
-      icon: Rocket,
-    },
-    {
-      id: 'de96952c-ea83-4afb-a310-27f1f2db8f4e',
-      name: 'Agente Pro',
-      slug: 'pro',
-      monthlyPrice: 599,
-      annualPrice: 6182,
-      annualMonthlyEquivalent: 515.17,
-      features: [
-        'Hasta 12 propiedades activas',
-        '2 propiedades destacadas al mes',
-        'Página profesional personalizada',
-        'Contenido listo para compartir (copys + fotos optimizadas)',
-        'Leads directo a WhatsApp',
-      ],
-      popular: true,
-      buttonText: 'Activar plan Pro',
-      icon: Zap,
-    },
-    {
-      id: 'd4529d5f-725e-4513-9b29-1fecfc681708',
-      name: 'Agente Elite',
-      slug: 'elite',
-      monthlyPrice: 999,
-      annualPrice: 10310,
-      annualMonthlyEquivalent: 859.17,
-      features: [
-        'Hasta 30 propiedades activas',
-        '6 destacadas al mes + visibilidad prioritaria',
-        'Branding premium en perfil',
-        'IA para descripciones + programación de publicaciones',
-        'Soporte prioritario',
-      ],
-      popular: false,
-      buttonText: 'Subir a Elite',
-      icon: Crown,
-    },
-  ];
+  // Planes temporalmente deshabilitados - próximamente nueva información
+  const plans: any[] = [];
 
   const [upsellDialogOpen, setUpsellDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
