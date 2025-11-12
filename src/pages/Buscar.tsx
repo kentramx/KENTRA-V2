@@ -50,6 +50,7 @@ interface Property {
   created_at: string | null;
   sqft: number | null;
   agent_id: string;
+  is_featured?: boolean;
 }
 
 interface Filters {
@@ -1445,6 +1446,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                             imageUrl={property.images?.[0]?.url}
                             isHovered={hoveredProperty?.id === property.id}
                             agentId={property.agent_id}
+                            isFeatured={property.is_featured}
                           />
                         </div>
                       ));

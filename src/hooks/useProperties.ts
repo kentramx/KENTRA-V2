@@ -23,7 +23,12 @@ export const useProperties = (filters?: PropertyFilters) => {
           id, title, price, bedrooms, bathrooms, parking, 
           lat, lng, address, state, municipality, type, listing_type,
           created_at, sqft, agent_id, status,
-          images (url, position)
+          images (url, position),
+          featured_properties!left (
+            id,
+            status,
+            end_date
+          )
         `)
         .order('position', { foreignTable: 'images', ascending: true });
 
@@ -47,12 +52,25 @@ export const useProperties = (filters?: PropertyFilters) => {
       
       if (error) throw error;
 
-      // Normalizar datos
-      return data?.map(property => ({
-        ...property,
-        type: property.type === 'local_comercial' ? 'local' : property.type,
-        images: (property.images || []).sort((a: any, b: any) => a.position - b.position)
-      })) || [];
+      // Normalizar datos y calcular is_featured
+      return data?.map(property => {
+        const featured = Array.isArray(property.featured_properties) 
+          ? property.featured_properties[0] 
+          : property.featured_properties;
+        
+        const isFeatured = featured 
+          && featured.status === 'active' 
+          && new Date(featured.end_date) > new Date();
+
+        return {
+          ...property,
+          type: property.type === 'local_comercial' ? 'local' : property.type,
+          images: (property.images || []).sort((a: any, b: any) => a.position - b.position),
+          is_featured: isFeatured,
+          // Remover featured_properties del objeto final
+          featured_properties: undefined,
+        };
+      }) || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
   });

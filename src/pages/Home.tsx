@@ -45,6 +45,7 @@ interface Property {
   lng?: number;
   images?: { url: string; position: number }[];
   agent_id: string;
+  is_featured?: boolean;
 }
 
 const Home = () => {
@@ -152,7 +153,12 @@ const Home = () => {
             lat,
             lng,
             agent_id,
-            images (url, position)
+            images (url, position),
+            featured_properties!left (
+              id,
+              status,
+              end_date
+            )
           `)
           .eq('status', 'activa')
           .eq('listing_type', listingType)
@@ -161,11 +167,22 @@ const Home = () => {
 
         if (error) throw error;
         
-        // Ordenar imágenes por posición
-        const propertiesWithSortedImages = data?.map(property => ({
-          ...property,
-          images: (property.images || []).sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
-        })) || [];
+        // Ordenar imágenes por posición y calcular is_featured
+        const propertiesWithSortedImages = data?.map(property => {
+          const featured = Array.isArray(property.featured_properties) 
+            ? property.featured_properties[0] 
+            : property.featured_properties;
+          
+          const isFeatured = featured 
+            && featured.status === 'active' 
+            && new Date(featured.end_date) > new Date();
+
+          return {
+            ...property,
+            images: (property.images || []).sort((a: any, b: any) => (a.position || 0) - (b.position || 0)),
+            is_featured: isFeatured,
+          };
+        }) || [];
         
         setFeaturedProperties(propertiesWithSortedImages);
       } catch (error) {
@@ -450,6 +467,7 @@ const Home = () => {
                       sqft={property.sqft}
                       imageUrl={property.images?.[0]?.url}
                       agentId={property.agent_id}
+                      isFeatured={property.is_featured}
                     />
                   </div>
                 ))}

@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart } from "lucide-react";
+import { Heart, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import propertyPlaceholder from "@/assets/property-placeholder.jpg";
 import { useTracking } from "@/hooks/useTracking";
@@ -24,6 +25,7 @@ interface PropertyCardProps {
   onToggleFavorite?: () => void;
   isHovered?: boolean;
   agentId: string;
+  isFeatured?: boolean;
 }
 
 const PropertyCard = ({
@@ -44,6 +46,7 @@ const PropertyCard = ({
   onToggleFavorite,
   isHovered = false,
   agentId,
+  isFeatured = false,
 }: PropertyCardProps) => {
   const { toast } = useToast();
   const { trackGA4Event } = useTracking();
@@ -93,6 +96,17 @@ const PropertyCard = ({
             decoding="async"
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
           />
+          
+          {/* Badge de Destacada */}
+          {isFeatured && (
+            <Badge 
+              className="absolute left-3 top-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg"
+            >
+              <Star className="h-3 w-3 mr-1 fill-white" />
+              Destacada
+            </Badge>
+          )}
+          
           {onToggleFavorite && (
             <Button
               variant="ghost"
