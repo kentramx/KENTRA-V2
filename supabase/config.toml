@@ -44,3 +44,6 @@ verify_jwt = true
 
 [functions.verify-whatsapp-number]
 verify_jwt = true
+
+[functions.send-whatsapp-verification-email]
+verify_jwt = false

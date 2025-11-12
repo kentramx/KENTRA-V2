@@ -138,6 +138,33 @@ serve(async (req) => {
       );
     }
 
+    // Si la verificación fue exitosa, enviar email de confirmación
+    if (hasWhatsApp) {
+      console.log('Sending WhatsApp verification confirmation email...');
+      
+      // Obtener nombre del perfil para el email
+      const { data: profileData } = await supabaseClient
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
+      try {
+        // Invocar edge function de email (no bloqueante)
+        await supabaseClient.functions.invoke('send-whatsapp-verification-email', {
+          body: {
+            userEmail: user.email,
+            userName: profileData?.name || 'Usuario',
+            whatsappNumber: phoneNumber,
+          }
+        });
+        console.log('WhatsApp verification email sent successfully');
+      } catch (emailError) {
+        // No bloquear el flujo si el email falla
+        console.error('Error sending verification email (non-blocking):', emailError);
+      }
+    }
+
     // Retornar resultado
     return new Response(
       JSON.stringify({
