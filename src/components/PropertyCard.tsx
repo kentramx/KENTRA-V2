@@ -1,10 +1,8 @@
 import { Link } from "react-router-dom";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2 } from "lucide-react";
+import { Heart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { trackWhatsAppInteraction } from "@/utils/whatsappTracking";
 import propertyPlaceholder from "@/assets/property-placeholder.jpg";
 import { useTracking } from "@/hooks/useTracking";
 
@@ -72,31 +70,6 @@ const PropertyCard = ({
     return labels[type] || type;
   };
 
-  const handleShareWhatsApp = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    
-    // Track interaction
-    await trackWhatsAppInteraction({
-      agentId,
-      propertyId: id,
-      interactionType: 'share_property',
-    });
-
-    const url = `${window.location.origin}/propiedad/${id}`;
-    const whatsappMessage = `🏡 *${title}*\n\n💰 ${formatPrice(price)}\n📍 ${municipality}, ${state}\n\n🔗 Ver más: ${url}`;
-    const encoded = encodeURIComponent(whatsappMessage);
-    
-    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
-    const waUrl = isMobile ? `whatsapp://send?text=${encoded}` : `https://wa.me/?text=${encoded}`;
-    
-    window.open(waUrl, '_blank');
-    
-    toast({
-      title: 'Compartiendo por WhatsApp',
-      description: 'Se abrirá WhatsApp para compartir',
-    });
-  };
-
   const handleCardClick = () => {
     // Track selección de propiedad en GA4
     trackGA4Event('select_item', {
@@ -161,18 +134,6 @@ const PropertyCard = ({
           </p>
         </Link>
       </CardContent>
-      
-      <CardFooter className="p-4 pt-0">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={handleShareWhatsApp}
-        >
-          <Share2 className="h-4 w-4 mr-2" />
-          Compartir por WhatsApp
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
