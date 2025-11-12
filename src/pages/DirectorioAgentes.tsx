@@ -294,13 +294,22 @@ const DirectorioAgentes = () => {
         return 0;
       };
 
-      // Función para calcular score de badges
-      const getBadgeScore = (badges: BadgeData[]) => {
+      // Función para calcular score de badges de logros (excluye badges de plan)
+      const getAchievementBadgeScore = (badges: BadgeData[]) => {
         if (!badges || badges.length === 0) return 0;
-        return badges.reduce((sum, badge) => sum + badge.priority, 0);
+        
+        // Filtrar solo badges de logros (no de plan)
+        const achievementBadges = badges.filter(badge => 
+          !badge.code.includes('plan_') && !badge.code.includes('agency_')
+        );
+        
+        // Sumar priority de badges de logros: top_seller (100), five_stars (95), active_seller (70)
+        // Máximo teórico = 265 puntos, normalizar a escala de 15
+        const totalPriority = achievementBadges.reduce((sum, badge) => sum + badge.priority, 0);
+        return Math.min(15, (totalPriority / 265) * 15);
       };
 
-      // Sistema de scoring compuesto con pesos para ranking
+      // Sistema de scoring compuesto con pesos ajustados para 7 badges
       const calculateAgentScore = (agent: AgentData): number => {
         let score = 0;
         
@@ -311,19 +320,14 @@ const DirectorioAgentes = () => {
         // 2. Rating (25%) - Calidad del servicio verificada
         if (agent.avg_rating) {
           if (agent.avg_rating >= 5) score += 25;
-          else if (agent.avg_rating >= 4) score += 20;
-          else if (agent.avg_rating >= 3) score += 12;
+          else if (agent.avg_rating >= 4.5) score += 22;
+          else if (agent.avg_rating >= 4) score += 18;
+          else if (agent.avg_rating >= 3) score += 10;
           else score += 5;
         }
         
-        // 3. Badges (20%) - Reconocimientos y logros
-        const badgeScore = getBadgeScore(agent.badges);
-        score += Math.min(20, badgeScore / 2); // Normalizar a escala de 20
-        
-        // Bonus: WhatsApp verificado (+3 puntos)
-        if (agent.whatsapp_verified) {
-          score += 3;
-        }
+        // 3. Badges de Logros (15%) - Reconocimientos ganados (excluye badges de plan)
+        score += getAchievementBadgeScore(agent.badges);
         
         // 4. Active Properties (15%) - Inventario y actividad
         if (agent.active_properties >= 20) score += 15;
@@ -336,6 +340,16 @@ const DirectorioAgentes = () => {
         else if (agent.total_reviews >= 10) score += 8;
         else if (agent.total_reviews >= 5) score += 5;
         else if (agent.total_reviews >= 1) score += 2;
+        
+        // 6. Bonus: KYC verificado (+3 puntos) - Identidad confirmada
+        if (agent.is_verified) {
+          score += 3;
+        }
+        
+        // 7. Bonus: WhatsApp verificado (+2 puntos) - Contacto rápido
+        if (agent.whatsapp_verified) {
+          score += 2;
+        }
         
         return score;
       };
