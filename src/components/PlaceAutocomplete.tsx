@@ -133,10 +133,20 @@ export const PlaceAutocomplete = ({
             }
 
             onPlaceSelectRef.current(location);
-            toast({
-              title: '📍 Ubicación detectada',
-              description: `${municipality}, ${state}`,
-            });
+            
+            // Validar si se capturó la colonia
+            if (!colonia) {
+              toast({
+                title: '⚠️ Colonia no detectada',
+                description: 'Por favor ingresa la colonia manualmente',
+                variant: 'destructive',
+              });
+            } else {
+              toast({
+                title: '📍 Ubicación detectada',
+                description: `${colonia}, ${municipality}`,
+              });
+            }
           }
         } catch (error) {
           console.error('Error geocoding:', error);
@@ -211,10 +221,20 @@ export const PlaceAutocomplete = ({
         }
 
         onPlaceSelectRef.current?.(location);
-        toast({ 
-          title: '📍 Ubicación seleccionada', 
-          description: `${location.municipality}, ${location.state}` 
-        });
+        
+        // Validar si se capturó la colonia
+        if (!location.colonia) {
+          toast({
+            title: '⚠️ Colonia no detectada',
+            description: 'Por favor ingresa la colonia manualmente en el campo siguiente',
+            variant: 'destructive',
+          });
+        } else {
+          toast({ 
+            title: '📍 Ubicación seleccionada', 
+            description: `${location.colonia}, ${location.municipality}` 
+          });
+        }
       };
 
       try {
@@ -366,10 +386,20 @@ export const PlaceAutocomplete = ({
       }
 
       onPlaceSelectRef.current?.(location);
-      toast({ 
-        title: '📍 Ubicación seleccionada', 
-        description: `${location.municipality}, ${location.state}` 
-      });
+      
+      // Validar si se capturó la colonia
+      if (!location.colonia) {
+        toast({
+          title: '⚠️ Colonia no detectada',
+          description: 'Por favor ingresa la colonia manualmente en el campo siguiente',
+          variant: 'destructive',
+        });
+      } else {
+        toast({ 
+          title: '📍 Ubicación seleccionada', 
+          description: `${location.colonia}, ${location.municipality}` 
+        });
+      }
     };
 
     if (onInputChange) {
