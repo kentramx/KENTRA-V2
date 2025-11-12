@@ -232,8 +232,8 @@ export const PlaceAutocomplete = ({
           requestedRegion: 'MX',
         });
         
-        // Configurar tipos de búsqueda para incluir colonias
-        placeAutocomplete.types = ['(regions)'];
+        // Usar 'address' para obtener direcciones completas con colonias
+        placeAutocomplete.types = ['address'];
         
         // Aplicar estilos personalizados y forzar ancho completo
         placeAutocomplete.style.display = 'block';
@@ -388,7 +388,7 @@ export const PlaceAutocomplete = ({
     const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
       componentRestrictions: { country: 'mx' },
       fields: ['address_components', 'formatted_address', 'geometry'],
-      types: ['(regions)'],
+      types: ['address'],
     });
 
     autocomplete.addListener('place_changed', () => {
