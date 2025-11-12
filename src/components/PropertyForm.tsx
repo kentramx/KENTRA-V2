@@ -238,8 +238,9 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         rancho: 'Rancho'
       }[formData.type] || 'Propiedad';
       
-      const listingTypeLabel = formData.listing_type === 'renta' ? 'Renta' : 'Venta';
-      const autoTitle = `${propertyTypeLabel} en ${listingTypeLabel} - ${formData.municipality}, ${formData.state}`;
+      // Usar colonia como elemento principal, fallback a municipio si no está disponible
+      const locationText = formData.colonia || formData.municipality;
+      const autoTitle = `${propertyTypeLabel} en ${locationText}`;
 
       // Validate form data
       const validatedData = propertySchema.parse({
