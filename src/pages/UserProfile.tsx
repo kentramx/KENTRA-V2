@@ -337,11 +337,14 @@ const UserProfile = () => {
                           <FormLabel>Teléfono (opcional)</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="+52 123 456 7890" 
+                              placeholder="+524771234567" 
                               {...field} 
                               value={field.value || ""}
                             />
                           </FormControl>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Incluye el código de país (ej: +52 para México). Haz clic en "Guardar Cambios" para poder verificarlo.
+                          </p>
                           <FormMessage />
                         </FormItem>
                       )}
