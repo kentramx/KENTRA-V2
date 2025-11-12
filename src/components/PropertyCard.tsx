@@ -172,7 +172,7 @@ const PropertyCard = ({
           {/* Badge de Nuevo */}
           {!isFeatured && isNew() && (
             <Badge 
-              className="absolute left-3 top-3 bg-teal-500 text-white border-0 shadow-lg z-20"
+              className="absolute left-3 top-3 bg-accent text-accent-foreground border-0 shadow-lg z-20"
             >
               Nuevo
             </Badge>
