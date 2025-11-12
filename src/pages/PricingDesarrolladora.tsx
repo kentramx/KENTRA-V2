@@ -20,18 +20,21 @@ const PricingDesarrolladora = () => {
     document.getElementById('planes')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSelectPlan = async (planName: string) => {
+  const handleSelectPlan = async (planSlug: string) => {
     if (!user) {
       navigate('/auth?redirect=/pricing-desarrolladora');
       return;
     }
 
     try {
+      // Construir el nombre completo del plan para la búsqueda en DB
+      const fullPlanName = `desarrolladora_${planSlug}`;
+      
       // Buscar el plan en la base de datos
       const { data: plan, error: planError } = await supabase
         .from('subscription_plans')
         .select('id, name')
-        .eq('name', planName)
+        .eq('name', fullPlanName)
         .single();
 
       if (planError || !plan) {
@@ -45,7 +48,7 @@ const PricingDesarrolladora = () => {
         body: {
           planId: plan.id,
           billingCycle: billingCycle === 'monthly' ? 'monthly' : 'yearly',
-          successUrl: `${window.location.origin}/payment-success?plan=${planName}`,
+          successUrl: `${window.location.origin}/payment-success?plan=${fullPlanName}`,
           cancelUrl: `${window.location.origin}/pricing-desarrolladora`,
         },
       });

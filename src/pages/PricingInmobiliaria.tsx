@@ -20,18 +20,21 @@ const PricingInmobiliaria = () => {
     plansSection?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSelectPlan = async (planName: string) => {
+  const handleSelectPlan = async (planSlug: string) => {
     if (!user) {
       navigate('/auth?redirect=/pricing-inmobiliaria');
       return;
     }
 
     try {
+      // Construir el nombre completo del plan para la búsqueda en DB
+      const fullPlanName = `inmobiliaria_${planSlug}`;
+      
       // Buscar el plan en la base de datos
       const { data: plan, error: planError } = await supabase
         .from('subscription_plans')
         .select('id, name')
-        .eq('name', planName)
+        .eq('name', fullPlanName)
         .single();
 
       if (planError || !plan) {
@@ -45,7 +48,7 @@ const PricingInmobiliaria = () => {
         body: {
           planId: plan.id,
           billingCycle: billingPeriod === 'monthly' ? 'monthly' : 'yearly',
-          successUrl: `${window.location.origin}/payment-success?plan=${planName}`,
+          successUrl: `${window.location.origin}/payment-success?plan=${fullPlanName}`,
           cancelUrl: `${window.location.origin}/pricing-inmobiliaria`,
         },
       });
