@@ -40,6 +40,7 @@ import AdminFinancial from "./pages/AdminFinancial";
 import AdminKPIs from "./pages/AdminKPIs";
 import AdminMarketing from "./pages/AdminMarketing";
 import AdminUpsells from "./pages/AdminUpsells";
+import AdminKYC from "./pages/AdminKYC";
 import UnirseEquipo from "./pages/UnirseEquipo";
 import { Footer } from "@/components/Footer";
 
@@ -102,6 +103,7 @@ const AppContent = () => {
               <Route path="/admin/subscription-changes" element={<AdminSubscriptionChanges />} />
               <Route path="/admin/notification-settings" element={<AdminNotificationSettings />} />
               <Route path="/admin/upsells" element={<AdminUpsells />} />
+              <Route path="/admin/kyc" element={<AdminKYC />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

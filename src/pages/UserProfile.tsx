@@ -17,6 +17,7 @@ import { DynamicBreadcrumbs } from "@/components/DynamicBreadcrumbs";
 import { WhatsAppConfigSection } from "@/components/WhatsAppConfigSection";
 import { TwoFactorAuth } from "@/components/TwoFactorAuth";
 import { PhoneVerification } from "@/components/PhoneVerification";
+import { IdentityVerification } from "@/components/IdentityVerification";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import {
   Loader2,
@@ -476,6 +477,14 @@ const UserProfile = () => {
                               <Bell className="w-4 h-4 mr-2" />
                               Notificaciones
                             </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate("/admin/kyc")}
+                            >
+                              <User className="w-4 h-4 mr-2" />
+                              Verificaciones KYC
+                            </Button>
                             
                             {/* Exclusivo para super_admin */}
                             {isSuperAdmin && (
@@ -714,6 +723,10 @@ const UserProfile = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="verification" className="mt-6">
+            <IdentityVerification />
           </TabsContent>
 
           <TabsContent value="security" className="mt-6">

@@ -517,6 +517,63 @@ export type Database = {
           },
         ]
       }
+      identity_verifications: {
+        Row: {
+          address: string | null
+          admin_notes: string | null
+          created_at: string
+          curp: string | null
+          date_of_birth: string | null
+          full_name: string | null
+          id: string
+          ine_back_url: string | null
+          ine_front_url: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rfc_url: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          admin_notes?: string | null
+          created_at?: string
+          curp?: string | null
+          date_of_birth?: string | null
+          full_name?: string | null
+          id?: string
+          ine_back_url?: string | null
+          ine_front_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rfc_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          admin_notes?: string | null
+          created_at?: string
+          curp?: string | null
+          date_of_birth?: string | null
+          full_name?: string | null
+          id?: string
+          ine_back_url?: string | null
+          ine_front_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rfc_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       image_ai_analysis: {
         Row: {
           ai_notes: string | null
