@@ -5,6 +5,7 @@ interface LocationSearchProps {
     address: string;
     municipality: string;
     state: string;
+    colonia?: string;
     lat?: number;
     lng?: number;
   }) => void;

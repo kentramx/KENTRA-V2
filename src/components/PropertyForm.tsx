@@ -591,6 +591,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
                 address: location.address,
                 municipality: location.municipality,
                 state: location.state,
+                colonia: location.colonia || '',
                 lat: location.lat,
                 lng: location.lng,
               });

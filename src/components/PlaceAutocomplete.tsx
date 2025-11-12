@@ -13,6 +13,7 @@ interface PlaceAutocompleteProps {
     address: string;
     municipality: string;
     state: string;
+    colonia?: string;
     lat?: number;
     lng?: number;
   }) => void;
@@ -90,6 +91,7 @@ export const PlaceAutocomplete = ({
             
             let municipality = '';
             let state = '';
+            let colonia = '';
             
             addressComponents?.forEach((component) => {
               if (component.types.includes('administrative_area_level_1')) {
@@ -100,6 +102,12 @@ export const PlaceAutocomplete = ({
               } else if (!municipality && component.types.includes('locality')) {
                 municipality = component.long_name;
               }
+              // Extraer colonia
+              if (component.types.includes('sublocality_level_1') || 
+                  component.types.includes('sublocality') ||
+                  component.types.includes('neighborhood')) {
+                colonia = component.long_name;
+              }
             });
             
             const address = place.formatted_address;
@@ -108,6 +116,7 @@ export const PlaceAutocomplete = ({
               address,
               municipality,
               state,
+              colonia,
               lat: latitude,
               lng: longitude
             };
@@ -190,6 +199,7 @@ export const PlaceAutocomplete = ({
         address: string;
         municipality: string;
         state: string;
+        colonia?: string;
         lat?: number;
         lng?: number;
       }, inputValue: string) => {
@@ -250,6 +260,7 @@ export const PlaceAutocomplete = ({
           
           let municipality = '';
           let state = '';
+          let colonia = '';
           
           place.addressComponents?.forEach((component: any) => {
             if (component.types.includes('administrative_area_level_1')) {
@@ -261,12 +272,19 @@ export const PlaceAutocomplete = ({
             } else if (!municipality && component.types.includes('locality')) {
               municipality = component.longText;
             }
+            // Extraer colonia
+            if (component.types.includes('sublocality_level_1') || 
+                component.types.includes('sublocality') ||
+                component.types.includes('neighborhood')) {
+              colonia = component.longText;
+            }
           });
           
           const location = {
             address: place.formattedAddress || '',
             municipality,
             state,
+            colonia,
             lat: place.location?.lat(),
             lng: place.location?.lng(),
           };
@@ -336,6 +354,7 @@ export const PlaceAutocomplete = ({
       address: string;
       municipality: string;
       state: string;
+      colonia?: string;
       lat?: number;
       lng?: number;
     }, inputValue: string) => {
@@ -386,6 +405,7 @@ export const PlaceAutocomplete = ({
 
       let municipality = '';
       let state = '';
+      let colonia = '';
 
       place.address_components.forEach((component) => {
         if (component.types.includes('administrative_area_level_1')) {
@@ -397,12 +417,19 @@ export const PlaceAutocomplete = ({
         } else if (!municipality && component.types.includes('locality')) {
           municipality = component.long_name;
         }
+        // Extraer colonia
+        if (component.types.includes('sublocality_level_1') || 
+            component.types.includes('sublocality') ||
+            component.types.includes('neighborhood')) {
+          colonia = component.long_name;
+        }
       });
 
       const location = {
         address: place.formatted_address || '',
         municipality,
         state,
+        colonia,
         lat: place.geometry?.location?.lat(),
         lng: place.geometry?.location?.lng(),
       };
