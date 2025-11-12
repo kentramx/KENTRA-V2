@@ -148,39 +148,42 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const { data: properties = [], isLoading: loading, isFetching } = useProperties(queryFilters);
 
   // Ordenar propiedades según criterio seleccionado
+  // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
   const sortedProperties = useMemo(() => {
     const sorted = [...properties];
     
-    switch (filters.orden) {
-      case 'price_desc':
-        sorted.sort((a, b) => b.price - a.price);
-        break;
-      case 'price_asc':
-        sorted.sort((a, b) => a.price - b.price);
-        break;
-      case 'newest':
-        sorted.sort((a, b) => {
+    sorted.sort((a, b) => {
+      // 1. Prioridad principal: Destacadas primero
+      const aFeatured = a.is_featured ? 1 : 0;
+      const bFeatured = b.is_featured ? 1 : 0;
+      if (aFeatured !== bFeatured) {
+        return bFeatured - aFeatured; // Destacadas primero
+      }
+      
+      // 2. Ordenamiento secundario según criterio seleccionado
+      switch (filters.orden) {
+        case 'price_desc':
+          return b.price - a.price;
+        case 'price_asc':
+          return a.price - b.price;
+        case 'newest': {
           const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
           const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
           return dateB - dateA;
-        });
-        break;
-      case 'oldest':
-        sorted.sort((a, b) => {
+        }
+        case 'oldest': {
           const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
           const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
           return dateA - dateB;
-        });
-        break;
-      case 'bedrooms_desc':
-        sorted.sort((a, b) => (b.bedrooms || 0) - (a.bedrooms || 0));
-        break;
-      case 'sqft_desc':
-        sorted.sort((a, b) => (b.sqft || 0) - (a.sqft || 0));
-        break;
-      default:
-        sorted.sort((a, b) => b.price - a.price);
-    }
+        }
+        case 'bedrooms_desc':
+          return (b.bedrooms || 0) - (a.bedrooms || 0);
+        case 'sqft_desc':
+          return (b.sqft || 0) - (a.sqft || 0);
+        default:
+          return b.price - a.price;
+      }
+    });
     
     return sorted;
   }, [properties, filters.orden]);
