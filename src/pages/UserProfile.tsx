@@ -285,7 +285,7 @@ const UserProfile = () => {
           onValueChange={(value) => setSearchParams({ tab: value })}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="profile">
               <User className="mr-2 h-4 w-4" />
               Información Personal
@@ -301,6 +301,10 @@ const UserProfile = () => {
             <TabsTrigger value="security">
               <Lock className="mr-2 h-4 w-4" />
               Seguridad
+            </TabsTrigger>
+            <TabsTrigger value="verification">
+              <Shield className="mr-2 h-4 w-4" />
+              Verificación
             </TabsTrigger>
             <TabsTrigger value="advanced">
               <Settings className="mr-2 h-4 w-4" />

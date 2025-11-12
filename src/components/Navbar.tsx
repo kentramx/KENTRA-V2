@@ -250,6 +250,12 @@ const Navbar = () => {
                             </DropdownMenuItem>
                           </Link>
                         )}
+                        <Link to="/admin/kyc">
+                          <DropdownMenuItem className="cursor-pointer">
+                            <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                            Verificaciones KYC
+                          </DropdownMenuItem>
+                        </Link>
                         <DropdownMenuSeparator />
                       </>
                     )}
@@ -410,6 +416,12 @@ const Navbar = () => {
                             </DropdownMenuItem>
                           </Link>
                         )}
+                        <Link to="/admin/kyc">
+                          <DropdownMenuItem className="cursor-pointer">
+                            <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                            Verificaciones KYC
+                          </DropdownMenuItem>
+                        </Link>
                         <DropdownMenuSeparator />
                       </>
                     )}
