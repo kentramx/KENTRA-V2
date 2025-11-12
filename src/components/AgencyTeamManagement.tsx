@@ -130,10 +130,12 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
       return;
     }
 
-    if (agents.length >= maxAgents) {
+    // Validar límite incluyendo agentes actuales + invitaciones pendientes/aceptadas
+    const totalSlots = agents.length + invitations.filter(inv => inv.status === 'pending' || inv.status === 'accepted').length;
+    if (totalSlots >= maxAgents) {
       toast({
         title: 'Límite alcanzado',
-        description: `Has alcanzado el límite de ${maxAgents} agentes. Mejora tu plan para agregar más.`,
+        description: `Has alcanzado el límite de ${maxAgents} agentes (incluyendo invitaciones pendientes). Mejora tu plan para agregar más.`,
         variant: 'destructive',
       });
       return;

@@ -38,6 +38,58 @@ serve(async (req) => {
 
     console.log('📧 Sending invitation:', { agencyId, email, role });
 
+    // Obtener el plan de la inmobiliaria y validar límite de agentes
+    const { data: agency } = await supabase
+      .from('agencies')
+      .select('owner_id')
+      .eq('id', agencyId)
+      .single();
+
+    if (!agency) {
+      return new Response(
+        JSON.stringify({ error: 'Inmobiliaria no encontrada' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Obtener información de suscripción incluyendo límite de agentes
+    const { data: subscription } = await supabase
+      .rpc('get_user_subscription_info', { user_uuid: agency.owner_id })
+      .single();
+
+    if (!subscription || !subscription.has_subscription) {
+      return new Response(
+        JSON.stringify({ error: 'La inmobiliaria no tiene una suscripción activa' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const maxAgents = subscription.features?.max_agents || 5;
+
+    // Contar agentes actuales
+    const { count: currentAgentsCount } = await supabase
+      .from('agency_agents')
+      .select('*', { count: 'exact', head: true })
+      .eq('agency_id', agencyId);
+
+    // Contar invitaciones pendientes y aceptadas
+    const { count: pendingInvitationsCount } = await supabase
+      .from('agency_invitations')
+      .select('*', { count: 'exact', head: true })
+      .eq('agency_id', agencyId)
+      .in('status', ['pending', 'accepted']);
+
+    const totalSlots = (currentAgentsCount || 0) + (pendingInvitationsCount || 0);
+
+    if (totalSlots >= maxAgents) {
+      return new Response(
+        JSON.stringify({ 
+          error: `Límite de agentes alcanzado. Tu plan permite ${maxAgents} agentes (actualmente: ${currentAgentsCount} agentes + ${pendingInvitationsCount} invitaciones). Mejora tu plan para agregar más.` 
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verificar si ya existe una invitación pendiente
     const { data: existingInvitation } = await supabase
       .from('agency_invitations')
