@@ -34,9 +34,10 @@ import { useNavigate } from 'react-router-dom';
 interface AgentPropertyListProps {
   onEdit: (property: any) => void;
   subscriptionInfo?: any;
+  agentId?: string;
 }
 
-const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps) => {
+const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId }: AgentPropertyListProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -46,23 +47,24 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
   const [featureProperty, setFeatureProperty] = useState<any>(null);
 
   // Fetch properties con React Query
-  const { data: properties = [], isLoading: loading, refetch } = useAgentProperties(user?.id);
+  const effectiveAgentId = agentId || user?.id;
+  const { data: properties = [], isLoading: loading, refetch } = useAgentProperties(effectiveAgentId);
   
   // Mutation para delete
   const deletePropertyMutation = useDeleteProperty();
 
   useEffect(() => {
     fetchFeaturedProperties();
-  }, [user]);
+  }, [effectiveAgentId]);
 
   const fetchFeaturedProperties = async () => {
-    if (!user) return;
+    if (!effectiveAgentId) return;
     
     try {
       const { data: featuredData } = await supabase
         .from('featured_properties')
         .select('property_id')
-        .eq('agent_id', user.id)
+        .eq('agent_id', effectiveAgentId)
         .eq('status', 'active')
         .gt('end_date', new Date().toISOString());
 
@@ -103,7 +105,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
       });
       
       // Invalidar caché de React Query
-      queryClient.invalidateQueries({ queryKey: ['agent-properties', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['agent-properties', effectiveAgentId] });
       fetchFeaturedProperties();
     } catch (error) {
       console.error('Error renewing property:', error);
@@ -138,7 +140,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
       });
       
       // Invalidar caché de React Query
-      queryClient.invalidateQueries({ queryKey: ['agent-properties', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['agent-properties', effectiveAgentId] });
     } catch (error) {
       console.error('Error resubmitting property:', error);
       toast({
@@ -163,7 +165,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo }: AgentPropertyListProps)
       });
       
       // Invalidar caché de React Query
-      queryClient.invalidateQueries({ queryKey: ['agent-properties', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['agent-properties', effectiveAgentId] });
     } catch (error) {
       console.error('Error reactivating property:', error);
       toast({
