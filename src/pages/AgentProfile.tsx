@@ -6,6 +6,7 @@ import { getWhatsAppUrl, WhatsAppTemplates } from "@/utils/whatsapp";
 import Navbar from "@/components/Navbar";
 import PropertyCard from "@/components/PropertyCard";
 import { AgentReviews } from "@/components/AgentReviews";
+import { ReviewForm } from "@/components/ReviewForm";
 import { ContactAgentDialog } from "@/components/ContactAgentDialog";
 import AgentBadges from "@/components/AgentBadges";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,7 @@ const AgentProfile = () => {
     totalReviews: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [reviewsKey, setReviewsKey] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -388,10 +390,18 @@ const AgentProfile = () => {
         {/* Reviews Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Reseñas de Clientes</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Reseñas de Clientes</CardTitle>
+              {user && user.id !== id && (
+                <ReviewForm 
+                  agentId={id!} 
+                  onReviewSubmitted={() => setReviewsKey(prev => prev + 1)}
+                />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <AgentReviews agentId={id!} />
+            <AgentReviews key={reviewsKey} agentId={id!} />
           </CardContent>
         </Card>
       </div>

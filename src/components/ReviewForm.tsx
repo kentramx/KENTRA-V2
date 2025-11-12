@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Star } from "lucide-react";
+import { Star, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 
 const reviewSchema = z.object({
@@ -42,6 +43,8 @@ export const ReviewForm = ({ agentId, propertyId, onReviewSubmitted }: ReviewFor
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [hoveredRating, setHoveredRating] = useState(0);
+  const [canReview, setCanReview] = useState<boolean | null>(null);
+  const [hasExistingReview, setHasExistingReview] = useState(false);
 
   const form = useForm<ReviewFormData>({
     resolver: zodResolver(reviewSchema),
@@ -50,6 +53,44 @@ export const ReviewForm = ({ agentId, propertyId, onReviewSubmitted }: ReviewFor
       comment: "",
     },
   });
+
+  useEffect(() => {
+    if (user && agentId) {
+      checkReviewEligibility();
+    }
+  }, [user, agentId]);
+
+  const checkReviewEligibility = async () => {
+    if (!user) return;
+
+    try {
+      // Verificar si ya existe una review
+      const { data: existingReview } = await supabase
+        .from('agent_reviews')
+        .select('id')
+        .eq('agent_id', agentId)
+        .eq('buyer_id', user.id)
+        .maybeSingle();
+
+      if (existingReview) {
+        setHasExistingReview(true);
+        setCanReview(false);
+        return;
+      }
+
+      // Verificar si existe conversación con el agente
+      const { data: conversation } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`and(buyer_id.eq.${user.id},agent_id.eq.${agentId}),and(agent_id.eq.${user.id},buyer_id.eq.${agentId})`)
+        .maybeSingle();
+
+      setCanReview(!!conversation);
+    } catch (error) {
+      console.error('Error checking review eligibility:', error);
+      setCanReview(false);
+    }
+  };
 
   const onSubmit = async (data: ReviewFormData) => {
     if (!user) {
@@ -74,7 +115,13 @@ export const ReviewForm = ({ agentId, propertyId, onReviewSubmitted }: ReviewFor
         if (error.code === "23505") {
           toast({
             title: "Error",
-            description: "Ya has dejado una reseña para este agente y propiedad",
+            description: "Ya has dejado una reseña para este agente",
+            variant: "destructive",
+          });
+        } else if (error.message?.includes('row-level security')) {
+          toast({
+            title: "No permitido",
+            description: "Solo puedes dejar reseñas de agentes con los que has interactuado",
             variant: "destructive",
           });
         } else {
@@ -90,6 +137,7 @@ export const ReviewForm = ({ agentId, propertyId, onReviewSubmitted }: ReviewFor
 
       form.reset();
       setOpen(false);
+      setHasExistingReview(true);
       onReviewSubmitted?.();
     } catch (error) {
       console.error("Error submitting review:", error);
@@ -129,6 +177,39 @@ export const ReviewForm = ({ agentId, propertyId, onReviewSubmitted }: ReviewFor
     return null;
   }
 
+  // Mostrar estado de carga
+  if (canReview === null) {
+    return (
+      <Button variant="outline" disabled>
+        Verificando...
+      </Button>
+    );
+  }
+
+  // Usuario ya dejó review
+  if (hasExistingReview) {
+    return (
+      <Button variant="outline" disabled>
+        Ya dejaste una reseña
+      </Button>
+    );
+  }
+
+  // Usuario no puede dejar review
+  if (!canReview) {
+    return (
+      <div className="flex flex-col gap-2">
+        <Button variant="outline" disabled>
+          Dejar Reseña
+        </Button>
+        <p className="text-xs text-muted-foreground flex items-center gap-1">
+          <MessageCircle className="h-3 w-3" />
+          Contacta al agente primero para poder dejarle una reseña
+        </p>
+      </div>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -141,6 +222,15 @@ export const ReviewForm = ({ agentId, propertyId, onReviewSubmitted }: ReviewFor
             Comparte tu experiencia trabajando con este agente
           </DialogDescription>
         </DialogHeader>
+        
+        {/* Información sobre elegibilidad */}
+        <Alert className="bg-blue-50 border-blue-200">
+          <MessageCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-sm text-blue-800">
+            Solo puedes dejar reseñas de agentes con los que has interactuado previamente a través de mensajes en la plataforma.
+          </AlertDescription>
+        </Alert>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
