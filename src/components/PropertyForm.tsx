@@ -601,14 +601,47 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         </div>
 
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="colonia">Colonia*</Label>
+          <Label htmlFor="colonia" className="flex items-center justify-between">
+            <span>Colonia*</span>
+            <span className="text-xs text-muted-foreground font-normal">
+              Determina el título de tu propiedad
+            </span>
+          </Label>
           <Input
             id="colonia"
             value={formData.colonia}
             onChange={(e) => setFormData({ ...formData, colonia: e.target.value })}
-            placeholder="Ej: Providencia"
+            placeholder={(() => {
+              const coloniaExamples: Record<string, string> = {
+                'Jalisco': 'Ej: Providencia, Chapalita, Americana',
+                'Guanajuato': 'Ej: Jardines de Versalles, Centro, Campestre',
+                'Nuevo León': 'Ej: San Pedro, Cumbres, Valle Oriente',
+                'Ciudad de México': 'Ej: Polanco, Roma, Condesa',
+                'Querétaro': 'Ej: Juriquilla, Centro, Zibatá',
+                'Puebla': 'Ej: Angelópolis, La Paz, Centro',
+                'Quintana Roo': 'Ej: Aldea Zama, Centro, Puerto Cancún',
+                'Yucatán': 'Ej: García Ginerés, Montes de Amé, Centro',
+                'Estado de México': 'Ej: Interlomas, Metepec Centro, Lomas Verdes',
+                'Baja California': 'Ej: Zona Río, Playas, Centro'
+              };
+              return coloniaExamples[formData.state] || 'Ej: Nombre de la colonia';
+            })()}
             required
           />
+          <p className="text-xs text-muted-foreground">
+            La colonia se usa para generar el título: "{formData.type ? 
+              `${({
+                casa: 'Casa',
+                departamento: 'Departamento',
+                terreno: 'Terreno',
+                oficina: 'Oficina',
+                local: 'Local Comercial',
+                bodega: 'Bodega',
+                edificio: 'Edificio',
+                rancho: 'Rancho'
+              }[formData.type] || 'Propiedad')} en [Tu Colonia]` 
+              : 'Tipo en [Tu Colonia]'}"
+          </p>
           {(formData.type && (formData.colonia || formData.municipality)) && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border/50 animate-fade-in">
               <FileText className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
@@ -635,7 +668,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
                 {!formData.colonia && formData.municipality && (
                   <p className="text-xs text-amber-600 dark:text-amber-500 flex items-center gap-1">
                     <span className="text-lg leading-none">⚠️</span>
-                    Agrega una colonia para un título más específico
+                    Agrega una colonia para un título más específico y mejor posicionamiento
                   </p>
                 )}
               </div>
