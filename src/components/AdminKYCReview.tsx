@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ImageLightbox } from "@/components/ImageLightbox";
 import { toast } from "@/hooks/use-toast";
 import {
   CheckCircle,
@@ -31,7 +32,7 @@ import {
   User,
   Calendar,
   MapPin,
-  ExternalLink,
+  Image as ImageIcon,
 } from "lucide-react";
 
 interface KYCVerification {
@@ -64,6 +65,12 @@ export const AdminKYCReview = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
   const [processing, setProcessing] = useState(false);
+  
+  // Estado para el lightbox de documentos
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<{ url: string }[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxTitle, setLightboxTitle] = useState("");
 
   useEffect(() => {
     fetchVerifications();
@@ -198,8 +205,44 @@ export const AdminKYCReview = () => {
     }
   };
 
-  const openDocument = (url: string) => {
-    window.open(url, '_blank');
+  const openDocument = (verification: KYCVerification, docType: 'ine_front' | 'ine_back' | 'rfc') => {
+    const documents = [];
+    const docNames: Record<string, string> = {
+      ine_front: 'INE (Frente)',
+      ine_back: 'INE (Reverso)',
+      rfc: 'RFC'
+    };
+    
+    // Construir array de documentos disponibles
+    if (verification.ine_front_url) {
+      documents.push({ url: verification.ine_front_url, name: 'INE (Frente)' });
+    }
+    if (verification.ine_back_url) {
+      documents.push({ url: verification.ine_back_url, name: 'INE (Reverso)' });
+    }
+    if (verification.rfc_url) {
+      documents.push({ url: verification.rfc_url, name: 'RFC' });
+    }
+    
+    // Determinar índice inicial basado en el documento clickeado
+    let initialIndex = 0;
+    switch (docType) {
+      case 'ine_front':
+        initialIndex = 0;
+        break;
+      case 'ine_back':
+        initialIndex = verification.ine_front_url ? 1 : 0;
+        break;
+      case 'rfc':
+        initialIndex = documents.length - 1;
+        break;
+    }
+    
+    // Abrir lightbox
+    setLightboxImages(documents);
+    setLightboxIndex(initialIndex);
+    setLightboxTitle(`Documentos KYC - ${verification.profiles?.name || 'Usuario'}`);
+    setLightboxOpen(true);
   };
 
   return (
@@ -287,9 +330,9 @@ export const AdminKYCReview = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => openDocument(verification.ine_front_url!)}
+                      onClick={() => openDocument(verification, 'ine_front')}
                     >
-                      <ExternalLink className="h-4 w-4 mr-2" />
+                      <ImageIcon className="h-4 w-4 mr-2" />
                       Ver INE (Frente)
                     </Button>
                   )}
@@ -297,9 +340,9 @@ export const AdminKYCReview = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => openDocument(verification.ine_back_url!)}
+                      onClick={() => openDocument(verification, 'ine_back')}
                     >
-                      <ExternalLink className="h-4 w-4 mr-2" />
+                      <ImageIcon className="h-4 w-4 mr-2" />
                       Ver INE (Reverso)
                     </Button>
                   )}
@@ -307,9 +350,9 @@ export const AdminKYCReview = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => openDocument(verification.rfc_url!)}
+                      onClick={() => openDocument(verification, 'rfc')}
                     >
-                      <ExternalLink className="h-4 w-4 mr-2" />
+                      <ImageIcon className="h-4 w-4 mr-2" />
                       Ver RFC
                     </Button>
                   )}
@@ -464,6 +507,15 @@ export const AdminKYCReview = () => {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Visor de documentos KYC */}
+      <ImageLightbox
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        title={lightboxTitle}
+      />
     </div>
   );
 };
