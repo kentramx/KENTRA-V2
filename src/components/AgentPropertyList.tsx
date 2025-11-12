@@ -273,7 +273,12 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId }: AgentPropertyL
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      {(property as any).colonia && (
+                        <p className="text-sm font-medium text-foreground/80">
+                          {(property as any).colonia}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
                         {property.municipality}, {property.state}
                       </p>
                     </div>

@@ -12,7 +12,7 @@ export const useAgentProperties = (agentId: string | undefined, statusFilter?: s
         .select(`
           id, title, price, bedrooms, bathrooms, type, listing_type,
           status, created_at, expires_at, last_renewed_at, address,
-          state, municipality, sqft, parking, description, video_url,
+          state, municipality, colonia, sqft, parking, description, video_url,
           ai_moderation_score, ai_moderation_status, agent_id,
           images (id, url, position)
         `)
