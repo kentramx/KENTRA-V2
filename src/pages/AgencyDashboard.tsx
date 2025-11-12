@@ -55,7 +55,7 @@ const AgencyDashboard = () => {
     }
 
     try {
-      // Si está simulando, cargar datos demo
+      // Si está simulando, cargar datos demo y terminar aquí
       if (isImpersonating && impersonatedRole === 'agency') {
         // Cargar agencia demo
         const { data: agencyData } = await supabase
@@ -80,7 +80,7 @@ const AgencyDashboard = () => {
         }
         
         setLoading(false);
-        return;
+        return; // IMPORTANTE: Salir aquí para no verificar rol real
       }
 
       // Verificar rol de agencia
