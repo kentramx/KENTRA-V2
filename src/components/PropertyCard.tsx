@@ -172,7 +172,7 @@ const PropertyCard = ({
           {/* Badge de Nuevo */}
           {!isFeatured && isNew() && (
             <Badge 
-              className="absolute left-3 top-3 bg-green-500 text-white border-0 shadow-lg z-20"
+              className="absolute left-3 top-3 bg-blue-500 text-white border-0 shadow-lg z-20"
             >
               Nuevo
             </Badge>
@@ -180,7 +180,7 @@ const PropertyCard = ({
           
           {/* Tipo de operación */}
           <Badge className="absolute right-3 bottom-3 bg-background/90 text-foreground z-20">
-            {listingType === 'renta' ? '🔑 Renta' : '🏠 Venta'}
+            {listingType === 'renta' ? 'Renta' : 'Venta'}
           </Badge>
           
           {/* Indicadores de galería */}
