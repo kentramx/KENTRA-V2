@@ -95,25 +95,31 @@ const AgentCard = ({
             </Avatar>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-lg leading-tight truncate">
-                  {name}
-                </h3>
-                <div className="flex items-center gap-1 flex-shrink-0">
+              <div className="mb-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-lg leading-tight truncate">
+                    {name}
+                  </h3>
+                </div>
+                
+                <div className="flex items-center gap-1.5 flex-wrap">
                   {is_verified && (
-                    <div title="Perfil verificado">
-                      <ShieldCheck className="h-5 w-5 text-primary" />
-                    </div>
+                    <Badge variant="outline" className="flex items-center gap-1 bg-purple-50 text-purple-700 border-purple-200">
+                      <ShieldCheck className="h-3 w-3" />
+                      Identidad Verificada
+                    </Badge>
                   )}
                   {phone_verified && (
-                    <div title="Teléfono verificado">
-                      <Smartphone className="h-4 w-4 text-blue-600" />
-                    </div>
+                    <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
+                      <Smartphone className="h-3 w-3" />
+                      Teléfono
+                    </Badge>
                   )}
                   {whatsapp_verified && (
-                    <div title="WhatsApp verificado">
-                      <MessageCircle className="h-4 w-4 text-green-600" />
-                    </div>
+                    <Badge variant="outline" className="flex items-center gap-1 bg-green-50 text-green-700 border-green-200">
+                      <MessageCircle className="h-3 w-3" />
+                      WhatsApp
+                    </Badge>
                   )}
                 </div>
               </div>

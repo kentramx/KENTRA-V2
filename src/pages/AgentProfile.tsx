@@ -73,7 +73,7 @@ const AgentProfile = () => {
       // Fetch agent profile
       const { data: agentData, error: agentError } = await supabase
         .from("profiles")
-        .select("*, phone_verified, whatsapp_verified")
+        .select("*, is_verified, phone_verified, whatsapp_verified")
         .eq("id", id)
         .single();
 
@@ -184,26 +184,29 @@ const AgentProfile = () => {
               </Avatar>
               
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2 flex-wrap">
-                  <h1 className="text-3xl font-bold">{agent.name}</h1>
-                  {agent.is_verified && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Verificado
-                    </Badge>
-                  )}
-                  {agent.phone_verified && (
-                    <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
-                      <Smartphone className="h-3 w-3" />
-                      Teléfono Verificado
-                    </Badge>
-                  )}
-                  {agent.whatsapp_verified && (
-                    <Badge variant="outline" className="flex items-center gap-1 bg-green-50 text-green-700 border-green-200">
-                      <MessageCircle className="h-3 w-3" />
-                      WhatsApp Verificado
-                    </Badge>
-                  )}
+                <div className="mb-2">
+                  <h1 className="text-3xl font-bold mb-3">{agent.name}</h1>
+                  
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {agent.is_verified && (
+                      <Badge variant="outline" className="flex items-center gap-1.5 bg-purple-50 text-purple-700 border-purple-200 px-3 py-1">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Identidad Verificada
+                      </Badge>
+                    )}
+                    {agent.phone_verified && (
+                      <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
+                        <Smartphone className="h-3 w-3" />
+                        Teléfono Verificado
+                      </Badge>
+                    )}
+                    {agent.whatsapp_verified && (
+                      <Badge variant="outline" className="flex items-center gap-1 bg-green-50 text-green-700 border-green-200">
+                        <MessageCircle className="h-3 w-3" />
+                        WhatsApp Verificado
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 
                 {badges && badges.length > 0 && (
