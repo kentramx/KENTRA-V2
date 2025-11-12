@@ -51,6 +51,27 @@ export const AvatarUpload = ({ userId, currentAvatarUrl, userName, onUploadCompl
         return;
       }
 
+      // Validar dimensiones mínimas (200x200px)
+      const img = new Image();
+      const imageUrl = URL.createObjectURL(file);
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+
+      URL.revokeObjectURL(imageUrl);
+
+      if (img.width < 200 || img.height < 200) {
+        toast({
+          title: "Error",
+          description: "La imagen debe tener al menos 200x200 píxeles",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setUploading(true);
 
       // Crear nombre único para el archivo
@@ -138,7 +159,7 @@ export const AvatarUpload = ({ userId, currentAvatarUrl, userName, onUploadCompl
           )}
         </Button>
         <p className="text-xs text-muted-foreground text-center">
-          JPG, PNG o WEBP. Máximo 2MB.
+          JPG, PNG o WEBP. Mínimo 200x200px, máximo 2MB.
         </p>
       </div>
     </div>
