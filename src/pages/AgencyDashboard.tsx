@@ -46,38 +46,57 @@ const AgencyDashboard = () => {
     if (user) {
       checkAgencyStatus();
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, isImpersonating, impersonatedRole]);
 
   const checkAgencyStatus = async () => {
+    // Chequeo sincronizado inmediato por localStorage para evitar carreras
+    const localImpersonated = localStorage.getItem('kentra_impersonated_role');
+    const isLocalSimulatingAgency = localImpersonated === 'agency';
+    const DEMO_OWNER_ID = '00000000-0000-0000-0000-000000000010';
+    const DEMO_AGENCY_ID = '20000000-0000-0000-0000-000000000001';
+
+    if (isLocalSimulatingAgency) {
+      try {
+        const ownerId = DEMO_OWNER_ID;
+        const agencyId = DEMO_AGENCY_ID;
+
+        const { data: agencyData } = await supabase
+          .from('agencies')
+          .select('*')
+          .eq('owner_id', ownerId)
+          .single();
+
+        setAgency(agencyData || { name: 'Kentra Inmobiliaria Demo', owner_id: ownerId, id: agencyId });
+
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: ownerId });
+        if (subInfo && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
+      } finally {
+        setLoading(false);
+      }
+      return; // salir siempre en simulación
+    }
+
     if (!effectiveOwnerId) {
       setLoading(false);
       return;
     }
 
     try {
-      // Si está simulando, cargar datos demo y terminar aquí
+      // Si está simulando (vía hook), cargar datos demo y terminar aquí
       if (isImpersonating && impersonatedRole === 'agency') {
-        // Cargar agencia demo
+        const ownerId = getDemoUserId() || DEMO_OWNER_ID;
+        const agencyId = getDemoAgencyId() || DEMO_AGENCY_ID;
+
         const { data: agencyData } = await supabase
           .from('agencies')
           .select('*')
-          .eq('owner_id', effectiveOwnerId)
+          .eq('owner_id', ownerId)
           .single();
         
-        setAgency(agencyData || { 
-          name: 'Kentra Inmobiliaria Demo', 
-          owner_id: effectiveOwnerId,
-          id: getDemoAgencyId()
-        });
+        setAgency(agencyData || { name: 'Kentra Inmobiliaria Demo', owner_id: ownerId, id: agencyId });
 
-        // Cargar suscripción demo
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', {
-          user_uuid: effectiveOwnerId,
-        });
-
-        if (subInfo && subInfo.length > 0) {
-          setSubscriptionInfo(subInfo[0]);
-        }
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: ownerId });
+        if (subInfo && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
         
         setLoading(false);
         return; // IMPORTANTE: Salir aquí para no verificar rol real

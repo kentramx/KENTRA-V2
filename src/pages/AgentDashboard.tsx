@@ -57,9 +57,36 @@ const AgentDashboard = () => {
     if (user) {
       checkAgentStatus();
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, isImpersonating, impersonatedRole]);
 
   const checkAgentStatus = async () => {
+    // Chequeo sincronizado inmediato por localStorage para evitar carreras
+    const localImpersonated = localStorage.getItem('kentra_impersonated_role');
+    const isLocalSimulatingAgent = localImpersonated === 'agent';
+    const DEMO_AGENT_ID = '00000000-0000-0000-0000-000000000001';
+
+    if (isLocalSimulatingAgent) {
+      const demoId = DEMO_AGENT_ID;
+      setUserRole('agent');
+
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', demoId)
+          .single();
+        setProfile(profileData || { name: 'Demo Agent Kentra', id: demoId });
+
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: demoId });
+        if (subInfo && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
+
+        await fetchFeaturedCount();
+      } finally {
+        setLoading(false);
+      }
+      return; // salir siempre en simulación
+    }
+
     if (!effectiveAgentId) {
       setLoading(false);
       return;
