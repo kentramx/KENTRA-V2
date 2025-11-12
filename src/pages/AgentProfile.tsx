@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Loader2,
   MessageCircle,
+  Smartphone,
 } from "lucide-react";
 
 interface BadgeData {
@@ -70,7 +71,7 @@ const AgentProfile = () => {
       // Fetch agent profile
       const { data: agentData, error: agentError } = await supabase
         .from("profiles")
-        .select("*")
+        .select("*, phone_verified")
         .eq("id", id)
         .single();
 
@@ -181,12 +182,18 @@ const AgentProfile = () => {
               </Avatar>
               
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-2 flex-wrap">
                   <h1 className="text-3xl font-bold">{agent.name}</h1>
                   {agent.is_verified && (
                     <Badge variant="secondary" className="flex items-center gap-1">
                       <CheckCircle2 className="h-3 w-3" />
                       Verificado
+                    </Badge>
+                  )}
+                  {agent.phone_verified && (
+                    <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
+                      <Smartphone className="h-3 w-3" />
+                      Teléfono Verificado
                     </Badge>
                   )}
                 </div>
