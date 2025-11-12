@@ -20,6 +20,7 @@ import QualityChecklist from '@/components/QualityChecklist';
 import PropertyDiff from '@/components/PropertyDiff';
 import AdminModerationMetrics from '@/components/AdminModerationMetrics';
 import AutoApprovalStats from '@/components/AutoApprovalStats';
+import { ImageQualityReview, ImageQualityIssues } from '@/components/ImageQualityReview';
 
 const REJECTION_REASONS = [
   { code: 'incomplete_info', label: 'Información incompleta' },
@@ -55,6 +56,16 @@ const AdminDashboard = () => {
   
   const [viewProperty, setViewProperty] = useState<any>(null);
   const [quickReviewMode, setQuickReviewMode] = useState(false);
+  const [imageQualityIssues, setImageQualityIssues] = useState<ImageQualityIssues>({
+    hasBlurryImages: false,
+    hasPoorLighting: false,
+    hasLowResolution: false,
+    hasDarkImages: false,
+    hasPoorComposition: false,
+    hasInappropriateContent: false,
+    hasManipulation: false,
+    issueNotes: '',
+  });
   
   const [metrics, setMetrics] = useState({
     new: 0,
@@ -257,6 +268,16 @@ const AdminDashboard = () => {
       fetchMetrics();
       setViewProperty(null);
       setAdminNotes('');
+      setImageQualityIssues({
+        hasBlurryImages: false,
+        hasPoorLighting: false,
+        hasLowResolution: false,
+        hasDarkImages: false,
+        hasPoorComposition: false,
+        hasInappropriateContent: false,
+        hasManipulation: false,
+        issueNotes: '',
+      });
     } catch (error) {
       console.error('Error approving property:', error);
       toast({
@@ -283,12 +304,31 @@ const AdminDashboard = () => {
     setProcessing(true);
     try {
       const reasonLabel = REJECTION_REASONS.find(r => r.code === rejectionReason)?.label || '';
+      
+      // Agregar detalles de problemas de calidad de imagen si aplica
+      let enrichedDetails = rejectionDetails;
+      if (rejectionReason === 'poor_images') {
+        const detectedIssues = [];
+        if (imageQualityIssues.hasBlurryImages) detectedIssues.push('Imágenes borrosas o desenfocadas');
+        if (imageQualityIssues.hasPoorLighting) detectedIssues.push('Iluminación deficiente');
+        if (imageQualityIssues.hasLowResolution) detectedIssues.push('Resolución muy baja');
+        if (imageQualityIssues.hasDarkImages) detectedIssues.push('Imágenes muy oscuras');
+        if (imageQualityIssues.hasPoorComposition) detectedIssues.push('Mala composición');
+        if (imageQualityIssues.hasInappropriateContent) detectedIssues.push('Contenido inapropiado');
+        if (imageQualityIssues.hasManipulation) detectedIssues.push('Evidencia de manipulación');
+        
+        if (detectedIssues.length > 0) {
+          enrichedDetails = `Problemas detectados:\n${detectedIssues.map(issue => `• ${issue}`).join('\n')}${rejectionDetails ? `\n\nDetalles adicionales: ${rejectionDetails}` : ''}`;
+        }
+      }
+      
       const rejectionData = {
         code: rejectionReason,
         label: reasonLabel,
-        details: rejectionDetails,
+        details: enrichedDetails,
         admin_id: user?.id,
         rejected_at: new Date().toISOString(),
+        image_quality_issues: rejectionReason === 'poor_images' ? imageQualityIssues : null,
       };
 
       const { error: updateError } = await supabase
@@ -340,6 +380,16 @@ const AdminDashboard = () => {
       setRejectionReason('');
       setRejectionDetails('');
       setAdminNotes('');
+      setImageQualityIssues({
+        hasBlurryImages: false,
+        hasPoorLighting: false,
+        hasLowResolution: false,
+        hasDarkImages: false,
+        hasPoorComposition: false,
+        hasInappropriateContent: false,
+        hasManipulation: false,
+        issueNotes: '',
+      });
       fetchProperties();
       fetchMetrics();
     } catch (error) {
@@ -804,7 +854,19 @@ const AdminDashboard = () => {
       </div>
 
       {/* Dialog de vista detallada */}
-      <Dialog open={!!viewProperty} onOpenChange={() => setViewProperty(null)}>
+      <Dialog open={!!viewProperty} onOpenChange={() => {
+        setViewProperty(null);
+        setImageQualityIssues({
+          hasBlurryImages: false,
+          hasPoorLighting: false,
+          hasLowResolution: false,
+          hasDarkImages: false,
+          hasPoorComposition: false,
+          hasInappropriateContent: false,
+          hasManipulation: false,
+          issueNotes: '',
+        });
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Revisión Detallada</DialogTitle>
@@ -860,6 +922,12 @@ const AdminDashboard = () => {
 
               <QualityChecklist property={viewProperty} />
               
+              {/* Evaluación manual de calidad de imágenes */}
+              <ImageQualityReview 
+                images={viewProperty.images || []}
+                onQualityIssuesChange={setImageQualityIssues}
+              />
+              
               {viewProperty.resubmission_count > 0 && (
                 <PropertyDiff property={viewProperty} />
               )}
@@ -901,7 +969,21 @@ const AdminDashboard = () => {
       </Dialog>
 
       {/* Dialog de Rechazo */}
-      <Dialog open={!!rejectProperty} onOpenChange={() => setRejectProperty(null)}>
+      <Dialog open={!!rejectProperty} onOpenChange={() => {
+        setRejectProperty(null);
+        setRejectionReason('');
+        setRejectionDetails('');
+        setImageQualityIssues({
+          hasBlurryImages: false,
+          hasPoorLighting: false,
+          hasLowResolution: false,
+          hasDarkImages: false,
+          hasPoorComposition: false,
+          hasInappropriateContent: false,
+          hasManipulation: false,
+          issueNotes: '',
+        });
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Rechazar Propiedad</DialogTitle>
@@ -929,6 +1011,36 @@ const AdminDashboard = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Mostrar problemas de calidad detectados si aplica */}
+            {rejectionReason === 'poor_images' && (
+              Object.values(imageQualityIssues).some(v => v === true) ? (
+                <Alert className="bg-orange-50 border-orange-200">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  <AlertDescription className="text-sm text-orange-900">
+                    <strong>Problemas detectados en la evaluación:</strong>
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      {imageQualityIssues.hasBlurryImages && <li>Imágenes borrosas o desenfocadas</li>}
+                      {imageQualityIssues.hasPoorLighting && <li>Iluminación deficiente</li>}
+                      {imageQualityIssues.hasLowResolution && <li>Resolución muy baja</li>}
+                      {imageQualityIssues.hasDarkImages && <li>Imágenes muy oscuras</li>}
+                      {imageQualityIssues.hasPoorComposition && <li>Mala composición</li>}
+                      {imageQualityIssues.hasInappropriateContent && <li>Contenido inapropiado</li>}
+                      {imageQualityIssues.hasManipulation && <li>Evidencia de manipulación</li>}
+                    </ul>
+                    <p className="mt-2 text-xs">
+                      Estos problemas se incluirán automáticamente en el mensaje al agente
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert className="bg-blue-50 border-blue-200">
+                  <AlertDescription className="text-sm text-blue-900">
+                    No se detectaron problemas específicos de calidad en la evaluación. Por favor especifica los problemas en "Detalles adicionales".
+                  </AlertDescription>
+                </Alert>
+              )
+            )}
 
             <div className="space-y-2">
               <Label>
