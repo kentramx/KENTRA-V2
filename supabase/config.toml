@@ -1,5 +1,8 @@
 project_id = "jazjzwhbagwllensnkaz"
 
+[functions.reset-featured-counts]
+verify_jwt = false
+
 [functions.send-message-notification]
 verify_jwt = false
 

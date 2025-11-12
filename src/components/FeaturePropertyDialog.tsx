@@ -165,14 +165,16 @@ export const FeaturePropertyDialog = ({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Has usado todos tus slots de propiedades destacadas ({subscriptionInfo.featured_limit}/{subscriptionInfo.featured_limit}).
+                Has usado tus {subscriptionInfo.featured_limit} destacadas de este mes ({subscriptionInfo.featured_used}/{subscriptionInfo.featured_limit}).
+                {' '}
+                El contador se resetea el 1ro del próximo mes.
                 {' '}
                 <button 
                   onClick={() => onOpenChange(false)}
                   className="underline font-semibold"
                 >
                   Mejora tu plan
-                </button> para destacar más propiedades.
+                </button> para tener más destacadas mensuales.
               </AlertDescription>
             </Alert>
           )}

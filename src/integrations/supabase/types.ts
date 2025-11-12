@@ -1521,6 +1521,8 @@ export type Database = {
           created_at: string | null
           current_period_end: string | null
           current_period_start: string | null
+          featured_reset_date: string | null
+          featured_used_this_month: number | null
           id: string
           plan_id: string
           status: string
@@ -1535,6 +1537,8 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
+          featured_reset_date?: string | null
+          featured_used_this_month?: number | null
           id?: string
           plan_id: string
           status?: string
@@ -1549,6 +1553,8 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
+          featured_reset_date?: string | null
+          featured_used_this_month?: number | null
           id?: string
           plan_id?: string
           status?: string
@@ -1618,6 +1624,16 @@ export type Database = {
           can_create: boolean
           current_count: number
           max_allowed: number
+          reason: string
+        }[]
+      }
+      can_feature_property: {
+        Args: { user_uuid: string }
+        Returns: {
+          can_feature: boolean
+          featured_limit: number
+          featured_used: number
+          plan_name: string
           reason: string
         }[]
       }
