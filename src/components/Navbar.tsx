@@ -127,7 +127,7 @@ const Navbar = () => {
 
           {/* Center Logo - Always visible */}
           <Link to="/" className="flex items-center shrink-0">
-            <img src={kentraLogo} alt="Kentra" className="h-8" />
+            <img src={kentraLogo} alt="Kentra" className="h-10 md:h-12" />
           </Link>
 
           {/* Right Navigation - Desktop */}
