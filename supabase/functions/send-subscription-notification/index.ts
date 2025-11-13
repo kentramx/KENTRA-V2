@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface NotificationRequest {
   userId: string;
-  type: 'renewal_success' | 'payment_failed' | 'subscription_canceled' | 'subscription_expiring' | 'downgrade_confirmed' | 'trial_expired' | 'trial_started' | 'subscription_suspended';
+  type: 'renewal_success' | 'payment_failed' | 'payment_failed_day_3' | 'payment_failed_day_5' | 'payment_failed_day_7' | 'subscription_canceled' | 'subscription_expiring' | 'downgrade_confirmed' | 'trial_expired' | 'trial_started' | 'subscription_suspended';
   metadata?: Record<string, any>;
 }
 
@@ -75,6 +75,77 @@ Deno.serve(async (req) => {
           <p><strong>⏰ Tienes ${metadata.graceDaysRemaining} días para actualizar tu método de pago</strong> antes de que tu cuenta sea suspendida.</p>
           <p>Por favor, actualiza tu método de pago para continuar disfrutando de nuestros servicios sin interrupciones.</p>
           <p><a href="https://kentra.com.mx/perfil?tab=subscription" style="background-color: #DC2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 16px;">Actualizar método de pago</a></p>
+        `;
+        break;
+
+      case 'payment_failed_day_3':
+        subject = '⚠️ Recordatorio: Actualiza tu método de pago - Kentra';
+        htmlContent = `
+          <h1>⚠️ Recordatorio de pago pendiente</h1>
+          <p>Hola ${userName},</p>
+          <p>Te recordamos que intentamos procesar el pago de tu suscripción <strong>${metadata.planName}</strong> hace ${metadata.daysSinceFailed} días sin éxito.</p>
+          
+          <p>⏰ <strong>Te quedan ${metadata.daysRemaining} días</strong> para actualizar tu método de pago antes de que tu suscripción sea suspendida.</p>
+          
+          <h2>📌 Actualiza tu método de pago ahora</h2>
+          <p>Ve a tu panel de usuario y actualiza tu tarjeta para evitar la suspensión de tu cuenta.</p>
+          
+          <p><a href="https://kentra.com.mx/perfil?tab=subscription" style="background-color: #DC2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 16px;">Actualizar Método de Pago</a></p>
+          
+          <p>Si ya actualizaste tu método de pago, puedes ignorar este mensaje.</p>
+          
+          <p>Saludos,<br>El equipo de Kentra</p>
+        `;
+        break;
+
+      case 'payment_failed_day_5':
+        subject = '🚨 Urgente: Solo te quedan 2 días - Actualiza tu pago en Kentra';
+        htmlContent = `
+          <h1>🚨 Acción requerida: Solo quedan 2 días</h1>
+          <p>Hola ${userName},</p>
+          <p>Tu suscripción <strong>${metadata.planName}</strong> está en riesgo de ser suspendida.</p>
+          
+          <p>⏰ <strong>Solo te quedan ${metadata.daysRemaining} días</strong> para actualizar tu método de pago.</p>
+          
+          <h2>⚠️ ¿Qué pasará si no actualizas tu pago?</h2>
+          <ul>
+            <li>Tu suscripción será suspendida</li>
+            <li>Tus propiedades serán pausadas</li>
+            <li>Perderás acceso a tu cuenta</li>
+          </ul>
+          
+          <p><strong>👉 Actualiza tu método de pago ahora desde tu panel de usuario.</strong></p>
+          
+          <p><a href="https://kentra.com.mx/perfil?tab=subscription" style="background-color: #DC2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 16px;">ACTUALIZAR AHORA</a></p>
+          
+          <p>Si necesitas ayuda, contáctanos de inmediato.</p>
+          
+          <p>Saludos,<br>El equipo de Kentra</p>
+        `;
+        break;
+
+      case 'payment_failed_day_7':
+        subject = '🚨 Último aviso: Tu suscripción será suspendida hoy - Kentra';
+        htmlContent = `
+          <h1>🚨 ÚLTIMO AVISO: Tu suscripción será suspendida HOY</h1>
+          <p>Hola ${userName},</p>
+          <p>Este es tu último aviso. Tu suscripción <strong>${metadata.planName}</strong> será suspendida al final del día de hoy si no actualizas tu método de pago.</p>
+          
+          <h2>⚠️ Consecuencias de la suspensión:</h2>
+          <ul>
+            <li>✖️ Tu suscripción será cancelada</li>
+            <li>✖️ Todas tus propiedades serán pausadas automáticamente</li>
+            <li>✖️ Perderás acceso a tu cuenta</li>
+            <li>✖️ Dejarás de recibir leads</li>
+          </ul>
+          
+          <p><strong>⏰ ACTÚA AHORA:</strong> Ve a tu panel de usuario y actualiza tu tarjeta INMEDIATAMENTE.</p>
+          
+          <p><a href="https://kentra.com.mx/perfil?tab=subscription" style="background-color: #DC2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 16px;">ACTUALIZAR URGENTE</a></p>
+          
+          <p>Si tienes algún problema, contáctanos de urgencia.</p>
+          
+          <p>Saludos,<br>El equipo de Kentra</p>
         `;
         break;
 

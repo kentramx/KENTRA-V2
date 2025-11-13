@@ -47,6 +47,23 @@ Deno.serve(async (req) => {
       upsellOnly,
     });
 
+    // Initialize Stripe
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
+      apiVersion: '2023-10-16',
+      httpClient: Stripe.createFetchHttpClient(),
+    });
+
+    // VALIDACIÓN 5: Función auxiliar para verificar que stripe_price_id existe en Stripe
+    const validateStripePriceId = async (priceId: string): Promise<boolean> => {
+      try {
+        await stripe.prices.retrieve(priceId);
+        return true;
+      } catch (error) {
+        console.error('Invalid stripe_price_id:', priceId, error);
+        return false;
+      }
+    };
+
     // Si es compra de upsell únicamente
     if (upsellOnly) {
       console.log('Processing upsell-only purchase');
@@ -67,13 +84,50 @@ Deno.serve(async (req) => {
         );
       }
 
+      // VALIDACIÓN 6: Verificar límite de slots adicionales
+      if (upsells && upsells.length > 0) {
+        const slotUpsellIds = upsells.filter((u: any) => 
+          u.name?.toLowerCase().includes('slot adicional') || 
+          u.name?.toLowerCase().includes('paquete')
+        ).map((u: any) => u.id);
+
+        if (slotUpsellIds.length > 0) {
+          const { data: activeSlots, error: slotsError } = await supabaseClient
+            .from('user_active_upsells')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+            .in('upsell_id', slotUpsellIds);
+
+          if (slotsError) {
+            console.error('Error checking active slots:', slotsError);
+          } else if (activeSlots && activeSlots.length >= 10) {
+            return new Response(
+              JSON.stringify({ 
+                error: 'Has alcanzado el límite máximo de 10 slots adicionales. Considera mejorar tu plan.' 
+              }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+      }
+
       const customerId = activeSub.stripe_customer_id;
 
-      // Initialize Stripe
-      const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
-        apiVersion: '2023-10-16',
-        httpClient: Stripe.createFetchHttpClient(),
-      });
+      // VALIDACIÓN 5: Verificar que todos los stripe_price_id de upsells sean válidos
+      for (const upsell of upsells) {
+        if (upsell.stripePriceId) {
+          const isValid = await validateStripePriceId(upsell.stripePriceId);
+          if (!isValid) {
+            return new Response(
+              JSON.stringify({ 
+                error: `El servicio "${upsell.name || 'seleccionado'}" tiene una configuración de precio inválida. Contacta soporte.` 
+              }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+      }
 
       // Line items solo con upsells
       const lineItems = upsells.map((upsell: any) => ({
@@ -129,12 +183,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
-      apiVersion: '2023-10-16',
-      httpClient: Stripe.createFetchHttpClient(),
-    });
-
     // Determine price ID based on billing cycle
     const priceId = billingCycle === 'yearly' 
       ? plan.stripe_price_id_yearly 
@@ -144,6 +192,17 @@ Deno.serve(async (req) => {
       console.error('Missing price ID for billing cycle:', billingCycle);
       return new Response(
         JSON.stringify({ error: 'Price configuration missing for this billing cycle' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // VALIDACIÓN 5: Verificar que el stripe_price_id del plan sea válido
+    const isPlanPriceValid = await validateStripePriceId(priceId);
+    if (!isPlanPriceValid) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'El plan seleccionado tiene una configuración de precio inválida. Contacta soporte.' 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

@@ -1753,6 +1753,10 @@ export type Database = {
           total_auto_approved: number
         }[]
       }
+      get_churn_metrics: {
+        Args: { end_date?: string; start_date?: string }
+        Returns: Json
+      }
       get_financial_metrics: {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
