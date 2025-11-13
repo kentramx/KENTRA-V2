@@ -217,8 +217,39 @@ Deno.serve(async (req) => {
       currentSub.stripe_subscription_id
     );
 
+    // 🔍 DIAGNOSIS - Current Subscription State
+    console.log('🔍 DIAGNOSIS - Current Subscription State:', {
+      subscriptionId: stripeSubscription.id,
+      status: stripeSubscription.status,
+      currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
+      currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
+      currentPriceId: stripeSubscription.items.data[0].price.id,
+      currentAmount: stripeSubscription.items.data[0].price.unit_amount / 100,
+      currentInterval: stripeSubscription.items.data[0].price.recurring?.interval,
+      billingCycleAnchor: stripeSubscription.billing_cycle_anchor,
+    });
+
     // If preview only, calculate proration without applying changes
     if (previewOnly) {
+      // ⏰ DIAGNOSIS - Time Calculations
+      const now = Date.now();
+      const periodEnd = stripeSubscription.current_period_end * 1000;
+      const periodStart = stripeSubscription.current_period_start * 1000;
+      const totalDays = Math.ceil((periodEnd - periodStart) / (1000 * 60 * 60 * 24));
+      const daysRemaining = Math.ceil((periodEnd - now) / (1000 * 60 * 60 * 24));
+      const daysElapsed = totalDays - daysRemaining;
+
+      console.log('⏰ DIAGNOSIS - Time Calculations:', {
+        now: new Date(now).toISOString(),
+        periodStart: new Date(periodStart).toISOString(),
+        periodEnd: new Date(periodEnd).toISOString(),
+        totalDays,
+        daysElapsed,
+        daysRemaining,
+        percentageUsed: ((daysElapsed / totalDays) * 100).toFixed(2) + '%',
+        percentageRemaining: ((daysRemaining / totalDays) * 100).toFixed(2) + '%',
+      });
+
       const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
         customer: currentSub.stripe_customer_id,
         subscription: currentSub.stripe_subscription_id,
@@ -227,6 +258,26 @@ Deno.serve(async (req) => {
           price: newPriceId,
         }],
         subscription_proration_behavior: 'create_prorations',
+      });
+
+      // 💰 DIAGNOSIS - Stripe Proration Calculation
+      console.log('💰 DIAGNOSIS - Stripe Proration Calculation:', {
+        upcomingInvoiceId: upcomingInvoice.id,
+        amountDue: upcomingInvoice.amount_due / 100,
+        currency: upcomingInvoice.currency,
+        subtotal: upcomingInvoice.subtotal / 100,
+        total: upcomingInvoice.total / 100,
+        periodStart: new Date(upcomingInvoice.period_start * 1000).toISOString(),
+        periodEnd: new Date(upcomingInvoice.period_end * 1000).toISOString(),
+        lines: upcomingInvoice.lines.data.map((line: any) => ({
+          description: line.description,
+          amount: line.amount / 100,
+          proration: line.proration,
+          period: {
+            start: new Date(line.period.start * 1000).toISOString(),
+            end: new Date(line.period.end * 1000).toISOString(),
+          }
+        })),
       });
 
       // Calculate current plan price for comparison
@@ -241,6 +292,35 @@ Deno.serve(async (req) => {
 
       const isUpgrade = newPrice > currentPrice;
       const isDowngrade = newPrice < currentPrice;
+
+      // 📊 DIAGNOSIS - Price Comparison
+      console.log('📊 DIAGNOSIS - Price Comparison:', {
+        currentPlanName: currentPlan.name,
+        currentBillingCycle: currentSub.billing_cycle,
+        currentPrice,
+        newPlanName: newPlan.name,
+        newBillingCycle: billingCycle,
+        newPrice,
+        simpleDifference: newPrice - currentPrice,
+        isUpgrade,
+        isDowngrade,
+      });
+
+      // 🧮 DIAGNOSIS - Manual Proration Calculation
+      const usedValue = (daysElapsed / totalDays) * currentPrice;
+      const creditForRemaining = (daysRemaining / totalDays) * currentPrice;
+      const proportionalNewCost = (daysRemaining / totalDays) * newPrice;
+      const manualProration = proportionalNewCost - creditForRemaining;
+
+      console.log('🧮 DIAGNOSIS - Manual Proration Calculation:', {
+        usedValue: usedValue.toFixed(2),
+        creditForRemaining: creditForRemaining.toFixed(2),
+        proportionalNewCost: proportionalNewCost.toFixed(2),
+        manualProration: manualProration.toFixed(2),
+        stripeProration: (upcomingInvoice.amount_due / 100).toFixed(2),
+        difference: ((upcomingInvoice.amount_due / 100) - manualProration).toFixed(2),
+        percentageDifference: (((upcomingInvoice.amount_due / 100 - manualProration) / manualProration) * 100).toFixed(2) + '%',
+      });
 
       console.log('Preview calculated:', {
         proratedAmount: upcomingInvoice.amount_due,

@@ -12,10 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Loader2, TrendingUp, TrendingDown, Check, AlertCircle } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Check, AlertCircle, Calculator, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
 
 interface ChangePlanDialogProps {
   open: boolean;
@@ -33,7 +34,14 @@ interface Plan {
   display_name: string;
   price_monthly: number;
   price_yearly: number;
-  features: any;
+  features: {
+    max_properties: number;
+    featured_listings: number;
+    max_agents?: number;
+    analytics?: string;
+    support?: string;
+    [key: string]: any;
+  };
 }
 
 interface ProrationPreview {
@@ -185,7 +193,7 @@ export const ChangePlanDialog = ({
 
       if (error) throw error;
 
-      setPlans(data || []);
+      setPlans(data as unknown as Plan[]);
     } catch (error) {
       console.error('Error fetching plans:', error);
       toast({
@@ -447,9 +455,9 @@ export const ChangePlanDialog = ({
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="yearly" id="yearly" />
-                  <Label htmlFor="yearly" className="cursor-pointer">
-                    Anual <Badge variant="secondary" className="ml-2">-12%</Badge>
-                  </Label>
+            <Label htmlFor="yearly" className="cursor-pointer">
+              Anual <Badge variant="secondary" className="ml-2">-17%</Badge>
+            </Label>
                 </div>
               </RadioGroup>
             </div>
@@ -506,14 +514,14 @@ export const ChangePlanDialog = ({
                           </span>
                         </div>
 
-                        <div className="text-sm text-muted-foreground">
-                          <span className="font-medium">Incluye:</span>{' '}
-                          {plan.features?.properties_limit === -1 
-                            ? 'Propiedades ilimitadas' 
-                            : `${plan.features?.properties_limit} propiedades activas`}
-                          {plan.features?.featured_limit > 0 && 
-                            `, ${plan.features.featured_limit} destacada${plan.features.featured_limit > 1 ? 's' : ''}`}
-                        </div>
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-medium">Incluye:</span>{' '}
+                  {plan.features?.max_properties === -1 
+                    ? 'Propiedades ilimitadas' 
+                    : `${plan.features?.max_properties} propiedades activas`}
+                  {plan.features?.featured_listings > 0 && 
+                    `, ${plan.features.featured_listings} destacada${plan.features.featured_listings > 1 ? 's' : ''}`}
+                </div>
                       </div>
                     </div>
                   );
@@ -530,47 +538,102 @@ export const ChangePlanDialog = ({
                       Preview del cambio de plan
                     </p>
                     
-                    {loadingPreview ? (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm">Calculando prorrateo...</span>
-                      </div>
-                    ) : preview ? (
-                      <div className="space-y-3">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-bold text-primary">
-                            ${preview.proratedAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })} {preview.proratedCurrency}
-                          </span>
-                        </div>
-                        
-                        <div className="text-sm space-y-1">
-                          {preview.isUpgrade && (
-                            <>
-                              <p className="text-green-700 font-medium">
-                                ✓ Upgrade - Se cargará ahora
-                              </p>
-                              <p className="text-muted-foreground">
-                                Pagarás la diferencia prorrateada por el tiempo restante del período actual.
-                              </p>
-                            </>
-                          )}
-                          {preview.isDowngrade && (
-                            <>
-                              <p className="text-blue-700 font-medium">
-                                ↓ Downgrade - Crédito aplicado
-                              </p>
-                              <p className="text-muted-foreground">
-                                El crédito se aplicará automáticamente a tu próxima factura.
-                              </p>
-                            </>
-                          )}
-                          <p className="text-muted-foreground mt-2">
-                            <strong>Próxima facturación:</strong>{' '}
-                            {format(new Date(preview.nextBillingDate), "d 'de' MMMM, yyyy", { locale: es })}
-                          </p>
-                        </div>
-                      </div>
-                    ) : null}
+          {preview && (
+            <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="p-2 bg-blue-500 rounded-lg">
+                  <Calculator className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-lg mb-1">
+                    Preview del Cambio de Plan
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Cálculo de prorrateo basado en tiempo restante del período actual
+                  </p>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Desglose Detallado */}
+              <div className="space-y-3 mb-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Plan actual</span>
+                  <span className="font-medium">
+                    {plans.find(p => p.id === currentPlanId)?.display_name} - ${preview.currentPrice.toLocaleString('es-MX')} MXN
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Nuevo plan</span>
+                  <span className="font-medium">
+                    {plans.find(p => p.id === selectedPlanId)?.display_name} - ${preview.newPrice.toLocaleString('es-MX')} MXN
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Diferencia de precio</span>
+                  <span className={`font-medium ${preview.isUpgrade ? 'text-green-600' : 'text-orange-600'}`}>
+                    {preview.isUpgrade ? '+' : ''}{(preview.newPrice - preview.currentPrice).toLocaleString('es-MX')} MXN
+                  </span>
+                </div>
+
+                <Separator />
+
+                <div className="bg-white dark:bg-gray-900 p-3 rounded-lg">
+                  <div className="flex justify-between items-center text-sm mb-2">
+                    <span className="text-muted-foreground">Próxima renovación</span>
+                    <span className="font-medium">
+                      {format(new Date(preview.nextBillingDate), "d 'de' MMMM, yyyy", { locale: es })}
+                    </span>
+                  </div>
+                  
+                  <div className="text-xs text-muted-foreground">
+                    Stripe ajusta el precio según los días restantes de tu período actual
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Total a Pagar */}
+              <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-900 rounded-lg">
+                <div>
+                  <div className="font-semibold text-lg">Total a pagar hoy</div>
+                  <div className="text-xs text-muted-foreground">
+                    {preview.isUpgrade ? 'Upgrade con prorrateo' : 'Downgrade con crédito aplicado'}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-primary">
+                    ${preview.proratedAmount.toLocaleString('es-MX', { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 2 
+                    })} {preview.proratedCurrency}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Calculado por Stripe
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Box */}
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex gap-2">
+                  <Info className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-blue-900 dark:text-blue-100">
+                    <p className="font-medium mb-1">¿Por qué este monto?</p>
+                    <p>
+                      Stripe calcula el prorrateo considerando el tiempo restante de tu período actual.
+                      {preview.isUpgrade && ' Pagas la diferencia proporcional hasta tu próxima renovación.'}
+                      {preview.isDowngrade && ' Recibes un crédito por el tiempo restante que se aplica al nuevo plan.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
                   </div>
                 </div>
               </div>
