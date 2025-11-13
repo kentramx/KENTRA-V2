@@ -31,6 +31,7 @@ const PaymentSuccess = () => {
 
   useEffect(() => {
     const payment = searchParams.get('payment');
+    const type = searchParams.get('type');
     
     if (payment !== 'success') {
       navigate('/');
@@ -42,7 +43,14 @@ const PaymentSuccess = () => {
       return;
     }
 
-    fetchSubscription();
+    // Si es compra de upsell, redirigir directamente al dashboard después de un momento
+    if (type === 'upsell') {
+      setTimeout(() => {
+        setLoading(false);
+      }, 1500);
+    } else {
+      fetchSubscription();
+    }
   }, [user, searchParams, navigate]);
 
   const fetchSubscription = async () => {
@@ -105,9 +113,41 @@ const PaymentSuccess = () => {
         <div className="container mx-auto px-4 py-16 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Cargando información de tu suscripción...</p>
+            <p className="text-muted-foreground">
+              {searchParams.get('type') === 'upsell' 
+                ? 'Procesando tu compra...' 
+                : 'Cargando información de tu suscripción...'}
+            </p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Si es compra de upsell, mostrar mensaje simple
+  if (searchParams.get('type') === 'upsell') {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-16">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-6">
+                <CheckCircle2 className="h-12 w-12 text-green-600" />
+              </div>
+              <h1 className="text-4xl font-bold text-foreground mb-4">
+                ¡Compra exitosa!
+              </h1>
+              <p className="text-xl text-muted-foreground mb-8">
+                Tu servicio adicional ha sido activado correctamente
+              </p>
+              <Button size="lg" onClick={() => navigate('/panel-agente?tab=subscription')}>
+                Ver Mis Servicios
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }

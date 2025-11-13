@@ -66,11 +66,71 @@ Deno.serve(async (req) => {
         console.log('Checkout completed:', session.id);
 
         const userId = session.metadata?.user_id;
+        const isUpsellOnly = session.metadata?.upsell_only === 'true';
+
+        if (!userId) {
+          console.error('Missing user_id in checkout session metadata');
+          break;
+        }
+
+        // Si es compra de upsell únicamente
+        if (isUpsellOnly) {
+          console.log('Processing upsell-only purchase');
+          
+          const upsellIds = session.metadata?.upsell_ids?.split(',') || [];
+          
+          if (upsellIds.length === 0) {
+            console.error('No upsell IDs found in metadata');
+            break;
+          }
+
+          // Obtener detalles de los upsells
+          const { data: upsells, error: upsellsError } = await supabaseClient
+            .from('upsells')
+            .select('*')
+            .in('id', upsellIds);
+
+          if (upsellsError || !upsells) {
+            console.error('Error fetching upsells:', upsellsError);
+            break;
+          }
+
+          // Registrar cada upsell comprado
+          for (const upsell of upsells) {
+            const endDate = upsell.is_recurring 
+              ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 días para recurrentes
+              : null; // Sin fecha de fin para one-time (se gestiona por featured_properties)
+
+            const { error: insertError } = await supabaseClient
+              .from('user_active_upsells')
+              .insert({
+                user_id: userId,
+                upsell_id: upsell.id,
+                stripe_subscription_id: session.subscription as string || null,
+                stripe_payment_intent_id: session.payment_intent as string || null,
+                status: 'active',
+                quantity: 1,
+                start_date: new Date().toISOString(),
+                end_date: endDate,
+                auto_renew: upsell.is_recurring,
+              });
+
+            if (insertError) {
+              console.error('Error inserting upsell:', insertError);
+            } else {
+              console.log('Upsell registered:', upsell.name);
+            }
+          }
+
+          break;
+        }
+
+        // Flujo normal de suscripción (con plan)
         const planId = session.metadata?.plan_id;
         const billingCycle = session.metadata?.billing_cycle;
 
-        if (!userId || !planId) {
-          console.error('Missing metadata in checkout session');
+        if (!planId) {
+          console.error('Missing plan_id in checkout session');
           break;
         }
 

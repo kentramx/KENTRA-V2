@@ -29,6 +29,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { ChangePlanDialog } from './ChangePlanDialog';
+import { ActiveUpsells } from './ActiveUpsells';
 
 interface SubscriptionManagementProps {
   userId: string;
@@ -421,6 +422,9 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           )}
         </CardContent>
       </Card>
+
+      {/* Active Upsells Section */}
+      <ActiveUpsells userId={userId} />
       </div>
     </>
   );
