@@ -217,23 +217,15 @@ Deno.serve(async (req) => {
       currentSub.stripe_subscription_id
     );
 
-    // 🔍 DIAGNOSIS - Current Subscription State
-    console.log('🔍 DIAGNOSIS - Current Subscription State:', {
-      subscriptionId: stripeSubscription.id,
-      status: stripeSubscription.status,
-      currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
-      currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
-      currentPriceId: stripeSubscription.items.data[0].price.id,
-      currentAmount: stripeSubscription.items.data[0].price.unit_amount / 100,
-      currentInterval: stripeSubscription.items.data[0].price.recurring?.interval,
-      billingCycleAnchor: stripeSubscription.billing_cycle_anchor,
-    });
+    console.log('🔍 Retrieved subscription with status:', stripeSubscription.status);
 
-    // Validate subscription status - cannot change canceled subscriptions
+    // 🚨 CRITICAL: Validate subscription status IMMEDIATELY
+    // Cannot change plans for canceled or expired subscriptions
     if (stripeSubscription.status === 'canceled' || stripeSubscription.status === 'incomplete_expired') {
-      console.error('Cannot change plan for canceled subscription:', {
+      console.error('❌ BLOCKING: Cannot change plan for canceled subscription:', {
         status: stripeSubscription.status,
         subscriptionId: stripeSubscription.id,
+        userId: user.id,
       });
       
       return new Response(
@@ -249,6 +241,20 @@ Deno.serve(async (req) => {
         }
       );
     }
+
+    console.log('✅ Subscription status valid, proceeding with plan change');
+
+    // 🔍 DIAGNOSIS - Current Subscription State
+    console.log('🔍 DIAGNOSIS - Current Subscription State:', {
+      subscriptionId: stripeSubscription.id,
+      status: stripeSubscription.status,
+      currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
+      currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
+      currentPriceId: stripeSubscription.items.data[0].price.id,
+      currentAmount: stripeSubscription.items.data[0].price.unit_amount / 100,
+      currentInterval: stripeSubscription.items.data[0].price.recurring?.interval,
+      billingCycleAnchor: stripeSubscription.billing_cycle_anchor,
+    });
 
     // Warn if subscription is in problematic state
     if (stripeSubscription.status === 'incomplete' || stripeSubscription.status === 'unpaid') {
