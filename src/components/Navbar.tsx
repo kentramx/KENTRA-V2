@@ -227,6 +227,14 @@ const Navbar = () => {
                           </Link>
                         )}
                         {isSuperAdmin && (
+                          <Link to="/admin/coupons">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Cupones y Descuentos
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
                           <>
                             <Link to="/admin/kpis">
                               <DropdownMenuItem className="cursor-pointer">

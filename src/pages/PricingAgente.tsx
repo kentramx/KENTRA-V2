@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
+import { CouponInput } from '@/components/CouponInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ const PricingAgente = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
 
   const scrollToPlans = () => {
     const element = document.getElementById('planes');
@@ -70,6 +72,7 @@ const PricingAgente = () => {
           billingCycle: pricingPeriod === 'monthly' ? 'monthly' : 'yearly',
           successUrl: `${window.location.origin}/payment-success?plan=${fullPlanName}`,
           cancelUrl: `${window.location.origin}/pricing-agente`,
+          couponCode: appliedCoupon,
         },
       });
 
@@ -269,6 +272,13 @@ const PricingAgente = () => {
         <div id="planes" className="max-w-7xl mx-auto mb-20">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Elige tu plan</h2>
+            
+            <div className="max-w-md mx-auto mb-6">
+              <CouponInput 
+                onCouponApplied={setAppliedCoupon}
+                planType="agent"
+              />
+            </div>
             
             {/* Toggle Mensual/Anual */}
             <div className="inline-flex items-center gap-4 p-1 rounded-lg bg-muted">

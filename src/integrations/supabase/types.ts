@@ -407,6 +407,54 @@ export type Database = {
         }
         Relationships: []
       }
+      coupon_redemptions: {
+        Row: {
+          coupon_id: string | null
+          currency: string | null
+          discount_amount: number
+          id: string
+          plan_id: string | null
+          redeemed_at: string | null
+          stripe_session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          coupon_id?: string | null
+          currency?: string | null
+          discount_amount: number
+          id?: string
+          plan_id?: string | null
+          redeemed_at?: string | null
+          stripe_session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          coupon_id?: string | null
+          currency?: string | null
+          discount_amount?: number
+          id?: string
+          plan_id?: string | null
+          redeemed_at?: string | null
+          stripe_session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "promotion_coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       demo_setup_log: {
         Row: {
           created_at: string
@@ -948,6 +996,66 @@ export type Database = {
           whatsapp_number?: string | null
           whatsapp_verified?: boolean | null
           whatsapp_verified_at?: string | null
+        }
+        Relationships: []
+      }
+      promotion_coupons: {
+        Row: {
+          applies_to: string | null
+          campaign_name: string | null
+          code: string
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          max_redemptions: number | null
+          stripe_coupon_id: string
+          stripe_promotion_code_id: string | null
+          times_redeemed: number | null
+          updated_at: string | null
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          applies_to?: string | null
+          campaign_name?: string | null
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          discount_type: string
+          discount_value: number
+          id?: string
+          is_active?: boolean | null
+          max_redemptions?: number | null
+          stripe_coupon_id: string
+          stripe_promotion_code_id?: string | null
+          times_redeemed?: number | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          applies_to?: string | null
+          campaign_name?: string | null
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          max_redemptions?: number | null
+          stripe_coupon_id?: string
+          stripe_promotion_code_id?: string | null
+          times_redeemed?: number | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
         }
         Relationships: []
       }
@@ -1799,6 +1907,17 @@ export type Database = {
         Returns: undefined
       }
       renew_property: { Args: { property_id: string }; Returns: undefined }
+      validate_coupon: {
+        Args: { p_code: string; p_plan_type?: string; p_user_id: string }
+        Returns: {
+          coupon_id: string
+          discount_type: string
+          discount_value: number
+          is_valid: boolean
+          message: string
+          stripe_coupon_id: string
+        }[]
+      }
     }
     Enums: {
       ai_moderation_status: "pass" | "review" | "reject" | "pending"

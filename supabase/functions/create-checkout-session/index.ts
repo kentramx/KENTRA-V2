@@ -38,7 +38,44 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { planId, billingCycle, successUrl, cancelUrl, upsells = [], upsellOnly = false } = await req.json();
+    const { planId, billingCycle, successUrl, cancelUrl, upsells = [], upsellOnly = false, couponCode } = await req.json();
+
+    // Supabase Admin client para validar cupones
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Validar cupón si se proporcionó
+    let validatedCoupon = null;
+    if (couponCode) {
+      const { data: couponValidation, error: couponError } = await supabaseAdmin
+        .rpc('validate_coupon', {
+          p_code: couponCode,
+          p_user_id: user.id,
+          p_plan_type: null
+        });
+
+      if (couponError) {
+        console.error('Error validating coupon:', couponError);
+        throw new Error('Error al validar cupón');
+      }
+
+      if (couponValidation && couponValidation.length > 0) {
+        const validation = couponValidation[0];
+        if (!validation.is_valid) {
+          return new Response(
+            JSON.stringify({ error: validation.message }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 400,
+            }
+          );
+        }
+        validatedCoupon = validation;
+        console.log('Coupon validated:', validatedCoupon);
+      }
+    }
 
     console.log('Creating checkout session for:', {
       userId: user.id,
@@ -142,7 +179,7 @@ Deno.serve(async (req) => {
       console.log('Creating upsell checkout with line items:', lineItems, 'mode:', mode);
 
       // Crear sesión
-      const session = await stripe.checkout.sessions.create({
+      const sessionParams: any = {
         mode,
         payment_method_types: ['card'],
         customer: customerId,
@@ -155,7 +192,14 @@ Deno.serve(async (req) => {
           upsell_only: 'true',
           upsell_ids: upsells.map((u: any) => u.id).join(','),
         },
-      });
+      };
+
+      // Aplicar cupón si fue validado
+      if (validatedCoupon && validatedCoupon.stripe_coupon_id) {
+        sessionParams.discounts = [{ coupon: validatedCoupon.stripe_coupon_id }];
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionParams);
 
       console.log('Upsell checkout session created:', session.id);
 
@@ -247,7 +291,7 @@ Deno.serve(async (req) => {
     console.log('Creating checkout with line items:', lineItems);
 
     // Create checkout session
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: any = {
       mode,
       payment_method_types: ['card'],
       customer: customerId,
@@ -269,7 +313,14 @@ Deno.serve(async (req) => {
           },
         },
       } : {}),
-    });
+    };
+
+    // Aplicar cupón si fue validado
+    if (validatedCoupon && validatedCoupon.stripe_coupon_id) {
+      sessionParams.discounts = [{ coupon: validatedCoupon.stripe_coupon_id }];
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     console.log('Checkout session created:', session.id);
 
