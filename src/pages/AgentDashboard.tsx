@@ -173,6 +173,22 @@ const AgentDashboard = () => {
 
       if (!subError && subInfo && subInfo.length > 0) {
         setSubscriptionInfo(subInfo[0]);
+        
+        // Sincronizar estado con Stripe si hay suscripción cancelada
+        if (subInfo[0].status === 'canceled') {
+          try {
+            await supabase.functions.invoke('sync-subscription-status');
+            // Recargar info de suscripción después de sincronizar
+            const { data: updatedSubInfo } = await supabase.rpc('get_user_subscription_info', {
+              user_uuid: user?.id,
+            });
+            if (updatedSubInfo && updatedSubInfo.length > 0) {
+              setSubscriptionInfo(updatedSubInfo[0]);
+            }
+          } catch (syncError) {
+            console.error('Error sincronizando estado de suscripción:', syncError);
+          }
+        }
       }
 
       // Get featured properties count
