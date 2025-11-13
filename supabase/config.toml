@@ -1,5 +1,8 @@
 project_id = "jazjzwhbagwllensnkaz"
 
+[functions.send-admin-alerts]
+verify_jwt = false
+
 [functions.reset-featured-counts]
 verify_jwt = false
 

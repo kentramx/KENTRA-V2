@@ -211,6 +211,22 @@ const Navbar = () => {
                           </Link>
                         )}
                         {isSuperAdmin && (
+                          <Link to="/admin/subscriptions">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Gestión de Suscripciones
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
+                          <Link to="/admin/churn">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Churn & Retención
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
                           <>
                             <Link to="/admin/kpis">
                               <DropdownMenuItem className="cursor-pointer">
@@ -389,6 +405,22 @@ const Navbar = () => {
                               <DropdownMenuItem className="cursor-pointer">
                                 <Badge className="mr-2 bg-purple-600">Admin</Badge>
                                 Salud del Sistema
+                              </DropdownMenuItem>
+                            </Link>
+                          )}
+                          {isSuperAdmin && (
+                            <Link to="/admin/subscriptions">
+                              <DropdownMenuItem className="cursor-pointer">
+                                <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                                Gestión de Suscripciones
+                              </DropdownMenuItem>
+                            </Link>
+                          )}
+                          {isSuperAdmin && (
+                            <Link to="/admin/churn">
+                              <DropdownMenuItem className="cursor-pointer">
+                                <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                                Churn & Retención
                               </DropdownMenuItem>
                             </Link>
                           )}
