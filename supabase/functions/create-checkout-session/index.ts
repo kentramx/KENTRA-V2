@@ -38,15 +38,83 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { planId, billingCycle, successUrl, cancelUrl, upsells = [] } = await req.json();
+    const { planId, billingCycle, successUrl, cancelUrl, upsells = [], upsellOnly = false } = await req.json();
 
     console.log('Creating checkout session for:', {
       userId: user.id,
       planId,
       billingCycle,
+      upsellOnly,
     });
 
-    // Get plan details
+    // Si es compra de upsell únicamente
+    if (upsellOnly) {
+      console.log('Processing upsell-only purchase');
+      
+      // Verificar que el usuario tenga suscripción activa
+      const { data: activeSub, error: subError } = await supabaseClient
+        .from('user_subscriptions')
+        .select('stripe_customer_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (subError || !activeSub) {
+        console.error('No active subscription:', subError);
+        return new Response(
+          JSON.stringify({ error: 'Necesitas una suscripción activa para comprar servicios adicionales' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const customerId = activeSub.stripe_customer_id;
+
+      // Initialize Stripe
+      const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
+        apiVersion: '2023-10-16',
+        httpClient: Stripe.createFetchHttpClient(),
+      });
+
+      // Line items solo con upsells
+      const lineItems = upsells.map((upsell: any) => ({
+        price: upsell.stripePriceId,
+        quantity: 1,
+      }));
+
+      // Determinar mode según si hay recurrentes
+      const hasRecurring = upsells.some((u: any) => u.isRecurring);
+      const mode = hasRecurring ? 'subscription' : 'payment';
+
+      console.log('Creating upsell checkout with line items:', lineItems, 'mode:', mode);
+
+      // Crear sesión
+      const session = await stripe.checkout.sessions.create({
+        mode,
+        payment_method_types: ['card'],
+        customer: customerId,
+        line_items: lineItems,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        client_reference_id: user.id,
+        metadata: {
+          user_id: user.id,
+          upsell_only: 'true',
+          upsell_ids: upsells.map((u: any) => u.id).join(','),
+        },
+      });
+
+      console.log('Upsell checkout session created:', session.id);
+
+      return new Response(
+        JSON.stringify({ 
+          checkoutUrl: session.url,
+          sessionId: session.id,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get plan details (flujo normal con plan)
     const { data: plan, error: planError } = await supabaseClient
       .from('subscription_plans')
       .select('*')

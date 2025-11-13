@@ -19,6 +19,8 @@ import { SubscriptionManagement } from '@/components/SubscriptionManagement';
 import { PropertyExpiryReminders } from '@/components/PropertyExpiryReminders';
 import { PlanMetricsCards } from '@/components/PlanMetricsCards';
 import { EmailVerificationRequired } from '@/components/EmailVerificationRequired';
+import { QuickUpsells } from '@/components/QuickUpsells';
+import { AgentUpsells } from '@/components/AgentUpsells';
 
 const AgentDashboard = () => {
   const { user, loading: authLoading, isEmailVerified } = useAuth();
@@ -277,6 +279,62 @@ const AgentDashboard = () => {
     }
   };
 
+  const handleUpsellPurchase = async (upsellId: string) => {
+    if (isImpersonating) {
+      toast({
+        title: 'Acción no disponible',
+        description: 'No puedes comprar upsells en modo simulación',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Obtener detalles del upsell
+      const { data: upsell, error: upsellError } = await supabase
+        .from('upsells')
+        .select('*')
+        .eq('id', upsellId)
+        .single();
+
+      if (upsellError || !upsell) throw new Error('Upsell no encontrado');
+
+      // Llamar a create-checkout-session SOLO con el upsell
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: {
+          upsellOnly: true,
+          upsells: [{
+            id: upsell.id,
+            stripePriceId: upsell.stripe_price_id,
+            name: upsell.name,
+            price: upsell.price,
+            isRecurring: upsell.is_recurring,
+          }],
+          successUrl: `${window.location.origin}/payment-success?type=upsell`,
+          cancelUrl: `${window.location.origin}/panel-agente?tab=services`,
+        },
+      });
+
+      if (error) throw error;
+
+      // Redirigir a Stripe Checkout
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      }
+    } catch (error) {
+      console.error('Error comprando upsell:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo iniciar el proceso de compra',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -324,6 +382,18 @@ const AgentDashboard = () => {
           featuredCount={featuredCount}
         />
 
+        {/* Quick Upsells Section */}
+        {subscriptionInfo && (
+          <div className="mb-6">
+            <QuickUpsells 
+              subscriptionInfo={subscriptionInfo}
+              activePropertiesCount={activePropertiesCount}
+              onPurchase={handleUpsellPurchase}
+              onViewAll={() => setActiveTab('services')}
+            />
+          </div>
+        )}
+
         {/* Email Verification Banner */}
         {!emailVerified && (
           <div className="mb-6">
@@ -347,10 +417,11 @@ const AgentDashboard = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="list">Mis Propiedades</TabsTrigger>
                 <TabsTrigger value="analytics">Analíticas</TabsTrigger>
                 <TabsTrigger value="reminders">Recordatorios</TabsTrigger>
+                <TabsTrigger value="services">Servicios</TabsTrigger>
                 <TabsTrigger value="subscription">Suscripción</TabsTrigger>
                 <TabsTrigger 
                   value="form" 
@@ -370,6 +441,10 @@ const AgentDashboard = () => {
 
               <TabsContent value="reminders" className="mt-6">
                 <PropertyExpiryReminders agentId={effectiveAgentId || ''} />
+              </TabsContent>
+
+              <TabsContent value="services" className="mt-6">
+                <AgentUpsells onPurchase={handleUpsellPurchase} />
               </TabsContent>
 
               <TabsContent value="subscription" className="mt-6">
