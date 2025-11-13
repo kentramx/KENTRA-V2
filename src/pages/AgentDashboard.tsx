@@ -282,6 +282,15 @@ const AgentDashboard = () => {
     }
   };
 
+  const handleGoToPricing = () => {
+    const route = userRole === 'agency'
+      ? '/pricing-inmobiliaria'
+      : userRole === 'developer'
+      ? '/pricing-desarrolladora'
+      : '/pricing-agente';
+    navigate(route);
+  };
+
   const handleNewProperty = async () => {
     if (!user) return;
 
@@ -459,24 +468,29 @@ const AgentDashboard = () => {
                 </span>
                 . Después de esa fecha perderás acceso a tus propiedades y servicios.
               </div>
-              <Button
-                onClick={handleReactivateSubscription}
-                disabled={reactivating}
-                size="lg"
-                className="bg-primary hover:bg-primary/90 shadow-lg"
-              >
-                {reactivating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Reactivando...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCcw className="mr-2 h-4 w-4" />
-                    Reactivar Suscripción
-                  </>
-                )}
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={handleReactivateSubscription}
+                  disabled={reactivating}
+                  size="lg"
+                  className="bg-primary hover:bg-primary/90 shadow-lg"
+                >
+                  {reactivating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Reactivando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCcw className="mr-2 h-4 w-4" />
+                      Reactivar Suscripción
+                    </>
+                  )}
+                </Button>
+                <Button onClick={handleGoToPricing} size="lg" variant="secondary">
+                  Contratar Nuevo Plan
+                </Button>
+              </div>
             </AlertDescription>
           </Alert>
         )}
