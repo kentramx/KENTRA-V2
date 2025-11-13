@@ -449,7 +449,7 @@ const AgentDashboard = () => {
           </div>
         </div>
 
-        {/* Alerta prominente de suscripción cancelada */}
+        {/* Alerta de suscripción en período de gracia - puede reactivarse */}
         {subscriptionInfo?.status === 'canceled' && subscriptionInfo?.cancel_at_period_end && (
           <Alert className="mb-6 border-destructive/50 bg-destructive/10">
             <AlertCircle className="h-5 w-5 text-destructive" />
@@ -491,6 +491,24 @@ const AgentDashboard = () => {
                   Contratar Nuevo Plan
                 </Button>
               </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Alerta de suscripción completamente cancelada - solo CTA para contratar */}
+        {subscriptionInfo?.status === 'canceled' && !subscriptionInfo?.cancel_at_period_end && (
+          <Alert className="mb-6 border-destructive/50 bg-destructive/10">
+            <AlertCircle className="h-5 w-5 text-destructive" />
+            <AlertTitle className="text-lg font-semibold text-destructive">
+              Suscripción Expirada
+            </AlertTitle>
+            <AlertDescription className="mt-2 flex items-center justify-between gap-4 flex-wrap">
+              <div className="text-sm text-muted-foreground flex-1 min-w-[300px]">
+                Tu suscripción ha expirado. Para volver a publicar y acceder a todas las funcionalidades, necesitas contratar un nuevo plan.
+              </div>
+              <Button onClick={handleGoToPricing} size="lg" className="bg-primary hover:bg-primary/90 shadow-lg">
+                Contratar Nuevo Plan
+              </Button>
             </AlertDescription>
           </Alert>
         )}
