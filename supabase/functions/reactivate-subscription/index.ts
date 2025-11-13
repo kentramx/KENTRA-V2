@@ -82,10 +82,11 @@ Deno.serve(async (req) => {
     // If subscription is already fully canceled in Stripe, cannot reactivate
     if (stripeSubscription.status === 'canceled') {
       return new Response(JSON.stringify({ 
+        success: false,
         error: 'Esta suscripción ya está completamente cancelada. Debes contratar un nuevo plan.',
         code: 'SUBSCRIPTION_FULLY_CANCELED'
       }), {
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -93,10 +94,11 @@ Deno.serve(async (req) => {
     // Only can reactivate if status is active with cancel_at_period_end
     if (stripeSubscription.status !== 'active' || !stripeSubscription.cancel_at_period_end) {
       return new Response(JSON.stringify({ 
+        success: false,
         error: 'Esta suscripción no puede ser reactivada. Estado actual: ' + stripeSubscription.status,
         code: 'CANNOT_REACTIVATE'
       }), {
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

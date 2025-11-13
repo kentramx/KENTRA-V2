@@ -232,21 +232,27 @@ const AgentDashboard = () => {
       
       if (error) throw error;
       
-      if (data.code === 'SUBSCRIPTION_FULLY_CANCELED') {
-        toast({
-          title: "No se puede reactivar",
-          description: data.error || "Esta suscripción ya está cancelada. Debes contratar un nuevo plan desde las páginas de precios.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (data.code === 'CANNOT_REACTIVATE') {
-        toast({
-          title: "No se puede reactivar",
-          description: data.error || "Esta suscripción no puede ser reactivada.",
-          variant: "destructive",
-        });
+      // Check if the operation was successful
+      if (!data.success) {
+        if (data.code === 'SUBSCRIPTION_FULLY_CANCELED') {
+          toast({
+            title: "No se puede reactivar",
+            description: data.error || "Esta suscripción ya está cancelada. Debes contratar un nuevo plan desde las páginas de precios.",
+            variant: "destructive",
+          });
+        } else if (data.code === 'CANNOT_REACTIVATE') {
+          toast({
+            title: "No se puede reactivar",
+            description: data.error || "Esta suscripción no puede ser reactivada.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error al reactivar",
+            description: data.error || "No se pudo reactivar tu suscripción.",
+            variant: "destructive",
+          });
+        }
         return;
       }
       

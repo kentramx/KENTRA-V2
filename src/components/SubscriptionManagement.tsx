@@ -173,6 +173,16 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
       if (error) throw error;
 
+      // Check if the operation was successful
+      if (!data.success) {
+        toast({
+          title: 'No se puede reactivar',
+          description: data.error || 'Esta suscripción no puede ser reactivada.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       toast({
         title: 'Suscripción reactivada',
         description: 'Tu suscripción continuará renovándose normalmente',
