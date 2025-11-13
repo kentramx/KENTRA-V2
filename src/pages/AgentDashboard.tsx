@@ -8,8 +8,9 @@ import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, RefreshCcw, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import PropertyForm from '@/components/PropertyForm';
 import AgentPropertyList from '@/components/AgentPropertyList';
 import { AgentAnalytics } from '@/components/AgentAnalytics';
@@ -39,6 +40,7 @@ const AgentDashboard = () => {
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>('');
   const [featuredCount, setFeaturedCount] = useState(0);
+  const [reactivating, setReactivating] = useState(false);
   
   // Si está simulando rol agent, usar agent demo; si no, usar user real
   const effectiveAgentId = (isImpersonating && impersonatedRole === 'agent') 
@@ -223,6 +225,39 @@ const AgentDashboard = () => {
     setActiveTab('form');
   };
 
+  const handleReactivateSubscription = async () => {
+    setReactivating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('reactivate-subscription');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "¡Suscripción reactivada!",
+        description: data.message || "Tu suscripción ha sido reactivada exitosamente.",
+      });
+      
+      // Recargar información de suscripción
+      if (effectiveAgentId) {
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { 
+          user_uuid: effectiveAgentId 
+        });
+        if (subInfo && subInfo.length > 0) {
+          setSubscriptionInfo(subInfo[0]);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error reactivating subscription:', error);
+      toast({
+        title: "Error al reactivar",
+        description: error.message || "No se pudo reactivar tu suscripción. Por favor intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setReactivating(false);
+    }
+  };
+
   const handleNewProperty = async () => {
     if (!user) return;
 
@@ -380,6 +415,47 @@ const AgentDashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Alerta prominente de suscripción cancelada */}
+        {subscriptionInfo?.status === 'canceled' && subscriptionInfo?.cancel_at_period_end && (
+          <Alert className="mb-6 border-destructive/50 bg-destructive/10">
+            <AlertCircle className="h-5 w-5 text-destructive" />
+            <AlertTitle className="text-lg font-semibold text-destructive">
+              Suscripción Cancelada
+            </AlertTitle>
+            <AlertDescription className="mt-2 flex items-center justify-between gap-4 flex-wrap">
+              <div className="text-sm text-muted-foreground flex-1 min-w-[300px]">
+                Tu suscripción se cancelará el{' '}
+                <span className="font-medium text-foreground">
+                  {new Date(subscriptionInfo.current_period_end).toLocaleDateString('es-MX', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </span>
+                . Después de esa fecha perderás acceso a tus propiedades y servicios.
+              </div>
+              <Button
+                onClick={handleReactivateSubscription}
+                disabled={reactivating}
+                size="lg"
+                className="bg-primary hover:bg-primary/90 shadow-lg"
+              >
+                {reactivating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Reactivando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="mr-2 h-4 w-4" />
+                    Reactivar Suscripción
+                  </>
+                )}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Plan Status Card */}
         <div className="mb-6">
