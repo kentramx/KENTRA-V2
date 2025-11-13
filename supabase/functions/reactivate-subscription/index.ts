@@ -72,13 +72,44 @@ Deno.serve(async (req) => {
       httpClient: Stripe.createFetchHttpClient(),
     });
 
-    // Reactivate subscription
+    // Get subscription from Stripe first to check real status
+    const stripeSubscription = await stripe.subscriptions.retrieve(
+      subscription.stripe_subscription_id
+    );
+
+    console.log('Stripe subscription status:', stripeSubscription.status);
+
+    // If subscription is already fully canceled in Stripe, cannot reactivate
+    if (stripeSubscription.status === 'canceled') {
+      return new Response(JSON.stringify({ 
+        error: 'Esta suscripción ya está completamente cancelada. Debes contratar un nuevo plan.',
+        code: 'SUBSCRIPTION_FULLY_CANCELED'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Only can reactivate if status is active with cancel_at_period_end
+    if (stripeSubscription.status !== 'active' || !stripeSubscription.cancel_at_period_end) {
+      return new Response(JSON.stringify({ 
+        error: 'Esta suscripción no puede ser reactivada. Estado actual: ' + stripeSubscription.status,
+        code: 'CANNOT_REACTIVATE'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Reactivate subscription by removing cancellation
     const updatedSubscription = await stripe.subscriptions.update(
       subscription.stripe_subscription_id,
       {
         cancel_at_period_end: false,
       }
     );
+
+    console.log('Subscription reactivated in Stripe:', updatedSubscription.id);
 
     // Update database
     const { error: updateError } = await supabaseClient
