@@ -21,6 +21,32 @@ export const createStripeCheckoutSession = async (
   try {
     console.log('Creating Stripe checkout session:', params);
 
+    // VALIDACIÓN: Verificar suscripción activa antes de crear checkout
+    // Solo para suscripciones completas, no para upsells
+    if (!params.upsellOnly) {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: activeSub } = await supabase
+          .from('user_subscriptions')
+          .select('id, subscription_plans(name)')
+          .eq('user_id', user.id)
+          .in('status', ['active', 'trialing'])
+          .maybeSingle();
+
+        if (activeSub) {
+          const currentPlanName = activeSub.subscription_plans?.name;
+          // Si intenta contratar el mismo plan que ya tiene, prevenir
+          if (currentPlanName === params.planId) {
+            return {
+              success: false,
+              error: 'Ya tienes este plan activo. Adminístralo desde tu panel de suscripción.',
+            };
+          }
+        }
+      }
+    }
+
     const { data, error } = await supabase.functions.invoke('create-checkout-session', {
       body: {
         planId: params.planId,

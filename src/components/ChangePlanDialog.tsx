@@ -313,6 +313,17 @@ export const ChangePlanDialog = ({
         },
       });
 
+      // Validar que no sea el mismo plan
+      if (selectedPlanId === currentPlanId && billingCycle === currentBillingCycle) {
+        toast({
+          title: 'Plan actual',
+          description: 'Ya estás en este plan con este ciclo de facturación.',
+          variant: 'destructive',
+        });
+        setProcessing(false);
+        return;
+      }
+
       if (response.error) {
         // Handle subscription canceled error
         if (response.error.message?.includes('SUBSCRIPTION_CANCELED') || 

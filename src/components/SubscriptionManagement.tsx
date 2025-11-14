@@ -138,6 +138,9 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
   };
 
   const handleCancelSubscription = async () => {
+    // Prevenir doble click
+    if (canceling) return;
+    
     setCanceling(true);
     try {
       const { data, error } = await supabase.functions.invoke('cancel-subscription', {

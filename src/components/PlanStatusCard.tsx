@@ -71,16 +71,42 @@ export const PlanStatusCard = ({ subscriptionInfo, userRole }: PlanStatusCardPro
   const daysUntilRenewal = Math.ceil((periodEnd.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
   const isNearRenewal = daysUntilRenewal <= 7;
 
+  // Determinar estado visual según status
+  const getStatusInfo = () => {
+    switch (subscriptionInfo.status) {
+      case 'active':
+        return { variant: 'default' as const, label: 'Activo', showAlert: false };
+      case 'trialing':
+        return { variant: 'secondary' as const, label: `Prueba (${daysUntilRenewal} días)`, showAlert: true, alertMessage: `Tu período de prueba termina en ${daysUntilRenewal} días. Asegúrate de tener un método de pago válido.`, alertType: 'info' };
+      case 'past_due':
+        return { variant: 'destructive' as const, label: 'Pago Pendiente', showAlert: true, alertMessage: 'Hay un problema con tu pago. Actualiza tu método de pago para no perder acceso.', alertType: 'destructive' };
+      case 'canceled':
+        return { variant: 'secondary' as const, label: 'Cancelado', showAlert: true, alertMessage: `Tu suscripción termina el ${format(periodEnd, "d 'de' MMMM", { locale: es })}. Después de esta fecha perderás acceso.`, alertType: 'warning' };
+      default:
+        return { variant: 'secondary' as const, label: subscriptionInfo.status, showAlert: false };
+    }
+  };
+
+  const statusInfo = getStatusInfo();
+
   return (
     <div className="space-y-4">
+      {/* Alerta de estado si es necesario */}
+      {statusInfo.showAlert && (
+        <Alert variant={statusInfo.alertType as any}>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{statusInfo.alertMessage}</AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 Plan {subscriptionInfo.plan_display_name}
-                <Badge variant={subscriptionInfo.status === 'active' ? 'default' : 'secondary'}>
-                  {subscriptionInfo.status === 'active' ? 'Activo' : subscriptionInfo.status}
+                <Badge variant={statusInfo.variant}>
+                  {statusInfo.label}
                 </Badge>
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">

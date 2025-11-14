@@ -284,11 +284,27 @@ Deno.serve(async (req) => {
       })),
     ];
 
-    // Determine mode: subscription if there are recurring items, payment for one-time only
-    const hasRecurring = true; // Plan is always recurring
-    const mode = hasRecurring ? 'subscription' : 'payment';
+    // METADATA COMPLETA para webhook - CRÍTICO para sincronización correcta
+    const metadata: Record<string, string> = {
+      user_id: user.id,
+      plan_slug: upsellOnly ? 'upsell' : plan.name,
+      billing_cycle: billingCycle,
+      upsell_only: upsellOnly.toString(),
+      environment: 'production',
+    };
+
+    if (upsells && upsells.length > 0) {
+      metadata.upsells = JSON.stringify(upsells);
+    }
+
+    if (couponCode) {
+      metadata.coupon_code = couponCode;
+    }
 
     console.log('Creating checkout with line items:', lineItems);
+
+    // Determine mode
+    const mode = upsellOnly ? 'payment' : 'subscription';
 
     // Create checkout session
     const sessionParams: any = {
@@ -299,12 +315,7 @@ Deno.serve(async (req) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       client_reference_id: user.id,
-      metadata: {
-        plan_id: planId,
-        user_id: user.id,
-        billing_cycle: billingCycle,
-        has_upsells: upsells.length > 0 ? 'true' : 'false',
-      },
+      metadata,
       ...(mode === 'subscription' ? {
         subscription_data: {
           metadata: {
