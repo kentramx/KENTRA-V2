@@ -930,6 +930,33 @@ export type Database = {
           },
         ]
       }
+      processed_webhook_events: {
+        Row: {
+          created_at: string
+          event_id: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          processed_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          processed_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          processed_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1560,8 +1587,10 @@ export type Database = {
           is_recurring: boolean
           name: string
           price: number
+          quantity_per_upsell: number | null
           stripe_price_id: string
           updated_at: string
+          upsell_type: string | null
           user_type: string
         }
         Insert: {
@@ -1575,8 +1604,10 @@ export type Database = {
           is_recurring?: boolean
           name: string
           price: number
+          quantity_per_upsell?: number | null
           stripe_price_id: string
           updated_at?: string
+          upsell_type?: string | null
           user_type: string
         }
         Update: {
@@ -1590,8 +1621,10 @@ export type Database = {
           is_recurring?: boolean
           name?: string
           price?: number
+          quantity_per_upsell?: number | null
           stripe_price_id?: string
           updated_at?: string
+          upsell_type?: string | null
           user_type?: string
         }
         Relationships: []
@@ -1818,6 +1851,16 @@ export type Database = {
           reason: string
         }[]
       }
+      can_create_property_with_upsells: {
+        Args: { user_uuid: string }
+        Returns: {
+          additional_slots: number
+          can_create: boolean
+          current_count: number
+          max_allowed: number
+          reason: string
+        }[]
+      }
       can_feature_property: {
         Args: { user_uuid: string }
         Returns: {
@@ -1881,6 +1924,7 @@ export type Database = {
       get_user_subscription_info: {
         Args: { user_uuid: string }
         Returns: {
+          cancel_at_period_end: boolean
           current_period_end: string
           display_name: string
           featured_limit: number

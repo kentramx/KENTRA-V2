@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Calendar, CreditCard, TrendingUp, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Calendar, CreditCard, TrendingUp, AlertCircle, CheckCircle2, Loader2, RefreshCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +65,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
@@ -177,6 +178,43 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
   const handleChangePlanSuccess = () => {
     fetchSubscriptionData();
+  };
+
+  const handleReactivateSubscription = async () => {
+    try {
+      setReactivating(true);
+      console.log('🔄 Calling reactivate-subscription function...');
+      
+      const { data, error } = await supabase.functions.invoke('reactivate-subscription');
+      
+      if (error) {
+        console.error('❌ Error reactivating subscription:', error);
+        throw error;
+      }
+
+      if (!data?.success) {
+        console.error('❌ Reactivation failed:', data);
+        throw new Error(data?.error || 'Error al reactivar la suscripción');
+      }
+
+      console.log('✅ Subscription reactivated successfully');
+      
+      toast({
+        title: "Suscripción reactivada",
+        description: "Tu suscripción continuará activa sin interrupciones",
+      });
+      
+      await fetchSubscriptionData();
+    } catch (error: any) {
+      console.error('❌ Error in handleReactivateSubscription:', error);
+      toast({
+        title: "Error al reactivar",
+        description: error.message || 'No se pudo reactivar la suscripción',
+        variant: "destructive",
+      });
+    } finally {
+      setReactivating(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -320,17 +358,36 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3">
+            {/* Reactivar Suscripción - Mostrar PRIMERO si hay cancelación programada */}
+            {subscription.cancel_at_period_end && (
+              <Button 
+                onClick={handleReactivateSubscription}
+                disabled={reactivating}
+                className="flex-1 gap-2 bg-green-600 hover:bg-green-700 text-white"
+              >
+                {reactivating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Reactivando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="h-4 w-4" />
+                    Reactivar Suscripción
+                  </>
+                )}
+              </Button>
+            )}
+
             {/* Cambiar de Plan - disponible siempre si está activa */}
             {(subscription.status === 'active' || subscription.status === 'trialing') && (
               <Button 
                 onClick={handleChangePlan} 
+                variant={subscription.cancel_at_period_end ? "outline" : "default"}
                 className="flex-1 gap-2"
               >
                 <TrendingUp className="h-4 w-4" />
-                {subscription.cancel_at_period_end 
-                  ? 'Hacer Upgrade y Reactivar' 
-                  : 'Cambiar de Plan'
-                }
+                Cambiar de Plan
               </Button>
             )}
             

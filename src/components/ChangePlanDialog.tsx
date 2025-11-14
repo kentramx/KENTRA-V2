@@ -430,8 +430,8 @@ export const ChangePlanDialog = ({
         // Handle DOWNGRADE_WITH_CANCELLATION explicitly
         if (errorBody?.error === 'DOWNGRADE_WITH_CANCELLATION') {
           toast({
-            title: 'Solo se permiten upgrades',
-            description: errorBody?.message || 'Solo puedes hacer upgrade para reactivar tu suscripción',
+            title: 'No se puede hacer downgrade',
+            description: errorBody?.message || 'No puedes hacer downgrade con una cancelación programada. Usa "Reactivar Suscripción" para mantener tu plan actual.',
             variant: 'destructive',
           });
           return;
@@ -596,14 +596,11 @@ export const ChangePlanDialog = ({
                   <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold text-blue-900">
-                      Suscripción con cancelación programada
+                      Tu suscripción está programada para cancelarse
                     </p>
                     <p className="text-sm text-blue-800 mt-1">
-                      Solo puedes hacer <strong>upgrade</strong> a un plan superior. 
-                      Esto reactivará tu suscripción automáticamente.
-                    </p>
-                    <p className="text-xs text-blue-700 mt-2">
-                      Para contratar un plan inferior, espera a que finalice tu suscripción actual.
+                      Puedes hacer <strong>upgrade</strong> para reactivarla automáticamente, 
+                      o usar el botón "Reactivar Suscripción" para mantener tu plan actual sin cambios.
                     </p>
                   </div>
                 </div>
