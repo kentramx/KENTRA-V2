@@ -232,13 +232,31 @@ Deno.serve(async (req) => {
         userId: user.id,
       });
       
+      // 🔄 SYNC: Update database to match Stripe status
+      console.log('🔄 Syncing database status to match Stripe...');
+      const { error: updateError } = await supabaseClient
+        .from('user_subscriptions')
+        .update({
+          status: 'canceled',
+          cancel_at_period_end: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+        .eq('stripe_subscription_id', currentSub.stripe_subscription_id);
+
+      if (updateError) {
+        console.error('Error syncing subscription status:', updateError);
+      } else {
+        console.log('✅ Database status synchronized with Stripe');
+      }
+      
       // Return 200 with success: false to avoid RUNTIME_ERROR in Lovable
       // This is a business rule error, not a technical failure
       return new Response(
         JSON.stringify({ 
           success: false,
           error: 'SUBSCRIPTION_CANCELED',
-          message: 'Tu suscripción está cancelada. Debes reactivar tu suscripción antes de cambiar de plan.',
+          message: 'Tu suscripción ha finalizado. Por favor contrata un nuevo plan para continuar.',
           status: stripeSubscription.status,
           details: 'No se pueden cambiar planes de suscripciones canceladas o expiradas.'
         }),
