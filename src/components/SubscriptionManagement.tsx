@@ -102,6 +102,13 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
       if (subError) throw subError;
 
+      // Si no hay suscripción activa, limpiar el estado
+      if (!subData || !subData.subscription_plans) {
+        setSubscription(null);
+        setLoading(false);
+        return;
+      }
+
       if (subData && subData.subscription_plans) {
         setSubscription({
           plan_id: subData.plan_id,
@@ -194,21 +201,15 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
       // Handle SUBSCRIPTION_ALREADY_CANCELED error
       if (data?.error === 'SUBSCRIPTION_ALREADY_CANCELED') {
-        console.log('⚠️ Subscription already canceled, showing message and redirecting');
+        console.log('⚠️ Subscription already canceled, clearing state');
         toast({
           title: "Suscripción finalizada",
-          description: data.message || "Tu suscripción ya ha finalizado. Por favor contrata un nuevo plan.",
+          description: data.message || "Tu suscripción ya ha finalizado.",
           variant: "destructive",
         });
         
-        // Refresh to show correct state
-        await fetchSubscriptionData();
-        
-        // Redirect to pricing after 2 seconds
-        setTimeout(() => {
-          navigate('/pricing-agente');
-        }, 2000);
-        
+        // Forzar estado null para mostrar UI correcta inmediatamente
+        setSubscription(null);
         return;
       }
 
