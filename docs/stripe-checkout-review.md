@@ -604,6 +604,73 @@ grep -r "supabase.functions.invoke('create-checkout-session'" src/
 
 ---
 
+## 8. Experiencia de Usuario (UX) para Suscripciones Canceladas
+
+### Problema Identificado
+
+Cuando un usuario con suscripción cancelada o expirada intentaba cambiar de plan, la Edge Function devolvía correctamente un error 400 con código `SUBSCRIPTION_CANCELED`, pero el frontend mostraba un error crudo de runtime en lugar de una experiencia amigable.
+
+### Solución Implementada
+
+#### 1. Prevención en el Frontend
+
+**`SubscriptionManagement.tsx`:**
+- ✅ Query modificada para incluir suscripciones `['active', 'canceled', 'expired', 'past_due']`
+- ✅ Botón "Cambiar de Plan" se deshabilita automáticamente si `status ∈ ['canceled', 'expired']`
+- ✅ Banner rojo informativo cuando la suscripción está cancelada/expirada
+- ✅ CTA visible "Reactivar Suscripción" con estilo distintivo
+
+#### 2. Validación Temprana en el Diálogo
+
+**`ChangePlanDialog.tsx`:**
+- ✅ Nueva función `checkSubscriptionStatus()` que se ejecuta al abrir el diálogo
+- ✅ Si detecta suscripción cancelada/expirada:
+  - Cierra el diálogo automáticamente
+  - Muestra toast descriptivo con el estado
+  - Previene cualquier llamada a la Edge Function
+
+#### 3. Manejo Graceful de Errores
+
+**Mejoras en `ChangePlanDialog.tsx`:**
+- ✅ Detección mejorada del error `SUBSCRIPTION_CANCELED`
+- ✅ Extrae mensaje del backend: `response.error.context?.body`
+- ✅ Muestra toast descriptivo en lugar de runtime error
+- ✅ Cierra el diálogo de forma controlada
+- ✅ Mismo manejo para preview y cambio real de plan
+
+#### 4. Protección en Backend (Sin Cambios)
+
+**`change-subscription-plan/index.ts`:**
+- ✅ Mantiene validación de seguridad existente
+- ✅ Devuelve error 400 estructurado con código `SUBSCRIPTION_CANCELED`
+
+### Flujo Completo del Error
+
+#### Escenario 1: Prevención UI
+Usuario ve banner rojo, botón deshabilitado, y CTA "Reactivar Suscripción"
+
+#### Escenario 2: Validación Temprana
+Diálogo detecta status cancelado, muestra toast y cierra automáticamente
+
+#### Escenario 3: Fallback Backend
+Error capturado gracefully, toast amigable, NO runtime error
+
+### Archivos Modificados
+
+1. **`src/components/SubscriptionManagement.tsx`** - Query inclusiva, UI preventiva
+2. **`src/components/ChangePlanDialog.tsx`** - Validación temprana, manejo mejorado de errores
+3. **`supabase/functions/change-subscription-plan/index.ts`** - Sin cambios (protección intacta)
+
+### Criterios de Aceptación
+
+- ✅ No existe runtime error por `SUBSCRIPTION_CANCELED`
+- ✅ Usuarios con suscripción cancelada ven mensaje claro
+- ✅ CTA "Reactivar Suscripción" funcional
+- ✅ Errores manejados con toasts amigables
+- ✅ Protección de seguridad en backend intacta
+
+---
+
 **Última actualización:** 14 de Noviembre, 2025  
-**Versión del documento:** 2.0  
-**Estado:** ✅ Segunda pasada completada - Sistema optimizado y sin código duplicado
+**Versión del documento:** 2.1 
+**Estado:** ✅ Segunda pasada completada + UX pulida para suscripciones canceladas

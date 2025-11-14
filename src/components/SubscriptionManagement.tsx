@@ -74,7 +74,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
   const fetchSubscriptionData = async () => {
     try {
-      // Obtener suscripción actual
+      // Obtener suscripción actual (active, canceled, or expired)
       const { data: subData, error: subError } = await supabase
         .from('user_subscriptions')
         .select(`
@@ -93,7 +93,9 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           )
         `)
         .eq('user_id', userId)
-        .eq('status', 'active')
+        .in('status', ['active', 'canceled', 'expired', 'past_due'])
+        .order('current_period_end', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (subError) throw subError;
@@ -362,9 +364,39 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
           <Separator />
 
+          {/* Canceled Subscription Warning */}
+          {(subscription.status === 'canceled' || subscription.status === 'expired') && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-red-900">
+                    Suscripción {subscription.status === 'canceled' ? 'cancelada' : 'expirada'}
+                  </p>
+                  <p className="text-sm text-red-800 mt-1">
+                    Tu suscripción está {subscription.status === 'canceled' ? 'cancelada' : 'expirada'}. 
+                    Reactívala para poder cambiar de plan o continuar publicando propiedades.
+                  </p>
+                  <Button
+                    onClick={handleReactivateSubscription}
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 border-red-600 text-red-900 hover:bg-red-100"
+                  >
+                    Reactivar Suscripción
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button onClick={handleChangePlan} className="flex-1 gap-2">
+            <Button 
+              onClick={handleChangePlan} 
+              className="flex-1 gap-2"
+              disabled={subscription.status === 'canceled' || subscription.status === 'expired'}
+            >
               <TrendingUp className="h-4 w-4" />
               Cambiar de Plan
             </Button>
