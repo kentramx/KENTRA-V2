@@ -31,6 +31,9 @@ import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { PropertyStats } from '@/components/PropertyStats';
 import { DynamicBreadcrumbs, type BreadcrumbItem } from '@/components/DynamicBreadcrumbs';
 import { useTracking } from '@/hooks/useTracking';
+import { SEOHead } from '@/components/SEOHead';
+import { generateSearchTitle, generateSearchDescription } from '@/utils/seo';
+import { generatePropertyListStructuredData } from '@/utils/structuredData';
 
 interface Property {
   id: string;
@@ -827,8 +830,41 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     );
   }
 
+  // Generar metadatos SEO dinámicos
+  const seoTitle = generateSearchTitle({
+    estado: filters.estado,
+    municipio: filters.municipio,
+    tipo: filters.tipo,
+    listingType: filters.listingType,
+  });
+
+  const seoDescription = generateSearchDescription({
+    estado: filters.estado,
+    municipio: filters.municipio,
+    tipo: filters.tipo,
+    listingType: filters.listingType,
+    resultCount: filteredProperties.length,
+  });
+
+  const listStructuredData = generatePropertyListStructuredData(
+    filteredProperties.slice(0, 10).map(p => ({
+      id: p.id,
+      title: p.title,
+      price: p.price,
+      url: `${window.location.origin}/property/${p.id}`,
+      image: p.images?.[0]?.url,
+    })),
+    filters.municipio || filters.estado || 'Propiedades en México'
+  );
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={seoTitle}
+        description={seoDescription}
+        canonical="/buscar"
+        structuredData={listStructuredData}
+      />
       <Navbar />
       
       <div className="pt-16">

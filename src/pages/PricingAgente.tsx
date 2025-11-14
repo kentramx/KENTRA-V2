@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { createStripeCheckoutSession, checkActiveSubscription, getPlanBySlug } from '@/utils/stripeCheckout';
 import Navbar from '@/components/Navbar';
 import { CouponInput } from '@/components/CouponInput';
+import { SEOHead } from '@/components/SEOHead';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -196,6 +197,11 @@ const PricingAgente = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title="Planes para Agentes Inmobiliarios en México | Kentra"
+        description="Planes desde $299/mes para agentes inmobiliarios. Publica hasta 5 propiedades, recibe leads directos y haz crecer tu negocio. Prueba gratis 14 días."
+        canonical="/pricing-agente"
+      />
       <Navbar />
       
       <div className="container mx-auto px-4 py-16 md:py-24">

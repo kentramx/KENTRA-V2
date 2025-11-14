@@ -13,6 +13,8 @@ import PropertyCard from "@/components/PropertyCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { NewsletterForm } from "@/components/NewsletterForm";
+import { SEOHead } from "@/components/SEOHead";
+import { generateWebsiteStructuredData, generateOrganizationStructuredData } from "@/utils/structuredData";
 import {
   Select,
   SelectContent,
@@ -188,6 +190,15 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title="Kentra - Encuentra tu Propiedad Ideal en México | Casas, Departamentos y más"
+        description="Plataforma inmobiliaria líder en México. Miles de propiedades en venta y renta: casas, departamentos, terrenos, oficinas. Contacta directamente con agentes certificados."
+        canonical="/"
+        structuredData={[
+          generateWebsiteStructuredData(),
+          generateOrganizationStructuredData(),
+        ]}
+      />
       <Navbar />
 
       {/* Hero Section */}

@@ -14,6 +14,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DynamicBreadcrumbs } from "@/components/DynamicBreadcrumbs";
+import { SEOHead } from "@/components/SEOHead";
+import { generateAgentTitle, generateAgentDescription } from "@/utils/seo";
+import { generateAgentStructuredData } from "@/utils/structuredData";
 import {
   ArrowLeft,
   Home,

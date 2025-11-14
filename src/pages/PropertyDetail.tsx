@@ -13,6 +13,9 @@ import { PropertyImageGallery } from "@/components/PropertyImageGallery";
 import { PropertyMap } from "@/components/PropertyMap";
 import PropertyCard from "@/components/PropertyCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SEOHead } from "@/components/SEOHead";
+import { generatePropertyTitle, generatePropertyDescription } from "@/utils/seo";
+import { generatePropertyStructuredData, generateBreadcrumbStructuredData } from "@/utils/structuredData";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -447,8 +450,70 @@ const PropertyDetail = () => {
     ? property.images.map((img: any) => img.url)
     : [propertyPlaceholder];
 
+  const propertyUrl = `${window.location.origin}/property/${id}`;
+  const mainImage = images[0];
+
+  // Generar metadatos SEO dinámicos
+  const seoTitle = generatePropertyTitle({
+    type: property.type,
+    municipality: property.municipality,
+    state: property.state,
+    price: property.price,
+    bedrooms: property.bedrooms || undefined,
+    listingType: (property.listing_type || 'venta') as 'venta' | 'renta',
+  });
+
+  const seoDescription = generatePropertyDescription({
+    type: property.type,
+    municipality: property.municipality,
+    state: property.state,
+    price: property.price,
+    bedrooms: property.bedrooms || undefined,
+    bathrooms: property.bathrooms || undefined,
+    sqft: property.sqft || undefined,
+    listingType: (property.listing_type || 'venta') as 'venta' | 'renta',
+    description: property.description,
+  });
+
+  const structuredData = generatePropertyStructuredData({
+    id: property.id,
+    title: property.title,
+    description: property.description || seoDescription,
+    price: property.price,
+    currency: 'MXN',
+    type: property.type,
+    listingType: (property.listing_type || 'venta') as 'venta' | 'renta',
+    address: property.address,
+    municipality: property.municipality,
+    state: property.state,
+    bedrooms: property.bedrooms || undefined,
+    bathrooms: property.bathrooms || undefined,
+    sqft: property.sqft || undefined,
+    images,
+    url: propertyUrl,
+    agentName: agent?.name,
+    agentPhone: agent?.phone || undefined,
+  });
+
+  const breadcrumbsData = [
+    { name: 'Inicio', href: '/' },
+    { name: 'Propiedades', href: '/buscar' },
+    { name: property.title, href: `/property/${id}` },
+  ];
+
+  const breadcrumbStructuredData = generateBreadcrumbStructuredData(breadcrumbsData);
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={seoTitle}
+        description={seoDescription}
+        canonical={`/property/${id}`}
+        ogType="product"
+        ogImage={mainImage}
+        ogUrl={propertyUrl}
+        structuredData={[structuredData, breadcrumbStructuredData]}
+      />
       <Navbar />
 
       <div className="container mx-auto px-4 py-8">
