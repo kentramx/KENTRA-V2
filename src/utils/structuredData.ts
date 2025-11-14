@@ -64,7 +64,8 @@ export function generatePropertyStructuredData(
     },
     ...(property.bedrooms && { numberOfRooms: property.bedrooms }),
     ...(property.bathrooms && { numberOfBathroomsTotal: property.bathrooms }),
-    ...(property.sqft && { floorSize: { '@type': 'QuantitativeValue', value: property.sqft, unitCode: 'FTK' } }),
+    // sqft field contains square meters (despite the name) - using MTK for schema.org
+    ...(property.sqft && { floorSize: { '@type': 'QuantitativeValue', value: property.sqft, unitCode: 'MTK' } }),
     offers: {
       '@type': 'Offer',
       priceCurrency: property.currency || 'MXN',

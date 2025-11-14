@@ -127,4 +127,21 @@ Bloquea:
 
 ---
 
+## Corrección de unitCode en JSON-LD
+
+**Fecha**: 2025-11-14
+
+Se corrigió el código de unidad (`unitCode`) en el JSON-LD de propiedades para reflejar correctamente el uso de metros cuadrados:
+
+- **Antes**: `unitCode: "FTK"` (square feet / pies cuadrados)
+- **Después**: `unitCode: "MTK"` (square meters / metros cuadrados)
+
+**Ubicación**: `src/utils/structuredData.ts` → función `generatePropertyStructuredData`
+
+**Justificación**: Todas las propiedades en Kentra utilizan metros cuadrados como unidad de medida de área. El uso de MTK garantiza que los motores de búsqueda interpreten correctamente la información estructurada según el estándar [UN/CEFACT Common Codes](https://schema.org/unitCode).
+
+**Impacto SEO**: Los rich snippets de Google mostrarán ahora la unidad correcta (m²) en los resultados de búsqueda, mejorando la precisión de la información para usuarios mexicanos.
+
+---
+
 **Última actualización**: 2025-11-14
