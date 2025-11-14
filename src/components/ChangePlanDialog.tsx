@@ -266,6 +266,21 @@ export const ChangePlanDialog = ({
       if (response.error || (response.data && !response.data.success && response.data.error)) {
         const errorBody = response.error?.context?.body || response.data;
         
+        // Handle SUBSCRIPTION_CANCELED - close dialog and refresh
+        if (errorBody?.error === 'SUBSCRIPTION_CANCELED') {
+          toast({
+            title: 'Suscripción no activa',
+            description: errorBody?.message || 'Tu suscripción ha finalizado. Por favor contrata un nuevo plan.',
+            variant: 'destructive',
+          });
+          onOpenChange(false);
+          // Trigger refresh in parent component
+          if (onSuccess) {
+            onSuccess();
+          }
+          return;
+        }
+        
         // Handle COOLDOWN_ACTIVE explicitly
         if (errorBody?.error === 'COOLDOWN_ACTIVE') {
           toast({
@@ -364,6 +379,21 @@ export const ChangePlanDialog = ({
       // Check for errors in response or success: false
       if (response.error || (response.data && !response.data.success && response.data.error)) {
         const errorBody = response.error?.context?.body || response.data;
+        
+        // Handle SUBSCRIPTION_CANCELED - close dialog and refresh
+        if (errorBody?.error === 'SUBSCRIPTION_CANCELED') {
+          toast({
+            title: 'Suscripción no activa',
+            description: errorBody?.message || 'Tu suscripción ha finalizado. Por favor contrata un nuevo plan.',
+            variant: 'destructive',
+          });
+          onOpenChange(false);
+          // Trigger refresh in parent component
+          if (onSuccess) {
+            onSuccess();
+          }
+          return;
+        }
         
         // Handle COOLDOWN_ACTIVE explicitly
         if (errorBody?.error === 'COOLDOWN_ACTIVE') {

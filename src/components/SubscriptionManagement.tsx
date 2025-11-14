@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Alert } from '@/components/ui/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -260,6 +261,25 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Banner informativo para cancelación programada */}
+          {subscription.cancel_at_period_end && (
+            <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-semibold text-yellow-800 dark:text-yellow-500 mb-1">
+                    Cancelación programada
+                  </h4>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-600">
+                    Tu suscripción finalizará el{' '}
+                    <strong>{format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}</strong>.
+                    Después de esa fecha podrás contratar un nuevo plan.
+                  </p>
+                </div>
+              </div>
+            </Alert>
+          )}
+
           {/* Price */}
           <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
             <CreditCard className="h-5 w-5 text-primary" />
@@ -298,19 +318,20 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
           <Separator />
 
-          {/* Actions - Solo para suscripciones activas o en trial */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              onClick={handleChangePlan} 
-              className="flex-1 gap-2"
-            >
-              <TrendingUp className="h-4 w-4" />
-              Cambiar de Plan
-            </Button>
-            
-            {/* Solo mostrar botón de cancelar si está activa o en trial */}
-            {(subscription.status === 'active' || subscription.status === 'trialing') && (
-              <AlertDialog>
+          {/* Actions - Solo mostrar si NO hay cancelación programada */}
+          {!subscription.cancel_at_period_end && (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                onClick={handleChangePlan} 
+                className="flex-1 gap-2"
+              >
+                <TrendingUp className="h-4 w-4" />
+                Cambiar de Plan
+              </Button>
+              
+              {/* Solo mostrar botón de cancelar si está activa o en trial */}
+              {(subscription.status === 'active' || subscription.status === 'trialing') && (
+                <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" className="flex-1">
                     Cancelar Suscripción
@@ -348,6 +369,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
               </AlertDialog>
             )}
           </div>
+          )}
         </CardContent>
       </Card>
 
