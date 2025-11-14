@@ -261,9 +261,9 @@ export const ChangePlanDialog = ({
         },
       });
 
-      // Check for errors in response
-      if (response.error) {
-        const errorBody = response.error.context?.body;
+      // Check for errors in response or success: false
+      if (response.error || (response.data && !response.data.success && response.data.error)) {
+        const errorBody = response.error?.context?.body || response.data;
         
         // Handle SUBSCRIPTION_CANCELED explicitly
         if (errorBody?.error === 'SUBSCRIPTION_CANCELED') {
@@ -273,6 +273,16 @@ export const ChangePlanDialog = ({
             variant: 'destructive',
           });
           onOpenChange(false);
+          return;
+        }
+        
+        // Handle COOLDOWN_ACTIVE explicitly
+        if (errorBody?.error === 'COOLDOWN_ACTIVE') {
+          toast({
+            title: 'Cambio de plan no disponible',
+            description: errorBody?.message || 'Debes esperar antes de cambiar de plan nuevamente',
+            variant: 'destructive',
+          });
           return;
         }
         
@@ -286,18 +296,6 @@ export const ChangePlanDialog = ({
     } catch (error: any) {
       // Catch any unexpected errors
       console.error('Error fetching preview:', error);
-      
-      // Check if it's a SUBSCRIPTION_CANCELED error that wasn't caught above
-      if (error?.error === 'SUBSCRIPTION_CANCELED' || error?.message?.includes('SUBSCRIPTION_CANCELED')) {
-        toast({
-          title: 'Suscripción no activa',
-          description: error?.message || 'Tu suscripción está cancelada. Debes reactivar tu suscripción antes de cambiar de plan.',
-          variant: 'destructive',
-        });
-        onOpenChange(false);
-        return;
-      }
-      
       setPreview(null);
     } finally {
       setLoadingPreview(false);
@@ -373,9 +371,9 @@ export const ChangePlanDialog = ({
         return;
       }
 
-      // Check for errors in response
-      if (response.error) {
-        const errorBody = response.error.context?.body;
+      // Check for errors in response or success: false
+      if (response.error || (response.data && !response.data.success && response.data.error)) {
+        const errorBody = response.error?.context?.body || response.data;
         
         // Handle SUBSCRIPTION_CANCELED explicitly
         if (errorBody?.error === 'SUBSCRIPTION_CANCELED') {
@@ -407,6 +405,16 @@ export const ChangePlanDialog = ({
           }
           return;
         }
+
+        // Handle EXCEEDS_PROPERTY_LIMIT explicitly
+        if (errorBody?.error === 'EXCEEDS_PROPERTY_LIMIT') {
+          toast({
+            title: 'No puedes hacer downgrade',
+            description: errorBody?.message || 'Tienes más propiedades activas de las permitidas en el nuevo plan',
+            variant: 'destructive',
+          });
+          return;
+        }
         
         // Other errors
         console.error('Error en cambio de plan:', errorBody || response.error);
@@ -418,37 +426,20 @@ export const ChangePlanDialog = ({
         return;
       }
 
-      toast({
-        title: '¡Plan actualizado!',
-        description: 'Tu plan se ha cambiado exitosamente. Los cambios se reflejarán en tu próxima factura.',
-      });
+      // Verify successful response
+      if (response.data && response.data.success !== false) {
+        toast({
+          title: '¡Plan actualizado!',
+          description: 'Tu plan se ha cambiado exitosamente. Los cambios se reflejarán en tu próxima factura.',
+        });
 
-      onSuccess();
-      onOpenChange(false);
+        onSuccess();
+        onOpenChange(false);
+      }
     } catch (error: any) {
       console.error('Error changing plan:', error);
       
-      // Check if it's a known error type that should be handled gracefully
-      if (error?.error === 'SUBSCRIPTION_CANCELED' || error?.message?.includes('SUBSCRIPTION_CANCELED')) {
-        toast({
-          title: 'Suscripción no activa',
-          description: error?.message || 'Tu suscripción está cancelada. Debes reactivar tu suscripción antes de cambiar de plan.',
-          variant: 'destructive',
-        });
-        onOpenChange(false);
-        return;
-      }
-      
-      if (error?.error === 'COOLDOWN_ACTIVE' || error?.message?.includes('COOLDOWN_ACTIVE')) {
-        toast({
-          title: 'Cambio de plan no disponible',
-          description: error?.message || 'Debes esperar antes de cambiar de plan nuevamente',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      // Generic error handling
+      // Generic error handling for unexpected errors
       toast({
         title: 'Error al cambiar de plan',
         description: error instanceof Error ? error.message : 'Intenta de nuevo más tarde',

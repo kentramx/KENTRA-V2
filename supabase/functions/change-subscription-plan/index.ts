@@ -102,8 +102,10 @@ Deno.serve(async (req) => {
             nextChangeDate,
           });
 
+          // Return 200 with success: false for business rule errors
           return new Response(
             JSON.stringify({
+              success: false,
               error: 'COOLDOWN_ACTIVE',
               message: `Debes esperar ${daysRemaining} día${daysRemaining > 1 ? 's' : ''} antes de cambiar de plan nuevamente`,
               daysRemaining,
@@ -111,7 +113,7 @@ Deno.serve(async (req) => {
               lastChangeDate: lastChangeDate.toISOString(),
             }),
             {
-              status: 429,
+              status: 200,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             }
           );
@@ -178,8 +180,10 @@ Deno.serve(async (req) => {
         console.error('Error counting properties:', countError);
       } else if (activePropertiesCount && activePropertiesCount > newPlanLimit) {
         const excess = activePropertiesCount - newPlanLimit;
+        // Return 200 with success: false for business rule errors
         return new Response(
           JSON.stringify({
+            success: false,
             error: 'EXCEEDS_PROPERTY_LIMIT',
             message: `Tienes ${activePropertiesCount} propiedades activas, pero el plan ${newPlan.display_name} solo permite ${newPlanLimit}. Debes pausar o eliminar ${excess} ${excess === 1 ? 'propiedad' : 'propiedades'} antes de hacer el downgrade.`,
             currentCount: activePropertiesCount,
@@ -187,7 +191,7 @@ Deno.serve(async (req) => {
             excess,
           }),
           {
-            status: 400,
+            status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           }
         );
@@ -228,15 +232,18 @@ Deno.serve(async (req) => {
         userId: user.id,
       });
       
+      // Return 200 with success: false to avoid RUNTIME_ERROR in Lovable
+      // This is a business rule error, not a technical failure
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: 'SUBSCRIPTION_CANCELED',
           message: 'Tu suscripción está cancelada. Debes reactivar tu suscripción antes de cambiar de plan.',
           status: stripeSubscription.status,
           details: 'No se pueden cambiar planes de suscripciones canceladas o expiradas.'
         }),
         { 
-          status: 400, 
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
