@@ -192,6 +192,26 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
         throw error;
       }
 
+      // Handle SUBSCRIPTION_ALREADY_CANCELED error
+      if (data?.error === 'SUBSCRIPTION_ALREADY_CANCELED') {
+        console.log('⚠️ Subscription already canceled, showing message and redirecting');
+        toast({
+          title: "Suscripción finalizada",
+          description: data.message || "Tu suscripción ya ha finalizado. Por favor contrata un nuevo plan.",
+          variant: "destructive",
+        });
+        
+        // Refresh to show correct state
+        await fetchSubscriptionData();
+        
+        // Redirect to pricing after 2 seconds
+        setTimeout(() => {
+          navigate('/pricing-agente');
+        }, 2000);
+        
+        return;
+      }
+
       if (!data?.success) {
         console.error('❌ Reactivation failed:', data);
         throw new Error(data?.error || 'Error al reactivar la suscripción');
