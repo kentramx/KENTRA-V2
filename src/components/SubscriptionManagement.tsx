@@ -174,6 +174,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
     // Validación previa: solo se puede reactivar si está activa con cancelación programada
     if (!subscription) return;
     
+    // Validación 1: Si está totalmente cancelada, no permitir reactivación
     if (subscription.status === 'canceled' || subscription.status === 'expired') {
       toast({
         title: 'No se puede reactivar',
@@ -183,10 +184,11 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
       return;
     }
 
+    // Validación 2: Solo se puede reactivar si está activa con cancelación programada
     if (subscription.status !== 'active' || !subscription.cancel_at_period_end) {
       toast({
         title: 'No se puede reactivar',
-        description: 'Esta suscripción no tiene una cancelación programada.',
+        description: 'Solo puedes reactivar suscripciones activas con cancelación programada.',
         variant: 'destructive',
       });
       return;
@@ -199,11 +201,11 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
       if (error) throw error;
 
-      // Check if the operation was successful
-      if (!data.success) {
+      // Verificar si la operación fue exitosa
+      if (!data || !data.success) {
         toast({
           title: 'No se puede reactivar',
-          description: data.error || 'Esta suscripción no puede ser reactivada.',
+          description: data?.error || 'Esta suscripción no puede ser reactivada.',
           variant: 'destructive',
         });
         return;
@@ -214,7 +216,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
         description: 'Tu suscripción continuará renovándose normalmente',
       });
 
-      // Recargar datos
+      // Recargar datos para actualizar la UI
       await fetchSubscriptionData();
     } catch (error) {
       console.error('Error reactivating subscription:', error);
@@ -356,7 +358,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
             </div>
           </div>
 
-          {/* Caso 2: Suscripción activa con cancelación programada */}
+          {/* Estado 2: Suscripción activa con cancelación programada */}
           {subscription.status === 'active' && subscription.cancel_at_period_end && (
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="flex items-start gap-3">
@@ -383,81 +385,89 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
             </div>
           )}
 
-          <Separator />
-
-          {/* Caso 3: Suscripción totalmente cancelada */}
+          {/* Estado 3: Suscripción totalmente cancelada - NO mostrar botón de reactivar */}
           {(subscription.status === 'canceled' || subscription.status === 'expired') && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-semibold text-red-900">
-                    Suscripción {subscription.status === 'canceled' ? 'cancelada' : 'expirada'}
-                  </p>
-                  <p className="text-sm text-red-800 mt-1">
-                    Tu suscripción ha finalizado. Contrata un nuevo plan para seguir publicando propiedades.
-                  </p>
-                  <Button
-                    onClick={() => navigate('/pricing-agente')}
-                    size="sm"
-                    className="mt-3"
-                  >
-                    Contratar Nuevo Plan
-                  </Button>
+            <>
+              <Separator />
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-red-900">
+                      Suscripción {subscription.status === 'canceled' ? 'cancelada' : 'expirada'}
+                    </p>
+                    <p className="text-sm text-red-800 mt-1">
+                      Tu suscripción ha finalizado. Contrata un nuevo plan para seguir publicando propiedades.
+                    </p>
+                    <Button
+                      onClick={() => navigate('/pricing-agente')}
+                      size="sm"
+                      className="mt-3"
+                    >
+                      Contratar Nuevo Plan
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              onClick={handleChangePlan} 
-              className="flex-1 gap-2"
-              disabled={subscription.status === 'canceled' || subscription.status === 'expired'}
-            >
-              <TrendingUp className="h-4 w-4" />
-              Cambiar de Plan
-            </Button>
-            {!subscription.cancel_at_period_end && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" className="flex-1">
-                    Cancelar Suscripción
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>¿Cancelar suscripción?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Tu suscripción se cancelará al final del período de facturación actual el{' '}
-                      {format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}.
-                      Podrás seguir usando todas las funciones hasta esa fecha.
-                      <br /><br />
-                      Esta acción no se puede deshacer, pero podrás suscribirte nuevamente en cualquier momento.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>No, mantener suscripción</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleCancelSubscription}
-                      disabled={canceling}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {canceling ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Cancelando...
-                        </>
-                      ) : (
-                        'Sí, cancelar'
-                      )}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
+          {/* Separator solo para estados activos */}
+          {subscription.status === 'active' && !subscription.cancel_at_period_end && (
+            <Separator />
+          )}
+
+          {/* Actions - Solo mostrar para suscripciones activas */}
+          {subscription.status === 'active' && (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                onClick={handleChangePlan} 
+                className="flex-1 gap-2"
+                disabled={subscription.cancel_at_period_end}
+              >
+                <TrendingUp className="h-4 w-4" />
+                Cambiar de Plan
+              </Button>
+              {!subscription.cancel_at_period_end && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="flex-1">
+                      Cancelar Suscripción
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Cancelar suscripción?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tu suscripción se cancelará al final del período de facturación actual el{' '}
+                        {format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}.
+                        Podrás seguir usando todas las funciones hasta esa fecha.
+                        <br /><br />
+                        Esta acción no se puede deshacer, pero podrás suscribirte nuevamente en cualquier momento.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>No, mantener suscripción</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleCancelSubscription}
+                        disabled={canceling}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {canceling ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Cancelando...
+                          </>
+                        ) : (
+                          'Sí, cancelar'
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

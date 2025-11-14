@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
     console.log('Reactivating subscription for user:', user.id);
 
-    // Get current subscription
+    // Get current subscription - buscar solo suscripciones activas
     const { data: subscription, error: subError } = await supabaseClient
       .from('user_subscriptions')
       .select('*')
@@ -46,22 +46,31 @@ Deno.serve(async (req) => {
       .single();
 
     if (subError || !subscription) {
-      return new Response(JSON.stringify({ error: 'No active subscription found' }), {
-        status: 404,
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'No se encontró una suscripción activa para reactivar.' 
+      }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     if (!subscription.cancel_at_period_end) {
-      return new Response(JSON.stringify({ error: 'Subscription is not scheduled for cancellation' }), {
-        status: 400,
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Esta suscripción no tiene cancelación programada.' 
+      }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     if (!subscription.stripe_subscription_id) {
-      return new Response(JSON.stringify({ error: 'No Stripe subscription ID found' }), {
-        status: 400,
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'No se encontró ID de suscripción de Stripe.' 
+      }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -79,8 +88,9 @@ Deno.serve(async (req) => {
 
     console.log('Stripe subscription status:', stripeSubscription.status);
 
-    // If subscription is already fully canceled in Stripe, cannot reactivate
-    if (stripeSubscription.status === 'canceled') {
+    // Validación: No se puede reactivar si está cancelada, incompleta o expirada
+    const nonReactivableStatuses = ['canceled', 'incomplete', 'incomplete_expired', 'unpaid'];
+    if (nonReactivableStatuses.includes(stripeSubscription.status)) {
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Esta suscripción ya está completamente cancelada. Debes contratar un nuevo plan.',
@@ -91,11 +101,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Only can reactivate if status is active with cancel_at_period_end
-    if (stripeSubscription.status !== 'active' || !stripeSubscription.cancel_at_period_end) {
+    // Solo se puede reactivar si está activa o trialing con cancel_at_period_end
+    const reactivableStatuses = ['active', 'trialing'];
+    if (!reactivableStatuses.includes(stripeSubscription.status) || !stripeSubscription.cancel_at_period_end) {
       return new Response(JSON.stringify({ 
         success: false,
-        error: 'Esta suscripción no puede ser reactivada. Estado actual: ' + stripeSubscription.status,
+        error: 'Solo puedes reactivar suscripciones activas con cancelación programada.',
         code: 'CANNOT_REACTIVATE'
       }), {
         status: 200,
@@ -125,8 +136,11 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       console.error('Database update error:', updateError);
-      return new Response(JSON.stringify({ error: 'Failed to update database' }), {
-        status: 500,
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Error al actualizar la base de datos.' 
+      }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -145,10 +159,11 @@ Deno.serve(async (req) => {
     console.error('Error reactivating subscription:', error);
     return new Response(
       JSON.stringify({
-        error: 'Internal server error',
+        success: false,
+        error: 'Error al reactivar la suscripción. Intenta de nuevo.',
         details: error instanceof Error ? error.message : 'Unknown error',
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
