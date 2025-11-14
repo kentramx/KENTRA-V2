@@ -87,14 +87,44 @@ export const ChangePlanDialog = ({
   const [preview, setPreview] = useState<ProrationPreview | null>(null);
   const [cooldownInfo, setCooldownInfo] = useState<CooldownInfo>({ canChange: true });
   const [userRole, setUserRole] = useState<UserRole>({ isAdmin: false, role: 'buyer' });
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('active');
 
   useEffect(() => {
     if (open) {
+      checkSubscriptionStatus();
       fetchAvailablePlans();
       checkUserRole();
       checkCooldown();
     }
   }, [open, currentPlanName]);
+
+  const checkSubscriptionStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .select('status')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) throw error;
+      
+      if (data) {
+        setSubscriptionStatus(data.status);
+        
+        // If subscription is canceled or expired, close dialog and show message
+        if (data.status === 'canceled' || data.status === 'expired') {
+          toast({
+            title: 'Suscripción no activa',
+            description: `Tu suscripción está ${data.status === 'canceled' ? 'cancelada' : 'expirada'}. Debes reactivar tu suscripción antes de cambiar de plan.`,
+            variant: 'destructive',
+          });
+          onOpenChange(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking subscription status:', error);
+    }
+  };
 
   const checkUserRole = async () => {
     try {
@@ -233,11 +263,12 @@ export const ChangePlanDialog = ({
 
       if (response.error) {
         // Handle subscription canceled error
+        const errorBody = response.error.context?.body;
         if (response.error.message?.includes('SUBSCRIPTION_CANCELED') || 
-            response.error.context?.body?.error === 'SUBSCRIPTION_CANCELED') {
+            errorBody?.error === 'SUBSCRIPTION_CANCELED') {
           toast({
-            title: 'Suscripción Cancelada',
-            description: 'Tu suscripción está cancelada. Debes reactivar tu suscripción antes de cambiar de plan.',
+            title: 'Suscripción no activa',
+            description: errorBody?.message || 'Tu suscripción está cancelada. Debes reactivar tu suscripción antes de cambiar de plan.',
             variant: 'destructive',
           });
           onOpenChange(false);
@@ -326,11 +357,12 @@ export const ChangePlanDialog = ({
 
       if (response.error) {
         // Handle subscription canceled error
+        const errorBody = response.error.context?.body;
         if (response.error.message?.includes('SUBSCRIPTION_CANCELED') || 
-            response.error.context?.body?.error === 'SUBSCRIPTION_CANCELED') {
+            errorBody?.error === 'SUBSCRIPTION_CANCELED') {
           toast({
-            title: 'Suscripción Cancelada',
-            description: 'Tu suscripción está cancelada. Debes reactivar tu suscripción antes de cambiar de plan.',
+            title: 'Suscripción no activa',
+            description: errorBody?.message || 'Tu suscripción está cancelada. Debes reactivar tu suscripción antes de cambiar de plan.',
             variant: 'destructive',
           });
           onOpenChange(false);
@@ -339,21 +371,20 @@ export const ChangePlanDialog = ({
         
         // Handle cooldown error specifically
         if (response.error.message?.includes('COOLDOWN_ACTIVE') || 
-            response.error.context?.body?.error === 'COOLDOWN_ACTIVE') {
-          const errorData = response.error.context?.body;
+            errorBody?.error === 'COOLDOWN_ACTIVE') {
           toast({
             title: 'Cambio de plan no disponible',
-            description: errorData?.message || 'Debes esperar antes de cambiar de plan nuevamente',
+            description: errorBody?.message || 'Debes esperar antes de cambiar de plan nuevamente',
             variant: 'destructive',
           });
           
           // Update cooldown info
-          if (errorData) {
+          if (errorBody) {
             setCooldownInfo({
               canChange: false,
-              daysRemaining: errorData.daysRemaining,
-              nextChangeDate: errorData.nextChangeDate,
-              lastChangeDate: errorData.lastChangeDate,
+              daysRemaining: errorBody.daysRemaining,
+              nextChangeDate: errorBody.nextChangeDate,
+              lastChangeDate: errorBody.lastChangeDate,
             });
           }
           return;
