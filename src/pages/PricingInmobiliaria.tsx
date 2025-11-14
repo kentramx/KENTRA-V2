@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { createStripeCheckoutSession, checkActiveSubscription, getPlanBySlug } from '@/utils/stripeCheckout';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,60 +27,41 @@ const PricingInmobiliaria = () => {
     }
 
     try {
-      // Verificar si ya tiene una suscripción activa
-      const { data: activeSub, error: subError } = await supabase
-        .from('user_subscriptions')
-        .select('id, subscription_plans(name)')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (activeSub && !subError) {
+      // Verificar suscripción activa
+      const { hasActive } = await checkActiveSubscription(user.id);
+      if (hasActive) {
         toast.error('Ya tienes una suscripción activa. Ve a tu dashboard para gestionar tu plan.');
         navigate('/panel-inmobiliaria');
         return;
       }
 
-      // Construir el nombre completo del plan
-      const fullPlanName = `inmobiliaria_${planSlug}`;
-      
-      // Buscar el plan en la base de datos
-      const { data: plan, error: planError } = await supabase
-        .from('subscription_plans')
-        .select('id, name, display_name, price_monthly, price_yearly')
-        .eq('name', fullPlanName)
-        .single();
-
+      // Obtener plan
+      const { plan, error: planError } = await getPlanBySlug('inmobiliaria', planSlug);
       if (planError || !plan) {
-        toast.error('No se pudo encontrar el plan seleccionado');
+        toast.error(planError || 'No se pudo encontrar el plan seleccionado');
         return;
       }
 
-      // Mostrar confirmación del plan
+      // Mostrar confirmación
       const price = billingPeriod === 'monthly' ? plan.price_monthly : plan.price_yearly;
       const period = billingPeriod === 'monthly' ? 'mes' : 'año';
       toast.success(`Redirigiendo al checkout de ${plan.display_name} - $${price} MXN/${period}`);
 
-      // Invocar el Edge Function para crear la sesión de checkout
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: {
-          planId: plan.id,
-          billingCycle: billingPeriod === 'monthly' ? 'monthly' : 'yearly',
-          successUrl: `${window.location.origin}/payment-success?plan=${fullPlanName}`,
-          cancelUrl: `${window.location.origin}/pricing-inmobiliaria`,
-        },
+      // Crear sesión de checkout
+      const result = await createStripeCheckoutSession({
+        planId: plan.id,
+        billingCycle: billingPeriod === 'monthly' ? 'monthly' : 'yearly',
+        successUrl: `${window.location.origin}/payment-success?payment=success&plan=${plan.name}`,
+        cancelUrl: `${window.location.origin}/pricing-inmobiliaria`,
       });
 
-      if (error) {
-        console.error('Error creating checkout session:', error);
-        toast.error('Error al crear la sesión de pago. Por favor intenta de nuevo.');
+      if (!result.success) {
+        toast.error(result.error || 'Error al crear la sesión de pago');
         return;
       }
 
-      if (data?.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      } else {
-        toast.error('No se pudo generar la URL de pago');
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
       }
     } catch (error) {
       console.error('Error:', error);
@@ -231,7 +212,7 @@ const PricingInmobiliaria = () => {
                     <span>Soporte por email</span>
                   </div>
                 </div>
-                <Button className="w-full" onClick={() => handleSelectPlan('Inmobiliaria Start')}>
+                <Button className="w-full" onClick={() => handleSelectPlan('start')}>
                   Comenzar con Start
                 </Button>
               </CardContent>
@@ -301,7 +282,7 @@ const PricingInmobiliaria = () => {
                     <span>Soporte por email</span>
                   </div>
                 </div>
-                <Button className="w-full" onClick={() => handleSelectPlan('Inmobiliaria Grow')}>
+                <Button className="w-full" onClick={() => handleSelectPlan('grow')}>
                   Continuar con Grow
                 </Button>
               </CardContent>
@@ -364,7 +345,7 @@ const PricingInmobiliaria = () => {
                     <span>Soporte por email</span>
                   </div>
                 </div>
-                <Button className="w-full" onClick={() => handleSelectPlan('Inmobiliaria Pro')}>
+                <Button className="w-full" onClick={() => handleSelectPlan('pro')}>
                   Actualizar a Pro
                 </Button>
               </CardContent>
