@@ -298,7 +298,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
           <Separator />
 
-          {/* Actions - Solo para suscripciones activas */}
+          {/* Actions - Solo para suscripciones activas o en trial */}
           <div className="flex flex-col sm:flex-row gap-3">
             <Button 
               onClick={handleChangePlan} 
@@ -307,42 +307,46 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
               <TrendingUp className="h-4 w-4" />
               Cambiar de Plan
             </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" className="flex-1">
-                  Cancelar Suscripción
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Cancelar suscripción?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Tu suscripción se cancelará al final del período de facturación actual el{' '}
-                    {format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}.
-                    Podrás seguir usando todas las funciones hasta esa fecha.
-                    <br /><br />
-                    Esta acción no se puede deshacer, pero podrás suscribirte nuevamente en cualquier momento.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>No, mantener suscripción</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleCancelSubscription}
-                    disabled={canceling}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    {canceling ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Cancelando...
-                      </>
-                    ) : (
-                      'Sí, cancelar'
-                    )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            
+            {/* Solo mostrar botón de cancelar si está activa o en trial */}
+            {(subscription.status === 'active' || subscription.status === 'trialing') && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="flex-1">
+                    Cancelar Suscripción
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Cancelar suscripción?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tu suscripción se cancelará al final del período de facturación actual el{' '}
+                      {format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}.
+                      Podrás seguir usando todas las funciones hasta esa fecha.
+                      <br /><br />
+                      Esta acción no se puede deshacer, pero podrás suscribirte nuevamente en cualquier momento.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>No, mantener suscripción</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleCancelSubscription}
+                      disabled={canceling}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {canceling ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Cancelando...
+                        </>
+                      ) : (
+                        'Sí, cancelar'
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         </CardContent>
       </Card>
