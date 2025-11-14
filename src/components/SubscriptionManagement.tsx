@@ -288,6 +288,10 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
     );
   }
 
+  // Verificar si la suscripción ya expiró (cancel_at_period_end pero fecha pasada)
+  const isExpired = subscription.cancel_at_period_end && 
+                    new Date(subscription.current_period_end) < new Date();
+
   const currentPrice = subscription.billing_cycle === 'yearly' 
     ? subscription.price_yearly 
     : subscription.price_monthly;
@@ -319,23 +323,48 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Banner informativo para cancelación programada */}
+          {/* Banner informativo para cancelación programada o expirada */}
           {subscription.cancel_at_period_end && (
-            <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 mt-0.5" />
-                <div className="flex-1">
-                  <h4 className="font-semibold text-yellow-800 dark:text-yellow-500 mb-1">
-                    Cancelación programada
-                  </h4>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-600">
-                    Tu suscripción finalizará el{' '}
-                    <strong>{format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}</strong>.
-                    Después de esa fecha podrás contratar un nuevo plan.
-                  </p>
+            isExpired ? (
+              <Alert className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-red-800 dark:text-red-500 mb-1">
+                      Suscripción Finalizada
+                    </h4>
+                    <p className="text-sm text-red-700 dark:text-red-600 mb-3">
+                      Tu suscripción finalizó el{' '}
+                      <strong>{format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}</strong>.
+                      Contrata un nuevo plan para continuar publicando propiedades.
+                    </p>
+                    <Button 
+                      onClick={() => navigate('/pricing-agente')}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      Ver Planes Disponibles
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </Alert>
+              </Alert>
+            ) : (
+              <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-yellow-800 dark:text-yellow-500 mb-1">
+                      Cancelación programada
+                    </h4>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-600">
+                      Tu suscripción finalizará el{' '}
+                      <strong>{format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}</strong>.
+                      Después de esa fecha podrás contratar un nuevo plan.
+                    </p>
+                  </div>
+                </div>
+              </Alert>
+            )
           )}
 
           {/* Price */}
@@ -378,8 +407,8 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Reactivar Suscripción - Mostrar PRIMERO si hay cancelación programada */}
-            {subscription.cancel_at_period_end && (
+            {/* Reactivar Suscripción - Mostrar SOLO si hay cancelación programada Y NO ha expirado */}
+            {subscription.cancel_at_period_end && !isExpired && (
               <Button 
                 onClick={handleReactivateSubscription}
                 disabled={reactivating}
@@ -396,6 +425,17 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
                     Reactivar Suscripción
                   </>
                 )}
+              </Button>
+            )}
+
+            {/* Contratar nuevo plan - Mostrar SOLO si ya expiró */}
+            {isExpired && (
+              <Button 
+                onClick={() => navigate('/pricing-agente')}
+                className="flex-1 gap-2"
+                variant="default"
+              >
+                Contratar Nuevo Plan
               </Button>
             )}
 

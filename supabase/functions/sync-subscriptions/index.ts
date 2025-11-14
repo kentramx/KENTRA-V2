@@ -25,11 +25,11 @@ Deno.serve(async (req) => {
       httpClient: Stripe.createFetchHttpClient(),
     });
 
-    // Get all active subscriptions
+    // Get all active and trialing subscriptions
     const { data: subscriptions, error: subError } = await supabaseClient
       .from('user_subscriptions')
       .select('*')
-      .eq('status', 'active');
+      .in('status', ['active', 'trialing']);
 
     if (subError) {
       throw subError;
@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
             .from('user_subscriptions')
             .update({
               status: 'canceled',
+              cancel_at_period_end: false,
               updated_at: new Date().toISOString(),
             })
             .eq('id', sub.id);
@@ -72,14 +73,19 @@ Deno.serve(async (req) => {
 
           expiredCount++;
         } else {
-          // Sync any status changes
-          if (stripeSub.status !== sub.status) {
-            console.log(`Syncing status for subscription ${sub.id}: ${sub.status} -> ${stripeSub.status}`);
+          // Sync status and cancel_at_period_end
+          const needsUpdate = 
+            stripeSub.status !== sub.status || 
+            stripeSub.cancel_at_period_end !== sub.cancel_at_period_end;
+
+          if (needsUpdate) {
+            console.log(`Syncing subscription ${sub.id}: status ${sub.status} -> ${stripeSub.status}, cancel_at_period_end ${sub.cancel_at_period_end} -> ${stripeSub.cancel_at_period_end}`);
             
             await supabaseClient
               .from('user_subscriptions')
               .update({
                 status: stripeSub.status,
+                cancel_at_period_end: stripeSub.cancel_at_period_end,
                 updated_at: new Date().toISOString(),
               })
               .eq('id', sub.id);
