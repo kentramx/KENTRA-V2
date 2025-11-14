@@ -53,22 +53,21 @@ Deno.serve(async (req) => {
       .from('user_subscriptions')
       .select('*')
       .eq('user_id', user.id)
-      .eq('status', 'active')
       .eq('cancel_at_period_end', true)
       .single();
 
     if (subError || !subscription) {
-      console.error('❌ No active subscription with pending cancellation found:', subError);
+      console.error('❌ No subscription with pending cancellation found:', subError);
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'No se encontró una suscripción activa con cancelación programada',
+          error: 'No se encontró una suscripción con cancelación programada',
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('📦 Subscription found:', subscription.id);
+    console.log('📦 Subscription found in DB:', subscription.id, 'Status:', subscription.status);
 
     // Initialize Stripe
     const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
@@ -84,8 +83,66 @@ Deno.serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
+    // CRITICAL: First check the actual Stripe subscription status
+    console.log('🔍 Checking Stripe subscription status:', subscription.stripe_subscription_id);
+    let stripeSubscription;
+    try {
+      stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
+      console.log('📊 Stripe subscription status:', stripeSubscription.status);
+      console.log('📊 Stripe cancel_at_period_end:', stripeSubscription.cancel_at_period_end);
+    } catch (error) {
+      console.error('❌ Error retrieving Stripe subscription:', error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'No se pudo verificar el estado de la suscripción en Stripe',
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if subscription is already canceled in Stripe
+    if (stripeSubscription.status === 'canceled') {
+      console.error('❌ Subscription is already canceled in Stripe');
+      
+      // Sync DB to reflect reality
+      await supabaseClient
+        .from('user_subscriptions')
+        .update({
+          status: 'canceled',
+          cancel_at_period_end: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', subscription.id);
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'SUBSCRIPTION_ALREADY_CANCELED',
+          message: 'Tu suscripción ya ha finalizado. Por favor contrata un nuevo plan para continuar.',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if subscription is active with pending cancellation
+    if (stripeSubscription.status !== 'active' || !stripeSubscription.cancel_at_period_end) {
+      console.error('❌ Subscription not eligible for reactivation:', {
+        status: stripeSubscription.status,
+        cancel_at_period_end: stripeSubscription.cancel_at_period_end
+      });
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Tu suscripción no tiene una cancelación programada o no está activa',
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Update Stripe subscription to cancel the cancellation
-    console.log('🔄 Updating Stripe subscription:', subscription.stripe_subscription_id);
+    console.log('🔄 Reactivating Stripe subscription:', subscription.stripe_subscription_id);
     const updatedStripeSubscription = await stripe.subscriptions.update(
       subscription.stripe_subscription_id,
       {
