@@ -95,19 +95,22 @@ export const createStripeCheckoutSession = async (
 };
 
 /**
- * Valida si el usuario ya tiene una suscripción activa
- * Estados considerados activos: 'active', 'trialing', 'past_due'
- * Estados NO considerados activos: 'canceled', 'expired', 'incomplete_expired'
+ * Valida si el usuario ya tiene una suscripción activa que bloquee un nuevo checkout
+ * Estados que BLOQUEAN nuevo checkout: 'active', 'trialing', 'past_due'
+ * Estados que PERMITEN nuevo checkout: 'canceled', 'expired', 'incomplete', 'incomplete_expired', 'unpaid'
  */
 export const checkActiveSubscription = async (
   userId: string
 ): Promise<{ hasActive: boolean; planName?: string; status?: string }> => {
   try {
+    // Solo considerar como "activa" los estados que realmente bloquean un nuevo checkout
+    const activeStatuses = ['active', 'trialing', 'past_due'];
+    
     const { data: activeSub, error: subError } = await supabase
       .from('user_subscriptions')
       .select('id, status, subscription_plans(name)')
       .eq('user_id', userId)
-      .in('status', ['active', 'trialing', 'past_due'])
+      .in('status', activeStatuses)
       .maybeSingle();
 
     if (subError) {
