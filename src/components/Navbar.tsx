@@ -73,6 +73,11 @@ const Navbar = () => {
       return;
     }
 
+    // Esperar a que se cargue el rol
+    if (roleLoading) {
+      return;
+    }
+
     // Verificar email para agentes/inmobiliarias
     if ((effectiveRole === 'agent' || effectiveRole === 'agency') && !isEmailVerified()) {
       toast({
@@ -93,7 +98,10 @@ const Navbar = () => {
         navigate('/panel-inmobiliaria?tab=form');
         break;
       case 'buyer':
+        setShowUpgradeDialog(true);
+        break;
       default:
+        // Si el rol no está definido, asumir buyer y mostrar upgrade
         setShowUpgradeDialog(true);
         break;
     }
