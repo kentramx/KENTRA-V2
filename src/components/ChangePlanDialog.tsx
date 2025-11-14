@@ -88,6 +88,7 @@ export const ChangePlanDialog = ({
   const [cooldownInfo, setCooldownInfo] = useState<CooldownInfo>({ canChange: true });
   const [userRole, setUserRole] = useState<UserRole>({ isAdmin: false, role: 'buyer' });
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('active');
+  const [hasPendingCancellation, setHasPendingCancellation] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -102,7 +103,7 @@ export const ChangePlanDialog = ({
     try {
       const { data, error } = await supabase
         .from('user_subscriptions')
-        .select('status')
+        .select('status, cancel_at_period_end')
         .eq('user_id', userId)
         .in('status', ['active', 'trialing'])
         .order('current_period_end', { ascending: false })
@@ -113,6 +114,7 @@ export const ChangePlanDialog = ({
       
       if (data) {
         setSubscriptionStatus(data.status);
+        setHasPendingCancellation(data.cancel_at_period_end || false);
       } else {
         // No hay suscripción activa - cerrar diálogo
         toast({
@@ -425,6 +427,16 @@ export const ChangePlanDialog = ({
           return;
         }
         
+        // Handle DOWNGRADE_WITH_CANCELLATION explicitly
+        if (errorBody?.error === 'DOWNGRADE_WITH_CANCELLATION') {
+          toast({
+            title: 'Solo se permiten upgrades',
+            description: errorBody?.message || 'Solo puedes hacer upgrade para reactivar tu suscripción',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
         // Other errors
         console.error('Error en cambio de plan:', errorBody || response.error);
         toast({
@@ -577,10 +589,49 @@ export const ChangePlanDialog = ({
               </RadioGroup>
             </div>
 
+            {/* Banner de cancelación programada */}
+            {hasPendingCancellation && (
+              <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-blue-900">
+                      Suscripción con cancelación programada
+                    </p>
+                    <p className="text-sm text-blue-800 mt-1">
+                      Solo puedes hacer <strong>upgrade</strong> a un plan superior. 
+                      Esto reactivará tu suscripción automáticamente.
+                    </p>
+                    <p className="text-xs text-blue-700 mt-2">
+                      Para contratar un plan inferior, espera a que finalice tu suscripción actual.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Plans List */}
             <RadioGroup value={selectedPlanId} onValueChange={setSelectedPlanId}>
               <div className="space-y-3">
-                {plans.map((plan) => {
+                {plans
+                  .filter(plan => {
+                    // Si hay cancelación pendiente, solo mostrar upgrades
+                    if (!hasPendingCancellation) return true;
+                    
+                    // Calcular precio actual
+                    const currentPrice = currentBillingCycle === 'yearly'
+                      ? plans.find(p => p.id === currentPlanId)?.price_yearly || 0
+                      : plans.find(p => p.id === currentPlanId)?.price_monthly || 0;
+                    
+                    // Calcular precio del plan a mostrar
+                    const planPrice = billingCycle === 'yearly' 
+                      ? plan.price_yearly 
+                      : plan.price_monthly;
+                    
+                    // Solo mostrar upgrades (precio mayor)
+                    return planPrice > currentPrice;
+                  })
+                  .map((plan) => {
                   const isCurrentPlan = plan.id === currentPlanId;
                   const changeType = getChangeType(plan.id);
                   const price = getPlanPrice(plan);

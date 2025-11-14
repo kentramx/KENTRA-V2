@@ -318,25 +318,31 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
           <Separator />
 
-          {/* Actions - Solo mostrar si NO hay cancelación programada */}
-          {!subscription.cancel_at_period_end && (
-            <div className="flex flex-col sm:flex-row gap-3">
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Cambiar de Plan - disponible siempre si está activa */}
+            {(subscription.status === 'active' || subscription.status === 'trialing') && (
               <Button 
                 onClick={handleChangePlan} 
                 className="flex-1 gap-2"
               >
                 <TrendingUp className="h-4 w-4" />
-                Cambiar de Plan
+                {subscription.cancel_at_period_end 
+                  ? 'Hacer Upgrade y Reactivar' 
+                  : 'Cambiar de Plan'
+                }
               </Button>
-              
-              {/* Solo mostrar botón de cancelar si está activa o en trial */}
-              {(subscription.status === 'active' || subscription.status === 'trialing') && (
-                <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" className="flex-1">
-                    Cancelar Suscripción
-                  </Button>
-                </AlertDialogTrigger>
+            )}
+            
+            {/* Cancelar - Solo si NO hay cancelación programada */}
+            {(subscription.status === 'active' || subscription.status === 'trialing') && 
+             !subscription.cancel_at_period_end && (
+              <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="flex-1">
+                  Cancelar Suscripción
+                </Button>
+              </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>¿Cancelar suscripción?</AlertDialogTitle>
@@ -369,7 +375,6 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
               </AlertDialog>
             )}
           </div>
-          )}
         </CardContent>
       </Card>
 

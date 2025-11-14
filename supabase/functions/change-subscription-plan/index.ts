@@ -269,6 +269,38 @@ Deno.serve(async (req) => {
 
     console.log('✅ Subscription status valid, proceeding with plan change');
 
+    // 🔍 Check if subscription has pending cancellation
+    if (stripeSubscription.cancel_at_period_end) {
+      console.log('⚠️ Subscription has pending cancellation, validating upgrade...');
+      
+      // Calculate current and new prices for comparison
+      const currentPrice = currentSub.billing_cycle === 'yearly' 
+        ? Number(currentPlan.price_yearly) 
+        : Number(currentPlan.price_monthly);
+      
+      const newPrice = billingCycle === 'yearly'
+        ? Number(newPlan.price_yearly)
+        : Number(newPlan.price_monthly);
+      
+      const isUpgrade = newPrice > currentPrice;
+      
+      // 🚫 BLOCK downgrades or cycle changes when cancel_at_period_end = true
+      if (!isUpgrade) {
+        console.error('❌ BLOCKING: Cannot downgrade or change cycle with pending cancellation');
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'DOWNGRADE_WITH_CANCELLATION',
+            message: 'No puedes hacer downgrade con una cancelación programada. Solo puedes hacer upgrade para reactivar tu suscripción.',
+            details: 'Espera a que finalice tu suscripción actual para contratar un plan inferior.'
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log('✅ Upgrade detected with pending cancellation - will reactivate subscription');
+    }
+
     // 🔍 DIAGNOSIS - Current Subscription State
     console.log('🔍 DIAGNOSIS - Current Subscription State:', {
       subscriptionId: stripeSubscription.id,
@@ -404,30 +436,46 @@ Deno.serve(async (req) => {
     }
 
     // Apply the subscription change
+    const updateParams: any = {
+      items: [{
+        id: stripeSubscription.items.data[0].id,
+        price: newPriceId,
+      }],
+      proration_behavior: 'create_prorations',
+      metadata: {
+        plan_id: newPlanId,
+        user_id: user.id,
+        billing_cycle: billingCycle,
+      },
+    };
+
+    // 🔄 IMPORTANT: If subscription had pending cancellation, reactivate it
+    if (stripeSubscription.cancel_at_period_end) {
+      updateParams.cancel_at_period_end = false;
+      console.log('🔄 Reactivating subscription - removing pending cancellation');
+    }
+
     const updatedSubscription = await stripe.subscriptions.update(
       currentSub.stripe_subscription_id,
-      {
-        items: [{
-          id: stripeSubscription.items.data[0].id,
-          price: newPriceId,
-        }],
-        proration_behavior: 'create_prorations',
-        metadata: {
-          plan_id: newPlanId,
-          user_id: user.id,
-          billing_cycle: billingCycle,
-        },
-      }
+      updateParams
     );
 
     // Update database
+    const dbUpdate: any = {
+      plan_id: newPlanId,
+      billing_cycle: billingCycle,
+      updated_at: new Date().toISOString(),
+    };
+
+    // 🔄 Sync cancel_at_period_end with Stripe
+    if (stripeSubscription.cancel_at_period_end) {
+      dbUpdate.cancel_at_period_end = false;
+      console.log('🔄 Database: Removing pending cancellation flag');
+    }
+
     const { error: updateError } = await supabaseClient
       .from('user_subscriptions')
-      .update({
-        plan_id: newPlanId,
-        billing_cycle: billingCycle,
-        updated_at: new Date().toISOString(),
-      })
+      .update(dbUpdate)
       .eq('user_id', user.id)
       .eq('status', 'active');
 
