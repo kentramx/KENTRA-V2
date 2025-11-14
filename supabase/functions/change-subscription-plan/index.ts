@@ -121,12 +121,14 @@ Deno.serve(async (req) => {
       console.log('Admin bypassing cooldown restriction');
     }
 
-    // Get current subscription
+    // Get current subscription - include canceled ones to sync state
     const { data: currentSub, error: subError } = await supabaseClient
       .from('user_subscriptions')
       .select('*, subscription_plans(*)')
       .eq('user_id', user.id)
-      .eq('status', 'active')
+      .in('status', ['active', 'past_due', 'trialing'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
     if (subError || !currentSub) {
@@ -228,12 +230,22 @@ Deno.serve(async (req) => {
         userId: user.id,
       });
       
+      // Sync database state with Stripe reality
+      if (currentSub.status !== 'canceled') {
+        console.log('🔄 Syncing DB status to canceled');
+        await supabaseClient
+          .from('user_subscriptions')
+          .update({ status: 'canceled' })
+          .eq('id', currentSub.id);
+      }
+      
       return new Response(
         JSON.stringify({ 
           error: 'SUBSCRIPTION_CANCELED',
-          message: 'Tu suscripción está cancelada. Debes reactivar tu suscripción antes de cambiar de plan.',
+          message: 'Tu suscripción está cancelada. Para continuar, contrata un nuevo plan desde la página de precios.',
           status: stripeSubscription.status,
-          details: 'No se pueden cambiar planes de suscripciones canceladas o expiradas.'
+          details: 'No se pueden cambiar planes de suscripciones canceladas o expiradas.',
+          action: 'create_new_subscription'
         }),
         { 
           status: 400, 
