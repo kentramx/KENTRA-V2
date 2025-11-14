@@ -208,6 +208,12 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           description: data?.error || 'Esta suscripción no puede ser reactivada.',
           variant: 'destructive',
         });
+
+        // Si la suscripción está completamente cancelada en Stripe, actualizar la UI
+        if (data?.code === 'SUBSCRIPTION_FULLY_CANCELED') {
+          await fetchSubscriptionData();
+        }
+        
         return;
       }
 

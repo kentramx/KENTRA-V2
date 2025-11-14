@@ -91,10 +91,29 @@ Deno.serve(async (req) => {
     // Validación: No se puede reactivar si está cancelada, incompleta o expirada
     const nonReactivableStatuses = ['canceled', 'incomplete', 'incomplete_expired', 'unpaid'];
     if (nonReactivableStatuses.includes(stripeSubscription.status)) {
+      // Sincronizar la BD con el estado real de Stripe
+      const currentPeriodEnd = stripeSubscription.current_period_end 
+        ? new Date(stripeSubscription.current_period_end * 1000).toISOString()
+        : new Date().toISOString();
+
+      await supabaseClient
+        .from('user_subscriptions')
+        .update({
+          status: 'canceled',
+          cancel_at_period_end: false,
+          current_period_end: currentPeriodEnd,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+        .eq('stripe_subscription_id', subscription.stripe_subscription_id);
+
+      console.log('Subscription synced as canceled in database');
+
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Esta suscripción ya está completamente cancelada. Debes contratar un nuevo plan.',
-        code: 'SUBSCRIPTION_FULLY_CANCELED'
+        code: 'SUBSCRIPTION_FULLY_CANCELED',
+        status: 'canceled'
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
