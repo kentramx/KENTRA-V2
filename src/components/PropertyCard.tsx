@@ -73,11 +73,14 @@ const PropertyCard = ({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const formatPrice = (price: number, curr: string = currency) => {
-    return new Intl.NumberFormat("es-MX", {
+    const formatted = new Intl.NumberFormat("es-MX", {
       style: "currency",
       currency: curr,
       minimumFractionDigits: 0,
     }).format(price);
+    
+    // Agregar código de moneda para USD, mantener limpio para MXN
+    return curr === 'USD' ? `${formatted} USD` : formatted;
   };
 
   const getListingBadge = () => {
