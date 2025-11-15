@@ -39,33 +39,43 @@ export const useUserRole = () => {
         }
       }
 
-      // Check admin roles first
-      const { data: roleData } = await supabase
+      // Get ALL roles for the user
+      const { data: allRoles, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
-        .in('role', ['super_admin', 'moderator'] as any)
-        .maybeSingle();
+        .eq('user_id', user.id);
 
-      if (roleData?.role) {
-        setUserRole(roleData.role as UserRole);
+      if (error) {
+        console.error('Error fetching user roles:', error);
+        setUserRole('buyer');
         setLoading(false);
         return;
       }
 
-      // Check regular roles
-      const { data: regularRoleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .in('role', ['buyer', 'agent', 'agency'] as any)
-        .maybeSingle();
-
-      if (regularRoleData?.role) {
-        setUserRole(regularRoleData.role as UserRole);
-      } else {
+      if (!allRoles || allRoles.length === 0) {
         setUserRole('buyer'); // Default role
+        setLoading(false);
+        return;
       }
+
+      // Role priority: super_admin > moderator > agency > agent > buyer
+      const rolePriority: Record<UserRole, number> = {
+        super_admin: 5,
+        moderator: 4,
+        agency: 3,
+        agent: 2,
+        buyer: 1,
+      };
+
+      // Find the highest priority role
+      const highestRole = allRoles.reduce((highest, current) => {
+        const currentRole = current.role as UserRole;
+        const currentPriority = rolePriority[currentRole] || 0;
+        const highestPriority = rolePriority[highest] || 0;
+        return currentPriority > highestPriority ? currentRole : highest;
+      }, 'buyer' as UserRole);
+
+      setUserRole(highestRole);
     } catch (error) {
       console.error('Error fetching user role:', error);
       setUserRole('buyer');
