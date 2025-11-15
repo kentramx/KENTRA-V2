@@ -276,6 +276,20 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
     return labels[property?.type || ""] || property?.type;
   };
 
+  const extractLocation = (title: string) => {
+    // Remove patterns like "Casa en Venta en " or "Departamento en Renta en "
+    const patterns = [
+      /^[A-Za-záéíóúñÁÉÍÓÚÑ\s]+en\s+(Venta|Renta)\s+en\s+/i,
+    ];
+    
+    let location = title;
+    for (const pattern of patterns) {
+      location = location.replace(pattern, '');
+    }
+    
+    return location.trim() || title;
+  };
+
   if (loading) {
     return (
       <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
@@ -336,7 +350,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
                 </Badge>
               </div>
 
-              <h1 className="text-2xl md:text-3xl font-bold mb-3">{property.title}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold mb-3">{extractLocation(property.title)}</h1>
               
               {/* Price - Large and Prominent */}
               <div className="mb-3">
