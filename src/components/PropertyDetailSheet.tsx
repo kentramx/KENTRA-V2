@@ -270,7 +270,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
 
   if (loading) {
     return (
-      <Sheet open={open} onOpenChange={onClose}>
+      <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
         <SheetContent side="right" className="w-full sm:max-w-[900px] overflow-y-auto p-0">
           <div className="p-6 space-y-4">
             <Skeleton className="h-64 w-full" />
@@ -284,7 +284,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
 
   if (!property) {
     return (
-      <Sheet open={open} onOpenChange={onClose}>
+      <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
         <SheetContent side="right" className="w-full sm:max-w-[900px]">
           <div className="flex flex-col items-center justify-center h-full">
             <p className="text-muted-foreground">No se encontró la propiedad</p>
@@ -297,7 +297,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
   const imageUrls = property.images?.map((img: any) => img.url) || [];
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
+    <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
       <SheetContent side="right" className="w-full sm:max-w-[900px] overflow-y-auto p-0">
         {/* Galería de imágenes */}
         <div className="relative">
