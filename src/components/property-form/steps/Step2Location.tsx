@@ -3,7 +3,6 @@ import { Label } from '@/components/ui/label';
 import { LocationSearch } from '@/components/LocationSearch';
 import { ColoniaAutocomplete } from '@/components/ColoniaAutocomplete';
 import { PropertyFormData } from '@/hooks/useFormWizard';
-import { MapPin } from 'lucide-react';
 
 interface Step2LocationProps {
   formData: PropertyFormData;

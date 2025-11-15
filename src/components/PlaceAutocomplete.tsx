@@ -318,17 +318,20 @@ export const PlaceAutocomplete = ({
         placeAutocomplete.addEventListener('gmp-error', () => {
           console.warn('PlaceAutocompleteElement error, usando fallback legacy');
           setUseWebComponent(false);
+          console.info('🔄 PlaceAutocomplete modo legacy activado (error en Web Component)');
         });
         
         // Agregar Web Component al contenedor (sin reemplazar nada)
         webComponentContainerRef.current.appendChild(placeAutocomplete);
         autocompleteRef.current = placeAutocomplete;
         setUseWebComponent(true);
+        console.info('✅ PlaceAutocomplete Web Component activado');
         
       } catch (error) {
         // ⚙️ FALLBACK al método legacy si el nuevo API falla
         console.warn('PlaceAutocompleteElement no disponible, usando fallback legacy:', error);
         setUseWebComponent(false);
+        console.info('🔄 PlaceAutocomplete modo legacy activado (fallback)');
       }
     };
 
@@ -483,31 +486,28 @@ export const PlaceAutocomplete = ({
 
   return (
       <div className={label ? "space-y-2" : ""}>
-        {label && useWebComponent !== true && <Label htmlFor={id}>{label}</Label>}
+        {label && <Label htmlFor={id}>{label}</Label>}
         <div className="relative w-full">
         {showIcon && <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10 pointer-events-none" />}
         
-        {/* Contenedor para Web Component cuando esté disponible */}
-        {useWebComponent === true && (
-          <div ref={webComponentContainerRef} className="w-full" />
-        )}
+        {/* Contenedor para Web Component - siempre presente, visibilidad controlada por clase */}
+        <div ref={webComponentContainerRef} className={useWebComponent === true ? "w-full" : "hidden"} />
         
-        {/* Input normal para legacy autocomplete o mientras se carga */}
-        {useWebComponent !== true && (
-          <input
-            ref={inputRef}
-            id={id}
-            type="text"
-            placeholder={placeholder}
-            defaultValue={defaultValue}
-              className={(() => {
-                const base = unstyled
-                  ? 'h-12 w-full bg-transparent px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50'
-                  : 'h-12 w-full rounded-full border-2 border-primary/60 bg-background px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50';
-                return showIcon ? `${base} pl-12` : base;
-              })()}
-            />
-        )}
+        {/* Input normal para legacy autocomplete - siempre presente, visibilidad controlada por clase */}
+        <input
+          ref={inputRef}
+          id={id}
+          type="text"
+          placeholder={placeholder}
+          defaultValue={defaultValue}
+          className={(() => {
+            const base = unstyled
+              ? 'h-12 w-full bg-transparent px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50'
+              : 'h-12 w-full rounded-full border-2 border-primary/60 bg-background px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50';
+            const withIcon = showIcon ? `${base} pl-12` : base;
+            return useWebComponent === true ? `${withIcon} hidden` : withIcon;
+          })()}
+        />
 
         {/* Botón de Geolocalización */}
         {showMyLocationButton && isLoaded && (
