@@ -294,7 +294,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
     );
   }
 
-  const images = property.images?.map((img: any) => img.url) || [];
+  const imageUrls = property.images?.map((img: any) => img.url) || [];
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
@@ -302,7 +302,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
         {/* Galería de imágenes */}
         <div className="relative">
           <PropertyImageGallery
-            images={images}
+            images={property.images || []}
             title={property.title}
             type={property.type}
             propertyId={property.id}

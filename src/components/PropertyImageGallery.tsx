@@ -20,7 +20,8 @@ export const PropertyImageGallery = ({ images, title, type, propertyId, price }:
   const displayImages = images.length > 0 ? images : [{ url: propertyPlaceholder }];
   const { trackGA4Event } = useTracking();
 
-  const getImageUrl = (url: string) => {
+  const getImageUrl = (url: string | undefined) => {
+    if (!url) return propertyPlaceholder;
     if (url.startsWith('http')) return url;
     if (url.startsWith('/src/assets/')) return propertyPlaceholder;
     return url;
