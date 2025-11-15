@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PropertyFormData } from '@/hooks/useFormWizard';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
-import { CheckCircle2, Home, MapPin, Maximize, Bed, Bath, Car, FileText, Sparkles } from 'lucide-react';
+import { CheckCircle2, Home, MapPin, Maximize, Bed, Bath, Car, FileText, Sparkles, XCircle, AlertCircle } from 'lucide-react';
 
 interface Step6ReviewProps {
   formData: PropertyFormData;
@@ -97,6 +97,69 @@ export const Step6Review = ({ formData, imageFiles, existingImages = [] }: Step6
                 className="h-full bg-primary transition-all"
                 style={{ width: `${(completedItems / checklistItems.length) * 100}%` }}
               />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Validaciones críticas */}
+      <Card className="border-yellow-200 bg-yellow-50/30">
+        <CardContent className="pt-6">
+          <h4 className="font-semibold mb-4 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-yellow-600" />
+            Información Crítica
+          </h4>
+          
+          <div className="space-y-2 text-sm">
+            {/* Colonia */}
+            <div className="flex items-center gap-2">
+              {formData.colonia && formData.colonia.trim() ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  <span>Colonia: <strong>{formData.colonia}</strong></span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 text-red-600" />
+                  <span className="text-red-600">
+                    <strong>Falta la colonia</strong> - Requerida para el título
+                  </span>
+                </>
+              )}
+            </div>
+            
+            {/* Coordenadas */}
+            <div className="flex items-center gap-2">
+              {formData.lat && formData.lng ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  <span>Ubicación en mapa confirmada</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="w-4 h-4 text-yellow-600" />
+                  <span className="text-yellow-600">
+                    Ubicación no confirmada en mapa
+                  </span>
+                </>
+              )}
+            </div>
+            
+            {/* Imágenes */}
+            <div className="flex items-center gap-2">
+              {(imageFiles.length + existingImages.length) >= 3 ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  <span>{imageFiles.length + existingImages.length} imágenes</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 text-red-600" />
+                  <span className="text-red-600">
+                    <strong>Faltan imágenes</strong> - Mínimo 3 requeridas
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </CardContent>

@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { LocationSearch } from '@/components/LocationSearch';
 import { PropertyFormData } from '@/hooks/useFormWizard';
+import { AlertCircle } from 'lucide-react';
 
 interface Step2LocationProps {
   formData: PropertyFormData;
@@ -11,9 +12,12 @@ export const Step2Location = ({ formData, updateFormData }: Step2LocationProps) 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Ubicación</h2>
+        <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+          Ubicación <span className="text-destructive">*</span>
+          <AlertCircle className="w-5 h-5 text-yellow-600" />
+        </h2>
         <p className="text-muted-foreground">
-          Indica dónde se encuentra tu propiedad
+          Indica dónde se encuentra tu propiedad. <strong>La colonia es obligatoria</strong> para crear un título descriptivo.
         </p>
       </div>
 
@@ -33,6 +37,19 @@ export const Step2Location = ({ formData, updateFormData }: Step2LocationProps) 
             }}
             defaultValue={formData.address}
           />
+
+          {/* Alerta si falta colonia */}
+          {formData.state && formData.municipality && !formData.colonia && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-yellow-900 text-sm">Colonia requerida</h4>
+                <p className="text-yellow-700 text-sm mt-1">
+                  La colonia es obligatoria. Intenta buscar una dirección más específica o selecciona la ubicación en el mapa.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Vista previa de ubicación */}
           {formData.state && formData.municipality && (

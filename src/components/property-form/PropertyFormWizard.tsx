@@ -71,22 +71,48 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
   };
 
   const handleSubmit = async () => {
-    // Validación final
+    // ========== VALIDACIONES CRÍTICAS ==========
+    
+    // 1. Validar campos básicos
     if (!validateStep(1) || !validateStep(2) || !validateStep(4)) {
       toast({
         title: 'Información incompleta',
-        description: 'Por favor completa todos los campos requeridos',
+        description: 'Por favor completa todos los campos requeridos en cada paso',
         variant: 'destructive',
       });
       return;
     }
 
-    if (imageFiles.length + existingImages.length < 3) {
+    // 2. Validar colonia específicamente (crítico para título)
+    if (!formData.colonia || formData.colonia.trim() === '') {
       toast({
-        title: 'Imágenes insuficientes',
-        description: 'Necesitas al menos 3 imágenes para publicar',
+        title: '⚠️ Falta la colonia',
+        description: 'La colonia es obligatoria para crear un título descriptivo de tu propiedad. Por favor regresa al Paso 2 y completa este campo.',
         variant: 'destructive',
       });
+      goToStep(2);
+      return;
+    }
+
+    // 3. Validar coordenadas (necesarias para mapas)
+    if (!formData.lat || !formData.lng) {
+      toast({
+        title: '⚠️ Ubicación incompleta',
+        description: 'No se detectaron las coordenadas. Por favor selecciona la ubicación desde el mapa en el Paso 2.',
+        variant: 'destructive',
+      });
+      goToStep(2);
+      return;
+    }
+
+    // 4. Validar imágenes
+    if (imageFiles.length + existingImages.length < 3) {
+      toast({
+        title: '📸 Imágenes insuficientes',
+        description: 'Necesitas al menos 3 imágenes de buena calidad para publicar tu propiedad.',
+        variant: 'destructive',
+      });
+      goToStep(4);
       return;
     }
 
