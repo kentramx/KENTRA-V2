@@ -47,9 +47,9 @@ export const loadGoogleMaps = (): Promise<typeof google.maps> => {
       // Evitar insertar múltiples scripts
       const existing = document.querySelector<HTMLScriptElement>('script[data-google-maps]');
       if (!existing) {
-        // Cargar con loading=async para habilitar importLibrary() + bibliotecas iniciales
+        // Cargar con Legacy API (sin loading=async)
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=places,marker,geocoding&language=es&region=MX`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geocoding&language=es&region=MX`;
         script.async = true;
         script.defer = true;
         script.setAttribute('data-google-maps', 'true');
