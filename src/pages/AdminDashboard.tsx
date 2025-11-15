@@ -1104,13 +1104,8 @@ const AdminDashboard = () => {
                 <Button
                   variant="destructive"
                   onClick={handleReject}
-                  disabled={processing || !Object.entries(rejectionReasons).some(([key, value]) => key !== 'notes' && value === true) || !rejectionReasons.notes.trim()}
+                  disabled={processing}
                   className="min-w-[120px]"
-                  title={
-                    !Object.entries(rejectionReasons).some(([key, value]) => key !== 'notes' && value === true) || !rejectionReasons.notes.trim()
-                      ? 'Debes seleccionar al menos un motivo y agregar comentarios'
-                      : ''
-                  }
                 >
                   {processing ? (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
