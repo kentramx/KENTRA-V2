@@ -42,7 +42,14 @@ export const useProperties = (filters?: PropertyFilters) => {
       if (filters?.estado) query = query.eq('state', filters.estado);
       if (filters?.municipio) query = query.eq('municipality', filters.municipio);
       if (filters?.tipo) query = query.eq('type', filters.tipo as any);
-      if (filters?.listingType) query = query.eq('listing_type', filters.listingType);
+      
+      // Nuevo sistema: filtrar por for_sale o for_rent
+      if (filters?.listingType === 'venta') {
+        query = query.eq('for_sale', true);
+      } else if (filters?.listingType === 'renta') {
+        query = query.eq('for_rent', true);
+      }
+      
       if (filters?.precioMin) query = query.gte('price', filters.precioMin);
       if (filters?.precioMax) query = query.lte('price', filters.precioMax);
       if (filters?.recamaras) query = query.gte('bedrooms', parseInt(filters.recamaras));

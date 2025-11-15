@@ -1102,10 +1102,13 @@ export type Database = {
           bedrooms: number | null
           colonia: string | null
           created_at: string | null
+          currency: string
           description: string | null
           duplicate_warning: boolean | null
           duplicate_warning_data: Json | null
           expires_at: string | null
+          for_rent: boolean
+          for_sale: boolean
           has_inappropriate_images: boolean | null
           has_manipulated_images: boolean | null
           id: string
@@ -1120,7 +1123,9 @@ export type Database = {
           parking: number | null
           price: number
           price_history: Json | null
+          rent_price: number | null
           requires_manual_review: boolean | null
+          sale_price: number | null
           sqft: number | null
           state: string
           status: Database["public"]["Enums"]["property_status"] | null
@@ -1144,10 +1149,13 @@ export type Database = {
           bedrooms?: number | null
           colonia?: string | null
           created_at?: string | null
+          currency?: string
           description?: string | null
           duplicate_warning?: boolean | null
           duplicate_warning_data?: Json | null
           expires_at?: string | null
+          for_rent?: boolean
+          for_sale?: boolean
           has_inappropriate_images?: boolean | null
           has_manipulated_images?: boolean | null
           id?: string
@@ -1162,7 +1170,9 @@ export type Database = {
           parking?: number | null
           price: number
           price_history?: Json | null
+          rent_price?: number | null
           requires_manual_review?: boolean | null
+          sale_price?: number | null
           sqft?: number | null
           state: string
           status?: Database["public"]["Enums"]["property_status"] | null
@@ -1186,10 +1196,13 @@ export type Database = {
           bedrooms?: number | null
           colonia?: string | null
           created_at?: string | null
+          currency?: string
           description?: string | null
           duplicate_warning?: boolean | null
           duplicate_warning_data?: Json | null
           expires_at?: string | null
+          for_rent?: boolean
+          for_sale?: boolean
           has_inappropriate_images?: boolean | null
           has_manipulated_images?: boolean | null
           id?: string
@@ -1204,7 +1217,9 @@ export type Database = {
           parking?: number | null
           price?: number
           price_history?: Json | null
+          rent_price?: number | null
           requires_manual_review?: boolean | null
+          sale_price?: number | null
           sqft?: number | null
           state?: string
           status?: Database["public"]["Enums"]["property_status"] | null
