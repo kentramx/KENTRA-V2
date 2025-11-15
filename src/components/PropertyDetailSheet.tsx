@@ -334,10 +334,6 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
                 >
                   {property.listing_type === 'venta' ? 'En Venta' : 'En Renta'}
                 </Badge>
-                <Badge variant="outline" className="text-sm px-3 py-1">
-                  <Home className="mr-1 h-3 w-3" />
-                  {property.status === 'activa' ? 'Activa' : property.status}
-                </Badge>
               </div>
 
               <h1 className="text-2xl md:text-3xl font-bold mb-3">{property.title}</h1>
