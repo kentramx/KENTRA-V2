@@ -52,7 +52,7 @@ export const PlaceAutocomplete = ({
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
-  const [useWebComponent, setUseWebComponent] = React.useState<boolean | null>(null);
+  const [useWebComponent, setUseWebComponent] = React.useState<boolean>(false);
   const [isGettingLocation, setIsGettingLocation] = React.useState(false);
 
   // keep latest onPlaceSelect without recreating input
@@ -317,12 +317,20 @@ export const PlaceAutocomplete = ({
         // Si el Web Component falla, usar fallback
         placeAutocomplete.addEventListener('gmp-error', () => {
           console.warn('PlaceAutocompleteElement error, usando fallback legacy');
+          // Remover el Web Component del DOM para evitar duplicados visuales
+          try { placeAutocomplete.remove(); } catch {}
+          if (webComponentContainerRef.current) {
+            try { webComponentContainerRef.current.innerHTML = ''; } catch {}
+          }
           setUseWebComponent(false);
           console.info('🔄 PlaceAutocomplete modo legacy activado (error en Web Component)');
         });
         
         // Agregar Web Component al contenedor (sin reemplazar nada)
-        webComponentContainerRef.current.appendChild(placeAutocomplete);
+        if (webComponentContainerRef.current) {
+          try { webComponentContainerRef.current.innerHTML = ''; } catch {}
+          webComponentContainerRef.current.appendChild(placeAutocomplete);
+        }
         autocompleteRef.current = placeAutocomplete;
         setUseWebComponent(true);
         console.info('✅ PlaceAutocomplete Web Component activado');
@@ -330,6 +338,10 @@ export const PlaceAutocomplete = ({
       } catch (error) {
         // ⚙️ FALLBACK al método legacy si el nuevo API falla
         console.warn('PlaceAutocompleteElement no disponible, usando fallback legacy:', error);
+        // Asegurar que el contenedor quede vacío y sin el Web Component
+        if (webComponentContainerRef.current) {
+          try { webComponentContainerRef.current.innerHTML = ''; } catch {}
+        }
         setUseWebComponent(false);
         console.info('🔄 PlaceAutocomplete modo legacy activado (fallback)');
       }
