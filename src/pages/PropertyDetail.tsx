@@ -605,185 +605,226 @@ const PropertyDetail = () => {
               price={property.price}
             />
 
-            {/* Property Info */}
-            <div className="mb-6 mt-6">
-              <div className="mb-4 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <Badge className="bg-primary text-primary-foreground">{property.type}</Badge>
-                    <Badge variant={property.listing_type === 'venta' ? 'default' : 'secondary'}>
-                      {property.listing_type === 'venta' ? 'En Venta' : 'En Renta'}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center text-muted-foreground">
-                    <MapPin className="mr-1 h-4 w-4 flex-shrink-0" />
-                    <span className="text-sm md:text-base">
-                      {property.address}, {property.municipality},{" "}
-                      {property.state}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-left md:text-right">
-                  <p className="text-2xl md:text-3xl font-bold text-primary">
-                    {formatPrice(property.price)}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {property.listing_type === 'venta' ? 'Precio de venta' : 'Renta mensual'}
-                  </p>
-                </div>
+            {/* Property Hero Section - Zillow Style */}
+            <div className="mb-8 mt-6">
+              {/* Status Badges */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Badge className="bg-primary text-primary-foreground text-sm px-3 py-1">
+                  {property.type}
+                </Badge>
+                <Badge 
+                  variant={property.listing_type === 'venta' ? 'default' : 'secondary'}
+                  className="text-sm px-3 py-1"
+                >
+                  {property.listing_type === 'venta' ? 'En Venta' : 'En Renta'}
+                </Badge>
+                <Badge variant="outline" className="text-sm px-3 py-1">
+                  <Home className="mr-1 h-3 w-3" />
+                  {property.status === 'activa' ? 'Activa' : property.status}
+                </Badge>
               </div>
 
-              {/* Features */}
-              <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Price - Large and Prominent */}
+              <div className="mb-4">
+                <p className="text-4xl md:text-5xl font-bold text-foreground mb-2">
+                  {formatPrice(property.price)}
+                </p>
+                {property.sqft && (
+                  <p className="text-lg text-muted-foreground">
+                    {formatPrice(Math.round(property.price / property.sqft))}/m²
+                  </p>
+                )}
+              </div>
+
+              {/* Address */}
+              <div className="flex items-center text-muted-foreground mb-6">
+                <MapPin className="mr-2 h-5 w-5 flex-shrink-0" />
+                <span className="text-base md:text-lg">
+                  {property.address}, {property.municipality}, {property.state}
+                </span>
+              </div>
+
+              {/* Specs - Horizontal Line (Zillow Style) */}
+              <div className="flex flex-wrap items-center gap-6 pb-6 border-b border-border">
                 {property.bedrooms && (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                      <Bed className="h-8 w-8 text-primary mb-2" />
-                      <span className="text-2xl font-bold">{property.bedrooms}</span>
-                      <span className="text-sm text-muted-foreground">Recámaras</span>
-                    </CardContent>
-                  </Card>
+                  <div className="flex items-center gap-2">
+                    <Bed className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <span className="text-2xl font-semibold">{property.bedrooms}</span>
+                      <span className="text-sm text-muted-foreground ml-1">
+                        {property.bedrooms === 1 ? 'recámara' : 'recámaras'}
+                      </span>
+                    </div>
+                  </div>
                 )}
                 {property.bathrooms && (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                      <Bath className="h-8 w-8 text-primary mb-2" />
-                      <span className="text-2xl font-bold">{property.bathrooms}</span>
-                      <span className="text-sm text-muted-foreground">Baños</span>
-                    </CardContent>
-                  </Card>
+                  <div className="flex items-center gap-2">
+                    <Bath className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <span className="text-2xl font-semibold">{property.bathrooms}</span>
+                      <span className="text-sm text-muted-foreground ml-1">
+                        {property.bathrooms === 1 ? 'baño' : 'baños'}
+                      </span>
+                    </div>
+                  </div>
                 )}
                 {property.parking && (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                      <Car className="h-8 w-8 text-primary mb-2" />
-                      <span className="text-2xl font-bold">{property.parking}</span>
-                      <span className="text-sm text-muted-foreground">Estacionamientos</span>
-                    </CardContent>
-                  </Card>
+                  <div className="flex items-center gap-2">
+                    <Car className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <span className="text-2xl font-semibold">{property.parking}</span>
+                      <span className="text-sm text-muted-foreground ml-1">
+                        estacionamiento{property.parking !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
                 )}
                 {property.sqft && (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                      <Maximize className="h-8 w-8 text-primary mb-2" />
-                      <span className="text-2xl font-bold">{property.sqft}</span>
-                      <span className="text-sm text-muted-foreground">m² construidos</span>
-                    </CardContent>
-                  </Card>
+                  <div className="flex items-center gap-2">
+                    <Maximize className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <span className="text-2xl font-semibold">{property.sqft}</span>
+                      <span className="text-sm text-muted-foreground ml-1">m²</span>
+                    </div>
+                  </div>
+                )}
+                {property.lot_size && (
+                  <div className="flex items-center gap-2">
+                    <Ruler className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <span className="text-2xl font-semibold">{property.lot_size}</span>
+                      <span className="text-sm text-muted-foreground ml-1">m² terreno</span>
+                    </div>
+                  </div>
                 )}
               </div>
 
-              {/* Virtual Tour */}
-              <PropertyVirtualTour
-                videoUrl={property.video_url}
-                title={property.title}
-              />
-
-              {/* Description */}
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Descripción</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="whitespace-pre-line text-muted-foreground">
-                    {property.description ||
-                      "Esta propiedad no tiene descripción disponible."}
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Amenities */}
-              <PropertyAmenities amenities={property.amenities as any || []} />
-
-              {/* Investment Metrics */}
-              <PropertyInvestmentMetrics
-                price={property.price}
-                sqft={property.sqft}
-                listingType={property.listing_type}
-                state={property.state}
-                municipality={property.municipality}
-                type={property.type}
-              />
-
-              {/* Timeline */}
-              <PropertyTimeline
-                createdAt={property.created_at}
-                updatedAt={property.updated_at}
-                priceHistory={property.price_history as any || []}
-                currentPrice={property.price}
-              />
-
-              {/* Additional Details */}
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Detalles Adicionales</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {property.lot_size && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                        <Ruler className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Tamaño del terreno</p>
-                          <p className="font-semibold">{property.lot_size} m²</p>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                      <Home className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Tipo de propiedad</p>
-                        <p className="font-semibold">{property.type}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                      <Calendar className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Publicado</p>
-                        <p className="font-semibold">{formatDate(property.created_at)}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                      <Calendar className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Actualizado</p>
-                        <p className="font-semibold">{formatDate(property.updated_at)}</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Location Map */}
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Ubicación</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PropertyMap
-                    lat={property.lat}
-                    lng={property.lng}
-                    address={`${property.address}, ${property.municipality}, ${property.state}`}
-                    height="400px"
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Agent Reviews */}
-              {agent && (
-                <div className="mb-6">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-2xl font-semibold">Reseñas del Agente</h2>
-                    <ReviewForm 
-                      agentId={agent.id} 
-                      propertyId={property.id}
-                      onReviewSubmitted={handleReviewSubmitted}
-                    />
-                  </div>
-                  <AgentReviews key={reviewsKey} agentId={agent.id} />
+              {/* Additional Info Row */}
+              <div className="flex flex-wrap gap-4 mt-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>Publicada: {formatDate(property.created_at)}</span>
                 </div>
-              )}
+                {property.listing_type === 'venta' && (
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium">
+                      {property.listing_type === 'venta' ? 'Precio de venta' : 'Renta mensual'}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Virtual Tour */}
+            <PropertyVirtualTour
+              videoUrl={property.video_url}
+              title={property.title}
+            />
+
+            {/* Description */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Descripción</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-line text-muted-foreground">
+                  {property.description ||
+                    "Esta propiedad no tiene descripción disponible."}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Amenities */}
+            <PropertyAmenities amenities={property.amenities as any || []} />
+
+            {/* Investment Metrics */}
+            <PropertyInvestmentMetrics
+              price={property.price}
+              sqft={property.sqft}
+              listingType={property.listing_type}
+              state={property.state}
+              municipality={property.municipality}
+              type={property.type}
+            />
+
+            {/* Timeline */}
+            <PropertyTimeline
+              createdAt={property.created_at}
+              updatedAt={property.updated_at}
+              priceHistory={property.price_history as any || []}
+              currentPrice={property.price}
+            />
+
+            {/* Additional Details */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Detalles Adicionales</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {property.lot_size && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                      <Ruler className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tamaño del terreno</p>
+                        <p className="font-semibold">{property.lot_size} m²</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                    <Home className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tipo de propiedad</p>
+                      <p className="font-semibold">{property.type}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Publicado</p>
+                      <p className="font-semibold">{formatDate(property.created_at)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Actualizado</p>
+                      <p className="font-semibold">{formatDate(property.updated_at)}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Location Map */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Ubicación</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PropertyMap
+                  lat={property.lat}
+                  lng={property.lng}
+                  address={`${property.address}, ${property.municipality}, ${property.state}`}
+                  height="400px"
+                />
+              </CardContent>
+            </Card>
+
+            {/* Agent Reviews */}
+            {agent && (
+              <div className="mb-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-2xl font-semibold">Reseñas del Agente</h2>
+                  <ReviewForm 
+                    agentId={agent.id} 
+                    propertyId={property.id}
+                    onReviewSubmitted={handleReviewSubmitted}
+                  />
+                </div>
+                <AgentReviews key={reviewsKey} agentId={agent.id} />
+              </div>
+            )}
           </div>
 
           {/* Sidebar - Agent Contact */}
