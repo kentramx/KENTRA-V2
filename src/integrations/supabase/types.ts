@@ -1950,6 +1950,7 @@ export type Database = {
         Args: { p_conversation_id: string; p_user_id: string }
         Returns: undefined
       }
+      reactivate_property: { Args: { property_id: string }; Returns: undefined }
       renew_property: { Args: { property_id: string }; Returns: undefined }
       validate_coupon: {
         Args: { p_code: string; p_plan_type?: string; p_user_id: string }
