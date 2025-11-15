@@ -14,6 +14,7 @@ export const useAgentProperties = (agentId: string | undefined, statusFilter?: s
           status, created_at, expires_at, last_renewed_at, address,
           state, municipality, colonia, sqft, parking, description, video_url,
           ai_moderation_score, ai_moderation_status, agent_id,
+          rejection_history, resubmission_count,
           images (id, url, position)
         `)
         .eq('agent_id', agentId)
@@ -33,6 +34,6 @@ export const useAgentProperties = (agentId: string | undefined, statusFilter?: s
       })) || [];
     },
     enabled: !!agentId,
-    staleTime: 2 * 60 * 1000, // 2 minutos
+    staleTime: 30 * 1000, // 30 segundos
   });
 };

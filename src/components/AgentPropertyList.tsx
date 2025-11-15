@@ -32,6 +32,14 @@ import { Loader2, Edit, Trash2, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
+interface RejectionRecord {
+  date: string;
+  reasons: string[];
+  comments: string;
+  reviewed_by: string;
+  resubmission_number: number;
+}
+
 interface AgentPropertyListProps {
   onEdit: (property: any) => void;
   subscriptionInfo?: any;
@@ -310,7 +318,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                         Tu propiedad está siendo revisada por un administrador
                       </TooltipContent>
                     </Tooltip>
-                  ) : property.status === 'pausada' && (property as any).rejection_reason ? (
+                  ) : property.status === 'pausada' && (property as any).rejection_history?.length > 0 ? (
                     <Tooltip>
                       <TooltipTrigger>
                         <Badge variant="destructive">
@@ -318,13 +326,20 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                         </Badge>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p className="font-semibold">{(property as any).rejection_reason.label}</p>
-                        {(property as any).rejection_reason.details && (
-                          <p className="text-xs mt-1">{(property as any).rejection_reason.details}</p>
-                        )}
-                        <p className="text-xs mt-2 text-muted-foreground">
-                          Reenvíos: {(property as any).resubmission_count || 0}/3
-                        </p>
+                        {(() => {
+                          const lastRejection = (property as any).rejection_history[(property as any).rejection_history.length - 1] as RejectionRecord;
+                          return (
+                            <>
+                              <p className="font-semibold">Motivos: {lastRejection.reasons.join(', ')}</p>
+                              {lastRejection.comments && (
+                                <p className="text-xs mt-1">{lastRejection.comments}</p>
+                              )}
+                              <p className="text-xs mt-2 text-muted-foreground">
+                                Reenvíos: {(property as any).resubmission_count || 0}/3
+                              </p>
+                            </>
+                          );
+                        })()}
                       </TooltipContent>
                     </Tooltip>
                   ) : (
@@ -400,7 +415,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                     
-                    {property.status === 'pausada' && (property as any).rejection_reason && (
+                    {property.status === 'pausada' && (property as any).rejection_history?.length > 0 && (
                       <Button
                         variant="default"
                         size="sm"
@@ -412,7 +427,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                       </Button>
                     )}
                     
-                    {property.status === 'pausada' && !(property as any).rejection_reason && (
+                    {property.status === 'pausada' && (!(property as any).rejection_history || (property as any).rejection_history.length === 0) && (
                       <Button
                         variant="outline"
                         size="sm"
