@@ -803,6 +803,17 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     filters.banos
   );
 
+  // Detectar si hay filtros geográficos/específicos (excluye listingType)
+  const hasLocationFilters = !!(
+    filters.estado || 
+    filters.municipio || 
+    filters.tipo || 
+    filters.precioMin || 
+    filters.precioMax || 
+    filters.recamaras || 
+    filters.banos
+  );
+
   // Calcular centro del mapa con prioridades:
   // 1. Coordenadas de búsqueda (si existen)
   // 2. Propiedad en hover (si existe)
@@ -812,7 +823,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     ? searchCoordinates
     : (hoveredProperty && hoveredProperty.lat && hoveredProperty.lng
         ? { lat: hoveredProperty.lat, lng: hoveredProperty.lng }
-        : (hasActiveFilters && mapMarkers.length > 0
+        : (hasLocationFilters && mapMarkers.length > 0
             ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
             : { lat: 23.6345, lng: -102.5528 })); // Centro geográfico de México
 
@@ -824,7 +835,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     ? 12 
     : (hoveredProperty 
         ? 14 
-        : (hasActiveFilters 
+        : (hasLocationFilters 
             ? 12 
             : 5)); // Vista completa de México
 
@@ -1420,7 +1431,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               className="h-full w-full"
               onMarkerClick={handleMarkerClick}
               onFavoriteClick={handleFavoriteClick}
-              disableAutoFit={!hasActiveFilters || !!searchCoordinates}
+              disableAutoFit={!hasLocationFilters || !!searchCoordinates}
               hoveredMarkerId={hoveredProperty?.id || null}
               onMarkerHover={(markerId) => {
                 if (markerId) {
