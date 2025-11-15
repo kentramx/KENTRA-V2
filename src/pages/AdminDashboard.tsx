@@ -19,7 +19,7 @@ import { useAdminCheck } from '@/hooks/useAdminCheck';
 import QualityChecklist from '@/components/QualityChecklist';
 import PropertyDiff from '@/components/PropertyDiff';
 import AdminModerationMetrics from '@/components/AdminModerationMetrics';
-import { ImageQualityReview, ImageQualityIssues } from '@/components/ImageQualityReview';
+import RejectionReview, { RejectionReasons } from '@/components/RejectionReview';
 
 const REJECTION_REASONS = [
   { code: 'incomplete_info', label: 'Información incompleta' },
@@ -48,23 +48,20 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'nuevas');
   
   const [rejectProperty, setRejectProperty] = useState<any>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [rejectionDetails, setRejectionDetails] = useState('');
+  const [rejectionReasons, setRejectionReasons] = useState<RejectionReasons>({
+    incompleteInfo: false,
+    poorImages: false,
+    incorrectLocation: false,
+    suspiciousPrice: false,
+    inappropriateContent: false,
+    duplicateProperty: false,
+    notes: ''
+  });
   const [adminNotes, setAdminNotes] = useState('');
   const [processing, setProcessing] = useState(false);
   
   const [viewProperty, setViewProperty] = useState<any>(null);
   const [quickReviewMode, setQuickReviewMode] = useState(false);
-  const [imageQualityIssues, setImageQualityIssues] = useState<ImageQualityIssues>({
-    hasBlurryImages: false,
-    hasPoorLighting: false,
-    hasLowResolution: false,
-    hasDarkImages: false,
-    hasPoorComposition: false,
-    hasInappropriateContent: false,
-    hasManipulation: false,
-    issueNotes: '',
-  });
   
   const [metrics, setMetrics] = useState({
     new: 0,
@@ -267,16 +264,6 @@ const AdminDashboard = () => {
       fetchMetrics();
       setViewProperty(null);
       setAdminNotes('');
-      setImageQualityIssues({
-        hasBlurryImages: false,
-        hasPoorLighting: false,
-        hasLowResolution: false,
-        hasDarkImages: false,
-        hasPoorComposition: false,
-        hasInappropriateContent: false,
-        hasManipulation: false,
-        issueNotes: '',
-      });
     } catch (error) {
       console.error('Error approving property:', error);
       toast({
@@ -290,12 +277,17 @@ const AdminDashboard = () => {
   };
 
   const handleReject = async () => {
-    if (!rejectProperty || !rejectionReason) return;
-    if (rejectionReason === 'other' && !rejectionDetails.trim()) {
+    if (!rejectProperty) return;
+
+    // Validate that at least one reason is selected and notes are provided
+    const hasSelectedReasons = Object.entries(rejectionReasons)
+      .some(([key, value]) => key !== 'notes' && value === true);
+    
+    if (!hasSelectedReasons || !rejectionReasons.notes.trim()) {
       toast({
-        title: 'Error',
-        description: 'Debes especificar el motivo de rechazo',
-        variant: 'destructive',
+        title: "Error",
+        description: "Selecciona al menos un motivo y agrega comentarios específicos para el agente",
+        variant: "destructive",
       });
       return;
     }
@@ -312,39 +304,33 @@ const AdminDashboard = () => {
       const currentResubmissions = currentProperty?.resubmission_count || 0;
       const currentHistory = currentProperty?.rejection_history || [];
 
-      const reasonLabel = REJECTION_REASONS.find(r => r.code === rejectionReason)?.label || '';
-      
-      // Agregar detalles de problemas de calidad de imagen si aplica
-      let enrichedDetails = rejectionDetails;
-      if (rejectionReason === 'poor_images') {
-        const detectedIssues = [];
-        if (imageQualityIssues.hasBlurryImages) detectedIssues.push('Imágenes borrosas o desenfocadas');
-        if (imageQualityIssues.hasPoorLighting) detectedIssues.push('Iluminación deficiente');
-        if (imageQualityIssues.hasLowResolution) detectedIssues.push('Resolución muy baja');
-        if (imageQualityIssues.hasDarkImages) detectedIssues.push('Imágenes muy oscuras');
-        if (imageQualityIssues.hasPoorComposition) detectedIssues.push('Mala composición');
-        if (imageQualityIssues.hasInappropriateContent) detectedIssues.push('Contenido inapropiado');
-        if (imageQualityIssues.hasManipulation) detectedIssues.push('Evidencia de manipulación');
-        
-        if (detectedIssues.length > 0) {
-          enrichedDetails = `Problemas detectados:\n${detectedIssues.map(issue => `• ${issue}`).join('\n')}${rejectionDetails ? `\n\nDetalles adicionales: ${rejectionDetails}` : ''}`;
-        }
-      }
-      
+      // Format selected reasons as readable text
+      const selectedReasonsList = Object.entries(rejectionReasons)
+        .filter(([key, value]) => key !== 'notes' && value === true)
+        .map(([key]) => {
+          const reasonLabels: Record<string, string> = {
+            incompleteInfo: 'Información incompleta',
+            poorImages: 'Imágenes de baja calidad',
+            incorrectLocation: 'Ubicación incorrecta',
+            suspiciousPrice: 'Precio sospechoso',
+            inappropriateContent: 'Contenido inapropiado',
+            duplicateProperty: 'Propiedad duplicada'
+          };
+          return reasonLabels[key] || key;
+        });
+
       const rejectionData = {
-        code: rejectionReason,
-        label: reasonLabel,
-        details: enrichedDetails,
-        admin_id: user?.id,
+        reasons: selectedReasonsList,
+        comments: rejectionReasons.notes,
         rejected_at: new Date().toISOString(),
-        image_quality_issues: rejectionReason === 'poor_images' ? imageQualityIssues : null,
+        rejected_by: user?.id
       };
 
       // Crear registro del rechazo para el historial
       const rejectionRecord = {
         date: new Date().toISOString(),
-        reason: rejectionReason,
-        details: enrichedDetails,
+        reasons: selectedReasonsList,
+        comments: rejectionReasons.notes,
         reviewed_by: user?.email,
         resubmission_number: currentResubmissions + 1
       };
@@ -357,9 +343,8 @@ const AdminDashboard = () => {
         .from('properties')
         .update({
           status: 'pausada',
-          rejection_reason: rejectionData,
-          resubmission_count: currentResubmissions + 1,
           rejection_history: updatedHistory,
+          resubmission_count: currentResubmissions + 1,
         })
         .eq('id', rejectProperty.id);
 
@@ -380,6 +365,8 @@ const AdminDashboard = () => {
 
       // Enviar notificación por email al agente
       try {
+        const rejectionMessage = `Motivos: ${selectedReasonsList.join(', ')}\n\nComentarios del moderador:\n${rejectionReasons.notes}`;
+        
         await supabase.functions.invoke('send-moderation-notification', {
           body: {
             agentId: rejectProperty.agent_id,
@@ -401,19 +388,16 @@ const AdminDashboard = () => {
       });
 
       setRejectProperty(null);
-      setRejectionReason('');
-      setRejectionDetails('');
-      setAdminNotes('');
-      setImageQualityIssues({
-        hasBlurryImages: false,
-        hasPoorLighting: false,
-        hasLowResolution: false,
-        hasDarkImages: false,
-        hasPoorComposition: false,
-        hasInappropriateContent: false,
-        hasManipulation: false,
-        issueNotes: '',
+      setRejectionReasons({
+        incompleteInfo: false,
+        poorImages: false,
+        incorrectLocation: false,
+        suspiciousPrice: false,
+        inappropriateContent: false,
+        duplicateProperty: false,
+        notes: ''
       });
+      setAdminNotes('');
       fetchProperties();
       fetchMetrics();
     } catch (error) {
@@ -873,19 +857,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Dialog de vista detallada */}
-      <Dialog open={!!viewProperty} onOpenChange={() => {
-        setViewProperty(null);
-        setImageQualityIssues({
-          hasBlurryImages: false,
-          hasPoorLighting: false,
-          hasLowResolution: false,
-          hasDarkImages: false,
-          hasPoorComposition: false,
-          hasInappropriateContent: false,
-          hasManipulation: false,
-          issueNotes: '',
-        });
-      }}>
+      <Dialog open={!!viewProperty} onOpenChange={() => setViewProperty(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Revisión Detallada</DialogTitle>
@@ -941,12 +913,6 @@ const AdminDashboard = () => {
 
               <QualityChecklist property={viewProperty} />
               
-              {/* Evaluación manual de calidad de imágenes */}
-              <ImageQualityReview 
-                images={viewProperty.images || []}
-                onQualityIssuesChange={setImageQualityIssues}
-              />
-              
               {viewProperty.resubmission_count > 0 && (
                 <PropertyDiff property={viewProperty} />
               )}
@@ -990,22 +956,19 @@ const AdminDashboard = () => {
       {/* Dialog de Rechazo */}
       <Dialog open={!!rejectProperty} onOpenChange={() => {
         setRejectProperty(null);
-        setRejectionReason('');
-        setRejectionDetails('');
-        setImageQualityIssues({
-          hasBlurryImages: false,
-          hasPoorLighting: false,
-          hasLowResolution: false,
-          hasDarkImages: false,
-          hasPoorComposition: false,
-          hasInappropriateContent: false,
-          hasManipulation: false,
-          issueNotes: '',
+        setRejectionReasons({
+          incompleteInfo: false,
+          poorImages: false,
+          incorrectLocation: false,
+          suspiciousPrice: false,
+          inappropriateContent: false,
+          duplicateProperty: false,
+          notes: ''
         });
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Rechazar Propiedad</DialogTitle>
+            <DialogTitle>Rechazar Propiedad: {rejectProperty?.title}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Alert variant="destructive">
@@ -1015,100 +978,45 @@ const AdminDashboard = () => {
               </AlertDescription>
             </Alert>
 
-            <div className="space-y-2">
-              <Label>Motivo del rechazo*</Label>
-              <Select value={rejectionReason} onValueChange={setRejectionReason}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un motivo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {REJECTION_REASONS.map((reason) => (
-                    <SelectItem key={reason.code} value={reason.code}>
-                      {reason.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <RejectionReview 
+              onRejectionReasonsChange={setRejectionReasons}
+            />
 
-            {/* Mostrar problemas de calidad detectados si aplica */}
-            {rejectionReason === 'poor_images' && (
-              Object.values(imageQualityIssues).some(v => v === true) ? (
-                <Alert className="bg-orange-50 border-orange-200">
-                  <AlertTriangle className="h-4 w-4 text-orange-600" />
-                  <AlertDescription className="text-sm text-orange-900">
-                    <strong>Problemas detectados en la evaluación:</strong>
-                    <ul className="list-disc list-inside mt-2 space-y-1">
-                      {imageQualityIssues.hasBlurryImages && <li>Imágenes borrosas o desenfocadas</li>}
-                      {imageQualityIssues.hasPoorLighting && <li>Iluminación deficiente</li>}
-                      {imageQualityIssues.hasLowResolution && <li>Resolución muy baja</li>}
-                      {imageQualityIssues.hasDarkImages && <li>Imágenes muy oscuras</li>}
-                      {imageQualityIssues.hasPoorComposition && <li>Mala composición</li>}
-                      {imageQualityIssues.hasInappropriateContent && <li>Contenido inapropiado</li>}
-                      {imageQualityIssues.hasManipulation && <li>Evidencia de manipulación</li>}
-                    </ul>
-                    <p className="mt-2 text-xs">
-                      Estos problemas se incluirán automáticamente en el mensaje al agente
-                    </p>
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <Alert className="bg-blue-50 border-blue-200">
-                  <AlertDescription className="text-sm text-blue-900">
-                    No se detectaron problemas específicos de calidad en la evaluación. Por favor especifica los problemas en "Detalles adicionales".
-                  </AlertDescription>
-                </Alert>
-              )
-            )}
-
-            <div className="space-y-2">
-              <Label>
-                Detalles adicionales{rejectionReason === 'other' && '*'}
-              </Label>
-              <Textarea
-                value={rejectionDetails}
-                onChange={(e) => setRejectionDetails(e.target.value)}
-                placeholder="Explica al agente qué debe corregir..."
-                rows={4}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Notas internas (opcional)</Label>
-              <Textarea
-                value={adminNotes}
-                onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="Notas para otros administradores..."
-                rows={2}
-              />
-            </div>
-
-            <Alert>
-              <AlertDescription className="text-xs">
-                El agente recibirá un email con este motivo y podrá corregir la propiedad para reenviarla (máximo 3 intentos).
-              </AlertDescription>
-            </Alert>
-
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setRejectProperty(null)}
-                disabled={processing}
+            <div className="flex gap-2 pt-4">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => {
+                  setRejectProperty(null);
+                  setRejectionReasons({
+                    incompleteInfo: false,
+                    poorImages: false,
+                    incorrectLocation: false,
+                    suspiciousPrice: false,
+                    inappropriateContent: false,
+                    duplicateProperty: false,
+                    notes: ''
+                  });
+                }}
               >
                 Cancelar
               </Button>
-              <Button
-                variant="destructive"
+              <Button 
+                variant="destructive" 
+                className="flex-1"
                 onClick={handleReject}
-                disabled={processing || !rejectionReason}
+                disabled={processing}
               >
                 {processing ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Rechazando...
+                    Procesando...
                   </>
                 ) : (
-                  'Confirmar Rechazo'
+                  <>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Rechazar y Notificar
+                  </>
                 )}
               </Button>
             </div>
