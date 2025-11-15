@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import BasicGoogleMap from "@/components/BasicGoogleMap";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useProperties } from "@/hooks/useProperties";
+import { usePropertiesViewport, ViewportBounds } from "@/hooks/usePropertiesViewport";
 
 interface Property {
   id: string;
   title: string;
   price: number;
+  currency?: string;
   bedrooms: number | null;
   bathrooms: number | null;
   lat: number | null;
@@ -27,13 +28,17 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [hoveredProperty, setHoveredProperty] = useState<Property | null>(null);
+  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
 
-  // Fetch de propiedades con React Query
-  const { data: properties = [], isLoading: loading } = useProperties({
-    status: ['activa']
-  });
+  // Fetch de propiedades con viewport + clustering
+  const { data: viewportData, isLoading: loading } = usePropertiesViewport(
+    viewportBounds,
+    { status: ['activa'] }
+  );
 
-  // Creación de markers - IDÉNTICO a Buscar.tsx
+  const { properties = [], clusters = [] } = viewportData || {};
+
+  // Creación de markers desde propiedades individuales
   const mapMarkers = properties
     .filter(p => typeof p.lat === 'number' && typeof p.lng === 'number')
     .map(p => ({ 
@@ -42,7 +47,7 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
       lng: p.lng as number,
       title: p.title,
       price: p.price,
-      currency: ('currency' in p ? (p.currency as string) : 'MXN') as 'MXN' | 'USD',
+      currency: 'MXN' as 'MXN' | 'USD',
       bedrooms: p.bedrooms,
       bathrooms: p.bathrooms,
       images: p.images,
@@ -50,12 +55,26 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
       address: p.address,
     }));
 
+  // Creación de clusters
+  const mapClusters = clusters.map(c => ({
+    lat: c.lat,
+    lng: c.lng,
+    count: c.property_count,
+    avgPrice: c.avg_price,
+    propertyIds: c.property_ids,
+  }));
+
   // Centro del mapa y zoom - centrado en México
   const mapCenter = hoveredProperty && hoveredProperty.lat && hoveredProperty.lng
     ? { lat: hoveredProperty.lat, lng: hoveredProperty.lng }
     : { lat: 23.6345, lng: -102.5528 };
 
   const mapZoom = hoveredProperty ? 14 : 5;
+
+  // Actualizar viewport cuando cambia el mapa
+  const handleBoundsChange = (bounds: ViewportBounds) => {
+    setViewportBounds(bounds);
+  };
 
   const handleMarkerClick = (id: string) => {
     navigate(`/propiedad/${id}`);
