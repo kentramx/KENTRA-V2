@@ -12,6 +12,7 @@ import { Step6Review } from './steps/Step6Review';
 import { useFormWizard } from '@/hooks/useFormWizard';
 import { useCreateProperty, useUpdateProperty } from '@/hooks/usePropertyMutations';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { Save } from 'lucide-react';
 
 interface PropertyFormWizardProps {
@@ -22,6 +23,7 @@ interface PropertyFormWizardProps {
 
 export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFormWizardProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState(property?.images || []);
   
@@ -88,13 +90,50 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
       return;
     }
 
+    // Generar título automático basado en tipo y ubicación
+    const propertyTypeLabels: Record<string, string> = {
+      casa: 'Casa',
+      departamento: 'Departamento',
+      terreno: 'Terreno',
+      local_comercial: 'Local Comercial',
+      oficina: 'Oficina',
+      bodega: 'Bodega',
+      edificio: 'Edificio',
+      rancho: 'Rancho',
+      penthouse: 'Penthouse',
+      villa: 'Villa',
+      estudio: 'Estudio',
+      townhouse: 'Townhouse',
+      cabaña: 'Cabaña',
+      hacienda: 'Hacienda',
+      loft: 'Loft',
+    };
+    
+    const typeLabel = propertyTypeLabels[formData.type] || formData.type;
+    const listingTypeLabel = formData.for_sale && formData.for_rent 
+      ? 'en Venta/Renta' 
+      : formData.for_sale 
+        ? 'en Venta' 
+        : 'en Renta';
+    
+    const generatedTitle = `${typeLabel} ${listingTypeLabel} en ${formData.municipality}`;
+
+    // Calcular el precio principal basado en el tipo de listado
+    const mainPrice = formData.for_sale && formData.sale_price 
+      ? formData.sale_price 
+      : formData.rent_price || 0;
+
     const propertyData = {
+      title: generatedTitle,
+      price: mainPrice,
+      agent_id: user?.id,
       for_sale: formData.for_sale,
       for_rent: formData.for_rent,
       sale_price: formData.sale_price,
       rent_price: formData.rent_price,
       currency: formData.currency,
       type: formData.type,
+      listing_type: formData.for_sale ? 'venta' : 'renta',
       address: formData.address,
       colonia: formData.colonia,
       municipality: formData.municipality,
