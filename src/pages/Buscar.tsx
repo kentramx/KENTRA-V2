@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProperties } from '@/hooks/useProperties';
+import { usePropertiesViewport, ViewportBounds } from '@/hooks/usePropertiesViewport';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
 import BasicGoogleMap from '@/components/BasicGoogleMap';
 import Navbar from '@/components/Navbar';
@@ -154,7 +154,15 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     status: ['activa'],
   }), [filters.estado, filters.municipio, filters.tipo, filters.listingType, filters.precioMin, filters.precioMax, filters.recamaras, filters.banos]);
 
-  const { data: properties = [], isLoading: loading, isFetching } = useProperties(queryFilters);
+  const [mapCenter, setMapCenter] = useState({ lat: 19.4326, lng: -99.1332 });
+  const [mapZoom, setMapZoom] = useState(12);
+  const [mapBounds, setMapBounds] = useState<ViewportBounds | null>(null);
+
+  const { data: viewportData, isLoading: loading, isFetching } = usePropertiesViewport(mapBounds, queryFilters);
+  
+  const properties = viewportData?.properties || [];
+  const clusters = viewportData?.clusters || [];
+  const isClusterMode = mapBounds && mapBounds.zoom < 14;
 
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
@@ -815,30 +823,22 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     filters.banos
   );
 
-  // Calcular centro del mapa con prioridades:
-  // 1. Coordenadas de búsqueda (si existen)
-  // 2. Propiedad en hover (si existe)
-  // 3. Vista completa de México (si no hay filtros)
-  // 4. Centro de México por defecto
-  const mapCenter = searchCoordinates
-    ? searchCoordinates
-    : (hoveredProperty && hoveredProperty.lat && hoveredProperty.lng
-        ? { lat: hoveredProperty.lat, lng: hoveredProperty.lng }
-        : (hasLocationFilters && mapMarkers.length > 0
-            ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
-            : { lat: 23.6345, lng: -102.5528 })); // Centro geográfico de México
-
-  // Calcular zoom del mapa:
-  // - Sin filtros: zoom alejado para ver todo México (zoom 5)
-  // - Con búsqueda específica: zoom cercano (zoom 12)
-  // - Con hover: zoom medio-cercano (zoom 14)
-  const mapZoom = searchCoordinates 
-    ? 12 
-    : (hoveredProperty 
-        ? 14 
-        : (hasLocationFilters 
-            ? 12 
-            : 5)); // Vista completa de México
+  // Map center and zoom are now managed by state for bounds-based loading
+  // Update map position based on search, hover, or filters
+  useEffect(() => {
+    if (searchCoordinates) {
+      setMapCenter(searchCoordinates);
+      setMapZoom(12);
+    } else if (hoveredProperty && hoveredProperty.lat && hoveredProperty.lng) {
+      setMapCenter({ lat: hoveredProperty.lat, lng: hoveredProperty.lng });
+      setMapZoom(14);
+    } else if (hasLocationFilters && mapMarkers.length > 0) {
+      setMapCenter({ lat: mapMarkers[0].lat, lng: mapMarkers[0].lng });
+      setMapZoom(12);
+    } else {
+      setMapCenter({ lat: 23.6345, lng: -102.5528 });
+      setMapZoom(5);
+    }
 
   const getBreadcrumbItems = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = [
@@ -1434,6 +1434,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               onFavoriteClick={handleFavoriteClick}
               disableAutoFit={!hasLocationFilters || !!searchCoordinates}
               hoveredMarkerId={hoveredProperty?.id || null}
+              onBoundsChanged={setMapBounds}
               onMarkerHover={(markerId) => {
                 if (markerId) {
                   hoverFromMap.current = true;

@@ -30,6 +30,7 @@ interface BasicGoogleMapProps {
   disableAutoFit?: boolean;
   hoveredMarkerId?: string | null;
   onMarkerHover?: (markerId: string | null) => void;
+  onBoundsChanged?: (bounds: { minLng: number; minLat: number; maxLng: number; maxLat: number; zoom: number }) => void;
 }
 
 export function BasicGoogleMap({
@@ -45,6 +46,7 @@ export function BasicGoogleMap({
   disableAutoFit = false,
   hoveredMarkerId = null,
   onMarkerHover,
+  onBoundsChanged,
 }: BasicGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -79,6 +81,30 @@ export function BasicGoogleMap({
           streetViewControl: false,
           fullscreenControl: false,
         });
+
+        // Setup bounds changed listener with debounce
+        if (onBoundsChanged && mapRef.current) {
+          let boundsChangeTimeout: NodeJS.Timeout;
+          mapRef.current.addListener('idle', () => {
+            clearTimeout(boundsChangeTimeout);
+            boundsChangeTimeout = setTimeout(() => {
+              if (!mapRef.current) return;
+              const bounds = mapRef.current.getBounds();
+              const currentZoom = mapRef.current.getZoom();
+              if (bounds && currentZoom) {
+                const ne = bounds.getNorthEast();
+                const sw = bounds.getSouthWest();
+                onBoundsChanged({
+                  minLng: sw.lng(),
+                  minLat: sw.lat(),
+                  maxLng: ne.lng(),
+                  maxLat: ne.lat(),
+                  zoom: currentZoom,
+                });
+              }
+            }, 300);
+          });
+        }
 
         if (onReady && mapRef.current) onReady(mapRef.current);
       } catch (e: any) {
