@@ -8,6 +8,29 @@ interface LazyImageProps {
   blurDataURL?: string;
 }
 
+// Generar URLs responsivas usando Supabase Transform
+const generateResponsiveSrcSet = (src: string): string => {
+  // Solo aplicar transformaciones a URLs de Supabase Storage
+  if (!src.includes('supabase.co/storage/v1/object/public/')) {
+    return '';
+  }
+
+  const sizes = [400, 800, 1200, 1920];
+  
+  return sizes
+    .map(width => {
+      // Agregar parámetro de transformación width a la URL
+      const transformedUrl = `${src}?width=${width}&quality=80`;
+      return `${transformedUrl} ${width}w`;
+    })
+    .join(', ');
+};
+
+// Generar sizes attribute optimizado para diferentes viewports
+const getOptimizedSizes = (): string => {
+  return '(max-width: 640px) 400px, (max-width: 1024px) 800px, (max-width: 1920px) 1200px, 1920px';
+};
+
 export const LazyImage = ({ src, alt, className, blurDataURL }: LazyImageProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
@@ -52,6 +75,8 @@ export const LazyImage = ({ src, alt, className, blurDataURL }: LazyImageProps) 
       {isInView && (
         <img
           src={src}
+          srcSet={generateResponsiveSrcSet(src)}
+          sizes={getOptimizedSizes()}
           alt={alt}
           onLoad={() => setIsLoaded(true)}
           onError={() => {
