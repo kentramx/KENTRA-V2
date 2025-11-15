@@ -160,9 +160,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 
   const { data: viewportData, isLoading: loading, isFetching } = usePropertiesViewport(mapBounds, queryFilters);
   
-  const properties = viewportData?.properties || [];
-  const clusters = viewportData?.clusters || [];
-  const isClusterMode = mapBounds && mapBounds.zoom < 14;
+  const properties = (viewportData?.properties || []);
+  const clusters = (viewportData?.clusters || []);
+  const isClusterMode = !!(mapBounds && mapBounds.zoom < 14);
 
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
@@ -1413,7 +1413,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
           </div>
 
           {/* Mapa a la izquierda - 50% width en desktop, condicional en móvil */}
-          <div className={`relative ${mobileView === 'map' ? 'block' : 'hidden'} lg:block lg:w-1/2 h-[calc(100vh-200px)] lg:h-full`}>
+          <div className={`relative ${mobileView === 'map' ? 'block' : 'hidden'} lg:block lg:w-1/2 lg:h-full`} style={{ height: 'calc(100vh - 200px)' }}>
             {/* Contador de resultados sobre el mapa */}
             <div className="absolute top-4 left-4 z-10 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border">
               <p className="text-sm font-medium">
@@ -1728,7 +1728,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
         </div>
       </div>
       
-      {/* Property Detail Sheet */}
       <PropertyDetailSheet 
         propertyId={selectedPropertyId}
         open={sheetOpen}
@@ -1739,3 +1738,4 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 };
 
 export default Buscar;
+
