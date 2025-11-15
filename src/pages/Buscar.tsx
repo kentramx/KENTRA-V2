@@ -539,6 +539,12 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       params.set('lng', searchCoordinates.lng.toString());
     }
 
+    // Preserve propiedad parameter
+    const propiedad = searchParams.get('propiedad');
+    if (propiedad) {
+      params.set('propiedad', propiedad);
+    }
+
     const next = params.toString();
     const current = searchParams.toString();
     if (next !== current) {
