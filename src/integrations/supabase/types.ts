@@ -1123,8 +1123,10 @@ export type Database = {
           parking: number | null
           price: number
           price_history: Json | null
+          rejection_history: Json | null
           rent_price: number | null
           requires_manual_review: boolean | null
+          resubmission_count: number
           sale_price: number | null
           sqft: number | null
           state: string
@@ -1170,8 +1172,10 @@ export type Database = {
           parking?: number | null
           price: number
           price_history?: Json | null
+          rejection_history?: Json | null
           rent_price?: number | null
           requires_manual_review?: boolean | null
+          resubmission_count?: number
           sale_price?: number | null
           sqft?: number | null
           state: string
@@ -1217,8 +1221,10 @@ export type Database = {
           parking?: number | null
           price?: number
           price_history?: Json | null
+          rejection_history?: Json | null
           rent_price?: number | null
           requires_manual_review?: boolean | null
+          resubmission_count?: number
           sale_price?: number | null
           sqft?: number | null
           state?: string

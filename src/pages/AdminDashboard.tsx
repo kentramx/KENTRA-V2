@@ -137,7 +137,7 @@ const AdminDashboard = () => {
           images (url, position),
           profiles!properties_agent_id_fkey (name, email)
         `)
-        .eq('status', 'pausada')
+        .eq('status', 'pendiente_aprobacion')
         .order('created_at', { ascending: false });
 
       if (activeTab === 'nuevas') {
@@ -173,20 +173,20 @@ const AdminDashboard = () => {
       const { count: newCount } = await (supabase as any)
         .from('properties')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pausada')
+        .eq('status', 'pendiente_aprobacion')
         .eq('resubmission_count', 0);
       
       const { count: resubmittedCount } = await (supabase as any)
         .from('properties')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pausada')
+        .eq('status', 'pendiente_aprobacion')
         .gt('resubmission_count', 0);
       
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
       const { count: oldCount } = await (supabase as any)
         .from('properties')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pausada')
+        .eq('status', 'pendiente_aprobacion')
         .lt('created_at', threeDaysAgo);
       
       const { count: approvedToday } = await (supabase as any)
@@ -302,6 +302,16 @@ const AdminDashboard = () => {
 
     setProcessing(true);
     try {
+      // Obtener datos actuales de la propiedad
+      const { data: currentProperty } = await supabase
+        .from('properties')
+        .select('resubmission_count, rejection_history, title')
+        .eq('id', rejectProperty.id)
+        .single();
+
+      const currentResubmissions = currentProperty?.resubmission_count || 0;
+      const currentHistory = currentProperty?.rejection_history || [];
+
       const reasonLabel = REJECTION_REASONS.find(r => r.code === rejectionReason)?.label || '';
       
       // Agregar detalles de problemas de calidad de imagen si aplica
@@ -330,11 +340,26 @@ const AdminDashboard = () => {
         image_quality_issues: rejectionReason === 'poor_images' ? imageQualityIssues : null,
       };
 
+      // Crear registro del rechazo para el historial
+      const rejectionRecord = {
+        date: new Date().toISOString(),
+        reason: rejectionReason,
+        details: enrichedDetails,
+        reviewed_by: user?.email,
+        resubmission_number: currentResubmissions + 1
+      };
+
+      // Actualizar historial (asegurarse de que sea un array)
+      const historyArray = Array.isArray(currentHistory) ? currentHistory : [];
+      const updatedHistory = [...historyArray, rejectionRecord];
+
       const { error: updateError } = await supabase
         .from('properties')
         .update({
           status: 'pausada',
           rejection_reason: rejectionData,
+          resubmission_count: currentResubmissions + 1,
+          rejection_history: updatedHistory,
         })
         .eq('id', rejectProperty.id);
 
