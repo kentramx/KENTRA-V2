@@ -62,6 +62,7 @@ const Home = () => {
   const [listingType, setListingType] = useState<"venta" | "renta">("venta");
   const [propertyType, setPropertyType] = useState<string>("all");
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
+  const [recentProperties, setRecentProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
@@ -149,75 +150,85 @@ const Home = () => {
     const queryString = params.toString();
     navigate(queryString ? `/buscar?${queryString}` : '/buscar');
   };
+  // Fetch featured and recent properties on component mount or when listingType changes
   useEffect(() => {
-    const fetchFeaturedProperties = async () => {
+    const fetchProperties = async () => {
       setIsLoadingProperties(true);
       try {
-      const { data, error } = await supabase
-        .from('properties')
-        .select(`
-          id,
-          title,
-          price,
-          type,
-          listing_type,
-          for_sale,
-          for_rent,
-          sale_price,
-          rent_price,
-          currency,
-          address,
-          colonia,
-          municipality,
-          state,
-          bedrooms,
-          bathrooms,
-          parking,
-          sqft,
-          lat,
-          lng,
-          agent_id,
-          created_at,
-          images (url, position),
-          featured_properties!left (
-            id,
-            status,
-            end_date
-          )
-        `)
-        .eq('status', 'activa')
-        .eq('listing_type', listingType)
-        .order('created_at', { ascending: false })
-        .limit(20);
+        // First get the property IDs that are currently featured
+        const { data: featuredData, error: featuredError } = await supabase
+          .from('featured_properties')
+          .select('property_id')
+          .eq('status', 'active')
+          .gt('end_date', new Date().toISOString());
 
-        if (error) throw error;
+        if (featuredError) {
+          console.error('Error fetching featured property IDs:', featuredError);
+        }
+
+        const featuredIds = new Set(featuredData?.map(f => f.property_id) || []);
         
-        // Ordenar imágenes por posición y calcular is_featured
-        const propertiesWithSortedImages = data?.map(property => {
-          const featured = Array.isArray(property.featured_properties) 
-            ? property.featured_properties[0] 
-            : property.featured_properties;
-          
-          const isFeatured = featured 
-            && featured.status === 'active' 
-            && new Date(featured.end_date) > new Date();
+        // Get featured properties (only those that are actually featured and active)
+        if (featuredIds.size > 0) {
+          let featuredQuery = supabase
+            .from('properties')
+            .select(`
+              *,
+              images (url, position)
+            `)
+            .eq('status', 'activa')
+            .eq('listing_type', listingType)
+            .in('id', Array.from(featuredIds))
+            .limit(6);
 
-          return {
+          const { data: featuredPropsData, error: featuredPropsError } = await featuredQuery;
+
+          if (featuredPropsError) {
+            console.error('Error fetching featured properties:', featuredPropsError);
+          } else if (featuredPropsData) {
+            const featured = featuredPropsData.map((property: any) => ({
+              ...property,
+              images: (property.images || []).sort((a: any, b: any) => a.position - b.position),
+              is_featured: true
+            }));
+            setFeaturedProperties(featured);
+          }
+        } else {
+          setFeaturedProperties([]);
+        }
+
+        // Get recent properties (ordered by created_at DESC)
+        let recentQuery = supabase
+          .from('properties')
+          .select(`
+            *,
+            images (url, position)
+          `)
+          .eq('status', 'activa')
+          .eq('listing_type', listingType)
+          .order('created_at', { ascending: false })
+          .limit(8);
+
+        const { data: recentPropsData, error: recentPropsError } = await recentQuery;
+
+        if (recentPropsError) {
+          console.error('Error fetching recent properties:', recentPropsError);
+        } else if (recentPropsData) {
+          const recent = recentPropsData.map((property: any) => ({
             ...property,
-            images: (property.images || []).sort((a: any, b: any) => (a.position || 0) - (b.position || 0)),
-            is_featured: isFeatured,
-          };
-        }) || [];
-        
-        setFeaturedProperties(propertiesWithSortedImages);
+            images: (property.images || []).sort((a: any, b: any) => a.position - b.position),
+            is_featured: featuredIds.has(property.id)
+          }));
+          setRecentProperties(recent);
+        }
       } catch (error) {
-        console.error('Error fetching featured properties:', error);
+        console.error('Error fetching properties:', error);
       } finally {
         setIsLoadingProperties(false);
       }
     };
 
-    fetchFeaturedProperties();
+    fetchProperties();
   }, [listingType]);
 
   return (
@@ -434,7 +445,7 @@ const Home = () => {
             <div>
               <h2 className="text-3xl font-bold">Propiedades Destacadas</h2>
               <p className="mt-2 text-muted-foreground">
-                Descubre las últimas propiedades agregadas
+                Las mejores propiedades seleccionadas para ti
               </p>
             </div>
             <Button
@@ -517,8 +528,98 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Property Types */}
+      {/* Recent Properties */}
       <section className="py-16 bg-muted">
+        <div className="container mx-auto px-4">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold">Propiedades Recientes</h2>
+              <p className="mt-2 text-muted-foreground">
+                Últimas propiedades agregadas a la plataforma
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/buscar")}
+              className="hidden md:flex items-center gap-2"
+            >
+              Ver Todas
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {isLoadingProperties ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton className="aspect-[4/3] w-full rounded-lg" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-8 w-1/2" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              ))}
+            </div>
+          ) : recentProperties.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {recentProperties.map((property, index) => (
+                  <div
+                    key={property.id}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <PropertyCard
+                      id={property.id}
+                      title={property.title}
+                      price={property.price}
+                      type={property.type}
+                      listingType={property.listing_type}
+                      for_sale={property.for_sale}
+                      for_rent={property.for_rent}
+                      sale_price={property.sale_price}
+                      rent_price={property.rent_price}
+                      currency={property.currency}
+                      address={property.address}
+                      colonia={property.colonia}
+                      municipality={property.municipality}
+                      state={property.state}
+                      bedrooms={property.bedrooms}
+                      bathrooms={property.bathrooms}
+                      parking={property.parking}
+                      sqft={property.sqft}
+                      imageUrl={property.images?.[0]?.url}
+                      images={property.images}
+                      agentId={property.agent_id}
+                      isFeatured={property.is_featured}
+                      createdAt={property.created_at}
+                      onCardClick={handlePropertyClick}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8 text-center md:hidden">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/buscar")}
+                  className="w-full sm:w-auto"
+                >
+                  Ver Todas las Propiedades
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="py-12 text-center">
+              <p className="text-muted-foreground">
+                No hay propiedades recientes disponibles
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Property Types */}
+      <section className="py-16 bg-background">
         <div className="container mx-auto px-4">
           <h2 className="mb-8 text-center text-3xl font-bold">
             Explora por Tipo de Propiedad
