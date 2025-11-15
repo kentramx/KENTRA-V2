@@ -235,7 +235,7 @@ const AdminDashboard = () => {
           agent_id: property.agent_id,
           admin_id: user?.id,
           action: 'approved',
-          admin_notes: adminNotes || null,
+          notes: adminNotes || null,
         });
 
       if (historyError) throw historyError;
@@ -359,7 +359,7 @@ const AdminDashboard = () => {
           admin_id: user?.id,
           action: 'rejected',
           rejection_reason: rejectionData,
-          admin_notes: adminNotes || null,
+          notes: adminNotes || null,
         });
 
       if (historyError) throw historyError;
