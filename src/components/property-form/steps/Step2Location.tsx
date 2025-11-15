@@ -1,7 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { LocationSearch } from '@/components/LocationSearch';
-import { ColoniaAutocomplete } from '@/components/ColoniaAutocomplete';
 import { PropertyFormData } from '@/hooks/useFormWizard';
 
 interface Step2LocationProps {
@@ -36,29 +34,11 @@ export const Step2Location = ({ formData, updateFormData }: Step2LocationProps) 
             defaultValue={formData.address}
           />
 
-          {/* Colonia/Neighborhood */}
-          <div className="space-y-2">
-            <Label>
-              Colonia
-              <span className="text-destructive">*</span>
-            </Label>
-            <ColoniaAutocomplete
-              state={formData.state}
-              municipality={formData.municipality}
-              onColoniaSelect={(colonia) => updateFormData({ colonia })}
-              defaultValue={formData.colonia}
-            />
-            <p className="text-xs text-muted-foreground">
-              Si no encuentras tu colonia, puedes escribirla manualmente
-            </p>
-          </div>
-
           {/* Vista previa de ubicación */}
           {formData.state && formData.municipality && (
             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
               <h4 className="font-semibold text-sm">Ubicación seleccionada:</h4>
               <div className="text-sm space-y-1">
-                {formData.colonia && <p><span className="text-muted-foreground">Colonia:</span> {formData.colonia}</p>}
                 <p><span className="text-muted-foreground">Municipio:</span> {formData.municipality}</p>
                 <p><span className="text-muted-foreground">Estado:</span> {formData.state}</p>
                 {formData.address && <p><span className="text-muted-foreground">Dirección:</span> {formData.address}</p>}
