@@ -1,92 +1,52 @@
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-
-interface CreateCheckoutSessionParams {
-  planId: string;
-  billingCycle: 'monthly' | 'yearly';
-  successUrl: string;
-  cancelUrl: string;
-  couponCode?: string | null;
-  upsells?: string[];
-  upsellOnly?: boolean;
-}
 
 /**
- * Función centralizada para crear sesiones de checkout de Stripe
- * Elimina duplicación de código entre las diferentes páginas de pricing
+ * Inicia el proceso de checkout para una nueva suscripción
  */
-export const createStripeCheckoutSession = async (
-  params: CreateCheckoutSessionParams
-): Promise<{ success: boolean; checkoutUrl?: string; error?: string }> => {
+export const startSubscriptionCheckout = async (
+  planSlug: string,
+  billingCycle: 'monthly' | 'yearly'
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log('Creating Stripe checkout session:', params);
-
-    // VALIDACIÓN: Verificar suscripción activa antes de crear checkout
-    // Solo para suscripciones completas, no para upsells
-    // Permite checkout para usuarios con suscripciones: canceled, expired, incomplete_expired
-    if (!params.upsellOnly) {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data: activeSub } = await supabase
-          .from('user_subscriptions')
-          .select('id, status, subscription_plans(name)')
-          .eq('user_id', user.id)
-          .in('status', ['active', 'trialing', 'past_due'])
-          .maybeSingle();
-
-        if (activeSub) {
-          const currentPlanName = activeSub.subscription_plans?.name;
-          // Si intenta contratar el mismo plan que ya tiene activo, prevenir
-          if (currentPlanName === params.planId) {
-            return {
-              success: false,
-              error: 'Ya tienes este plan activo. Adminístralo desde tu panel de suscripción.',
-            };
-          }
-          
-          // Si tiene una suscripción activa de otro plan, sugerir cambio de plan
-          return {
-            success: false,
-            error: 'Ya tienes una suscripción activa. Usa la opción "Cambiar de Plan" desde tu panel.',
-          };
-        }
-      }
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, error: 'Usuario no autenticado' };
     }
 
+    // Verificar si ya tiene suscripción activa
+    const { data: activeSub } = await supabase
+      .from('user_subscriptions')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .in('status', ['active', 'trialing', 'past_due'])
+      .maybeSingle();
+
+    if (activeSub) {
+      return {
+        success: false,
+        error: 'Ya tienes una suscripción activa. Usa la opción de cambio de plan.',
+      };
+    }
+
+    // Crear sesión de checkout
     const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-      body: {
-        planId: params.planId,
-        billingCycle: params.billingCycle,
-        successUrl: params.successUrl,
-        cancelUrl: params.cancelUrl,
-        couponCode: params.couponCode || undefined,
-        upsells: params.upsells || [],
-        upsellOnly: params.upsellOnly || false,
-      },
+      body: { planSlug, billingCycle },
     });
 
     if (error) {
-      console.error('Error creating checkout session:', error);
-      return {
-        success: false,
-        error: error.message || 'Error al crear la sesión de pago',
-      };
+      console.error('Error creating checkout:', error);
+      return { success: false, error: error.message };
     }
 
-    if (!data?.checkoutUrl) {
-      return {
-        success: false,
-        error: 'No se pudo generar la URL de pago',
-      };
+    if (data?.url) {
+      window.location.href = data.url;
+      return { success: true };
     }
 
-    return {
-      success: true,
-      checkoutUrl: data.checkoutUrl,
-    };
+    return { success: false, error: 'No se pudo crear la sesión de pago' };
   } catch (error) {
-    console.error('Exception in createStripeCheckoutSession:', error);
+    console.error('Exception in startSubscriptionCheckout:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
@@ -95,70 +55,99 @@ export const createStripeCheckoutSession = async (
 };
 
 /**
- * Valida si el usuario ya tiene una suscripción activa que bloquee un nuevo checkout
- * Estados que BLOQUEAN nuevo checkout: 'active', 'trialing', 'past_due'
- * Estados que PERMITEN nuevo checkout: 'canceled', 'expired', 'incomplete', 'incomplete_expired', 'unpaid'
+ * Cambia el plan actual con prorrateo
  */
-export const checkActiveSubscription = async (
-  userId: string
-): Promise<{ hasActive: boolean; planName?: string; status?: string }> => {
+export const changePlan = async (
+  targetPlanSlug: string,
+  billingCycle: 'monthly' | 'yearly'
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Solo considerar como "activa" los estados que realmente bloquean un nuevo checkout
-    const activeStatuses = ['active', 'trialing', 'past_due'];
-    
-    const { data: activeSub, error: subError } = await supabase
-      .from('user_subscriptions')
-      .select('id, status, subscription_plans(name)')
-      .eq('user_id', userId)
-      .in('status', activeStatuses)
-      .maybeSingle();
+    const { data, error } = await supabase.functions.invoke('change-subscription-plan', {
+      body: { targetPlanSlug, billingCycle },
+    });
 
-    if (subError) {
-      console.error('Error checking active subscription:', subError);
-      return { hasActive: false };
+    if (error) {
+      console.error('Error changing plan:', error);
+      return { success: false, error: error.message };
     }
 
-    return {
-      hasActive: !!activeSub,
-      planName: activeSub?.subscription_plans?.name,
-      status: activeSub?.status,
-    };
+    if (!data?.success) {
+      return { success: false, error: data?.error || 'Error al cambiar de plan' };
+    }
+
+    return { success: true };
   } catch (error) {
-    console.error('Exception checking active subscription:', error);
-    return { hasActive: false };
+    console.error('Exception in changePlan:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
   }
 };
 
 /**
- * Obtiene detalles de un plan por su slug y tipo
+ * Cancela la suscripción actual inmediatamente
  */
-export const getPlanBySlug = async (
-  planType: 'agente' | 'inmobiliaria' | 'desarrolladora',
-  planSlug: string
-): Promise<{ plan: any; error?: string }> => {
+export const cancelSubscription = async (): Promise<{
+  success: boolean;
+  error?: string;
+}> => {
   try {
-    const fullPlanName = `${planType}_${planSlug}`;
+    const { data, error } = await supabase.functions.invoke('cancel-subscription');
 
-    const { data: plan, error: planError } = await supabase
-      .from('subscription_plans')
-      .select('id, name, display_name, price_monthly, price_yearly')
-      .eq('name', fullPlanName)
-      .single();
-
-    if (planError || !plan) {
-      console.error('Plan not found:', fullPlanName, planError);
-      return {
-        plan: null,
-        error: 'No se pudo encontrar el plan seleccionado',
-      };
+    if (error) {
+      console.error('Error canceling subscription:', error);
+      return { success: false, error: error.message };
     }
 
-    return { plan };
+    if (!data?.success) {
+      return { success: false, error: data?.error || 'Error al cancelar suscripción' };
+    }
+
+    return { success: true };
   } catch (error) {
-    console.error('Exception getting plan:', error);
+    console.error('Exception in cancelSubscription:', error);
     return {
-      plan: null,
-      error: error instanceof Error ? error.message : 'Error al obtener plan',
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
     };
+  }
+};
+
+/**
+ * Obtiene información del plan actual del usuario
+ */
+export const getCurrentSubscription = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { subscription: null };
+    }
+
+    const { data, error } = await supabase
+      .from('user_subscriptions')
+      .select(`
+        *,
+        subscription_plans (
+          name,
+          display_name,
+          price_monthly,
+          price_yearly,
+          features
+        )
+      `)
+      .eq('user_id', user.id)
+      .in('status', ['active', 'trialing', 'past_due'])
+      .single();
+
+    if (error || !data) {
+      return { subscription: null };
+    }
+
+    return { subscription: data };
+  } catch (error) {
+    console.error('Error getting current subscription:', error);
+    return { subscription: null };
   }
 };
