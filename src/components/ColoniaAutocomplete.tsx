@@ -116,10 +116,11 @@ export const ColoniaAutocomplete = ({
       }
 
       if (colonia) {
-        onColoniaSelectRef.current(colonia);
+        // ✅ Actualizar el valor visible del input para mantener el texto
         if (inputRef.current) {
           inputRef.current.value = colonia;
         }
+        onColoniaSelectRef.current(colonia);
       } else {
         toast({
           title: '❌ Error',

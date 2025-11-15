@@ -297,7 +297,13 @@ export const PlaceAutocomplete = ({
             lng: place.location?.lng(),
           };
           
-          handlePlaceSelection(location, placeAutocomplete.value);
+          // ✅ Actualizar el valor visible del Web Component
+          const displayText = colonia 
+            ? `${colonia}, ${municipality}, ${state}` 
+            : place.formattedAddress || `${municipality}, ${state}`;
+          placeAutocomplete.value = displayText;
+          
+          handlePlaceSelection(location, displayText);
         });
         
         // Listener para detectar cuando el usuario escribe (con debouncing)
@@ -461,7 +467,16 @@ export const PlaceAutocomplete = ({
         lng: place.geometry?.location?.lng(),
       };
 
-      handlePlaceSelection(location, inputRef.current?.value || '');
+      // ✅ Actualizar el valor visible del input legacy
+      const displayText = colonia 
+        ? `${colonia}, ${municipality}, ${state}` 
+        : place.formatted_address || `${municipality}, ${state}`;
+      
+      if (inputRef.current) {
+        inputRef.current.value = displayText;
+      }
+
+      handlePlaceSelection(location, displayText);
     });
 
     autocompleteRef.current = autocomplete;
