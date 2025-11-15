@@ -8,6 +8,7 @@ import propertyPlaceholder from "@/assets/property-placeholder.jpg";
 import { useTracking } from "@/hooks/useTracking";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { LazyImage } from "@/components/LazyImage";
 
 interface PropertyCardProps {
   id: string;
@@ -198,12 +199,11 @@ const PropertyCard = ({
       {/* @ts-ignore */}
       <Wrapper {...wrapperProps}>
         <div className="relative aspect-[4/3] overflow-hidden">
-          <img
+          <LazyImage
             src={getImageUrl(displayImages[currentImageIndex]?.url || propertyPlaceholder)}
             alt={`${bedrooms} bd, ${bathrooms} ba - ${getTypeLabel()}`}
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            className="h-full w-full transition-transform group-hover:scale-105"
+            blurDataURL={propertyPlaceholder}
           />
           
           {/* Navegación de imágenes - Solo visible si hay más de 1 imagen */}
