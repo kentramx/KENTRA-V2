@@ -46,7 +46,7 @@ export function BasicGoogleMap({
 }: BasicGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const markerRefs = useRef<Map<string, google.maps.marker.AdvancedMarkerElement>>(new Map());
+  const markerRefs = useRef<Map<string, google.maps.Marker>>(new Map());
   const clustererRef = useRef<MarkerClusterer | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -102,9 +102,7 @@ export function BasicGoogleMap({
         }
         clustererRef.current = null;
       }
-      markerRefs.current.forEach(m => {
-        m.map = null;
-      });
+      markerRefs.current.forEach(m => m.setMap(null));
       markerRefs.current.clear();
       mapRef.current = null;
     };
@@ -125,9 +123,7 @@ export function BasicGoogleMap({
     }
 
     // Limpiar marcadores anteriores
-    markerRefs.current.forEach(m => {
-      m.map = null;
-    });
+    markerRefs.current.forEach(m => m.setMap(null));
     markerRefs.current.clear();
 
     if (!markers || markers.length === 0) return;

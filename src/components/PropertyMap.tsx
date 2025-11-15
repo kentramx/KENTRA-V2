@@ -16,7 +16,7 @@ interface PropertyMapProps {
 export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
   const [isGoogleMapsReady, setIsGoogleMapsReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
@@ -67,12 +67,10 @@ export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMap
               mapInstanceRef.current?.setZoom(15);
 
               if (markerRef.current) {
-                markerRef.current.map = null;
+                markerRef.current.setMap(null);
               }
 
-              const { AdvancedMarkerElement } = await google.maps.importLibrary('marker') as google.maps.MarkerLibrary;
-
-              markerRef.current = new AdvancedMarkerElement({
+              markerRef.current = new google.maps.Marker({
                 position: location,
                 map: mapInstanceRef.current,
                 title: address,
@@ -120,17 +118,16 @@ export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMap
           });
         } else if (lat && lng) {
           // We have coordinates, use them directly
-          const { AdvancedMarkerElement } = await google.maps.importLibrary('marker') as google.maps.MarkerLibrary;
           const location = { lat, lng };
           
           mapInstanceRef.current?.setCenter(location);
           mapInstanceRef.current?.setZoom(15);
 
           if (markerRef.current) {
-            markerRef.current.map = null;
+            markerRef.current.setMap(null);
           }
 
-          markerRef.current = new AdvancedMarkerElement({
+          markerRef.current = new google.maps.Marker({
             position: location,
             map: mapInstanceRef.current,
             title: address || 'Ubicación de la propiedad',
@@ -152,7 +149,7 @@ export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMap
 
     return () => {
       if (markerRef.current) {
-        markerRef.current.map = null;
+        markerRef.current.setMap(null);
       }
     };
   }, [isGoogleMapsReady, address, lat, lng]);
