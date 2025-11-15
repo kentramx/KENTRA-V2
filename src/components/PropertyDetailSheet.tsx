@@ -45,8 +45,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import propertyPlaceholder from "@/assets/property-placeholder.jpg";
-import { AgentReviews } from "@/components/AgentReviews";
-import { ReviewForm } from "@/components/ReviewForm";
 import { PropertyAmenities } from "@/components/PropertyAmenities";
 import { PropertyVirtualTour } from "@/components/PropertyVirtualTour";
 import { PropertyTimeline } from "@/components/PropertyTimeline";
@@ -67,7 +65,6 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
-  const [reviewsKey, setReviewsKey] = useState(0);
   const [agentStats, setAgentStats] = useState<any>(null);
   const { toast } = useToast();
   const { addToCompare, isInCompare, removeFromCompare } = usePropertyCompare();
@@ -81,10 +78,6 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
     property?.state,
     4
   );
-
-  const handleReviewSubmitted = () => {
-    setReviewsKey(prev => prev + 1);
-  };
 
   useEffect(() => {
     if (propertyId && open) {
@@ -692,21 +685,6 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
                 />
               </CardContent>
             </Card>
-          )}
-
-          {/* Agent Reviews */}
-          {agent && (
-            <div>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-2xl font-semibold">Reseñas del Agente</h2>
-                <ReviewForm 
-                  agentId={agent.id} 
-                  propertyId={property.id}
-                  onReviewSubmitted={handleReviewSubmitted}
-                />
-              </div>
-              <AgentReviews key={reviewsKey} agentId={agent.id} />
-            </div>
           )}
 
           {/* Propiedades similares */}
