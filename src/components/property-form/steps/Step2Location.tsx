@@ -23,26 +23,19 @@ export const Step2Location = ({ formData, updateFormData }: Step2LocationProps) 
       <Card>
         <CardContent className="pt-6 space-y-6">
           {/* Buscar ubicación */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              Buscar Ubicación
-              <span className="text-destructive">*</span>
-            </Label>
-            <LocationSearch
-              onLocationSelect={(location) => {
-                updateFormData({
-                  state: location.state,
-                  municipality: location.municipality,
-                  address: location.address || formData.address,
-                  colonia: location.colonia || formData.colonia,
-                  lat: location.lat,
-                  lng: location.lng,
-                });
-              }}
-              defaultValue={formData.address}
-            />
-          </div>
+          <LocationSearch
+            onLocationSelect={(location) => {
+              updateFormData({
+                state: location.state,
+                municipality: location.municipality,
+                address: location.address || formData.address,
+                colonia: location.colonia || formData.colonia,
+                lat: location.lat,
+                lng: location.lng,
+              });
+            }}
+            defaultValue={formData.address}
+          />
 
           {/* Colonia/Neighborhood */}
           <div className="space-y-2">
