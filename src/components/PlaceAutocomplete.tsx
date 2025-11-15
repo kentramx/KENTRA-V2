@@ -1,12 +1,11 @@
 /// <reference types="google.maps" />
-import React, { useEffect, useRef } from 'react';
-import { Label } from '@/components/ui/label';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapPin, AlertCircle, Navigation, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
-import { toast } from '@/hooks/use-toast';
-
 
 interface PlaceAutocompleteProps {
   onPlaceSelect: (location: {
@@ -25,48 +24,46 @@ interface PlaceAutocompleteProps {
   id?: string;
   unstyled?: boolean;
   showMyLocationButton?: boolean;
+  className?: string;
 }
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'gmp-place-autocomplete': any;
-    }
-  }
-}
-
-export const PlaceAutocomplete = ({ 
+export const PlaceAutocomplete = ({
   onPlaceSelect,
   onInputChange,
-  defaultValue = '', 
-  placeholder = 'Escribe para buscar dirección...',
-  label,
-  showIcon = true,
-  id = 'place-autocomplete',
+  placeholder = "Buscar ubicación...",
+  defaultValue = "",
+  showIcon = false,
+  showMyLocationButton = false,
   unstyled = false,
-  showMyLocationButton = true
+  className = "",
+  label,
+  id,
 }: PlaceAutocompleteProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const webComponentContainerRef = useRef<HTMLDivElement>(null);
-  const autocompleteRef = useRef<any>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [isLoaded, setIsLoaded] = React.useState(false);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
-  const [useWebComponent, setUseWebComponent] = React.useState<boolean>(false);
-  const [isGettingLocation, setIsGettingLocation] = React.useState(false);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
-  // keep latest onPlaceSelect without recreating input
-  const onPlaceSelectRef = React.useRef(onPlaceSelect);
+  // Keep latest onPlaceSelect without recreating listeners
+  const onPlaceSelectRef = useRef(onPlaceSelect);
   useEffect(() => {
     onPlaceSelectRef.current = onPlaceSelect;
   }, [onPlaceSelect]);
 
+  // Handle place selection with toast notification
+  const handlePlaceSelection = useCallback((location: any, displayText: string) => {
+    onPlaceSelectRef.current(location);
+    toast.success('📍 Ubicación seleccionada', {
+      description: displayText,
+    });
+  }, []);
+
+  // Get user's current location
   const handleGetMyLocation = async () => {
     if (!navigator.geolocation) {
-      toast({
-        title: '❌ Geolocalización no disponible',
+      toast.error('❌ Geolocalización no disponible', {
         description: 'Tu navegador no soporta geolocalización',
-        variant: 'destructive',
       });
       return;
     }
@@ -102,7 +99,6 @@ export const PlaceAutocomplete = ({
               } else if (!municipality && component.types.includes('locality')) {
                 municipality = component.long_name;
               }
-              // Extraer colonia
               if (component.types.includes('sublocality_level_1') || 
                   component.types.includes('sublocality') ||
                   component.types.includes('neighborhood')) {
@@ -111,363 +107,157 @@ export const PlaceAutocomplete = ({
             });
             
             const address = place.formatted_address;
+            const displayText = colonia 
+              ? `${colonia}, ${municipality}, ${state}` 
+              : address || `${municipality}, ${state}`;
+
+            if (inputRef.current) {
+              inputRef.current.value = displayText;
+            }
 
             const location = {
               address,
               municipality,
               state,
-              colonia,
+              colonia: colonia || undefined,
               lat: latitude,
-              lng: longitude
+              lng: longitude,
             };
 
-            // Actualizar el input según el tipo
-            if (autocompleteRef.current) {
-              if (autocompleteRef.current instanceof HTMLElement) {
-                // Web Component (tiene propiedad value pero TypeScript no la ve)
-                (autocompleteRef.current as any).value = address;
-              } else if (inputRef.current) {
-                // Legacy input
-                inputRef.current.value = address;
-              }
-            }
-
-            onPlaceSelectRef.current(location);
-            
-            // Solo mostrar toast de éxito si se capturó todo
-            if (colonia && municipality && state) {
-              toast({
-                title: '📍 Ubicación detectada',
-                description: `${colonia}, ${municipality}`,
-              });
-            }
+            handlePlaceSelection(location, displayText);
+          } else {
+            toast.error('❌ Error', {
+              description: 'No se pudo obtener la información de la ubicación',
+            });
           }
         } catch (error) {
-          console.error('Error geocoding:', error);
-          toast({
-            title: '❌ Error',
-            description: 'No se pudo obtener la dirección',
-            variant: 'destructive',
+          console.error('Error obteniendo ubicación:', error);
+          toast.error('❌ Error', {
+            description: 'No se pudo obtener tu ubicación',
           });
         } finally {
           setIsGettingLocation(false);
         }
       },
       (error) => {
+        console.error('Error de geolocalización:', error);
         setIsGettingLocation(false);
-        
-        let description = 'Error obteniendo ubicación';
-        switch(error.code) {
-          case error.PERMISSION_DENIED:
-            description = 'Debes permitir el acceso a tu ubicación';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            description = 'Ubicación no disponible';
-            break;
-          case error.TIMEOUT:
-            description = 'Tiempo de espera agotado';
-            break;
-        }
-        
-        toast({
-          title: '❌ Error de geolocalización',
-          description,
-          variant: 'destructive',
+        toast.error('❌ Error', {
+          description: 'No se pudo acceder a tu ubicación',
         });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
       }
     );
   };
 
+  // Load Google Maps
   useEffect(() => {
     loadGoogleMaps()
       .then(() => {
         setIsLoaded(true);
       })
-      .catch((err) => {
-        console.error('Error loading Google Maps:', err);
-        setLoadError(err.message);
+      .catch((error) => {
+        console.error('Error cargando Google Maps:', error);
+        setLoadError(error.message || 'Error cargando Google Maps');
       });
   }, []);
 
+  // Initialize Legacy Autocomplete
   useEffect(() => {
-    if (!isLoaded) return;
-
-    const initAutocomplete = async () => {
-      // Función auxiliar para manejar la selección de lugar
-      const handlePlaceSelection = (location: {
-        address: string;
-        municipality: string;
-        state: string;
-        colonia?: string;
-        lat?: number;
-        lng?: number;
-      }, inputValue: string) => {
-        if (!location.municipality || !location.state) {
-          toast({
-            title: 'ℹ️ Información incompleta',
-            description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
-          });
-        }
-
-        onPlaceSelectRef.current?.(location);
-        
-        // Solo mostrar toast de éxito si todo está completo
-        if (location.colonia && location.municipality && location.state) {
-          toast({ 
-            title: '📍 Ubicación seleccionada', 
-            description: `${location.colonia}, ${location.municipality}` 
-          });
-        }
-      };
-
-      try {
-        // 🆕 Intentar usar el nuevo Web Component oficial
-        const { PlaceAutocompleteElement } = await google.maps.importLibrary("places") as any;
-        
-        if (!webComponentContainerRef.current) {
-          // Si no hay contenedor, usar legacy
-          throw new Error('No container for web component');
-        }
-
-        const placeAutocomplete = new PlaceAutocompleteElement({
-          componentRestrictions: { country: 'mx' },
-          requestedLanguage: 'es',
-          requestedRegion: 'MX',
-        });
-        
-        // NO especificar types para obtener TODOS los resultados incluyendo colonias
-        // placeAutocomplete.types no se establece para máxima cobertura
-        
-        // Aplicar estilos personalizados y forzar ancho completo
-        placeAutocomplete.style.display = 'block';
-        placeAutocomplete.style.width = '100%';
-        placeAutocomplete.style.maxWidth = 'none';
-        placeAutocomplete.style.boxSizing = 'border-box';
-
-        const baseClasses = unstyled
-          ? 'h-12 w-full bg-transparent px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50'
-          : 'h-12 w-full rounded-full border-2 border-primary/60 bg-background px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50';
-        placeAutocomplete.className = showIcon ? `${baseClasses} pl-12` : baseClasses;
-        
-        if (placeholder) placeAutocomplete.placeholder = placeholder;
-        if (defaultValue) placeAutocomplete.value = defaultValue;
-        
-        // Listener para cuando el usuario selecciona un lugar
-        placeAutocomplete.addEventListener('gmp-placeselect', async ({ place }: any) => {
-          if (!place) return;
-          
-          // Obtener los campos necesarios
-          await place.fetchFields({
-            fields: ['addressComponents', 'formattedAddress', 'location']
-          });
-          
-          let municipality = '';
-          let state = '';
-          let colonia = '';
-          
-          place.addressComponents?.forEach((component: any) => {
-            if (component.types.includes('administrative_area_level_1')) {
-              state = component.longText;
-            }
-            // Priorizar administrative_area_level_2 (municipio), luego locality
-            if (component.types.includes('administrative_area_level_2')) {
-              municipality = component.longText;
-            } else if (!municipality && component.types.includes('locality')) {
-              municipality = component.longText;
-            }
-            // Extraer colonia
-            if (component.types.includes('sublocality_level_1') || 
-                component.types.includes('sublocality') ||
-                component.types.includes('neighborhood')) {
-              colonia = component.longText;
-            }
-          });
-          
-          const location = {
-            address: place.formattedAddress || '',
-            municipality,
-            state,
-            colonia,
-            lat: place.location?.lat(),
-            lng: place.location?.lng(),
-          };
-          
-          // ✅ Actualizar el valor visible del Web Component
-          const displayText = colonia 
-            ? `${colonia}, ${municipality}, ${state}` 
-            : place.formattedAddress || `${municipality}, ${state}`;
-          placeAutocomplete.value = displayText;
-          
-          handlePlaceSelection(location, displayText);
-        });
-        
-        // Listener para detectar cuando el usuario escribe (con debouncing)
-        if (onInputChange) {
-          const debouncedInputHandler = (e: Event) => {
-            if (debounceTimerRef.current) {
-              clearTimeout(debounceTimerRef.current);
-            }
-            debounceTimerRef.current = setTimeout(() => {
-              const target = e.target as HTMLInputElement;
-              onInputChange(target.value || '');
-            }, 300);
-          };
-          placeAutocomplete.addEventListener('input', debouncedInputHandler);
-        }
-
-        // Si el Web Component falla, usar fallback
-        placeAutocomplete.addEventListener('gmp-error', () => {
-          console.warn('PlaceAutocompleteElement error, usando fallback legacy');
-          // Remover el Web Component del DOM para evitar duplicados visuales
-          try { placeAutocomplete.remove(); } catch {}
-          if (webComponentContainerRef.current) {
-            try { webComponentContainerRef.current.innerHTML = ''; } catch {}
-          }
-          setUseWebComponent(false);
-          console.info('🔄 PlaceAutocomplete modo legacy activado (error en Web Component)');
-        });
-        
-        // Agregar Web Component al contenedor (sin reemplazar nada)
-        if (webComponentContainerRef.current) {
-          try { webComponentContainerRef.current.innerHTML = ''; } catch {}
-          webComponentContainerRef.current.appendChild(placeAutocomplete);
-        }
-        autocompleteRef.current = placeAutocomplete;
-        setUseWebComponent(true);
-        console.info('✅ PlaceAutocomplete Web Component activado');
-        
-      } catch (error) {
-        // ⚙️ FALLBACK al método legacy si el nuevo API falla
-        console.warn('PlaceAutocompleteElement no disponible, usando fallback legacy:', error);
-        // Asegurar que el contenedor quede vacío y sin el Web Component
-        if (webComponentContainerRef.current) {
-          try { webComponentContainerRef.current.innerHTML = ''; } catch {}
-        }
-        setUseWebComponent(false);
-        console.info('🔄 PlaceAutocomplete modo legacy activado (fallback)');
-      }
-    };
-
-    initAutocomplete();
-
-    return () => {
-      // Limpiar debounce timer
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      
-      if (autocompleteRef.current) {
-        if (autocompleteRef.current instanceof HTMLElement) {
-          // Cleanup para Web Component
-          autocompleteRef.current.remove();
-        } else {
-          // Cleanup para legacy Autocomplete
-          google.maps.event.clearInstanceListeners(autocompleteRef.current);
-        }
-        autocompleteRef.current = null;
-      }
-    };
-  }, [isLoaded, placeholder, defaultValue, showIcon, onInputChange]);
-
-  // Effect separado para aplicar legacy autocomplete cuando useWebComponent es false
-  useEffect(() => {
-    if (!isLoaded || useWebComponent !== false || !inputRef.current) return;
-
-    // Función auxiliar para manejar la selección de lugar
-    const handlePlaceSelection = (location: {
-      address: string;
-      municipality: string;
-      state: string;
-      colonia?: string;
-      lat?: number;
-      lng?: number;
-    }, inputValue: string) => {
-      if (!location.municipality || !location.state) {
-        toast({
-          title: 'ℹ️ Información incompleta',
-          description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
-        });
-      }
-
-      onPlaceSelectRef.current?.(location);
-      
-      // Solo mostrar toast de éxito si todo está completo
-      if (location.colonia && location.municipality && location.state) {
-        toast({ 
-          title: '📍 Ubicación seleccionada', 
-          description: `${location.colonia}, ${location.municipality}` 
-        });
-      }
-    };
-
-    if (onInputChange) {
-      const debouncedInputHandler = (e: Event) => {
-        if (debounceTimerRef.current) {
-          clearTimeout(debounceTimerRef.current);
-        }
-        debounceTimerRef.current = setTimeout(() => {
-          const target = e.target as HTMLInputElement;
-          onInputChange(target.value || '');
-        }, 300);
-      };
-      inputRef.current.addEventListener('input', debouncedInputHandler);
+    if (!isLoaded || !window.google?.maps || !inputRef.current) {
+      return;
     }
 
     const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
       componentRestrictions: { country: 'mx' },
       fields: ['address_components', 'formatted_address', 'geometry'],
-      // NO especificar types para obtener TODOS los resultados incluyendo colonias
     });
 
-    autocomplete.addListener('place_changed', () => {
+    // Set search bounds to Mexico
+    const bounds = new google.maps.LatLngBounds(
+      new google.maps.LatLng(14.5, -118.4), // Southwest
+      new google.maps.LatLng(32.7, -86.7)   // Northeast
+    );
+    autocomplete.setBounds(bounds);
+
+    // Input change listener (debounced)
+    let debounceTimer: NodeJS.Timeout;
+    const handleInput = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (onInputChange && inputRef.current) {
+          onInputChange(inputRef.current.value);
+        }
+      }, 300);
+    };
+    
+    const inputElement = inputRef.current;
+    inputElement.addEventListener('input', handleInput);
+
+    // Place selection listener
+    const placeChangedListener = autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
 
       if (!place || !place.address_components) {
-        toast({
-          title: '⚠️ Lugar incompleto',
-          description: 'Por favor selecciona una dirección de la lista de sugerencias',
-          variant: 'destructive',
+        toast.error('❌ Error', {
+          description: 'No se pudo obtener la información de la ubicación',
         });
         return;
       }
 
+      // Extract municipality, state and colonia from address components
       let municipality = '';
       let state = '';
       let colonia = '';
 
-      place.address_components.forEach((component) => {
-        if (component.types.includes('administrative_area_level_1')) {
+      for (const component of place.address_components) {
+        const types = component.types;
+
+        // Municipality/City
+        if (types.includes('locality') || types.includes('administrative_area_level_2')) {
+          municipality = component.long_name;
+        }
+
+        // State
+        if (types.includes('administrative_area_level_1')) {
           state = component.long_name;
         }
-        // Priorizar administrative_area_level_2 (municipio), luego locality
-        if (component.types.includes('administrative_area_level_2')) {
-          municipality = component.long_name;
-        } else if (!municipality && component.types.includes('locality')) {
-          municipality = component.long_name;
-        }
-        // Extraer colonia
-        if (component.types.includes('sublocality_level_1') || 
-            component.types.includes('sublocality') ||
-            component.types.includes('neighborhood')) {
+
+        // Colonia/Neighborhood
+        if (types.includes('sublocality_level_1') || types.includes('neighborhood')) {
           colonia = component.long_name;
         }
-      });
+      }
+
+      // If no municipality found in locality, try sublocality
+      if (!municipality) {
+        for (const component of place.address_components) {
+          if (component.types.includes('sublocality') || component.types.includes('sublocality_level_1')) {
+            municipality = component.long_name;
+            break;
+          }
+        }
+      }
+
+      // Last resort: use postal_town
+      if (!municipality) {
+        for (const component of place.address_components) {
+          if (component.types.includes('postal_town')) {
+            municipality = component.long_name;
+            break;
+          }
+        }
+      }
 
       const location = {
         address: place.formatted_address || '',
-        municipality,
-        state,
-        colonia,
+        municipality: municipality || 'Sin municipio',
+        state: state || 'Sin estado',
+        colonia: colonia || undefined,
         lat: place.geometry?.location?.lat(),
         lng: place.geometry?.location?.lng(),
       };
 
-      // ✅ Actualizar el valor visible del input legacy
+      // ✅ Update the visible value of the input
       const displayText = colonia 
         ? `${colonia}, ${municipality}, ${state}` 
         : place.formatted_address || `${municipality}, ${state}`;
@@ -481,80 +271,99 @@ export const PlaceAutocomplete = ({
 
     autocompleteRef.current = autocomplete;
 
+    // Cleanup listeners on unmount
     return () => {
-      if (autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
-        autocompleteRef.current = null;
+      clearTimeout(debounceTimer);
+      inputElement.removeEventListener('input', handleInput);
+      if (placeChangedListener) {
+        google.maps.event.removeListener(placeChangedListener);
       }
     };
-  }, [isLoaded, useWebComponent, onInputChange]);
+  }, [isLoaded, onInputChange, handlePlaceSelection]);
 
+  // Error state
   if (loadError) {
     return (
-      <div className="space-y-2">
-        <Label htmlFor={id}>{label}</Label>
+      <div className="space-y-4">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Google Maps no disponible</AlertTitle>
+          <AlertTitle>Error cargando Google Maps</AlertTitle>
           <AlertDescription>
-            Usa entrada manual. Error: {loadError}
+            {loadError}. Verifica tu conexión a internet y recarga la página.
           </AlertDescription>
         </Alert>
-        <input
-          id={id}
-          type="text"
-          placeholder="Calle, número, colonia, municipio, estado"
-          defaultValue={defaultValue}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        />
+        <div>
+          <Label htmlFor="manual-address">Dirección (manual)</Label>
+          <input
+            id="manual-address"
+            type="text"
+            placeholder="Ingresa la dirección manualmente"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+        </div>
       </div>
     );
   }
 
-  return (
-      <div className={label ? "space-y-2" : ""}>
+  // Loading state
+  if (!isLoaded) {
+    return (
+      <div className="space-y-2">
         {label && <Label htmlFor={id}>{label}</Label>}
-        <div className="relative w-full">
-        {showIcon && <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10 pointer-events-none" />}
-        
-        {/* Contenedor para Web Component - siempre presente, visibilidad controlada por clase */}
-        <div ref={webComponentContainerRef} className={useWebComponent === true ? "w-full" : "hidden"} />
-        
-        {/* Input normal para legacy autocomplete - siempre presente, visibilidad controlada por clase */}
+        <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <span className="text-sm text-muted-foreground">Cargando mapa...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Main render
+  return (
+    <div className="space-y-2">
+      {label && <Label htmlFor={id}>{label}</Label>}
+      
+      <div className={`relative ${className}`}>
+        {showIcon && (
+          <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        )}
+
         <input
           ref={inputRef}
-          id={id}
           type="text"
+          id={id}
           placeholder={placeholder}
           defaultValue={defaultValue}
-          className={(() => {
-            const base = unstyled
-              ? 'h-12 w-full bg-transparent px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50'
-              : 'h-12 w-full rounded-full border-2 border-primary/60 bg-background px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50';
-            const withIcon = showIcon ? `${base} pl-12` : base;
-            return useWebComponent === true ? `${withIcon} hidden` : withIcon;
-          })()}
+          className={
+            unstyled
+              ? 'w-full border-none bg-transparent outline-none'
+              : `flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                showIcon ? 'pl-9' : ''
+              }`
+          }
         />
 
-        {/* Botón de Geolocalización */}
-        {showMyLocationButton && isLoaded && (
+        {showMyLocationButton && (
           <Button
             type="button"
             variant="ghost"
-            size="icon"
-            className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 z-10 hover:bg-primary/10"
+            size="sm"
             onClick={handleGetMyLocation}
             disabled={isGettingLocation}
-            title="Usar mi ubicación"
+            className="absolute right-1 top-1/2 h-8 -translate-y-1/2"
           >
             {isGettingLocation ? (
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Navigation className="h-4 w-4 text-muted-foreground hover:text-primary" />
+              <Navigation className="h-4 w-4" />
             )}
           </Button>
         )}
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        Empieza a escribir para ver sugerencias de ubicación en México
+      </p>
     </div>
   );
 };
