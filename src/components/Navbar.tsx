@@ -56,12 +56,16 @@ const Navbar = () => {
   const handleComprarClick = () => {
     const params = new URLSearchParams(searchParams);
     params.set("listingType", "venta");
+    params.delete("lat");
+    params.delete("lng");
     navigate(`/buscar?${params.toString()}`, { replace: true });
   };
 
   const handleRentarClick = () => {
     const params = new URLSearchParams(searchParams);
     params.set("listingType", "renta");
+    params.delete("lat");
+    params.delete("lng");
     navigate(`/buscar?${params.toString()}`, { replace: true });
   };
 
