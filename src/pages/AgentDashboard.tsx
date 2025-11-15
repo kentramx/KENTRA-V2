@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Plus, RefreshCcw, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import PropertyForm from '@/components/PropertyForm';
+import { PropertyFormWizard } from '@/components/property-form/PropertyFormWizard';
 import AgentPropertyList from '@/components/AgentPropertyList';
 import { AgentAnalytics } from '@/components/AgentAnalytics';
 import { DynamicBreadcrumbs } from '@/components/DynamicBreadcrumbs';
@@ -623,7 +623,7 @@ const AgentDashboard = () => {
               </TabsContent>
 
               <TabsContent value="form" className="mt-6">
-                <PropertyForm
+                <PropertyFormWizard
                   property={editingProperty}
                   onSuccess={editingProperty ? handlePropertyUpdated : handlePropertyCreated}
                   onCancel={() => {

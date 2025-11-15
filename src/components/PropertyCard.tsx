@@ -15,6 +15,11 @@ interface PropertyCardProps {
   price: number;
   type: string;
   listingType?: string;
+  for_sale?: boolean;
+  for_rent?: boolean;
+  sale_price?: number | null;
+  rent_price?: number | null;
+  currency?: string;
   address: string;
   colonia?: string;
   municipality: string;
@@ -39,6 +44,11 @@ const PropertyCard = ({
   price,
   type,
   listingType = 'venta',
+  for_sale = false,
+  for_rent = false,
+  sale_price,
+  rent_price,
+  currency = 'MXN',
   address,
   colonia,
   municipality,
@@ -60,12 +70,41 @@ const PropertyCard = ({
   const { trackGA4Event } = useTracking();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number, curr: string = currency) => {
     return new Intl.NumberFormat("es-MX", {
       style: "currency",
-      currency: "MXN",
+      currency: curr,
       minimumFractionDigits: 0,
     }).format(price);
+  };
+
+  const getListingBadge = () => {
+    if (for_sale && for_rent) return "Venta y Renta";
+    if (for_sale) return "En Venta";
+    if (for_rent) return "En Renta";
+    return listingType === 'renta' ? "En Renta" : "En Venta";
+  };
+
+  const getDisplayPrice = () => {
+    if (for_sale && for_rent) {
+      return (
+        <div className="space-y-1">
+          <div className="text-2xl font-bold text-primary">
+            {formatPrice(sale_price || price, currency)}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Renta: {formatPrice(rent_price || 0, currency)}/mes
+          </div>
+        </div>
+      );
+    }
+    if (for_sale) {
+      return <div className="text-2xl font-bold text-primary">{formatPrice(sale_price || price, currency)}</div>;
+    }
+    if (for_rent) {
+      return <div className="text-2xl font-bold text-primary">{formatPrice(rent_price || price, currency)}/mes</div>;
+    }
+    return <div className="text-2xl font-bold text-primary">{formatPrice(price, currency)}</div>;
   };
 
   const getTypeLabel = () => {
@@ -169,28 +208,24 @@ const PropertyCard = ({
             </>
           )}
           
-          {/* Badge de Destacada */}
-          {isFeatured && (
-            <Badge 
-              className="absolute left-3 top-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg z-20"
-            >
-              <Star className="h-3 w-3 mr-1 fill-white" />
-              Destacada
-            </Badge>
-          )}
-          
-          {/* Badge de Nuevo */}
-          {!isFeatured && isNew() && (
-            <Badge 
-              className="absolute left-3 top-3 bg-accent text-accent-foreground border-0 shadow-lg z-20"
-            >
-              Nuevo
-            </Badge>
-          )}
+          {/* Badge de Destacada y Nuevo */}
+          <div className="absolute top-2 left-2 flex flex-wrap gap-2 z-10">
+            {isFeatured && (
+              <Badge variant="default" className="bg-yellow-500 hover:bg-yellow-600">
+                <Star className="w-3 h-3 mr-1 fill-current" />
+                Destacada
+              </Badge>
+            )}
+            {isNew() && (
+              <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                Nuevo
+              </Badge>
+            )}
+          </div>
           
           {/* Tipo de operación */}
           <Badge className="absolute right-3 bottom-3 bg-background/90 text-foreground z-20">
-            {listingType === 'renta' ? 'Renta' : 'Venta'}
+            {getListingBadge()}
           </Badge>
           
           {/* Indicadores de galería */}
@@ -233,9 +268,7 @@ const PropertyCard = ({
         <Link to={`/propiedad/${id}`} className="block" onClick={handleCardClick}>
           {/* Precio */}
           <div className="mb-3">
-            <p className="text-2xl font-bold text-foreground">
-              {formatPrice(price)}
-            </p>
+            {getDisplayPrice()}
           </div>
           
           {/* Características con iconos claros */}

@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PriceInput } from '../shared/PriceInput';
 import { PropertyTypeSelector } from '../shared/PropertyTypeSelector';
 import { PropertyFormData } from '@/hooks/useFormWizard';
@@ -21,6 +22,32 @@ export const Step1BasicInfo = ({ formData, updateFormData }: Step1BasicInfoProps
           Comencemos con los detalles principales de tu propiedad
         </p>
       </div>
+
+      {/* Selector de Moneda */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-2">
+            <Label className="text-base font-semibold">
+              Moneda
+            </Label>
+            <Select 
+              value={formData.currency} 
+              onValueChange={(value: 'MXN' | 'USD') => updateFormData({ currency: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MXN">MXN - Pesos Mexicanos</SelectItem>
+                <SelectItem value="USD">USD - Dólares Americanos</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Todos los precios se mostrarán en esta moneda
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Opciones de Listado */}
       <Card>
@@ -97,13 +124,10 @@ export const Step1BasicInfo = ({ formData, updateFormData }: Step1BasicInfoProps
           <Card>
             <CardContent className="pt-6">
               <PriceInput
-                label="Precio de Venta"
+                label={`Precio de Venta (${formData.currency})`}
                 value={formData.sale_price}
-                currency={formData.currency}
                 onChange={(value) => updateFormData({ sale_price: value })}
-                onCurrencyChange={(currency) => updateFormData({ currency })}
                 required
-                showConversion
                 placeholder="Ej: 2,500,000"
               />
             </CardContent>
@@ -114,13 +138,10 @@ export const Step1BasicInfo = ({ formData, updateFormData }: Step1BasicInfoProps
           <Card>
             <CardContent className="pt-6">
               <PriceInput
-                label="Precio de Renta Mensual"
+                label={`Precio de Renta Mensual (${formData.currency})`}
                 value={formData.rent_price}
-                currency={formData.currency}
                 onChange={(value) => updateFormData({ rent_price: value })}
-                onCurrencyChange={(currency) => updateFormData({ currency })}
                 required
-                showConversion
                 placeholder="Ej: 15,000"
               />
             </CardContent>
