@@ -99,7 +99,7 @@ export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
         return true;
       
       case 2: // Ubicación
-        return !!(formData.state && formData.municipality && formData.address && formData.colonia);
+        return !!(formData.state && formData.municipality && formData.address);
       
       case 3: // Características
         // Validar según tipo de propiedad

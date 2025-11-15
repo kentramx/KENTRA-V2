@@ -14,7 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, X, Plus, Trash2, Video, AlertTriangle, FileText } from 'lucide-react';
 import { z } from 'zod';
 import { LocationSearch } from '@/components/LocationSearch';
-import { ColoniaAutocomplete } from '@/components/ColoniaAutocomplete';
 import { usePropertyTitleValidation } from '@/hooks/usePropertyTitleValidation';
 
 const propertySchema = z.object({
@@ -23,7 +22,7 @@ const propertySchema = z.object({
   type: z.enum(['casa', 'departamento', 'terreno', 'oficina', 'local', 'bodega', 'edificio', 'rancho']),
   listing_type: z.enum(['venta', 'renta']),
   address: z.string().trim().min(5, 'La dirección debe tener al menos 5 caracteres').max(300, 'La dirección no puede exceder 300 caracteres'),
-  colonia: z.string().trim().min(2, 'La colonia es requerida').max(100, 'La colonia no puede exceder 100 caracteres'),
+  colonia: z.string().trim().max(100, 'La colonia no puede exceder 100 caracteres').optional(),
   municipality: z.string().trim().min(2, 'El municipio es requerido').max(100, 'El municipio no puede exceder 100 caracteres'),
   state: z.string().trim().min(2, 'El estado es requerido').max(100, 'El estado no puede exceder 100 caracteres'),
   bedrooms: z.number().optional(),
@@ -519,74 +518,9 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
           />
         </div>
 
-        <div className="space-y-2 md:col-span-2">
-          <ColoniaAutocomplete
-            id="colonia"
-            label={
-              <span className="flex items-center justify-between">
-                <span>Colonia*</span>
-                <span className="text-xs text-muted-foreground font-normal">
-                  Determina el título de tu propiedad
-                </span>
-              </span>
-            }
-            defaultValue={formData.colonia}
-            placeholder={(() => {
-              const coloniaExamples: Record<string, string> = {
-                'Jalisco': 'Ej: Providencia, Chapalita, Americana',
-                'Guanajuato': 'Ej: Jardines de Versalles, Centro, Campestre',
-                'Nuevo León': 'Ej: San Pedro, Cumbres, Valle Oriente',
-                'Ciudad de México': 'Ej: Polanco, Roma, Condesa',
-                'Querétaro': 'Ej: Juriquilla, Centro, Zibatá',
-                'Puebla': 'Ej: Angelópolis, La Paz, Centro',
-                'Quintana Roo': 'Ej: Aldea Zama, Centro, Puerto Cancún',
-                'Yucatán': 'Ej: García Ginerés, Montes de Amé, Centro',
-                'Estado de México': 'Ej: Interlomas, Metepec Centro, Lomas Verdes',
-                'Baja California': 'Ej: Zona Río, Playas, Centro'
-              };
-              return coloniaExamples[formData.state] || 'Escribe para buscar colonia...';
-            })()}
-            state={formData.state}
-            municipality={formData.municipality}
-            onColoniaSelect={(colonia) => setFormData({ ...formData, colonia })}
-          />
-          <p className="text-xs text-muted-foreground">
-            La colonia se usa para generar el título: "{formData.type ? 
-              `${({
-                casa: 'Casa',
-                departamento: 'Departamento',
-                terreno: 'Terreno',
-                oficina: 'Oficina',
-                local: 'Local Comercial',
-                bodega: 'Bodega',
-                edificio: 'Edificio',
-                rancho: 'Rancho'
-              }[formData.type] || 'Propiedad')} en [Tu Colonia]` 
-              : 'Tipo en [Tu Colonia]'}"
-          </p>
-          {(formData.type && (formData.colonia || formData.municipality)) && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border/50 animate-fade-in">
-              <FileText className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-              <div className="space-y-1 flex-1 min-w-0">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Título generado automáticamente:
-                </p>
-                <p className="text-sm font-semibold text-foreground truncate">
-                  {autoTitle}
-                </p>
-                {!formData.colonia && formData.municipality && (
-                  <p className="text-xs text-amber-600 dark:text-amber-500 flex items-center gap-1">
-                    <span className="text-lg leading-none">⚠️</span>
-                    Agrega una colonia para un título más específico y mejor posicionamiento
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* Warning de título duplicado */}
-          {titleValidation.isDuplicate && !property && (
-            <Alert variant="destructive" className="md:col-span-2">
+        {/* Warning de título duplicado */}
+        {titleValidation.isDuplicate && !property && (
+          <Alert variant="destructive" className="md:col-span-2">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>⚠️ Posible propiedad duplicada detectada</AlertTitle>
               <AlertDescription>
@@ -609,7 +543,6 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
               </AlertDescription>
             </Alert>
           )}
-        </div>
 
         {showResidentialFields && (
           <>

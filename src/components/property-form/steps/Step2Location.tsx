@@ -1,9 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { LocationSearch } from '@/components/LocationSearch';
-import { ColoniaAutocomplete } from '@/components/ColoniaAutocomplete';
 import { PropertyFormData } from '@/hooks/useFormWizard';
-import { MapPin } from 'lucide-react';
 
 interface Step2LocationProps {
   formData: PropertyFormData;
@@ -36,23 +33,6 @@ export const Step2Location = ({ formData, updateFormData }: Step2LocationProps) 
             }}
             defaultValue={formData.address}
           />
-
-          {/* Colonia/Neighborhood */}
-          <div className="space-y-2">
-            <Label>
-              Colonia
-              <span className="text-destructive">*</span>
-            </Label>
-            <ColoniaAutocomplete
-              state={formData.state}
-              municipality={formData.municipality}
-              onColoniaSelect={(colonia) => updateFormData({ colonia })}
-              defaultValue={formData.colonia}
-            />
-            <p className="text-xs text-muted-foreground">
-              Si no encuentras tu colonia, puedes escribirla manualmente
-            </p>
-          </div>
 
           {/* Vista previa de ubicación */}
           {formData.state && formData.municipality && (
