@@ -58,9 +58,10 @@ export const Step4DescriptionImages = ({
   };
 
   const charCount = formData.description.length;
-  const minChars = 20;
+  const wordCount = formData.description.trim().split(/\s+/).filter(word => word.length > 0).length;
+  const minWords = 50;
   const maxChars = 2000;
-  const isValidLength = charCount >= minChars && charCount <= maxChars;
+  const isValidLength = wordCount >= minWords && charCount <= maxChars;
 
   return (
     <div className="space-y-6">
@@ -88,19 +89,19 @@ export const Step4DescriptionImages = ({
               className="resize-none"
             />
             <div className="flex items-center justify-between text-sm">
-              <p className={charCount < minChars ? 'text-destructive' : 'text-muted-foreground'}>
-                Mínimo {minChars} caracteres
+              <p className={wordCount < minWords ? 'text-destructive' : 'text-muted-foreground'}>
+                Mínimo {minWords} palabras ({wordCount} actual)
               </p>
               <p className={charCount > maxChars ? 'text-destructive' : 'text-muted-foreground'}>
-                {charCount} / {maxChars}
+                {charCount} / {maxChars} caracteres
               </p>
             </div>
           </div>
 
           {!isValidLength && charCount > 0 && (
             <div className="bg-muted/50 rounded-lg p-3 text-sm">
-              {charCount < minChars && (
-                <p className="text-destructive">Faltan {minChars - charCount} caracteres</p>
+              {wordCount < minWords && (
+                <p className="text-destructive">Faltan {minWords - wordCount} palabras para alcanzar el mínimo</p>
               )}
               {charCount > maxChars && (
                 <p className="text-destructive">Excedes por {charCount - maxChars} caracteres</p>
