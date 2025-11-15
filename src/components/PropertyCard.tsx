@@ -194,7 +194,7 @@ const PropertyCard = ({
     : { to: `/propiedad/${id}`, onClick: handleCardClick, className: cn("group overflow-hidden transition-all hover:shadow-lg", isHovered && 'ring-2 ring-primary shadow-xl scale-[1.02]') };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="h-full flex flex-col overflow-hidden">
       {/* @ts-ignore */}
       <Wrapper {...wrapperProps}>
         <div className="relative aspect-[4/3] overflow-hidden">
@@ -285,7 +285,7 @@ const PropertyCard = ({
       {/* @ts-ignore */}
       </Wrapper>
 
-      <CardContent className="p-5 space-y-3">
+      <CardContent className="flex-1 p-5 space-y-3">
         {/* @ts-ignore */}
         <Wrapper {...wrapperProps}>
           {/* Precio */}
