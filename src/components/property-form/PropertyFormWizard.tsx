@@ -11,8 +11,10 @@ import { Step5Amenities } from './steps/Step5Amenities';
 import { Step6Review } from './steps/Step6Review';
 import { useFormWizard } from '@/hooks/useFormWizard';
 import { useCreateProperty, useUpdateProperty } from '@/hooks/usePropertyMutations';
+import { useImageUpload } from '@/hooks/useImageUpload';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Save } from 'lucide-react';
 
 interface PropertyFormWizardProps {
@@ -62,6 +64,7 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
 
   const createPropertyMutation = useCreateProperty();
   const updatePropertyMutation = useUpdateProperty();
+  const { uploadImages } = useImageUpload();
 
   const handleSaveDraft = () => {
     toast({
@@ -181,14 +184,48 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
     };
 
     try {
+      let createdProperty;
+      
       if (property) {
-        await updatePropertyMutation.mutateAsync({
+        // Actualizar propiedad existente
+        createdProperty = await updatePropertyMutation.mutateAsync({
           id: property.id,
           updates: propertyData,
         });
       } else {
-        await createPropertyMutation.mutateAsync(propertyData);
+        // Crear nueva propiedad
+        createdProperty = await createPropertyMutation.mutateAsync(propertyData);
       }
+
+      // Si hay nuevas imágenes, subirlas y guardarlas en la tabla images
+      if (imageFiles.length > 0 && createdProperty) {
+        console.log('Uploading images to storage...');
+        const uploadedUrls = await uploadImages(imageFiles, createdProperty.id);
+        
+        console.log('Saving image records to database:', uploadedUrls.length);
+        // Insertar registros en la tabla images
+        const imageRecords = uploadedUrls.map((url, index) => ({
+          property_id: createdProperty.id,
+          url: url,
+          position: index,
+        }));
+
+        const { error: imagesError } = await supabase
+          .from('images')
+          .insert(imageRecords);
+
+        if (imagesError) {
+          console.error('Error saving images:', imagesError);
+          toast({
+            title: '⚠️ Advertencia',
+            description: 'La propiedad se creó pero hubo un error al guardar las imágenes',
+            variant: 'destructive',
+          });
+        } else {
+          console.log('Images saved successfully');
+        }
+      }
+
       clearDraft();
       onSuccess();
     } catch (error) {
