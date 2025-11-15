@@ -20,6 +20,12 @@ export const PropertyImageGallery = ({ images, title, type, propertyId, price }:
   const displayImages = images.length > 0 ? images : [{ url: propertyPlaceholder }];
   const { trackGA4Event } = useTracking();
 
+  const getImageUrl = (url: string) => {
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/src/assets/')) return propertyPlaceholder;
+    return url;
+  };
+
   const openLightbox = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -62,7 +68,7 @@ export const PropertyImageGallery = ({ images, title, type, propertyId, price }:
         {/* Imagen actual */}
         <div onClick={openLightbox} className="h-full w-full">
           <img
-            src={displayImages[currentImageIndex].url}
+            src={getImageUrl(displayImages[currentImageIndex].url)}
             alt={`${title} - Imagen ${currentImageIndex + 1}`}
             loading="lazy"
             decoding="async"

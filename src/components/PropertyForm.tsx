@@ -212,7 +212,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
   const removeExistingImage = async (imageId: string, url: string) => {
     try {
       // Delete from storage
-      const fileName = url.split('/').pop();
+      const fileName = url.split('/property-images/')[1];
       if (fileName) {
         await supabase.storage.from('property-images').remove([fileName]);
       }
@@ -337,7 +337,10 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
           const { error: uploadError } = await supabase.storage
             .from('property-images')
-            .upload(fileName, file);
+            .upload(fileName, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
 
           if (uploadError) throw uploadError;
 

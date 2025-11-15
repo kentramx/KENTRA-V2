@@ -110,7 +110,15 @@ const PropertyCard = ({
     });
   };
 
-  const displayImages = images && images.length > 0 ? images : [{ url: imageUrl || propertyPlaceholder, position: 0 }];
+  const displayImages = images && images.length > 0 
+    ? images 
+    : [{ url: imageUrl || propertyPlaceholder, position: 0 }];
+  
+  const getImageUrl = (url: string) => {
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/src/assets/')) return propertyPlaceholder;
+    return url;
+  };
 
   const handlePrevImage = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -132,7 +140,7 @@ const PropertyCard = ({
       <Link to={`/propiedad/${id}`} onClick={handleCardClick}>
         <div className="relative aspect-[4/3] overflow-hidden">
           <img
-            src={displayImages[currentImageIndex]?.url || propertyPlaceholder}
+            src={getImageUrl(displayImages[currentImageIndex]?.url || propertyPlaceholder)}
             alt={`${bedrooms} bd, ${bathrooms} ba - ${getTypeLabel()}`}
             loading="lazy"
             decoding="async"
