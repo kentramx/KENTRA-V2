@@ -27,7 +27,7 @@ export const InteractiveMapSearch = ({
 }: InteractiveMapSearchProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,14 +44,12 @@ export const InteractiveMapSearch = ({
 
         const { Map } = await google.maps.importLibrary('maps') as google.maps.MapsLibrary;
         const { Geocoder } = await google.maps.importLibrary('geocoding') as google.maps.GeocodingLibrary;
-        const { AdvancedMarkerElement } = await google.maps.importLibrary('marker') as google.maps.MarkerLibrary;
 
         const map = new Map(mapRef.current, {
           center: defaultCenter,
           zoom: defaultZoom,
           clickableIcons: false,
           gestureHandling: 'greedy',
-          mapId: 'KENTRA_INTERACTIVE_MAP',
         });
 
         mapInstanceRef.current = map;
@@ -66,10 +64,10 @@ export const InteractiveMapSearch = ({
 
           // Actualizar marcador
           if (markerRef.current) {
-            markerRef.current.position = { lat, lng };
+            markerRef.current.setPosition({ lat, lng });
           } else {
-            // Crear nuevo marcador moderno
-            markerRef.current = new AdvancedMarkerElement({
+            // Crear nuevo marcador
+            markerRef.current = new google.maps.Marker({
               map,
               position: { lat, lng },
               title: 'Ubicación seleccionada',
