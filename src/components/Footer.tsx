@@ -76,9 +76,9 @@ export const Footer = () => {
 
           {/* Newsletter */}
           <div>
-            <h4 className="font-semibold mb-4">Mantente Informado</h4>
+            <h4 className="font-semibold mb-4">Newsletter</h4>
             <p className="text-sm text-muted-foreground mb-4">
-              Recibe las mejores ofertas y novedades del mercado inmobiliario.
+              Recibe consejos, tendencias y las mejores propiedades en tu inbox.
             </p>
             <NewsletterForm />
           </div>

@@ -738,11 +738,10 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="mb-4 text-3xl font-bold">
-              Recibe Alertas de Nuevas Propiedades
+              Suscríbete a Nuestro Newsletter
             </h2>
             <p className="mb-8 text-lg text-muted-foreground">
-              Suscríbete y te notificaremos cuando haya propiedades que coincidan con
-              tus preferencias
+              Recibe las últimas novedades del mercado inmobiliario, consejos y propiedades destacadas directamente en tu email
             </p>
             <div className="flex justify-center">
               <NewsletterForm />
