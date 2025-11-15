@@ -1,20 +1,8 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Mail } from "lucide-react";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -23,24 +11,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Mail, Bell } from "lucide-react";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 
+// Esquema de validación simplificado para newsletter general
 const newsletterSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .email({ message: "Correo electrónico inválido" })
-    .max(255, { message: "El correo es demasiado largo" }),
-  name: z
-    .string()
-    .trim()
-    .max(100, { message: "El nombre es demasiado largo" })
-    .optional(),
-  listingType: z.enum(["venta", "renta", "ambos"]),
-  propertyType: z.string().optional(),
-  state: z.string().optional(),
-  priceMin: z.string().optional(),
-  priceMax: z.string().optional(),
+  email: z.string().email({ message: "Email inválido" }),
+  name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres" }).optional(),
 });
 
 type NewsletterFormData = z.infer<typeof newsletterSchema>;
@@ -51,88 +39,67 @@ export const NewsletterForm = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-    reset,
-  } = useForm<NewsletterFormData>({
+  const form = useForm<NewsletterFormData>({
     resolver: zodResolver(newsletterSchema),
     defaultValues: {
       email: user?.email || "",
-      listingType: "ambos",
+      name: "",
     },
   });
 
-  const listingType = watch("listingType");
-
   const onSubmit = async (data: NewsletterFormData) => {
-    setIsSubmitting(true);
-
     try {
-      const preferences = {
-        listingType: data.listingType,
-        propertyType: data.propertyType || null,
-        state: data.state || null,
-        priceMin: data.priceMin ? Number(data.priceMin) : null,
-        priceMax: data.priceMax ? Number(data.priceMax) : null,
+      setIsSubmitting(true);
+      
+      const subscriptionData = {
+        email: data.email,
+        name: data.name || null,
+        user_id: user?.id || null,
+        preferences: null, // Newsletter general sin preferencias específicas
+        is_active: true,
       };
 
-      // Check if subscription already exists
+      // Verificar si ya existe una suscripción
       const { data: existing } = await supabase
         .from("newsletter_subscriptions")
         .select("id")
         .eq("email", data.email)
-        .single();
+        .maybeSingle();
 
       if (existing) {
-        // Update existing subscription
+        // Actualizar suscripción existente
         const { error } = await supabase
           .from("newsletter_subscriptions")
-          .update({
-            name: data.name || null,
-            preferences,
-            is_active: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("email", data.email);
+          .update(subscriptionData)
+          .eq("id", existing.id);
 
         if (error) throw error;
 
         toast({
           title: "¡Suscripción actualizada!",
-          description: "Tus preferencias han sido actualizadas correctamente.",
+          description: "Seguirás recibiendo nuestro newsletter con las últimas novedades.",
         });
       } else {
-        // Create new subscription
+        // Crear nueva suscripción
         const { error } = await supabase
           .from("newsletter_subscriptions")
-          .insert({
-            user_id: user?.id || null,
-            email: data.email,
-            name: data.name || null,
-            preferences,
-            is_active: true,
-          });
+          .insert(subscriptionData);
 
         if (error) throw error;
 
         toast({
-          title: "¡Suscripción exitosa!",
-          description:
-            "Te notificaremos cuando haya propiedades que coincidan con tus preferencias.",
+          title: "¡Bienvenido!",
+          description: "Te has suscrito exitosamente a nuestro newsletter.",
         });
       }
 
-      reset();
       setIsOpen(false);
-    } catch (error: any) {
-      console.error("Error subscribing to newsletter:", error);
+      form.reset();
+    } catch (error) {
+      console.error("Error al suscribirse:", error);
       toast({
         title: "Error",
-        description: "No se pudo completar la suscripción. Intenta de nuevo.",
+        description: "Hubo un problema al procesar tu suscripción. Intenta nuevamente.",
         variant: "destructive",
       });
     } finally {
@@ -143,155 +110,63 @@ export const NewsletterForm = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="lg" className="gap-2">
-          <Bell className="h-5 w-5" />
-          Recibe Alertas de Propiedades
+        <Button variant="outline" className="gap-2">
+          <Mail className="h-4 w-4" />
+          Suscríbete al Newsletter
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Mail className="h-6 w-6 text-primary" />
-            Suscríbete al Newsletter
-          </DialogTitle>
+          <DialogTitle>Suscríbete a Nuestro Newsletter</DialogTitle>
           <DialogDescription>
-            Recibe notificaciones cuando haya nuevas propiedades que coincidan con tus
-            preferencias
+            Recibe las últimas novedades del mercado inmobiliario directamente en tu email
           </DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4">
-          {/* Email */}
-          <div className="space-y-2">
-            <Label htmlFor="email">
-              Correo Electrónico <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="tu@email.com"
-              {...register("email")}
-              disabled={!!user?.email}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="tu@email.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
-          </div>
-
-          {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Nombre (opcional)</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Tu nombre"
-              {...register("name")}
+            
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre (opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Tu nombre" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
-            )}
-          </div>
 
-          {/* Preferences Section */}
-          <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-4">
-            <h3 className="font-semibold text-lg">Preferencias de Búsqueda</h3>
-
-            {/* Listing Type */}
-            <div className="space-y-2">
-              <Label htmlFor="listingType">
-                Tipo de Operación <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={listingType}
-                onValueChange={(value) =>
-                  setValue("listingType", value as "venta" | "renta" | "ambos")
-                }
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsOpen(false)}
+                className="flex-1"
               >
-                <SelectTrigger id="listingType">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ambos">Venta y Renta</SelectItem>
-                  <SelectItem value="venta">Solo Venta</SelectItem>
-                  <SelectItem value="renta">Solo Renta</SelectItem>
-                </SelectContent>
-              </Select>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="flex-1">
+                {isSubmitting ? "Suscribiendo..." : "Suscribirme"}
+              </Button>
             </div>
-
-            {/* Property Type */}
-            <div className="space-y-2">
-              <Label htmlFor="propertyType">Tipo de Propiedad (opcional)</Label>
-              <Select
-                onValueChange={(value) =>
-                  setValue("propertyType", value === "all" ? undefined : value)
-                }
-              >
-                <SelectTrigger id="propertyType">
-                  <SelectValue placeholder="Todos los tipos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los tipos</SelectItem>
-                  <SelectItem value="casa">Casa</SelectItem>
-                  <SelectItem value="departamento">Departamento</SelectItem>
-                  <SelectItem value="terreno">Terreno</SelectItem>
-                  <SelectItem value="oficina">Oficina</SelectItem>
-                  <SelectItem value="local">Local Comercial</SelectItem>
-                  <SelectItem value="bodega">Bodega</SelectItem>
-                  <SelectItem value="edificio">Edificio</SelectItem>
-                  <SelectItem value="rancho">Rancho</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* State */}
-            <div className="space-y-2">
-              <Label htmlFor="state">Estado (opcional)</Label>
-              <Input
-                id="state"
-                type="text"
-                placeholder="Ej: Jalisco"
-                {...register("state")}
-              />
-            </div>
-
-            {/* Price Range */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="priceMin">Precio Mínimo (opcional)</Label>
-                <Input
-                  id="priceMin"
-                  type="number"
-                  placeholder="$0"
-                  {...register("priceMin")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="priceMax">Precio Máximo (opcional)</Label>
-                <Input
-                  id="priceMax"
-                  type="number"
-                  placeholder="Sin límite"
-                  {...register("priceMax")}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex gap-3 justify-end pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsOpen(false)}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Suscribiendo..." : "Suscribirse"}
-            </Button>
-          </div>
-        </form>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
