@@ -9,7 +9,8 @@ const corsHeaders = {
 };
 
 interface NotificationRequest {
-  agentEmail: string;
+  agentEmail?: string;
+  agentId?: string;
   agentName: string;
   propertyTitle: string;
   action: 'approved' | 'rejected';
@@ -26,13 +27,48 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     console.log("📧 Received moderation notification request");
-    const { agentEmail, agentName, propertyTitle, action, rejectionReason }: NotificationRequest = await req.json();
-    
-    console.log(`📤 Sending ${action} notification to ${agentEmail} for property: ${propertyTitle}`);
+    const { agentEmail, agentId, agentName, propertyTitle, action, rejectionReason }: NotificationRequest = await req.json();
 
-    if (!agentEmail) {
+    let resolvedEmail = agentEmail;
+
+    // If no email provided but agentId exists, resolve email from auth
+    if (!resolvedEmail && agentId) {
+      console.log(`🔍 Resolving email for agentId: ${agentId}`);
+      
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      
+      if (!supabaseUrl || !supabaseServiceKey) {
+        throw new Error("Missing Supabase credentials");
+      }
+
+      const response = await fetch(`${supabaseUrl}/auth/v1/admin/users/${agentId}`, {
+        headers: {
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+          'apikey': supabaseServiceKey,
+        },
+      });
+
+      if (!response.ok) {
+        console.error('❌ Failed to fetch user:', await response.text());
+        throw new Error("Could not resolve agent email");
+      }
+
+      const userData = await response.json();
+      resolvedEmail = userData.email;
+      
+      if (!resolvedEmail) {
+        throw new Error("User has no email");
+      }
+      
+      console.log(`✅ Resolved email: ${resolvedEmail}`);
+    }
+
+    if (!resolvedEmail) {
       throw new Error("Agent email is required");
     }
+    
+    console.log(`📤 Sending ${action} notification to ${resolvedEmail} for property: ${propertyTitle}`);
 
     let subject = '';
     let html = '';
@@ -199,7 +235,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("📮 Sending email via Resend...");
     const emailResponse = await resend.emails.send({
       from: "Kentra <noreply@updates.kentra.com.mx>",
-      to: [agentEmail],
+      to: [resolvedEmail],
       subject: subject,
       html: html,
     });

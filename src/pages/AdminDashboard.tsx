@@ -130,15 +130,15 @@ const AdminDashboard = () => {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      let query = (supabase as any)
-        .from('properties')
-        .select(`
-          *,
-          images (url, position),
-          profiles!properties_agent_id_fkey (name, email)
-        `)
-        .eq('status', 'pendiente_aprobacion')
-        .order('created_at', { ascending: false });
+    let query = (supabase as any)
+      .from('properties')
+      .select(`
+        *,
+        images (url, position),
+        profiles!properties_agent_id_fkey (id, name)
+      `)
+      .eq('status', 'pendiente_aprobacion')
+      .order('created_at', { ascending: false });
 
       if (activeTab === 'nuevas') {
         query = query.eq('resubmission_count', 0);
@@ -154,14 +154,14 @@ const AdminDashboard = () => {
       const { data, error } = await query;
       if (error) throw error;
       setProperties(data || []);
-    } catch (error) {
-      console.error('Error fetching properties:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar las propiedades',
-        variant: 'destructive',
-      });
-    } finally {
+  } catch (error: any) {
+    console.error('Error fetching properties:', error);
+    toast({
+      title: 'Error',
+      description: error?.message || 'No se pudieron cargar las propiedades',
+      variant: 'destructive',
+    });
+  } finally {
       setLoading(false);
     }
   };
@@ -246,7 +246,7 @@ const AdminDashboard = () => {
       try {
         await supabase.functions.invoke('send-moderation-notification', {
           body: {
-            agentEmail: property.profiles?.email,
+            agentId: property.agent_id,
             agentName: property.profiles?.name || 'Agente',
             propertyTitle: property.title,
             action: 'approved',
@@ -382,7 +382,7 @@ const AdminDashboard = () => {
       try {
         await supabase.functions.invoke('send-moderation-notification', {
           body: {
-            agentEmail: rejectProperty.profiles?.email,
+            agentId: rejectProperty.agent_id,
             agentName: rejectProperty.profiles?.name || 'Agente',
             propertyTitle: rejectProperty.title,
             action: 'rejected',
