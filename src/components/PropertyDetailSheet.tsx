@@ -254,6 +254,14 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
     }).format(price);
   };
 
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("es-MX", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   const getTypeLabel = () => {
     const labels: Record<string, string> = {
       casa: "Casa",
@@ -298,9 +306,9 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
-      <SheetContent side="right" className="w-full sm:max-w-[900px] overflow-y-auto p-0">
-        {/* Galería de imágenes */}
-        <div className="relative">
+      <SheetContent side="right" className="w-full sm:max-w-4xl overflow-y-auto p-0">
+        {/* Galería de imágenes - padding to avoid button overlap */}
+        <div className="pt-12">
           <PropertyImageGallery
             images={property.images || []}
             title={property.title}
@@ -312,92 +320,175 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
 
         {/* Contenido principal */}
         <div className="p-6 space-y-6">
-          {/* Precio y título */}
-          <div>
-            <div className="flex items-start justify-between gap-4 mb-2">
-              <h1 className="text-3xl font-bold text-foreground">{property.title}</h1>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleToggleFavorite}
-                className="shrink-0"
-              >
-                <Heart className={`h-5 w-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
-              </Button>
-            </div>
-            
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-3xl font-bold text-primary">{formatPrice(property.price)}</span>
-              <Badge variant="secondary">{getTypeLabel()}</Badge>
+          {/* Header with Actions */}
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex-1">
+              {/* Status Badges */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Badge className="bg-primary text-primary-foreground text-sm px-3 py-1">
+                  {property.type}
+                </Badge>
+                <Badge 
+                  variant={property.listing_type === 'venta' ? 'default' : 'secondary'}
+                  className="text-sm px-3 py-1"
+                >
+                  {property.listing_type === 'venta' ? 'En Venta' : 'En Renta'}
+                </Badge>
+                <Badge variant="outline" className="text-sm px-3 py-1">
+                  <Home className="mr-1 h-3 w-3" />
+                  {property.status === 'activa' ? 'Activa' : property.status}
+                </Badge>
+              </div>
+
+              <h1 className="text-2xl md:text-3xl font-bold mb-3">{property.title}</h1>
+              
+              {/* Price - Large and Prominent */}
+              <div className="mb-3">
+                <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">
+                  {formatPrice(property.price)}
+                </p>
+                {property.sqft && (
+                  <p className="text-base text-muted-foreground">
+                    {formatPrice(Math.round(property.price / property.sqft))}/m²
+                  </p>
+                )}
+              </div>
+
+              {/* Address */}
+              <div className="flex items-center text-muted-foreground mb-4">
+                <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                <span className="text-sm md:text-base">
+                  {property.address}, {property.municipality}, {property.state}
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              <span>{property.address}, {property.municipality}, {property.state}</span>
+            <div className="flex gap-2 flex-wrap">
+              <PropertyExportPDF property={property} agent={agent} />
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleShare('copy')}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copiar enlace
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    WhatsApp
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare('facebook')}>
+                    <Facebook className="mr-2 h-4 w-4" />
+                    Facebook
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button
+                variant={propertyId && isInCompare(propertyId) ? "default" : "outline"}
+                onClick={() => {
+                  if (propertyId) {
+                    if (isInCompare(propertyId)) {
+                      removeFromCompare(propertyId);
+                    } else {
+                      addToCompare(propertyId);
+                    }
+                  }
+                }}
+                size="icon"
+              >
+                <GitCompare className={`h-4 w-4 ${propertyId && isInCompare(propertyId) ? "fill-current" : ""}`} />
+              </Button>
+
+              <Button
+                variant={isFavorite ? "default" : "outline"}
+                onClick={handleToggleFavorite}
+                size="icon"
+              >
+                <Heart
+                  className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`}
+                />
+              </Button>
             </div>
           </div>
 
-          {/* Características */}
-          <div className="flex flex-wrap gap-6">
+          {/* Specs - Horizontal Line (Zillow Style) */}
+          <div className="flex flex-wrap items-center gap-6 pb-6 border-b border-border">
             {property.bedrooms && (
               <div className="flex items-center gap-2">
-                <Bed className="h-5 w-5 text-primary" />
-                <span>{property.bedrooms} Recámaras</span>
+                <Bed className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <span className="text-2xl font-semibold">{property.bedrooms}</span>
+                  <span className="text-sm text-muted-foreground ml-1">
+                    {property.bedrooms === 1 ? 'recámara' : 'recámaras'}
+                  </span>
+                </div>
               </div>
             )}
             {property.bathrooms && (
               <div className="flex items-center gap-2">
-                <Bath className="h-5 w-5 text-primary" />
-                <span>{property.bathrooms} Baños</span>
+                <Bath className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <span className="text-2xl font-semibold">{property.bathrooms}</span>
+                  <span className="text-sm text-muted-foreground ml-1">
+                    {property.bathrooms === 1 ? 'baño' : 'baños'}
+                  </span>
+                </div>
               </div>
             )}
             {property.parking && (
               <div className="flex items-center gap-2">
-                <Car className="h-5 w-5 text-primary" />
-                <span>{property.parking} Estacionamientos</span>
+                <Car className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <span className="text-2xl font-semibold">{property.parking}</span>
+                  <span className="text-sm text-muted-foreground ml-1">
+                    estacionamiento{property.parking !== 1 ? 's' : ''}
+                  </span>
+                </div>
               </div>
             )}
             {property.sqft && (
               <div className="flex items-center gap-2">
-                <Maximize className="h-5 w-5 text-primary" />
-                <span>{property.sqft} m²</span>
+                <Maximize className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <span className="text-2xl font-semibold">{property.sqft}</span>
+                  <span className="text-sm text-muted-foreground ml-1">m²</span>
+                </div>
+              </div>
+            )}
+            {property.lot_size && (
+              <div className="flex items-center gap-2">
+                <Ruler className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <span className="text-2xl font-semibold">{property.lot_size}</span>
+                  <span className="text-sm text-muted-foreground ml-1">m² terreno</span>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Botones de acción */}
-          <div className="flex flex-wrap gap-3">
-            <ContactPropertyDialog property={property} agentId={property.agent_id} />
-
-            {agent?.whatsapp_enabled && agent?.whatsapp_number && (
-              <Button variant="outline" onClick={handleContactWhatsApp} className="flex-1">
-                <MessageCircle className="mr-2 h-4 w-4" />
-                WhatsApp
-              </Button>
+          {/* Additional Info Row */}
+          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
+              <span>Publicada: {formatDate(property.created_at)}</span>
+            </div>
+            {property.listing_type === 'venta' && (
+              <div className="flex items-center gap-1">
+                <span className="font-medium">Precio de venta</span>
+              </div>
             )}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleShare('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copiar enlace
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  WhatsApp
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleShare('facebook')}>
-                  <Facebook className="mr-2 h-4 w-4" />
-                  Facebook
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
+
+          {/* Virtual Tour */}
+          <PropertyVirtualTour
+            videoUrl={property.video_url}
+            title={property.title}
+          />
 
           {/* Descripción */}
           {property.description && (
@@ -416,6 +507,65 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
             <PropertyAmenities amenities={property.amenities as any} />
           )}
 
+          {/* Investment Metrics */}
+          <PropertyInvestmentMetrics
+            price={property.price}
+            sqft={property.sqft}
+            listingType={property.listing_type}
+            state={property.state}
+            municipality={property.municipality}
+            type={property.type}
+          />
+
+          {/* Timeline */}
+          <PropertyTimeline
+            createdAt={property.created_at}
+            updatedAt={property.updated_at}
+            priceHistory={property.price_history as any || []}
+            currentPrice={property.price}
+          />
+
+          {/* Additional Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Detalles Adicionales</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {property.lot_size && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                    <Ruler className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tamaño del terreno</p>
+                      <p className="font-semibold">{property.lot_size} m²</p>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Home className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tipo de propiedad</p>
+                    <p className="font-semibold">{property.type}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Publicado</p>
+                    <p className="font-semibold">{formatDate(property.created_at)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Actualizado</p>
+                    <p className="font-semibold">{formatDate(property.updated_at)}</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Mapa */}
           {property.lat && property.lng && (
             <Card>
@@ -423,42 +573,131 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
                 <CardTitle>Ubicación</CardTitle>
               </CardHeader>
               <CardContent>
-                <PropertyMap lat={property.lat} lng={property.lng} address={property.address} />
+                <PropertyMap 
+                  lat={property.lat} 
+                  lng={property.lng} 
+                  address={`${property.address}, ${property.municipality}, ${property.state}`}
+                  height="300px"
+                />
               </CardContent>
             </Card>
           )}
 
-          {/* Información del agente */}
+          {/* Información del agente - Enhanced */}
           {agent && (
             <Card>
               <CardHeader>
-                <CardTitle>Agente</CardTitle>
+                <CardTitle>Contactar Agente</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <p className="font-semibold">{agent.name}</p>
-                    {agent.phone && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        {agent.phone}
-                      </p>
-                    )}
-                    {agentStats && (
-                      <div className="flex gap-4 mt-2 text-sm">
-                        <span>{agentStats.activeProperties} propiedades</span>
-                        {agentStats.avgRating && (
-                          <span>⭐ {agentStats.avgRating}</span>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 pb-4 border-b">
+                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-primary">
+                        {agent.name?.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <Link 
+                        to={`/agente/${agent.id}`}
+                        className="font-semibold text-lg hover:text-primary transition-colors"
+                      >
+                        {agent.name}
+                      </Link>
+                      <div className="flex items-center gap-2 mt-1">
+                        {agent.is_verified && (
+                          <Badge variant="secondary" className="text-xs">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Verificado
+                          </Badge>
                         )}
                       </div>
-                    )}
+                    </div>
                   </div>
-                  <Link to={`/agente/${agent.id}`}>
-                    <Button variant="outline">Ver perfil</Button>
-                  </Link>
+
+                  {agentStats && (
+                    <div className="grid grid-cols-2 gap-3 pb-4 border-b">
+                      <div className="text-center p-3 rounded-lg bg-muted/50">
+                        <p className="text-2xl font-bold text-primary">{agentStats.activeProperties}</p>
+                        <p className="text-xs text-muted-foreground">Propiedades</p>
+                      </div>
+                      {agentStats.avgRating && (
+                        <div className="text-center p-3 rounded-lg bg-muted/50">
+                          <p className="text-2xl font-bold text-primary">⭐ {agentStats.avgRating}</p>
+                          <p className="text-xs text-muted-foreground">{agentStats.totalReviews} reseñas</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!user && (
+                    <Button 
+                      className="w-full" 
+                      variant="default"
+                      onClick={() => navigate('/auth?redirect=' + window.location.pathname)}
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      Iniciar sesión para contactar
+                    </Button>
+                  )}
+
+                  {user && agent.whatsapp_enabled && agent.whatsapp_number && (
+                    <Button 
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      onClick={handleContactWhatsApp}
+                    >
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      WhatsApp
+                    </Button>
+                  )}
+
+                  {user && agent.phone && (
+                    <Button 
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => window.open(`tel:${agent.phone}`, '_self')}
+                    >
+                      <Phone className="mr-2 h-4 w-4" />
+                      Llamar: {agent.phone}
+                    </Button>
+                  )}
+
+                  {user && (
+                    <ContactPropertyDialog
+                      property={property}
+                      agentId={agent.id}
+                    />
+                  )}
+
+                  <Button 
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate(`/agente/${agent.id}`)}
+                  >
+                    Ver Perfil Completo
+                  </Button>
+
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    Al contactar al agente, aceptas compartir tu información de contacto.
+                  </p>
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Agent Reviews */}
+          {agent && (
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-2xl font-semibold">Reseñas del Agente</h2>
+                <ReviewForm 
+                  agentId={agent.id} 
+                  propertyId={property.id}
+                  onReviewSubmitted={handleReviewSubmitted}
+                />
+              </div>
+              <AgentReviews key={reviewsKey} agentId={agent.id} />
+            </div>
           )}
 
           {/* Propiedades similares */}
