@@ -24,10 +24,34 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Crear cliente de Supabase con JWT del usuario
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authHeader = req.headers.get('Authorization');
+    
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Verificar autenticación
+    const { data: { user: authenticatedUser }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !authenticatedUser) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { recipientId, senderName, messageContent, messageType, conversationId, propertyTitle }: NotificationRequest = await req.json();
 
-    // Crear cliente de Supabase
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    // Crear cliente admin para operaciones privilegiadas
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
