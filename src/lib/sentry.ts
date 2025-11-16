@@ -36,10 +36,9 @@ export const initSentry = () => {
 
     // Filtrar información sensible
     beforeSend(event, hint) {
-      // No enviar en desarrollo
+      // En preview, loguear pero SÍ enviar a Sentry para poder testear
       if (!IS_PRODUCTION) {
-        console.log('[Sentry Preview]', event);
-        return null;
+        console.log('[Sentry Preview - Sending to Sentry]', event);
       }
 
       // Limpiar datos sensibles
