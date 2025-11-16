@@ -21,20 +21,28 @@ const REJECTION_COLORS = [
   'hsl(var(--chart-5))',
 ];
 
+import type { 
+  ModerationMetrics, 
+  ModerationTrendData, 
+  ReviewTimeData, 
+  RejectionReasonData, 
+  AdminStatsData 
+} from '@/types/analytics';
+
 const AdminModerationMetrics = () => {
   const { error: logError, captureException } = useMonitoring();
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('7'); // days
-  const [metrics, setMetrics] = useState({
+  const [metrics, setMetrics] = useState<ModerationMetrics>({
     totalReviewed: 0,
     approvalRate: 0,
     avgReviewTime: 0,
     resubmissionRate: 0,
   });
-  const [trendData, setTrendData] = useState<any[]>([]);
-  const [reviewTimeData, setReviewTimeData] = useState<any[]>([]);
-  const [rejectionReasons, setRejectionReasons] = useState<any[]>([]);
-  const [adminStats, setAdminStats] = useState<any[]>([]);
+  const [trendData, setTrendData] = useState<ModerationTrendData[]>([]);
+  const [reviewTimeData, setReviewTimeData] = useState<ReviewTimeData[]>([]);
+  const [rejectionReasons, setRejectionReasons] = useState<RejectionReasonData[]>([]);
+  const [adminStats, setAdminStats] = useState<AdminStatsData[]>([]);
 
   useEffect(() => {
     fetchMetrics();
@@ -46,8 +54,15 @@ const AdminModerationMetrics = () => {
       const daysAgo = parseInt(dateRange);
       const startDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
 
+      interface ModerationHistoryRecord {
+        action: string;
+        created_at: string;
+        rejection_reason?: { code: string };
+        admin_id?: string;
+      }
+
       // Fetch moderation history
-      const { data: history, error } = await (supabase as any)
+      const { data: history, error } = await supabase
         .from('property_moderation_history')
         .select('*')
         .gte('created_at', startDate)
@@ -55,22 +70,24 @@ const AdminModerationMetrics = () => {
 
       if (error) throw error;
 
+      const historyRecords = (history || []) as ModerationHistoryRecord[];
+
       // Calculate main metrics
-      const totalReviewed = history?.filter((h: any) => 
+      const totalReviewed = historyRecords.filter(h => 
         h.action === 'approved' || h.action === 'rejected' || h.action === 'auto_approved'
       ).length || 0;
 
-      const approved = history?.filter((h: any) => 
+      const approved = historyRecords.filter(h => 
         h.action === 'approved' || h.action === 'auto_approved'
       ).length || 0;
 
       const approvalRate = totalReviewed > 0 ? (approved / totalReviewed) * 100 : 0;
 
-      const resubmissions = history?.filter((h: any) => h.action === 'resubmitted').length || 0;
+      const resubmissions = historyRecords.filter(h => h.action === 'resubmitted').length || 0;
       const resubmissionRate = totalReviewed > 0 ? (resubmissions / totalReviewed) * 100 : 0;
 
       // Calculate average review time
-      const { data: avgTimeData } = await (supabase as any).rpc('get_avg_review_time_minutes');
+      const { data: avgTimeData } = await supabase.rpc('get_avg_review_time_minutes');
       const avgReviewTime = avgTimeData || 0;
 
       setMetrics({
@@ -81,8 +98,8 @@ const AdminModerationMetrics = () => {
       });
 
       // Process trend data (by day)
-      const trendMap = new Map();
-      history?.forEach((h: any) => {
+      const trendMap = new Map<string, ModerationTrendData>();
+      historyRecords.forEach(h => {
         const date = new Date(h.created_at).toLocaleDateString('es-MX', { 
           month: 'short', 
           day: 'numeric' 

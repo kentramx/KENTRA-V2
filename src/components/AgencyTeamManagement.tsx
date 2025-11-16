@@ -32,16 +32,19 @@ import { Loader2, UserPlus, Trash2, Mail, Clock, XCircle, Send } from 'lucide-re
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+import type { AgencyAgent, AgencyInvitation } from '@/types/user';
+import type { SubscriptionInfo } from '@/types/subscription';
+
 interface AgencyTeamManagementProps {
   agencyId: string;
-  subscriptionInfo: any;
+  subscriptionInfo: SubscriptionInfo;
 }
 
 export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamManagementProps) => {
   const { toast } = useToast();
   const { error: logError, warn, captureException } = useMonitoring();
-  const [agents, setAgents] = useState<any[]>([]);
-  const [invitations, setInvitations] = useState<any[]>([]);
+  const [agents, setAgents] = useState<AgencyAgent[]>([]);
+  const [invitations, setInvitations] = useState<AgencyInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -193,7 +196,7 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
       setInviteDialogOpen(false);
       setInviteEmail('');
       fetchInvitations(); // Recargar invitaciones
-    } catch (error: any) {
+    } catch (error) {
       logError('Error inviting agent to agency', {
         component: 'AgencyTeamManagement',
         agencyId,
@@ -251,7 +254,7 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
     }
   };
 
-  const handleResendInvitation = async (invitation: any) => {
+  const handleResendInvitation = async (invitation: AgencyInvitation) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
@@ -279,7 +282,7 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
         title: 'Invitación reenviada',
         description: `Se ha reenviado la invitación a ${invitation.email}`,
       });
-    } catch (error: any) {
+    } catch (error) {
       logError('Error resending invitation', {
         component: 'AgencyTeamManagement',
         invitationId: invitation.id,
@@ -505,7 +508,7 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
 
             <div className="space-y-2">
               <Label htmlFor="role">Rol</Label>
-              <Select value={inviteRole} onValueChange={(value: any) => setInviteRole(value)}>
+              <Select value={inviteRole} onValueChange={(value: 'agent' | 'manager') => setInviteRole(value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

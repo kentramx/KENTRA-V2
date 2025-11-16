@@ -38,8 +38,10 @@ const propertySchema = z.object({
   })).optional(),
 });
 
+import type { Property, PropertyImage } from '@/types/property';
+
 interface PropertyFormProps {
-  property?: any;
+  property?: Property;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -49,7 +51,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [existingImages, setExistingImages] = useState<any[]>([]);
+  const [existingImages, setExistingImages] = useState<PropertyImage[]>([]);
   
   const [formData, setFormData] = useState({
     description: '',

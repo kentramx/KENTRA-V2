@@ -41,9 +41,12 @@ interface RejectionRecord {
   resubmission_number: number;
 }
 
+import type { Property } from '@/types/property';
+import type { SubscriptionInfo } from '@/types/subscription';
+
 interface AgentPropertyListProps {
-  onEdit: (property: any) => void;
-  subscriptionInfo?: any;
+  onEdit: (property: Property) => void;
+  subscriptionInfo?: SubscriptionInfo;
   agentId?: string;
   onCreateProperty?: () => void;
 }
@@ -55,7 +58,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
   const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [featuredProperties, setFeaturedProperties] = useState<Set<string>>(new Set());
-  const [featureProperty, setFeatureProperty] = useState<any>(null);
+  const [featureProperty, setFeatureProperty] = useState<Property | null>(null);
   const { error: logError, warn, captureException } = useMonitoring();
 
   // Fetch properties con React Query
@@ -144,7 +147,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleResubmitProperty = async (propertyId: string) => {
     try {
-      const { data, error } = await supabase.rpc('resubmit_property' as any, {
+      const { data, error } = await supabase.rpc('resubmit_property', {
         property_id: propertyId
       });
       
@@ -213,7 +216,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleReactivateProperty = async (propertyId: string) => {
     try {
-      const { error } = await supabase.rpc('reactivate_property' as any, {
+      const { error } = await supabase.rpc('reactivate_property', {
         property_id: propertyId
       });
       

@@ -34,27 +34,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-interface AgentStats {
-  total_properties: number;
-  active_properties: number;
-  total_views: number;
-  total_favorites: number;
-  total_conversations: number;
-  conversion_rate: number;
-}
-
-interface PropertyPerformance {
-  id: string;
-  title: string;
-  views: number;
-  favorites: number;
-  conversations: number;
-}
-
-interface ViewsOverTime {
-  date: string;
-  views: number;
-}
+import type { AgentStats, PropertyPerformance, ViewsOverTime } from '@/types/analytics';
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
@@ -275,7 +255,7 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
 
         // Group views by date
         const viewsByDate: { [key: string]: number } = {};
-        viewsData?.forEach((view: any) => {
+        (viewsData as { date: string; views: number }[] | null)?.forEach(view => {
           const date = new Date(view.viewed_at).toISOString().split('T')[0];
           viewsByDate[date] = (viewsByDate[date] || 0) + 1;
         });

@@ -14,27 +14,11 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 
-interface RealtimeNotification {
-  id: string;
-  type: 'bypass' | 'upgrade' | 'downgrade' | 'unusual';
-  message: string;
-  timestamp: string;
-  metadata: any;
-  read: boolean;
-}
+import type { RealtimeNotification, NotificationPreferences } from '@/types/analytics';
 
 interface AdminRealtimeNotificationsProps {
   userId: string;
   isAdmin: boolean;
-}
-
-interface NotificationPreferences {
-  notify_on_bypass: boolean;
-  notify_on_upgrade: boolean;
-  notify_on_downgrade: boolean;
-  use_toast: boolean;
-  use_sound: boolean;
-  use_email: boolean;
 }
 
 export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNotificationsProps) => {
@@ -90,7 +74,7 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
           table: 'subscription_changes',
         },
         async (payload) => {
-          await handleNewChange(payload.new as any);
+          await handleNewChange(payload.new as Record<string, unknown>);
         }
       )
       .subscribe();
@@ -158,7 +142,7 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
     }
   };
 
-  const handleNewChange = async (change: any) => {
+  const handleNewChange = async (change: Record<string, unknown>) => {
     const metadata = change.metadata || {};
     
     // Determinar si es un evento importante

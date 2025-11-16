@@ -12,14 +12,7 @@ import { Loader2, Shield, UserCog, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useMonitoring } from '@/lib/monitoring';
 
-interface AdminUser {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  granted_at: string;
-  granted_by: string;
-}
+import type { AdminUser } from '@/types/user';
 
 interface AdminRoleManagementProps {
   currentUserId: string;
@@ -46,7 +39,7 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role, granted_at, granted_by')
-        .in('role', ['super_admin', 'moderator'] as any)
+        .in('role', ['super_admin', 'moderator'])
         .order('granted_at', { ascending: false });
 
       if (rolesError) throw rolesError;
@@ -137,7 +130,7 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
       const foundUser = searchResult.user;
 
       // Promover usando la función RPC
-      const { error: promoteError } = await (supabase.rpc as any)('promote_user_to_admin', {
+      const { error: promoteError } = await supabase.rpc('promote_user_to_admin', {
         target_user_id: foundUser.id,
         new_admin_role: selectedRole,
       });
@@ -152,7 +145,7 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
       setTargetEmail('');
       setSelectedRole('moderator');
       fetchAdminUsers();
-    } catch (error: any) {
+    } catch (error) {
       logError('Error promoting user', {
         component: 'AdminRoleManagement',
         targetEmail,
@@ -251,7 +244,7 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
               <Label htmlFor="role">Rol Administrativo</Label>
               <Select
                 value={selectedRole}
-                onValueChange={(value: any) => setSelectedRole(value)}
+                onValueChange={(value: string) => setSelectedRole(value)}
                 disabled={promoting}
               >
                 <SelectTrigger>

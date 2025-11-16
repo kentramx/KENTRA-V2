@@ -32,26 +32,30 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+import type { Property } from '@/types/property';
+import type { SubscriptionInfo } from '@/types/subscription';
+import type { AgentProfile } from '@/types/user';
+
 interface AgencyInventoryProps {
   agencyId: string;
-  subscriptionInfo?: any;
+  subscriptionInfo?: SubscriptionInfo;
 }
 
 export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryProps) => {
   const { toast } = useToast();
   const { error: logError, warn, captureException } = useMonitoring();
   const navigate = useNavigate();
-  const [properties, setProperties] = useState<any[]>([]);
-  const [agents, setAgents] = useState<any[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterAgent, setFilterAgent] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [selectedNewAgent, setSelectedNewAgent] = useState<string>('');
   const [assigning, setAssigning] = useState(false);
   const [featuredProperties, setFeaturedProperties] = useState<Set<string>>(new Set());
-  const [featureProperty, setFeatureProperty] = useState<any>(null);
+  const [featureProperty, setFeatureProperty] = useState<Property | null>(null);
 
   useEffect(() => {
     loadData();
@@ -66,7 +70,7 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
     }
   };
 
-  const fetchFeaturedProperties = async (propertiesToCheck: any[] = properties) => {
+  const fetchFeaturedProperties = async (propertiesToCheck: Property[] = properties) => {
     if (propertiesToCheck.length === 0) return;
 
     try {
@@ -163,7 +167,7 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
     }).format(price);
   };
 
-  const handleOpenAssignDialog = (property: any) => {
+  const handleOpenAssignDialog = (property: Property) => {
     setSelectedProperty(property);
     setSelectedNewAgent(property.agent_id || '');
     setAssignDialogOpen(true);

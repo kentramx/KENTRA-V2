@@ -37,25 +37,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 
-interface KYCVerification {
-  id: string;
-  user_id: string;
-  status: string;
-  ine_front_url?: string;
-  ine_back_url?: string;
-  rfc_url?: string;
-  full_name?: string;
-  curp?: string;
-  date_of_birth?: string;
-  address?: string;
-  rejection_reason?: string;
-  admin_notes?: string;
-  created_at: string;
-  profiles?: {
-    name: string;
-    email?: string;
-  };
-}
+import type { KYCVerification } from '@/types/user';
 
 export const AdminKYCReview = () => {
   const { user } = useAuth();
@@ -114,7 +96,7 @@ export const AdminKYCReview = () => {
       } else {
         setVerifications([]);
       }
-    } catch (error: any) {
+    } catch (error) {
       logError("Error fetching KYC verifications", {
         component: "AdminKYCReview",
         filter,
@@ -172,7 +154,7 @@ export const AdminKYCReview = () => {
       setRejectionReason("");
       setAdminNotes("");
       await fetchVerifications();
-    } catch (error: any) {
+    } catch (error) {
       logError("Error processing KYC review", {
         component: "AdminKYCReview",
         verificationId: selectedVerification.id,

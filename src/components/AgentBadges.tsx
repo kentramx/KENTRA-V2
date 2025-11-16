@@ -49,7 +49,7 @@ const AgentBadges = ({ badges, maxVisible = 3, size = "md" }: AgentBadgesProps) 
   };
 
   const renderBadge = (badge: BadgeData) => {
-    const IconComponent = (Icons as any)[badge.icon] || Icons.Award;
+    const IconComponent = (Icons as Record<string, React.ComponentType<{ className?: string }>>)[badge.icon] || Icons.Award;
     
     return (
       <TooltipProvider key={badge.code}>
