@@ -69,7 +69,6 @@ interface Filters {
 }
 
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
-import { VirtualizedPropertyGrid } from '@/components/VirtualizedPropertyGrid';
 
 const getTipoLabel = (tipo: string) => {
   const labels: Record<string, string> = {
@@ -793,7 +792,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
         lng: c.lng,
         title: `${c.property_count} propiedades`,
         price: Number(c.avg_price) || undefined,
-        currency: 'MXN' as const,
       }));
     }
     return filteredProperties
@@ -1503,7 +1501,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               markers={mapMarkers}
               height="100%"
               className="h-full w-full"
-              enableClustering={mapMarkers.length > 50}
+              enableClustering={false}
               onMarkerClick={handleMarkerClick}
               onFavoriteClick={handleFavoriteClick}
               disableAutoFit={!hasLocationFilters || !!searchCoordinates}
@@ -1576,18 +1574,83 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 </Card>
               ) : (
                 <>
-                  <VirtualizedPropertyGrid 
-                    properties={filteredProperties.slice(
-                      (currentPage - 1) * PROPERTIES_PER_PAGE,
-                      currentPage * PROPERTIES_PER_PAGE
-                    )}
-                    hoveredPropertyId={hoveredProperty?.id || null}
-                    onPropertyHover={(property) => {
-                      hoverFromMap.current = false;
-                      setHoveredProperty(property as Property | null);
-                    }}
-                    onPropertyClick={handlePropertyClick}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {(() => {
+                      const startIndex = (currentPage - 1) * PROPERTIES_PER_PAGE;
+                      const endIndex = startIndex + PROPERTIES_PER_PAGE;
+                      const paginatedProperties = filteredProperties.slice(startIndex, endIndex);
+                      
+                      const elements: JSX.Element[] = [];
+                      let lastWasFeatured = false;
+                      
+                      paginatedProperties.forEach((property, index) => {
+                        // Detectar cambio de destacada a regular
+                        const isFeatured = !!property.is_featured;
+                        const isFirstRegular = index > 0 && lastWasFeatured && !isFeatured;
+                        
+                        // Insertar separador cuando cambia de destacadas a regulares
+                        if (isFirstRegular) {
+                          elements.push(
+                            <div key="separator" className="col-span-1 md:col-span-2">
+                              <div className="flex items-center gap-3 py-4">
+                                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Star className="h-4 w-4" />
+                                  <span>Más propiedades</span>
+                                </div>
+                                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        // Agregar la card de propiedad
+                        elements.push(
+                          <div
+                            key={property.id}
+                            ref={(el) => {
+                              if (el) {
+                                propertyCardRefs.current.set(property.id, el);
+                              } else {
+                                propertyCardRefs.current.delete(property.id);
+                              }
+                            }}
+                            onMouseEnter={() => {
+                              hoverFromMap.current = false;
+                              setHoveredProperty(property as Property);
+                            }}
+                            onMouseLeave={() => setHoveredProperty(null)}
+                          >
+                            <PropertyCard
+                              id={property.id}
+                              title={property.title}
+                              price={property.price}
+                              type={property.type}
+                              listingType={property.listing_type}
+                              address={property.address}
+                              municipality={property.municipality}
+                              state={property.state}
+                              bedrooms={property.bedrooms || undefined}
+                              bathrooms={property.bathrooms || undefined}
+                              parking={property.parking || undefined}
+                              sqft={property.sqft || undefined}
+                              imageUrl={property.images?.[0]?.url}
+                              images={property.images}
+                              isHovered={hoveredProperty?.id === property.id}
+                              agentId={property.agent_id}
+                              isFeatured={property.is_featured}
+                              createdAt={property.created_at || undefined}
+                              onCardClick={handlePropertyClick}
+                            />
+                          </div>
+                        );
+                        
+                        lastWasFeatured = isFeatured;
+                      });
+                      
+                      return elements;
+                    })()}
+                  </div>
 
                   {/* Paginación */}
                   {filteredProperties.length > PROPERTIES_PER_PAGE && (

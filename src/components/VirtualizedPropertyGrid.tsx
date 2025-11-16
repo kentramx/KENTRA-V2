@@ -23,39 +23,24 @@ interface Property {
   agent_id: string;
   is_featured?: boolean;
   currency?: string;
-  created_at?: string | null;
 }
 
 interface VirtualizedPropertyGridProps {
   properties: Property[];
-  hoveredPropertyId?: string | null;
-  onPropertyHover?: (property: Property | null) => void;
-  onPropertyClick?: (propertyId: string) => void;
 }
 
 const VirtualizedPropertyGridComponent = ({ 
   properties,
-  hoveredPropertyId,
-  onPropertyHover,
-  onPropertyClick,
 }: VirtualizedPropertyGridProps) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {properties.map((property) => (
-        <div
+        <PropertyCard
           key={property.id}
-          onMouseEnter={() => onPropertyHover?.(property)}
-          onMouseLeave={() => onPropertyHover?.(null)}
-        >
-          <PropertyCard
-            {...property}
-            agentId={property.agent_id}
-            isFeatured={property.is_featured}
-            isHovered={hoveredPropertyId === property.id}
-            onCardClick={onPropertyClick}
-            createdAt={property.created_at || undefined}
-          />
-        </div>
+          {...property}
+          agentId={property.agent_id}
+          isFeatured={property.is_featured}
+        />
       ))}
     </div>
   );
