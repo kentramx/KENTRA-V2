@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Loader2, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { useMonitoring } from '@/lib/monitoring';
 
 const COLORS = {
   approved: 'hsl(var(--chart-1))',
@@ -21,6 +22,7 @@ const REJECTION_COLORS = [
 ];
 
 const AdminModerationMetrics = () => {
+  const { error: logError, captureException } = useMonitoring();
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('7'); // days
   const [metrics, setMetrics] = useState({
@@ -172,7 +174,16 @@ const AdminModerationMetrics = () => {
       setAdminStats(Array.from(adminMap.values()));
 
     } catch (error) {
-      console.error('Error fetching metrics:', error);
+      logError('Error fetching moderation metrics', {
+        component: 'AdminModerationMetrics',
+        dateRange,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'AdminModerationMetrics',
+        action: 'fetchMetrics',
+        dateRange,
+      });
     } finally {
       setLoading(false);
     }

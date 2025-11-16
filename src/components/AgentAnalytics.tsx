@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { WhatsAppAnalytics } from "./WhatsAppAnalytics";
+import { useMonitoring } from "@/lib/monitoring";
 import {
   LineChart,
   Line,
@@ -58,6 +59,7 @@ interface ViewsOverTime {
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
 export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
+  const { error: logError, captureException } = useMonitoring();
   const [stats, setStats] = useState<AgentStats | null>(null);
   const [propertyPerformance, setPropertyPerformance] = useState<PropertyPerformance[]>([]);
   const [viewsOverTime, setViewsOverTime] = useState<ViewsOverTime[]>([]);
@@ -93,7 +95,16 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
         description: "El reporte CSV ha sido descargado exitosamente",
       });
     } catch (error) {
-      console.error("Error exporting CSV:", error);
+      logError("Error exporting CSV", {
+        component: "AgentAnalytics",
+        agentId,
+        error,
+      });
+      captureException(error as Error, {
+        component: "AgentAnalytics",
+        action: "exportCSV",
+        agentId,
+      });
       toast({
         title: "Error",
         description: "No se pudo exportar el reporte",
@@ -169,7 +180,16 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
         description: "El reporte PDF ha sido descargado exitosamente",
       });
     } catch (error) {
-      console.error("Error exporting PDF:", error);
+      logError("Error exporting PDF", {
+        component: "AgentAnalytics",
+        agentId,
+        error,
+      });
+      captureException(error as Error, {
+        component: "AgentAnalytics",
+        action: "exportPDF",
+        agentId,
+      });
       toast({
         title: "Error",
         description: "No se pudo exportar el reporte",
@@ -277,7 +297,16 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
         setViewsOverTime([]);
       }
     } catch (error) {
-      console.error("Error fetching analytics:", error);
+      logError("Error fetching analytics", {
+        component: "AgentAnalytics",
+        agentId,
+        error,
+      });
+      captureException(error as Error, {
+        component: "AgentAnalytics",
+        action: "fetchAnalytics",
+        agentId,
+      });
     } finally {
       setLoading(false);
     }

@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Shield, UserCog, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useMonitoring } from '@/lib/monitoring';
 
 interface AdminUser {
   id: string;
@@ -30,6 +31,7 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
   const [loading, setLoading] = useState(true);
   const [promoting, setPromoting] = useState(false);
   const { toast } = useToast();
+  const { error: logError, warn, captureException } = useMonitoring();
 
   const [targetEmail, setTargetEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('moderator');
@@ -79,7 +81,14 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
 
       setAdminUsers(admins);
     } catch (error) {
-      console.error('Error fetching admin users:', error);
+      logError('Error fetching admin users', {
+        component: 'AdminRoleManagement',
+        error,
+      });
+      captureException(error as Error, {
+        component: 'AdminRoleManagement',
+        action: 'fetchAdminUsers',
+      });
       toast({
         title: 'Error',
         description: 'No se pudieron cargar los usuarios administrativos',
@@ -144,7 +153,18 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
       setSelectedRole('moderator');
       fetchAdminUsers();
     } catch (error: any) {
-      console.error('Error promoting user:', error);
+      logError('Error promoting user', {
+        component: 'AdminRoleManagement',
+        targetEmail,
+        selectedRole,
+        error,
+      });
+      captureException(error, {
+        component: 'AdminRoleManagement',
+        action: 'promoteUser',
+        targetEmail,
+        selectedRole,
+      });
       toast({
         title: 'Error',
         description: error.message || 'No se pudo promover al usuario',

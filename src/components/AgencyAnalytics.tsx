@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, TrendingUp, Eye, Heart, MessageSquare, Home, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useMonitoring } from '@/lib/monitoring';
 
 interface AgencyAnalyticsProps {
   agencyId: string;
@@ -10,6 +11,7 @@ interface AgencyAnalyticsProps {
 
 export const AgencyAnalytics = ({ agencyId }: AgencyAnalyticsProps) => {
   const { toast } = useToast();
+  const { error: logError, captureException } = useMonitoring();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalProperties: 0,
@@ -83,7 +85,16 @@ export const AgencyAnalytics = ({ agencyId }: AgencyAnalyticsProps) => {
         conversionRate,
       });
     } catch (error) {
-      console.error('Error fetching agency stats:', error);
+      logError('Error fetching agency stats', {
+        component: 'AgencyAnalytics',
+        agencyId,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'AgencyAnalytics',
+        action: 'fetchAgencyStats',
+        agencyId,
+      });
       toast({
         title: 'Error',
         description: 'No se pudieron cargar las estadísticas',

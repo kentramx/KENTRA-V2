@@ -4,10 +4,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2, User } from "lucide-react";
 import Cropper from "react-easy-crop";
 import type { Area } from "react-easy-crop";
+import { useMonitoring } from "@/lib/monitoring";
 
 interface AvatarUploadProps {
   userId: string;
@@ -17,6 +18,8 @@ interface AvatarUploadProps {
 }
 
 export const AvatarUpload = ({ userId, currentAvatarUrl, userName, onUploadComplete }: AvatarUploadProps) => {
+  const { toast } = useToast();
+  const { error: logError, captureException } = useMonitoring();
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentAvatarUrl || null);
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
@@ -131,7 +134,16 @@ export const AvatarUpload = ({ userId, currentAvatarUrl, userName, onUploadCompl
       setImageToCrop(imageUrl);
       setCropDialogOpen(true);
     } catch (error) {
-      console.error("Error al cargar imagen:", error);
+      logError("Error al cargar imagen", {
+        component: "AvatarUpload",
+        userId,
+        error,
+      });
+      captureException(error as Error, {
+        component: "AvatarUpload",
+        action: "handleFileSelect",
+        userId,
+      });
       toast({
         title: "Error",
         description: "No se pudo cargar la imagen",
@@ -190,7 +202,16 @@ export const AvatarUpload = ({ userId, currentAvatarUrl, userName, onUploadCompl
         description: "Tu foto de perfil ha sido actualizada exitosamente",
       });
     } catch (error) {
-      console.error("Error uploading avatar:", error);
+      logError("Error uploading avatar", {
+        component: "AvatarUpload",
+        userId,
+        error,
+      });
+      captureException(error as Error, {
+        component: "AvatarUpload",
+        action: "uploadAvatar",
+        userId,
+      });
       toast({
         title: "Error",
         description: "No se pudo subir la foto de perfil",
