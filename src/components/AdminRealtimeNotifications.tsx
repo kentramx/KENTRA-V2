@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 
-import type { RealtimeNotification, NotificationPreferences } from '@/types/analytics';
+import type { RealtimeNotification, NotificationPreferences, SubscriptionChangeRecord } from '@/types/analytics';
 
 interface AdminRealtimeNotificationsProps {
   userId: string;

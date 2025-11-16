@@ -181,6 +181,7 @@ export type PropertyType =
   | 'terreno'
   | 'oficina'
   | 'local'
+  | 'local_comercial' // Alias
   | 'bodega'
   | 'edificio'
   | 'rancho';
