@@ -2585,6 +2585,7 @@ export type Database = {
       reactivate_property: { Args: { property_id: string }; Returns: undefined }
       refresh_agent_stats: { Args: never; Returns: undefined }
       renew_property: { Args: { property_id: string }; Returns: undefined }
+      resubmit_property: { Args: { property_id: string }; Returns: Json }
       search_properties_fts: {
         Args: {
           p_limit?: number
