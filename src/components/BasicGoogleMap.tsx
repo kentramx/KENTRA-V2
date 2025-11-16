@@ -178,14 +178,16 @@ export function BasicGoogleMap({
       
       const marker = new google.maps.Marker({ 
         position: { lat, lng },
+        map,
         animation: undefined,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
+          scale: 9,
           fillColor: '#0ea5e9',
-          fillOpacity: 0.9,
+          fillOpacity: 0.95,
           strokeColor: '#ffffff',
           strokeWeight: 2,
+          labelOrigin: new google.maps.Point(0, -18),
         },
         label: {
           text: priceLabel,
@@ -193,7 +195,8 @@ export function BasicGoogleMap({
           fontSize: '13px',
           fontWeight: '600',
         },
-        optimized: false,
+        optimized: true,
+        zIndex: Number(google.maps.Marker.MAX_ZINDEX) + 2,
       });
       
       // CRÍTICO: Asegurar que el marcador siempre se añade al mapa
