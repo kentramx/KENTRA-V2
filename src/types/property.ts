@@ -101,6 +101,8 @@ export interface PropertySummary {
   colonia: string | null;
   municipality: string;
   state: string;
+  lat: number | null;
+  lng: number | null;
   bedrooms: number | null;
   bathrooms: number | null;
   parking: number | null;
@@ -157,6 +159,8 @@ export interface HoveredProperty {
   title: string;
   price: number;
   currency: string;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 // ============= INTERFACES DE SOPORTE =============

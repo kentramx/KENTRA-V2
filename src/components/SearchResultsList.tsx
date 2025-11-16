@@ -75,6 +75,8 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
             title: property.title,
             price: property.price,
             currency: property.currency,
+            lat: property.lat,
+            lng: property.lng,
           });
         } else if (onPropertyHover) {
           onPropertyHover(null);

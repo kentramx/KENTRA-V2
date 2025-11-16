@@ -649,17 +649,23 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     setIsFiltering(isFetching && properties.length === 0);
   }, [isFetching, properties.length]);
 
-  // ✅ Callback para hover de propiedades desde la lista (sin coordenadas)
+  // ✅ Callback para hover de propiedades desde la lista
   const handlePropertyHoverFromList = useCallback((property: HoveredProperty | null) => {
     hoverFromMap.current = false;
-    // Convertir HoveredProperty a MapProperty parcial para hoveredProperty state
-    // Como no tenemos lat/lng desde la lista, solo guardamos los datos básicos
-    if (property) {
-      // No establecer hoveredProperty ya que no tenemos coordenadas para resaltar en el mapa
-      // El mapa ya tiene su propio sistema de hover desde handleMarkerHover
-      return;
+    
+    if (property && property.lat && property.lng) {
+      // ✅ Ahora SÍ tenemos coordenadas, establecer hoveredProperty
+      setHoveredProperty({
+        id: property.id,
+        title: property.title,
+        price: property.price,
+        currency: property.currency,
+        lat: property.lat,
+        lng: property.lng,
+      } as MapProperty);
+    } else {
+      setHoveredProperty(null);
     }
-    setHoveredProperty(null);
   }, []);
 
   // ✅ Handler: cuando se hace clic en un marcador del mapa
@@ -1481,6 +1487,11 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 onMarkerClick={handleMarkerClick}
                 onPropertyHover={handlePropertyHoverFromMap}
                 hoveredPropertyId={hoveredProperty?.id || null}
+                hoveredPropertyCoords={
+                  hoveredProperty?.lat && hoveredProperty?.lng
+                    ? { lat: hoveredProperty.lat, lng: hoveredProperty.lng }
+                    : null
+                }
                 height="100%"
                 onMapError={setMapError}
               />
