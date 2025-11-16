@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FeaturePropertyDialog } from './FeaturePropertyDialog';
+import { useMonitoring } from '@/lib/monitoring';
 import {
   Select,
   SelectContent,
@@ -38,6 +39,7 @@ interface AgencyInventoryProps {
 
 export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryProps) => {
   const { toast } = useToast();
+  const { error: logError, warn, captureException } = useMonitoring();
   const navigate = useNavigate();
   const [properties, setProperties] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
@@ -81,7 +83,11 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
         setFeaturedProperties(new Set(featuredData.map(f => f.property_id)));
       }
     } catch (error) {
-      console.error('Error fetching featured properties:', error);
+      warn('Error fetching featured properties', {
+        component: 'AgencyInventory',
+        agencyId,
+        error,
+      });
     }
   };
 
@@ -102,7 +108,11 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
       if (error) throw error;
       setAgents(data || []);
     } catch (error) {
-      console.error('Error fetching agents:', error);
+      warn('Error fetching agency agents', {
+        component: 'AgencyInventory',
+        agencyId,
+        error,
+      });
     }
   };
 
@@ -129,7 +139,11 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
       setProperties(data || []);
       return data || [];
     } catch (error) {
-      console.error('Error fetching properties:', error);
+      warn('Error fetching agency properties', {
+        component: 'AgencyInventory',
+        agencyId,
+        error,
+      });
       toast({
         title: 'Error',
         description: 'No se pudieron cargar las propiedades',
@@ -177,7 +191,17 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
       setSelectedNewAgent('');
       fetchProperties();
     } catch (error) {
-      console.error('Error assigning property:', error);
+      logError('Error assigning property to agent', {
+        component: 'AgencyInventory',
+        propertyId: selectedProperty?.id,
+        newAgentId: selectedNewAgent,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'AgencyInventory',
+        action: 'assignProperty',
+        propertyId: selectedProperty?.id,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo reasignar la propiedad',

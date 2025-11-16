@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Tag, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useMonitoring } from "@/lib/monitoring";
 
 interface CouponInputProps {
   onCouponApplied: (couponCode: string | null) => void;
@@ -13,6 +14,7 @@ interface CouponInputProps {
 }
 
 export function CouponInput({ onCouponApplied, planType }: CouponInputProps) {
+  const { error: logError, captureException } = useMonitoring();
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [discountInfo, setDiscountInfo] = useState<string | null>(null);
@@ -53,7 +55,17 @@ export function CouponInput({ onCouponApplied, planType }: CouponInputProps) {
         }
       }
     } catch (error: any) {
-      console.error('Error validating coupon:', error);
+      logError('Error validating coupon', {
+        component: 'CouponInput',
+        couponCode,
+        planType,
+        error,
+      });
+      captureException(error, {
+        component: 'CouponInput',
+        action: 'validateCoupon',
+        couponCode,
+      });
       toast.error("Error al validar el cupón");
     } finally {
       setIsValidating(false);

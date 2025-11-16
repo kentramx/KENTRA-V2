@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MessageCircle, Image } from 'lucide-react';
+import { useMonitoring } from '@/lib/monitoring';
 
 interface Conversation {
   id: string;
@@ -30,6 +31,7 @@ interface ConversationListProps {
 
 export const ConversationList = ({ selectedId, onSelect }: ConversationListProps) => {
   const { user } = useAuth();
+  const { error: logError, captureException } = useMonitoring();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -132,7 +134,15 @@ export const ConversationList = ({ selectedId, onSelect }: ConversationListProps
 
       setConversations(conversationsWithDetails);
     } catch (error) {
-      console.error('Error fetching conversations:', error);
+      logError('Error fetching conversations', {
+        component: 'ConversationList',
+        userId: user?.id,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'ConversationList',
+        action: 'fetchConversations',
+      });
     } finally {
       setLoading(false);
     }

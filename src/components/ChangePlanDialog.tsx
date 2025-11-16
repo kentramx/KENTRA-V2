@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useMonitoring } from '@/lib/monitoring';
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,7 @@ export const ChangePlanDialog = ({
   onSuccess,
 }: ChangePlanDialogProps) => {
   const { toast } = useToast();
+  const { error: logError, warn, captureException } = useMonitoring();
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -125,7 +127,11 @@ export const ChangePlanDialog = ({
         onOpenChange(false);
       }
     } catch (error) {
-      console.error('Error checking subscription status:', error);
+      warn('Error checking subscription status', {
+        component: 'ChangePlanDialog',
+        userId,
+        error,
+      });
     }
   };
 
@@ -163,7 +169,11 @@ export const ChangePlanDialog = ({
         role: data.role,
       });
     } catch (error) {
-      console.error('Error checking user role:', error);
+      warn('Error checking user role', {
+        component: 'ChangePlanDialog',
+        userId,
+        error,
+      });
       setUserRole({ isAdmin: false, role: 'buyer' });
     }
   };
@@ -203,7 +213,11 @@ export const ChangePlanDialog = ({
 
       setCooldownInfo({ canChange: true });
     } catch (error) {
-      console.error('Error checking cooldown:', error);
+      warn('Error checking cooldown period', {
+        component: 'ChangePlanDialog',
+        userId,
+        error,
+      });
       setCooldownInfo({ canChange: true });
     }
   };
@@ -228,7 +242,11 @@ export const ChangePlanDialog = ({
 
       setPlans(data as unknown as Plan[]);
     } catch (error) {
-      console.error('Error fetching plans:', error);
+      warn('Error fetching subscription plans', {
+        component: 'ChangePlanDialog',
+        planType: currentPlanName,
+        error,
+      });
       toast({
         title: 'Error',
         description: 'No se pudieron cargar los planes disponibles',
@@ -294,7 +312,10 @@ export const ChangePlanDialog = ({
         }
         
         // Other errors - log but don't crash
-        console.error('Error en preview:', errorBody || response.error);
+        warn('Error en preview de cambio de plan', {
+          component: 'ChangePlanDialog',
+          error: errorBody || response.error,
+        });
         setPreview(null);
         return;
       }
@@ -302,7 +323,12 @@ export const ChangePlanDialog = ({
       setPreview(response.data);
     } catch (error: any) {
       // Catch any unexpected errors
-      console.error('Error fetching preview:', error);
+      warn('Error fetching proration preview', {
+        component: 'ChangePlanDialog',
+        planId,
+        cycle,
+        error,
+      });
       setPreview(null);
     } finally {
       setLoadingPreview(false);
@@ -438,7 +464,10 @@ export const ChangePlanDialog = ({
         }
         
         // Other errors
-        console.error('Error en cambio de plan:', errorBody || response.error);
+        logError('Error en cambio de plan', {
+          component: 'ChangePlanDialog',
+          error: errorBody || response.error,
+        });
         toast({
           title: 'Error al cambiar de plan',
           description: errorBody?.message || 'Hubo un problema al cambiar de plan. Intenta de nuevo más tarde.',
@@ -458,7 +487,17 @@ export const ChangePlanDialog = ({
         onOpenChange(false);
       }
     } catch (error: any) {
-      console.error('Error changing plan:', error);
+      logError('Error changing subscription plan', {
+        component: 'ChangePlanDialog',
+        userId,
+        selectedPlanId,
+        error,
+      });
+      captureException(error, {
+        component: 'ChangePlanDialog',
+        action: 'changePlan',
+        selectedPlanId,
+      });
       
       // Generic error handling for unexpected errors
       toast({

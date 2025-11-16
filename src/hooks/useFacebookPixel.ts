@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { monitoring } from '@/lib/monitoring';
 
 declare global {
   interface Window {
@@ -73,7 +74,10 @@ const saveEventToDatabase = async (
       user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
     });
   } catch (error) {
-    console.error('Error saving event to database:', error);
+    monitoring.warn('Error saving Facebook Pixel event to database', {
+      eventName,
+      error,
+    });
   }
 };
 

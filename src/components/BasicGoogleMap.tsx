@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
 import { MarkerClusterer, GridAlgorithm } from '@googlemaps/markerclusterer';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
+import { monitoring } from '@/lib/monitoring';
 
 type LatLng = { lat: number; lng: number };
 type BasicMarker = LatLng & { 
@@ -132,7 +133,7 @@ export function BasicGoogleMap({
         try {
           clustererRef.current.clearMarkers();
         } catch (e) {
-          console.warn('Error clearing clusterer on unmount:', e);
+          monitoring.debug('Error clearing clusterer on unmount', { error: e });
         }
         clustererRef.current = null;
       }
@@ -151,7 +152,7 @@ export function BasicGoogleMap({
       try {
         clustererRef.current.clearMarkers();
       } catch (e) {
-        console.warn('Error clearing clusterer:', e);
+        monitoring.debug('Error clearing clusterer', { error: e });
       }
       clustererRef.current = null;
     }
@@ -384,7 +385,10 @@ export function BasicGoogleMap({
             },
           });
         } catch (e) {
-          console.error('Error creating clusterer:', e);
+          monitoring.warn('Error creating clusterer', {
+            component: 'BasicGoogleMap',
+            error: e,
+          });
           // Fallback: agregar marcadores directamente
           const mapInstance = mapRef.current;
           if (mapInstance) {

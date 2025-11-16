@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { TrendingDown, TrendingUp, Users, DollarSign, Target, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useMonitoring } from "@/lib/monitoring";
 import {
   LineChart,
   Line,
@@ -64,6 +65,7 @@ interface ChurnMetrics {
 const COLORS = ['#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#ec4899'];
 
 export const ChurnMetrics = () => {
+  const { error: logError, captureException } = useMonitoring();
   const [metrics, setMetrics] = useState<ChurnMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<'3m' | '6m' | '1y'>('6m');
@@ -87,7 +89,16 @@ export const ChurnMetrics = () => {
       if (error) throw error;
       setMetrics(data as unknown as ChurnMetrics);
     } catch (error) {
-      console.error('Error fetching churn metrics:', error);
+      logError('Error fetching churn metrics', {
+        component: 'ChurnMetrics',
+        dateRange,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'ChurnMetrics',
+        action: 'fetchChurnMetrics',
+        dateRange,
+      });
       toast.error('Error al cargar métricas de churn');
     } finally {
       setLoading(false);

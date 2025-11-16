@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Bell, TrendingUp, TrendingDown, Shield, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useMonitoring } from '@/lib/monitoring';
 import {
   Popover,
   PopoverContent,
@@ -38,6 +39,7 @@ interface NotificationPreferences {
 
 export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNotificationsProps) => {
   const { toast } = useToast();
+  const { error: logError } = useMonitoring();
   const [notifications, setNotifications] = useState<RealtimeNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [preferences, setPreferences] = useState<NotificationPreferences>({
@@ -143,10 +145,16 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
       });
 
       if (error) {
-        console.error('Error sending email notification:', error);
+        logError('Error sending email notification', {
+          component: 'AdminRealtimeNotifications',
+          error,
+        });
       }
     } catch (error) {
-      console.error('Error in sendEmailNotification:', error);
+      logError('Error in sendEmailNotification', {
+        component: 'AdminRealtimeNotifications',
+        error,
+      });
     }
   };
 

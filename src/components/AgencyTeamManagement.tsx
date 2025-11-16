@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useMonitoring } from '@/lib/monitoring';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ interface AgencyTeamManagementProps {
 
 export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamManagementProps) => {
   const { toast } = useToast();
+  const { error: logError, warn, captureException } = useMonitoring();
   const [agents, setAgents] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +76,16 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
       if (error) throw error;
       setAgents(data || []);
     } catch (error) {
-      console.error('Error fetching agents:', error);
+      logError('Error fetching team agents', {
+        component: 'AgencyTeamManagement',
+        agencyId,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'AgencyTeamManagement',
+        action: 'fetchAgents',
+        agencyId,
+      });
       toast({
         title: 'Error',
         description: 'No se pudieron cargar los agentes',
@@ -97,7 +108,11 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
       if (error) throw error;
       setInvitations(data || []);
     } catch (error) {
-      console.error('Error fetching invitations:', error);
+      warn('Error fetching agency invitations', {
+        component: 'AgencyTeamManagement',
+        agencyId,
+        error,
+      });
     }
   };
 
@@ -112,7 +127,11 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
       if (error) throw error;
       setAgencyName(data?.name || '');
     } catch (error) {
-      console.error('Error fetching agency name:', error);
+      warn('Error fetching agency name', {
+        component: 'AgencyTeamManagement',
+        agencyId,
+        error,
+      });
     }
   };
 
@@ -175,7 +194,17 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
       setInviteEmail('');
       fetchInvitations(); // Recargar invitaciones
     } catch (error: any) {
-      console.error('Error inviting agent:', error);
+      logError('Error inviting agent to agency', {
+        component: 'AgencyTeamManagement',
+        agencyId,
+        inviteEmail,
+        error,
+      });
+      captureException(error, {
+        component: 'AgencyTeamManagement',
+        action: 'inviteAgent',
+        agencyId,
+      });
       toast({
         title: 'Error',
         description: error.message || 'No se pudo enviar la invitación',
@@ -204,7 +233,16 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
 
       fetchInvitations();
     } catch (error) {
-      console.error('Error cancelling invitation:', error);
+      logError('Error cancelling invitation', {
+        component: 'AgencyTeamManagement',
+        invitationId,
+        email,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'AgencyTeamManagement',
+        action: 'cancelInvitation',
+      });
       toast({
         title: 'Error',
         description: 'No se pudo cancelar la invitación',
@@ -242,7 +280,16 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
         description: `Se ha reenviado la invitación a ${invitation.email}`,
       });
     } catch (error: any) {
-      console.error('Error resending invitation:', error);
+      logError('Error resending invitation', {
+        component: 'AgencyTeamManagement',
+        invitationId: invitation.id,
+        email: invitation.email,
+        error,
+      });
+      captureException(error, {
+        component: 'AgencyTeamManagement',
+        action: 'resendInvitation',
+      });
       toast({
         title: 'Error',
         description: error.message || 'No se pudo reenviar la invitación',

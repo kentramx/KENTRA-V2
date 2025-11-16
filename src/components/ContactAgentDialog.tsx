@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTracking } from '@/hooks/useTracking';
+import { useMonitoring } from '@/lib/monitoring';
 
 interface ContactAgentDialogProps {
   agentId: string;
@@ -37,11 +38,12 @@ export const ContactAgentDialog = ({
 }: ContactAgentDialogProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { trackEvent } = useTracking();
+  const { error: logError, captureException } = useMonitoring();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("properties");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const { trackEvent } = useTracking();
 
   const handleSend = async () => {
     if (!user) {
@@ -109,7 +111,16 @@ export const ContactAgentDialog = ({
       setReason("properties");
       navigate(`/mensajes?conversation=${conversationId}`);
     } catch (error) {
-      console.error("Error sending message:", error);
+      logError("Error sending message to agent", {
+        component: "ContactAgentDialog",
+        agentId,
+        error,
+      });
+      captureException(error as Error, {
+        component: "ContactAgentDialog",
+        action: "sendMessage",
+        agentId,
+      });
       toast.error("Error al enviar el mensaje");
     } finally {
       setSending(false);

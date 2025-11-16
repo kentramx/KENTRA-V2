@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useMonitoring } from "@/lib/monitoring";
 
 interface Review {
   id: string;
@@ -24,6 +25,7 @@ interface AgentReviewsProps {
 }
 
 export const AgentReviews = ({ agentId }: AgentReviewsProps) => {
+  const { warn } = useMonitoring();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [averageRating, setAverageRating] = useState(0);
@@ -56,7 +58,11 @@ export const AgentReviews = ({ agentId }: AgentReviewsProps) => {
         setAverageRating(avg);
       }
     } catch (error) {
-      console.error("Error fetching reviews:", error);
+      warn("Error fetching agent reviews", {
+        component: "AgentReviews",
+        agentId,
+        error,
+      });
     } finally {
       setLoading(false);
     }

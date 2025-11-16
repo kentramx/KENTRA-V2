@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { monitoring } from '@/lib/monitoring';
 
 // Extend Window interface for GTM dataLayer
 declare global {
@@ -48,7 +49,7 @@ export const useGTM = () => {
         window.dataLayer.push(eventData);
         console.log('GTM dataLayer push:', eventData);
       } catch (error) {
-        console.error('Error pushing to GTM dataLayer:', error);
+        monitoring.debug('Error pushing to GTM dataLayer', { eventData, error });
       }
     } else {
       console.warn('GTM dataLayer no está disponible');

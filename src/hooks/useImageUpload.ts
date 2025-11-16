@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { monitoring } from '@/lib/monitoring';
 
 export const useImageUpload = () => {
   const [uploading, setUploading] = useState(false);
@@ -26,7 +27,11 @@ export const useImageUpload = () => {
 
       return publicUrl;
     } catch (error) {
-      console.error('Error uploading image:', error);
+      monitoring.error('Error uploading property image', {
+        hook: 'useImageUpload',
+        propertyId,
+        error,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo subir la imagen',
@@ -64,7 +69,11 @@ export const useImageUpload = () => {
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error('Error deleting image:', error);
+      monitoring.warn('Error deleting property image', {
+        hook: 'useImageUpload',
+        url,
+        error,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo eliminar la imagen',
