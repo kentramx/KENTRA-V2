@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { SocialLinks } from "./SocialLinks";
-import { SentryTestButton } from "./SentryTestButton";
 import kentraLogo from "@/assets/kentra-logo.png";
 
 export const Footer = () => {
@@ -78,10 +77,7 @@ export const Footer = () => {
 
         {/* Copyright */}
         <div className="border-t border-border pt-6 text-center text-sm text-muted-foreground">
-          <div className="flex justify-center items-center gap-4 mb-3">
-            <p>© {new Date().getFullYear()} Kentra. Todos los derechos reservados.</p>
-            <SentryTestButton />
-          </div>
+          <p>© {new Date().getFullYear()} Kentra. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

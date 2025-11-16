@@ -6,7 +6,7 @@
 import * as Sentry from '@sentry/react';
 import { browserTracingIntegration, replayIntegration } from '@sentry/react';
 
-const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN || 'https://6d1f93f50c8424a5fcf916a7e279ab4c@o4510372691968000.ingest.us.sentry.io/4510372697800704';
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 const IS_PRODUCTION = import.meta.env.PROD;
 
 export const initSentry = () => {
@@ -18,7 +18,6 @@ export const initSentry = () => {
     Sentry.init({
       dsn: SENTRY_DSN,
       environment: IS_PRODUCTION ? 'production' : 'preview',
-      debug: !IS_PRODUCTION,
       
       // Sampling: capturar 100% de errores, 10% de transacciones en producción
       tracesSampleRate: IS_PRODUCTION ? 0.1 : 1.0,
@@ -37,11 +36,6 @@ export const initSentry = () => {
 
     // Filtrar información sensible
     beforeSend(event, hint) {
-      // En preview, loguear pero SÍ enviar a Sentry para poder testear
-      if (!IS_PRODUCTION) {
-        console.log('[Sentry Preview - Sending to Sentry]', event);
-      }
-
       // Limpiar datos sensibles
       if (event.request?.headers) {
         delete event.request.headers['authorization'];
