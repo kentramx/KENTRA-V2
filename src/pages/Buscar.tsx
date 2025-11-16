@@ -69,18 +69,22 @@ const Buscar = () => {
   const { data: viewportData, isLoading, error } = usePropertiesViewport(mapBounds, {
     estado: filters.estado,
     municipio: filters.municipio,
-    tipo: (filters.tipo && filters.tipo !== 'all') ? filters.tipo : undefined,
+    tipo: filters.tipo === 'all' ? undefined : filters.tipo,
     listingType: filters.listingType,
     precioMin: filters.precioMin ? parseFloat(filters.precioMin) : undefined,
     precioMax: filters.precioMax ? parseFloat(filters.precioMax) : undefined,
-    recamaras: (filters.recamaras && filters.recamaras !== '0') ? filters.recamaras : undefined,
-    banos: (filters.banos && filters.banos !== '0') ? filters.banos : undefined,
   });
 
-  // Obtener propiedades (filtros ya aplicados en la query)
+  // Obtener propiedades y aplicar filtros adicionales
   const allProperties = useMemo(() => {
-    return (viewportData?.properties || []) as Property[];
-  }, [viewportData]);
+    const properties = (viewportData?.properties || []) as Property[];
+    
+    return properties.filter((property) => {
+      if (filters.recamaras && property.bedrooms && property.bedrooms < parseInt(filters.recamaras)) return false;
+      if (filters.banos && property.bathrooms && property.bathrooms < parseInt(filters.banos)) return false;
+      return true;
+    });
+  }, [viewportData, filters.recamaras, filters.banos]);
 
   // Ordenar propiedades
   const sortedProperties = useMemo(() => {
@@ -257,7 +261,8 @@ const Buscar = () => {
 
           {/* Layout Principal */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-3 lg:sticky lg:top-24 space-y-4">
+            {/* Filtros (Desktop) */}
+            <div className="lg:col-span-3">
               <SearchFilters
                 filters={filters}
                 onFilterChange={updateFilter}
@@ -269,7 +274,7 @@ const Buscar = () => {
             </div>
 
             {/* Resultados */}
-            <div className={`lg:col-span-6 ${viewMode === 'map' ? 'hidden lg:block' : ''}`}>
+            <div className={`lg:col-span-5 ${viewMode === 'map' ? 'hidden lg:block' : ''}`}>
               <SearchResults
                 properties={paginatedProperties}
                 isLoading={isLoading}
@@ -285,17 +290,15 @@ const Buscar = () => {
             </div>
 
             {/* Mapa (Desktop siempre visible, Mobile solo en modo mapa) */}
-            <div className={`lg:col-span-3 ${viewMode === 'list' ? 'hidden lg:block' : ''} lg:sticky lg:top-24`}>
-              <div className="h-[calc(100vh-9rem)] rounded-lg overflow-hidden border bg-card">
-                <SearchMap
-                  properties={sortedProperties}
-                  hoveredPropertyId={hoveredPropertyId}
-                  selectedProperty={selectedProperty}
-                  onPropertyClick={handlePropertyClick}
-                  onPropertyHover={handlePropertyHover}
-                  onBoundsChange={handleBoundsChange}
-                />
-              </div>
+            <div className={`lg:col-span-4 ${viewMode === 'list' ? 'hidden lg:block' : ''}`}>
+              <SearchMap
+                properties={sortedProperties}
+                hoveredPropertyId={hoveredPropertyId}
+                selectedProperty={selectedProperty}
+                onPropertyClick={handlePropertyClick}
+                onPropertyHover={handlePropertyHover}
+                onBoundsChange={handleBoundsChange}
+              />
             </div>
           </div>
         </div>
