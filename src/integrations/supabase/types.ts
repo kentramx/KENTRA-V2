@@ -930,6 +930,51 @@ export type Database = {
           },
         ]
       }
+      phone_verifications: {
+        Row: {
+          attempts: number
+          blocked_until: string | null
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          last_request_at: string | null
+          max_attempts: number
+          phone_number: string
+          request_count_hour: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          blocked_until?: string | null
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          last_request_at?: string | null
+          max_attempts?: number
+          phone_number: string
+          request_count_hour?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          blocked_until?: string | null
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_request_at?: string | null
+          max_attempts?: number
+          phone_number?: string
+          request_count_hour?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       processed_webhook_events: {
         Row: {
           created_at: string

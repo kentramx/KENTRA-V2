@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.79.0";
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,22 +55,88 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate 6-digit OTP code
+    console.log("📱 Sending verification code to:", phoneNumber);
+
+    // Create admin client for phone_verifications table access
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    // Check if user has existing verification record
+    const { data: existingVerification } = await supabaseAdmin
+      .from("phone_verifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+
+    // Check if blocked
+    if (existingVerification?.blocked_until) {
+      const blockedUntil = new Date(existingVerification.blocked_until);
+      if (blockedUntil > new Date()) {
+        const minutesLeft = Math.ceil((blockedUntil.getTime() - Date.now()) / 60000);
+        return new Response(
+          JSON.stringify({ 
+            error: `Bloqueado por intentos excesivos. Intenta en ${minutesLeft} minuto${minutesLeft !== 1 ? 's' : ''}`,
+            blockedUntil: existingVerification.blocked_until
+          }),
+          {
+            status: 429,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+    }
+
+    // Check hourly rate limit (3 codes per hour)
+    if (existingVerification?.last_request_at) {
+      const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const lastRequest = new Date(existingVerification.last_request_at);
+      
+      if (lastRequest > hourAgo && existingVerification.request_count_hour >= 3) {
+        const retryAfter = new Date(lastRequest.getTime() + 60 * 60 * 1000);
+        const minutesLeft = Math.ceil((retryAfter.getTime() - Date.now()) / 60000);
+        return new Response(
+          JSON.stringify({ 
+            error: `Límite de 3 códigos por hora alcanzado. Intenta en ${minutesLeft} minuto${minutesLeft !== 1 ? 's' : ''}`,
+            retryAfter: retryAfter.toISOString()
+          }),
+          {
+            status: 429,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+    }
+
+    // Generate 6-digit code and hash it
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+    const salt = await bcrypt.genSalt(10);
+    const codeHash = await bcrypt.hash(verificationCode, salt);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    console.log("📱 Generating verification code for:", phoneNumber);
+    console.log("🔑 Generated verification code (will be hashed)");
 
-    // Save verification code to database
-    const { error: updateError } = await supabaseClient
-      .from("profiles")
-      .update({
-        phone: phoneNumber,
-        phone_verification_code: verificationCode,
-        phone_verification_expires_at: expiresAt.toISOString(),
-        phone_verified: false, // Reset verification status
-      })
-      .eq("id", user.id);
+    // Calculate new request count
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const lastRequest = existingVerification?.last_request_at ? new Date(existingVerification.last_request_at) : null;
+    const newRequestCount = (lastRequest && lastRequest > hourAgo) 
+      ? (existingVerification.request_count_hour + 1) 
+      : 1;
+
+    // Save hashed code to phone_verifications table
+    const { error: updateError } = await supabaseAdmin
+      .from("phone_verifications")
+      .upsert({
+        user_id: user.id,
+        phone_number: phoneNumber,
+        code_hash: codeHash,
+        attempts: 0, // Reset attempts with new code
+        blocked_until: null, // Clear any blocks
+        last_request_at: new Date().toISOString(),
+        request_count_hour: newRequestCount,
+        expires_at: expiresAt.toISOString(),
+      });
 
     if (updateError) {
       console.error("Error saving verification code:", updateError);
@@ -81,6 +148,15 @@ const handler = async (req: Request): Promise<Response> => {
         }
       );
     }
+
+    // Update phone number in profiles (but not the code)
+    await supabaseClient
+      .from("profiles")
+      .update({
+        phone: phoneNumber,
+        phone_verified: false,
+      })
+      .eq("id", user.id);
 
     // TODO: Send SMS using Twilio
     // For now, we'll just log the code (DEVELOPMENT ONLY)
