@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePropertiesViewport, ViewportBounds } from '@/hooks/usePropertiesViewport';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
-import BasicGoogleMap from '@/components/BasicGoogleMap';
+import BareGoogleMap from '@/components/BareGoogleMap';
 import Navbar from '@/components/Navbar';
 import PropertyCard from '@/components/PropertyCard';
 import { PropertyImageGallery } from '@/components/PropertyImageGallery';
@@ -1491,7 +1491,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               </p>
             </div>
 
-            <BasicGoogleMap
+            <BareGoogleMap
               center={mapCenter}
               zoom={mapZoom}
               markers={mapMarkers}
