@@ -783,23 +783,35 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     });
   };
 
-  const mapMarkers = filteredProperties
-    .filter(p => typeof p.lat === 'number' && typeof p.lng === 'number')
-    .map(p => ({ 
-      id: p.id, 
-      lat: p.lat as number, 
-      lng: p.lng as number,
-      title: p.title,
-      price: p.price,
-      currency: ('currency' in p ? (p.currency as string) : 'MXN') as 'MXN' | 'USD',
-      bedrooms: p.bedrooms,
-      bathrooms: p.bathrooms,
-      images: p.images,
-      listing_type: p.listing_type as "venta" | "renta",
-      address: p.address,
-    }));
+  const mapMarkers = isClusterMode
+    ? clusters.map(c => ({
+        id: c.cluster_id,
+        lat: c.lat,
+        lng: c.lng,
+        title: `${c.property_count} propiedades`,
+        price: Number(c.avg_price) || undefined,
+      }))
+    : filteredProperties
+        .filter(p => typeof p.lat === 'number' && typeof p.lng === 'number')
+        .map(p => ({ 
+          id: p.id, 
+          lat: p.lat as number, 
+          lng: p.lng as number,
+          title: p.title,
+          price: p.price,
+          currency: ('currency' in p ? (p.currency as string) : 'MXN') as 'MXN' | 'USD',
+          bedrooms: p.bedrooms,
+          bathrooms: p.bathrooms,
+          images: p.images,
+          listing_type: p.listing_type as "venta" | "renta",
+          address: p.address,
+        }));
 
-  // Detectar si hay algún filtro activo
+  // Conteo total considerando clusters en zoom bajo
+  const totalCount = isClusterMode 
+    ? clusters.reduce((sum, c) => sum + (c.property_count || 0), 0)
+    : filteredProperties.length;
+
   const hasActiveFilters = !!(
     filters.estado || 
     filters.municipio || 
@@ -1472,9 +1484,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
             {/* Contador de resultados sobre el mapa */}
             <div className="absolute top-4 left-4 z-10 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border">
               <p className="text-sm font-medium">
-                <span className="font-bold text-lg">{filteredProperties.length}</span>
+                <span className="font-bold text-lg">{totalCount}</span>
                 <span className="text-muted-foreground ml-1">
-                  {filteredProperties.length === 1 ? 'propiedad' : 'propiedades'}
+                  {totalCount === 1 ? 'propiedad' : 'propiedades'}
                 </span>
               </p>
             </div>
