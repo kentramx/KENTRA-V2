@@ -6,7 +6,7 @@
 import * as Sentry from '@sentry/react';
 import { browserTracingIntegration, replayIntegration } from '@sentry/react';
 
-const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN || 'https://6d1f93f50c8424a5fcf916a7e279ab4c@o4510372691968000.ingest.us.sentry.io/4510372697800704';
 const IS_PRODUCTION = import.meta.env.PROD;
 
 export const initSentry = () => {
