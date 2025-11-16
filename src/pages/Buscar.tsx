@@ -257,8 +257,7 @@ const Buscar = () => {
 
           {/* Layout Principal */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Filtros (Desktop) */}
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-3 lg:sticky lg:top-24 space-y-4">
               <SearchFilters
                 filters={filters}
                 onFilterChange={updateFilter}
@@ -270,7 +269,7 @@ const Buscar = () => {
             </div>
 
             {/* Resultados */}
-            <div className={`lg:col-span-5 ${viewMode === 'map' ? 'hidden lg:block' : ''}`}>
+            <div className={`lg:col-span-6 ${viewMode === 'map' ? 'hidden lg:block' : ''}`}>
               <SearchResults
                 properties={paginatedProperties}
                 isLoading={isLoading}
@@ -286,15 +285,17 @@ const Buscar = () => {
             </div>
 
             {/* Mapa (Desktop siempre visible, Mobile solo en modo mapa) */}
-            <div className={`lg:col-span-4 ${viewMode === 'list' ? 'hidden lg:block' : ''}`}>
-              <SearchMap
-                properties={sortedProperties}
-                hoveredPropertyId={hoveredPropertyId}
-                selectedProperty={selectedProperty}
-                onPropertyClick={handlePropertyClick}
-                onPropertyHover={handlePropertyHover}
-                onBoundsChange={handleBoundsChange}
-              />
+            <div className={`lg:col-span-3 ${viewMode === 'list' ? 'hidden lg:block' : ''} lg:sticky lg:top-24`}>
+              <div className="h-[calc(100vh-9rem)] rounded-lg overflow-hidden border bg-card">
+                <SearchMap
+                  properties={sortedProperties}
+                  hoveredPropertyId={hoveredPropertyId}
+                  selectedProperty={selectedProperty}
+                  onPropertyClick={handlePropertyClick}
+                  onPropertyHover={handlePropertyHover}
+                  onBoundsChange={handleBoundsChange}
+                />
+              </div>
             </div>
           </div>
         </div>
