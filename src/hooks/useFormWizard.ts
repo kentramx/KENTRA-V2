@@ -117,8 +117,12 @@ export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
         }
         return true;
       
-      case 4: // Descripción e imágenes (validar en el componente)
-        return formData.description.length >= 20 && formData.description.length <= 2000;
+      case 4: // Descripción e imágenes
+        const charCount = formData.description.length;
+        const wordCount = formData.description.trim().split(/\s+/).filter(word => word.length > 0).length;
+        const minWords = 50;
+        const maxChars = 2000;
+        return wordCount >= minWords && charCount <= maxChars;
       
       case 5: // Amenidades (opcional)
         return true;
