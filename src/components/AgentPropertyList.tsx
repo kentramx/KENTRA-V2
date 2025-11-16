@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { RefreshCw, Star } from 'lucide-react';
 import { FeaturePropertyDialog } from './FeaturePropertyDialog';
 import { EmptyStatePublish } from './EmptyStatePublish';
+import { useMonitoring } from '@/lib/monitoring';
 import {
   Table,
   TableBody,
@@ -55,6 +56,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [featuredProperties, setFeaturedProperties] = useState<Set<string>>(new Set());
   const [featureProperty, setFeatureProperty] = useState<any>(null);
+  const { error: logError, warn, captureException } = useMonitoring();
 
   // Fetch properties con React Query
   const effectiveAgentId = agentId || user?.id;
@@ -82,7 +84,11 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
         setFeaturedProperties(new Set(featuredData.map(f => f.property_id)));
       }
     } catch (error) {
-      console.error('Error fetching featured properties:', error);
+      warn('Error fetching featured properties', {
+        component: 'AgentPropertyList',
+        agentId: effectiveAgentId,
+        error,
+      });
     }
   };
 
@@ -118,7 +124,16 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
       queryClient.invalidateQueries({ queryKey: ['agent-properties', effectiveAgentId] });
       fetchFeaturedProperties();
     } catch (error) {
-      console.error('Error renewing property:', error);
+      logError('Error renewing property', {
+        component: 'AgentPropertyList',
+        propertyId,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'AgentPropertyList',
+        action: 'renewProperty',
+        propertyId,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo renovar la propiedad',
@@ -167,14 +182,27 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
           }
         });
       } catch (notificationError) {
-        console.error('Error sending admin notification:', notificationError);
+        warn('Error sending admin notification after resubmit', {
+          component: 'AgentPropertyList',
+          propertyId,
+          error: notificationError,
+        });
         // No mostrar error al usuario ya que el reenvío fue exitoso
       }
       
       // Invalidar caché de React Query
       queryClient.invalidateQueries({ queryKey: ['agent-properties', effectiveAgentId] });
     } catch (error) {
-      console.error('Error resubmitting property:', error);
+      logError('Error resubmitting property', {
+        component: 'AgentPropertyList',
+        propertyId,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'AgentPropertyList',
+        action: 'resubmitProperty',
+        propertyId,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo reenviar la propiedad',
@@ -199,7 +227,16 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
       // Invalidar caché de React Query
       queryClient.invalidateQueries({ queryKey: ['agent-properties', effectiveAgentId] });
     } catch (error) {
-      console.error('Error reactivating property:', error);
+      logError('Error reactivating property', {
+        component: 'AgentPropertyList',
+        propertyId,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'AgentPropertyList',
+        action: 'reactivateProperty',
+        propertyId,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo reactivar la propiedad',
@@ -229,7 +266,16 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
       await deletePropertyMutation.mutateAsync(deleteId);
       fetchFeaturedProperties();
     } catch (error) {
-      console.error('Error deleting property:', error);
+      logError('Error deleting property', {
+        component: 'AgentPropertyList',
+        propertyId: deleteId,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'AgentPropertyList',
+        action: 'deleteProperty',
+        propertyId: deleteId,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo eliminar la propiedad',

@@ -7,6 +7,7 @@ import { Loader2, Package, Star, Calendar, X, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useMonitoring } from '@/lib/monitoring';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +28,7 @@ export const ActiveUpsells = ({ userId }: ActiveUpsellsProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const { error: logError, captureException } = useMonitoring();
 
   // Query para upsells activos
   const { data: activeUpsells = [], isLoading } = useQuery({
@@ -97,7 +99,16 @@ export const ActiveUpsells = ({ userId }: ActiveUpsellsProps) => {
       setCancellingId(null);
     },
     onError: (error) => {
-      console.error('Error cancelling upsell:', error);
+      logError('Error cancelling upsell', {
+        component: 'ActiveUpsells',
+        userId,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'ActiveUpsells',
+        action: 'cancelUpsell',
+        userId,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo cancelar el servicio adicional',

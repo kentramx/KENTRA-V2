@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { ImageLightbox } from './ImageLightbox';
 import { z } from 'zod';
+import { useMonitoring } from '@/lib/monitoring';
 
 // Message content validation schema (max 5000 characters)
 const messageSchema = z.object({
@@ -71,6 +72,7 @@ export const ChatWindow = ({
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
   const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const { error: logError, warn, captureException } = useMonitoring();
 
   useEffect(() => {
     if (!conversationId || !user) return;
@@ -348,7 +350,14 @@ export const ChatWindow = ({
 
       return signedUrlData.signedUrl;
     } catch (error) {
-      console.error('Error uploading image:', error);
+      logError('Error uploading image to chat', {
+        component: 'ChatWindow',
+        error,
+      });
+      captureException(error as Error, {
+        component: 'ChatWindow',
+        action: 'uploadImage',
+      });
       toast.error('Error al subir la imagen');
       return null;
     }
@@ -370,13 +379,19 @@ export const ChatWindow = ({
         .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 año
 
       if (error) {
-        console.error('Error creating signed URL:', error);
+        warn('Error creating signed URL', {
+          component: 'ChatWindow',
+          error,
+        });
         return imageUrl;
       }
 
       return data.signedUrl;
     } catch (error) {
-      console.error('Error generating signed URL:', error);
+      warn('Error generating signed URL', {
+        component: 'ChatWindow',
+        error,
+      });
       return imageUrl;
     }
   };
@@ -411,7 +426,16 @@ export const ChatWindow = ({
       
       setMessages(messagesWithSignedUrls);
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      logError('Error fetching chat messages', {
+        component: 'ChatWindow',
+        conversationId,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'ChatWindow',
+        action: 'fetchMessages',
+        conversationId,
+      });
       toast.error('Error al cargar los mensajes');
     } finally {
       setLoading(false);
@@ -440,7 +464,11 @@ export const ChatWindow = ({
         .eq('conversation_id', conversationId)
         .eq('user_id', user.id);
     } catch (error) {
-      console.error('Error marking as read:', error);
+      warn('Error marking messages as read', {
+        component: 'ChatWindow',
+        conversationId,
+        error,
+      });
     }
   };
 
@@ -473,7 +501,11 @@ export const ChatWindow = ({
         },
       });
     } catch (error) {
-      console.error('Error sending email notification:', error);
+      warn('Error sending email notification', {
+        component: 'ChatWindow',
+        conversationId,
+        error,
+      });
     }
   };
 
@@ -488,7 +520,10 @@ export const ChatWindow = ({
         online_at: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Error updating typing status:', error);
+      warn('Error updating typing status', {
+        component: 'ChatWindow',
+        error,
+      });
     }
   }, [user]);
 
@@ -572,7 +607,16 @@ export const ChatWindow = ({
       setNewMessage('');
       clearSelectedImage();
     } catch (error) {
-      console.error('Error sending message:', error);
+      logError('Error sending message', {
+        component: 'ChatWindow',
+        conversationId,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'ChatWindow',
+        action: 'sendMessage',
+        conversationId,
+      });
       toast.error('Error al enviar el mensaje');
     } finally {
       setSending(false);

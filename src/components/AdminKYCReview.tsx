@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useMonitoring } from "@/lib/monitoring";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,7 @@ interface KYCVerification {
 
 export const AdminKYCReview = () => {
   const { user } = useAuth();
+  const { error: logError, captureException } = useMonitoring();
   const [verifications, setVerifications] = useState<KYCVerification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("pending");
@@ -113,7 +115,16 @@ export const AdminKYCReview = () => {
         setVerifications([]);
       }
     } catch (error: any) {
-      console.error("Error fetching verifications:", error);
+      logError("Error fetching KYC verifications", {
+        component: "AdminKYCReview",
+        filter,
+        error,
+      });
+      captureException(error, {
+        component: "AdminKYCReview",
+        action: "fetchVerifications",
+        filter,
+      });
       toast({
         title: "Error",
         description: "No se pudieron cargar las verificaciones",
@@ -162,7 +173,17 @@ export const AdminKYCReview = () => {
       setAdminNotes("");
       await fetchVerifications();
     } catch (error: any) {
-      console.error("Error processing review:", error);
+      logError("Error processing KYC review", {
+        component: "AdminKYCReview",
+        verificationId: selectedVerification.id,
+        action: reviewAction,
+        error,
+      });
+      captureException(error, {
+        component: "AdminKYCReview",
+        action: "processReview",
+        reviewAction,
+      });
       toast({
         title: "Error",
         description: error.message || "No se pudo procesar la revisión",

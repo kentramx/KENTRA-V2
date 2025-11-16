@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Property } from '@/types/property';
 import type { Database } from '@/integrations/supabase/types';
+import { monitoring } from '@/lib/monitoring';
 
 type PropertyInsert = Database['public']['Tables']['properties']['Insert'];
 type PropertyUpdate = Database['public']['Tables']['properties']['Update'];
@@ -32,7 +33,13 @@ export const useCreateProperty = () => {
       });
     },
     onError: (error) => {
-      console.error('Error creating property:', error);
+      monitoring.error('Error creating property', {
+        hook: 'useCreateProperty',
+        error,
+      });
+      monitoring.captureException(error as Error, {
+        hook: 'useCreateProperty',
+      });
       toast({
         title: 'Error',
         description: 'No se pudo crear la propiedad',
@@ -69,7 +76,13 @@ export const useUpdateProperty = () => {
       });
     },
     onError: (error) => {
-      console.error('Error updating property:', error);
+      monitoring.error('Error updating property', {
+        hook: 'useUpdateProperty',
+        error,
+      });
+      monitoring.captureException(error as Error, {
+        hook: 'useUpdateProperty',
+      });
       toast({
         title: 'Error',
         description: 'No se pudo actualizar la propiedad',

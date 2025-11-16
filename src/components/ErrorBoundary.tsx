@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { monitoring } from '@/lib/monitoring';
 
 interface Props {
   children: ReactNode;
@@ -26,7 +27,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    monitoring.captureException(error, {
+      component: 'ErrorBoundary',
+      componentStack: errorInfo.componentStack,
+    });
     
     // Llamar callback personalizado si existe
     this.props.onError?.(error, errorInfo);
