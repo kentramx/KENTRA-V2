@@ -317,7 +317,16 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
 
       fetchAgents();
     } catch (error) {
-      console.error('Error removing agent:', error);
+      logError('Error removing agent from agency', {
+        component: 'AgencyTeamManagement',
+        agencyId,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'AgencyTeamManagement',
+        action: 'removeAgent',
+        agencyId,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo remover al agente',

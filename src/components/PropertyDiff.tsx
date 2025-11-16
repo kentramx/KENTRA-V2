@@ -31,7 +31,11 @@ const PropertyDiff = ({ property }: PropertyDiffProps) => {
       if (error) throw error;
       setPreviousData(data);
     } catch (error) {
-      console.error('Error fetching previous version:', error);
+      monitoring.error('Error fetching previous version', {
+        component: 'PropertyDiff',
+        propertyId: property.id,
+        error,
+      });
     } finally {
       setLoading(false);
     }

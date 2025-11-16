@@ -89,7 +89,12 @@ export const ReviewForm = ({ agentId, propertyId, onReviewSubmitted }: ReviewFor
 
       setCanReview(!!conversation);
     } catch (error) {
-      console.error('Error checking review eligibility:', error);
+      warn('Error checking review eligibility', {
+        component: 'ReviewForm',
+        agentId,
+        userId: user?.id,
+        error,
+      });
       setCanReview(false);
     }
   };
@@ -142,7 +147,16 @@ export const ReviewForm = ({ agentId, propertyId, onReviewSubmitted }: ReviewFor
       setHasExistingReview(true);
       onReviewSubmitted?.();
     } catch (error) {
-      console.error("Error submitting review:", error);
+      logError("Error submitting review", {
+        component: "ReviewForm",
+        agentId,
+        propertyId,
+        error,
+      });
+      captureException(error as Error, {
+        component: "ReviewForm",
+        action: "submitReview",
+      });
       toast({
         title: "Error",
         description: "No se pudo publicar tu reseña. Intenta de nuevo.",

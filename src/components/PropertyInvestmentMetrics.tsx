@@ -68,7 +68,13 @@ export const PropertyInvestmentMetrics = ({
         });
       }
     } catch (error) {
-      console.error("Error fetching market data:", error);
+      monitoring.error("Error fetching market data", {
+        component: "PropertyInvestmentMetrics",
+        state,
+        municipality,
+        type,
+        error,
+      });
     }
   };
 

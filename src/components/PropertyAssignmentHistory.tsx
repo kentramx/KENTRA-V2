@@ -84,7 +84,16 @@ export const PropertyAssignmentHistory = ({
       if (error) throw error;
       setHistory(data || []);
     } catch (error) {
-      console.error('Error fetching assignment history:', error);
+      logError('Error fetching assignment history', {
+        component: 'PropertyAssignmentHistory',
+        propertyId,
+        agencyId,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'PropertyAssignmentHistory',
+        action: 'fetchHistory',
+      });
       toast({
         title: 'Error',
         description: 'No se pudo cargar el historial de asignaciones',

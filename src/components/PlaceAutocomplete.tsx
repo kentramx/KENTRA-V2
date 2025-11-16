@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
 import { toast } from '@/hooks/use-toast';
+import { monitoring } from '@/lib/monitoring';
 
 interface PlaceAutocompleteProps {
   onPlaceSelect: (location: {
@@ -133,7 +134,12 @@ export const PlaceAutocomplete = ({
             });
           }
         } catch (error) {
-          console.error('Error getting location:', error);
+          monitoring.error('Error getting location from coordinates', {
+            component: 'PlaceAutocomplete',
+            latitude,
+            longitude,
+            error,
+          });
           toast({
             title: '❌ Error',
             description: 'No se pudo obtener tu ubicación',
@@ -144,7 +150,11 @@ export const PlaceAutocomplete = ({
         }
       },
       (error) => {
-        console.error('Geolocation error:', error);
+        monitoring.warn('Geolocation permission denied or error', {
+          component: 'PlaceAutocomplete',
+          errorCode: error.code,
+          errorMessage: error.message,
+        });
         toast({
           title: '❌ Error de geolocalización',
           description: 'No se pudo acceder a tu ubicación',
@@ -186,7 +196,9 @@ export const PlaceAutocomplete = ({
   const initLegacyAutocomplete = React.useCallback(async () => {
     if (!inputRef.current) return;
     
-    console.log('[PlaceAutocomplete] Inicializando modo LEGACY');
+    monitoring.debug('Initializing PlaceAutocomplete in LEGACY mode', {
+      component: 'PlaceAutocomplete',
+    });
     setUseWebComponent(false);
     
     const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
@@ -252,12 +264,16 @@ export const PlaceAutocomplete = ({
       // Verificar que el contenedor existe Y está montado en el DOM
       if (!webComponentContainerRef.current || 
           !document.contains(webComponentContainerRef.current)) {
-        console.warn('[PlaceAutocomplete] Container not ready, usando LEGACY');
+        monitoring.debug('Container not ready, falling back to LEGACY mode', {
+          component: 'PlaceAutocomplete',
+        });
         await initLegacyAutocomplete();
         return;
       }
 
-      console.log('[PlaceAutocomplete] Intentando inicializar Web Component');
+      monitoring.debug('Attempting to initialize Web Component', {
+        component: 'PlaceAutocomplete',
+      });
       const { PlaceAutocompleteElement } = await google.maps.importLibrary("places") as any;
 
       const placeAutocomplete = new PlaceAutocompleteElement({
@@ -337,25 +353,41 @@ export const PlaceAutocomplete = ({
         }
       }
 
-      console.log('[PlaceAutocomplete] Web Component inicializado exitosamente');
+      monitoring.debug('Web Component initialized successfully', {
+        component: 'PlaceAutocomplete',
+      });
       setUseWebComponent(true);
       
     } catch (error) {
-      console.warn('[PlaceAutocomplete] Web Component falló, usando LEGACY:', error);
+      monitoring.warn('Web Component initialization failed, using LEGACY mode', {
+        component: 'PlaceAutocomplete',
+        error,
+      });
       await initLegacyAutocomplete();
     }
   }, [id, placeholder, showIcon, unstyled, handlePlaceSelection, initLegacyAutocomplete, onInputChange]);
 
   // ✅ FASE 3: Agregar logs de debugging
   useEffect(() => {
-    console.log('[PlaceAutocomplete] Cargando Google Maps...');
+    monitoring.debug('Loading Google Maps API', {
+      component: 'PlaceAutocomplete',
+    });
     loadGoogleMaps()
       .then(() => {
-        console.log('[PlaceAutocomplete] Google Maps cargado exitosamente');
+        monitoring.debug('Google Maps API loaded successfully', {
+          component: 'PlaceAutocomplete',
+        });
         setIsLoaded(true);
       })
       .catch((err) => {
-        console.error('[PlaceAutocomplete] Error loading Google Maps:', err);
+        monitoring.error('Error loading Google Maps API', {
+          component: 'PlaceAutocomplete',
+          error: err,
+        });
+        monitoring.captureException(err, {
+          component: 'PlaceAutocomplete',
+          action: 'loadGoogleMaps',
+        });
         setLoadError(err.message);
       });
   }, []);
@@ -364,7 +396,9 @@ export const PlaceAutocomplete = ({
     if (!isLoaded || initRef.current) return;
     
     initRef.current = true;
-    console.log('[PlaceAutocomplete] Iniciando autocomplete (ÚNICA VEZ) con delay de 100ms...');
+    monitoring.debug('Starting autocomplete initialization', {
+      component: 'PlaceAutocomplete',
+    });
     const initTimer = setTimeout(() => {
       initAutocomplete();
     }, 100);

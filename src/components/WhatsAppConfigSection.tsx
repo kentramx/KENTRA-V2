@@ -70,7 +70,7 @@ export const WhatsAppConfigSection = ({ userId, initialData, onDataRefresh }: Wh
       const { data, error } = await supabase.functions.invoke('verify-whatsapp-number');
 
       if (error) {
-        console.error('Error auto-verifying WhatsApp:', error);
+        // Silent error - auto-verification is optional
         return;
       }
 
@@ -89,8 +89,7 @@ export const WhatsAppConfigSection = ({ userId, initialData, onDataRefresh }: Wh
         onDataRefresh();
       }
     } catch (error) {
-      console.error('Unexpected error during auto-verification:', error);
-      // No mostrar error al usuario ya que es un proceso automático opcional
+      // Silent error - auto-verification is optional and shouldn't disrupt user flow
     } finally {
       setIsAutoVerifying(false);
     }

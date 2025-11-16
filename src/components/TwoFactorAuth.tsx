@@ -43,7 +43,10 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
         setFactorId(verifiedFactor.id);
       }
     } catch (error) {
-      console.error("Error checking MFA status:", error);
+      logError("Error checking MFA status", {
+        component: "TwoFactorAuth",
+        error,
+      });
     } finally {
       setLoading(false);
     }
