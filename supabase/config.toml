@@ -7,7 +7,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-message-notification]
-verify_jwt = false
+verify_jwt = true
 
 [functions.create-checkout-session]
 verify_jwt = true
@@ -31,7 +31,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.cleanup-expired-properties]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-moderation-notification]
 verify_jwt = false
@@ -40,12 +40,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.get-user-by-email]
-verify_jwt = true
-
-[functions.ai-premoderate-property]
-verify_jwt = true
-
-[functions.ai-analyze-images]
 verify_jwt = true
 
 [functions.send-role-change-notification]
