@@ -31,10 +31,16 @@ export class ErrorBoundary extends Component<Props, State> {
     // Llamar callback personalizado si existe
     this.props.onError?.(error, errorInfo);
 
-    // En producción, enviar a Sentry u otro servicio
+    // Enviar a Sentry con contexto de React
     if (import.meta.env.PROD) {
-      // TODO: Integrar con Sentry cuando esté configurado
-      // Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } });
+      const { Sentry } = require('@/lib/sentry');
+      Sentry.captureException(error, {
+        contexts: {
+          react: {
+            componentStack: errorInfo.componentStack,
+          },
+        },
+      });
     }
 
     this.setState({ errorInfo });

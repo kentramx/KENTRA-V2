@@ -10,6 +10,10 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useTracking } from "@/hooks/useTracking";
 import { monitoring } from "@/lib/monitoring";
+import { initSentry } from "@/lib/sentry";
+
+// Inicializar Sentry al cargar la app
+initSentry();
 import Home from "./pages/Home";
 import PropertyDetail from "./pages/PropertyDetail";
 import Favorites from "./pages/Favorites";

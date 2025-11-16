@@ -1,6 +1,9 @@
 /**
  * Sistema de monitoreo y logging centralizado
+ * Integrado con Sentry para error tracking y performance monitoring
  */
+
+import * as SentryLib from './sentry';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -32,22 +35,38 @@ class MonitoringService {
       ...context,
     };
 
+    // Console logging en desarrollo
     if (this.isDev) {
       const style = this.getConsoleStyle(level);
       console.log(`%c[${level.toUpperCase()}]`, style, message, context || '');
     }
 
-    if (!this.isDev && level !== 'debug') {
-      this.sendToBackend(logData);
+    // Enviar a Sentry en producción
+    if (!this.isDev) {
+      this.sendToSentry(level, message, context);
     }
   }
 
   /**
-   * Capturar excepción
+   * Capturar excepción con Sentry
    */
   captureException(error: Error, context?: LogContext) {
     console.error('Exception captured:', error, context);
 
+    // Agregar breadcrumb para contexto
+    if (context) {
+      SentryLib.addBreadcrumb({
+        message: 'Exception context',
+        category: 'error',
+        level: 'error',
+        data: context,
+      });
+    }
+
+    // Capturar en Sentry
+    SentryLib.captureException(error, context);
+
+    // Log local
     this.log('error', error.message, {
       ...context,
       stack: error.stack,
@@ -56,7 +75,7 @@ class MonitoringService {
   }
 
   /**
-   * Métricas de performance
+   * Métricas de performance con Sentry
    */
   trackPerformance(name: string, duration: number, context?: LogContext) {
     this.log('info', `Performance: ${name}`, {
@@ -64,20 +83,68 @@ class MonitoringService {
       duration,
       metric: 'performance',
     });
+
+    // Enviar métrica a Sentry como custom measurement
+    if (!this.isDev) {
+      SentryLib.addBreadcrumb({
+        message: `Performance: ${name}`,
+        category: 'performance',
+        level: 'info',
+        data: {
+          duration,
+          ...context,
+        },
+      });
+    }
   }
 
   /**
-   * Track user action
+   * Track user action con breadcrumbs
    */
   trackEvent(eventName: string, properties?: Record<string, any>) {
     this.log('info', `Event: ${eventName}`, {
       event: eventName,
       ...properties,
     });
+
+    // Agregar breadcrumb a Sentry
+    SentryLib.addBreadcrumb({
+      message: eventName,
+      category: 'user-action',
+      level: 'info',
+      data: properties,
+    });
   }
 
   /**
-   * Helpers
+   * Enviar logs a Sentry según nivel
+   */
+  private sendToSentry(level: LogLevel, message: string, context?: LogContext) {
+    const sentryLevel = this.mapToSentryLevel(level);
+    
+    if (level === 'error') {
+      SentryLib.captureMessage(message, sentryLevel, context);
+    } else if (level === 'warn') {
+      SentryLib.captureMessage(message, sentryLevel, context);
+    }
+    // info y debug no se envían a Sentry por defecto
+  }
+
+  /**
+   * Mapear nivel de log a nivel de Sentry
+   */
+  private mapToSentryLevel(level: LogLevel): 'fatal' | 'error' | 'warning' | 'info' | 'debug' {
+    const map: Record<LogLevel, 'fatal' | 'error' | 'warning' | 'info' | 'debug'> = {
+      debug: 'debug',
+      info: 'info',
+      warn: 'warning',
+      error: 'error',
+    };
+    return map[level];
+  }
+
+  /**
+   * Helpers de estilo para consola
    */
   private getConsoleStyle(level: LogLevel): string {
     const styles: Record<LogLevel, string> = {
@@ -89,14 +156,7 @@ class MonitoringService {
     return styles[level];
   }
 
-  private async sendToBackend(logData: any) {
-    try {
-      // TODO: Implementar endpoint de logging
-    } catch (error) {
-      // Silently fail
-    }
-  }
-
+  // Métodos de conveniencia
   debug(message: string, context?: LogContext) {
     this.log('debug', message, context);
   }
@@ -128,3 +188,6 @@ export const useMonitoring = () => {
     error: monitoring.error.bind(monitoring),
   };
 };
+
+// Re-exportar funciones de Sentry para uso directo
+export { setUser, clearUser, addBreadcrumb } from './sentry';
