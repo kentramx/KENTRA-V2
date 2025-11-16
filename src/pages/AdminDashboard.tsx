@@ -134,6 +134,7 @@ const AdminDashboard = () => {
         id, title, price, address, state, municipality, status,
         ai_moderation_status, ai_moderation_score, created_at,
         resubmission_count, rejection_history,
+        description, amenities, lat, lng,
         images (url, position),
         profiles!properties_agent_id_fkey (id, name)
       `, { count: 'exact' })
