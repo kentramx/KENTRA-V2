@@ -8,6 +8,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Property, PropertyFilters, PropertyCluster } from '@/types/property';
 
 export interface ViewportBounds {
   minLng: number;
@@ -15,49 +16,6 @@ export interface ViewportBounds {
   maxLng: number;
   maxLat: number;
   zoom: number;
-}
-
-interface PropertyFilters {
-  estado?: string;
-  municipio?: string;
-  tipo?: string;
-  listingType?: string;
-  precioMin?: number;
-  precioMax?: number;
-  recamaras?: string;
-  banos?: string;
-  status?: string[];
-}
-
-interface PropertyCluster {
-  cluster_id: string;
-  lat: number;
-  lng: number;
-  property_count: number;
-  avg_price: number;
-  property_ids: string[];
-}
-
-interface Property {
-  id: string;
-  title: string;
-  price: number;
-  bedrooms: number | null;
-  bathrooms: number | null;
-  parking: number | null;
-  lat: number;
-  lng: number;
-  address: string;
-  state: string;
-  municipality: string;
-  type: string;
-  listing_type: string;
-  sqft: number | null;
-  agent_id: string;
-  status: string;
-  created_at: string;
-  is_featured: boolean;
-  images: Array<{ url: string; position: number }>;
 }
 
 // ✅ OPTIMIZACIÓN: Límites inteligentes según zoom

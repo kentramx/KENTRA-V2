@@ -19,27 +19,7 @@ import { SearchFilters } from '@/components/search/SearchFilters';
 import { SearchResults } from '@/components/search/SearchResults';
 import { SearchMap } from '@/components/search/SearchMap';
 import { SavedSearches } from '@/components/search/SavedSearches';
-
-interface Property {
-  id: string;
-  title: string;
-  price: number;
-  bedrooms: number | null;
-  bathrooms: number | null;
-  parking: number | null;
-  lat: number | null;
-  lng: number | null;
-  address: string;
-  state: string;
-  municipality: string;
-  type: 'casa' | 'departamento' | 'terreno' | 'oficina' | 'local' | 'bodega' | 'edificio' | 'rancho';
-  listing_type: string;
-  images: { url: string; position: number }[];
-  created_at: string | null;
-  sqft: number | null;
-  agent_id: string;
-  is_featured?: boolean;
-}
+import type { Property } from '@/types/property';
 
 interface Filters {
   estado: string;

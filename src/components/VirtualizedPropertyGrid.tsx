@@ -5,25 +5,7 @@
 
 import { memo } from 'react';
 import PropertyCard from './PropertyCard';
-
-interface Property {
-  id: string;
-  title: string;
-  price: number;
-  type: string;
-  listing_type: string;
-  address: string;
-  municipality: string;
-  state: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  parking?: number;
-  sqft?: number;
-  images?: { url: string; position: number }[];
-  agent_id: string;
-  is_featured?: boolean;
-  currency?: string;
-}
+import type { Property } from '@/types/property';
 
 interface VirtualizedPropertyGridProps {
   properties: Property[];
