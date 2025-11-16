@@ -13,6 +13,7 @@ import { format, subDays, subWeeks, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useMonitoring } from '@/lib/monitoring';
+import type { Json } from '@/integrations/supabase/types';
 
 interface DailyRevenue {
   date: string;
@@ -72,7 +73,7 @@ interface Transaction {
   status: string;
   payment_type: string;
   created_at: string;
-  metadata: any;
+  metadata: Json | null;
 }
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];

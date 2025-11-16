@@ -1,8 +1,9 @@
 import { Home, Star, CheckCircle, Calendar } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
+import type { SubscriptionInfo } from '@/types/subscription';
 
 interface PlanMetricsCardsProps {
-  subscriptionInfo: any;
+  subscriptionInfo: SubscriptionInfo | null;
   activePropertiesCount: number;
   featuredCount: number;
 }

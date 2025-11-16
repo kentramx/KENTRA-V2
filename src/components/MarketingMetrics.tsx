@@ -49,6 +49,7 @@ import {
 import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { useMonitoring } from "@/lib/monitoring";
+import type { MarketingMetricsRaw } from "@/types/admin";
 
 interface MetricsData {
   total_events: number;
@@ -129,21 +130,19 @@ export const MarketingMetrics = () => {
       }
 
       // Validar y normalizar datos
-      const rawData = data as any;
+      const rawData = data as MarketingMetricsRaw;
       const normalizedData: MetricsData = {
         total_events: rawData?.total_events || 0,
         conversions: rawData?.conversions || 0,
         total_value: rawData?.total_value || 0,
         events_by_type: rawData?.events_by_type || [],
         daily_trend: rawData?.daily_trend || [],
-        funnel_data: rawData?.funnel_data || {
-          view_content: 0,
-          initiate_checkout: 0,
-          purchase: 0,
+        funnel_data: {
+          view_content: rawData?.funnel_data?.view_content || 0,
+          initiate_checkout: rawData?.funnel_data?.initiate_checkout || 0,
+          purchase: rawData?.funnel_data?.purchase || 0,
         },
       };
-
-      setMetrics(normalizedData);
     } catch (error: any) {
       captureException(error, {
         component: "MarketingMetrics",
