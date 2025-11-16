@@ -415,46 +415,6 @@ const Home = () => {
               </div>
             </>
           ) : (
-                      id={property.id}
-                      title={property.title}
-                      price={property.price}
-                      type={property.type}
-                      listingType={property.listing_type}
-                      for_sale={property.for_sale}
-                      for_rent={property.for_rent}
-                      sale_price={property.sale_price}
-                      rent_price={property.rent_price}
-                      currency={property.currency}
-                      address={property.address}
-                      colonia={(property as any).colonia}
-                      municipality={property.municipality}
-                      state={property.state}
-                      bedrooms={property.bedrooms}
-                      bathrooms={property.bathrooms}
-                      parking={property.parking}
-                      sqft={property.sqft}
-                      imageUrl={property.images?.[0]?.url}
-                      images={property.images}
-                      agentId={property.agent_id}
-                      isFeatured={property.is_featured}
-                      createdAt={property.created_at}
-                      onCardClick={handlePropertyClick}
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8 text-center md:hidden">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/buscar")}
-                  className="w-full sm:w-auto"
-                >
-                  Ver Todas las Propiedades
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </>
-          ) : (
             <div className="py-12 text-center">
               <p className="text-muted-foreground">
                 No hay propiedades disponibles en este momento
@@ -501,46 +461,6 @@ const Home = () => {
               <div className="mt-8 text-center">
                 <Button variant="outline" onClick={() => navigate("/buscar")}>
                   Ver Todas <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </>
-          ) : (
-                      id={property.id}
-                      title={property.title}
-                      price={property.price}
-                      type={property.type}
-                      listingType={property.listing_type}
-                      for_sale={property.for_sale}
-                      for_rent={property.for_rent}
-                      sale_price={property.sale_price}
-                      rent_price={property.rent_price}
-                      currency={property.currency}
-                      address={property.address}
-                      colonia={(property as any).colonia}
-                      municipality={property.municipality}
-                      state={property.state}
-                      bedrooms={property.bedrooms}
-                      bathrooms={property.bathrooms}
-                      parking={property.parking}
-                      sqft={property.sqft}
-                      imageUrl={property.images?.[0]?.url}
-                      images={property.images}
-                      agentId={property.agent_id}
-                      isFeatured={property.is_featured}
-                      createdAt={property.created_at}
-                      onCardClick={handlePropertyClick}
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8 text-center md:hidden">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/buscar")}
-                  className="w-full sm:w-auto"
-                >
-                  Ver Todas las Propiedades
-                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </>
