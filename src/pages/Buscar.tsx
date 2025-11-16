@@ -783,29 +783,33 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     });
   };
 
-  const mapMarkers = isClusterMode
-    ? clusters.map(c => ({
+  // Memoizar marcadores para evitar recreación innecesaria
+  const mapMarkers = useMemo(() => {
+    if (isClusterMode) {
+      return clusters.map(c => ({
         id: c.cluster_id,
         lat: c.lat,
         lng: c.lng,
         title: `${c.property_count} propiedades`,
         price: Number(c.avg_price) || undefined,
-      }))
-      : filteredProperties
-          .filter(p => p.lat != null && p.lng != null && !isNaN(Number(p.lat)) && !isNaN(Number(p.lng)))
-          .map(p => ({ 
-            id: p.id, 
-            lat: Number(p.lat),
-            lng: Number(p.lng),
-            title: p.title,
-            price: p.price,
-            currency: ('currency' in p ? (p.currency as string) : 'MXN') as 'MXN' | 'USD',
-            bedrooms: p.bedrooms,
-            bathrooms: p.bathrooms,
-            images: p.images,
-            listing_type: p.listing_type as "venta" | "renta",
-            address: p.address,
-          }));
+      }));
+    }
+    return filteredProperties
+      .filter(p => p.lat != null && p.lng != null && !isNaN(Number(p.lat)) && !isNaN(Number(p.lng)))
+      .map(p => ({ 
+        id: p.id, 
+        lat: Number(p.lat),
+        lng: Number(p.lng),
+        title: p.title,
+        price: p.price,
+        currency: ('currency' in p ? (p.currency as string) : 'MXN') as 'MXN' | 'USD',
+        bedrooms: p.bedrooms,
+        bathrooms: p.bathrooms,
+        images: p.images,
+        listing_type: p.listing_type as "venta" | "renta",
+        address: p.address,
+      }));
+  }, [isClusterMode, clusters, filteredProperties]);
 
   // Conteo total considerando clusters en zoom bajo si existen
   const totalCount = isClusterMode && clusters.length > 0
