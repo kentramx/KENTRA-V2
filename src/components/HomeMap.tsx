@@ -6,11 +6,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePropertiesViewport, ViewportBounds } from "@/hooks/usePropertiesViewport";
 import type { MapProperty } from "@/types/property";
+import { useMonitoring } from "@/lib/monitoring";
 
 const HomeMap = ({ height = "450px" }: { height?: string }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { error: logError, captureException } = useMonitoring();
   const [hoveredProperty, setHoveredProperty] = useState<MapProperty | null>(null);
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
 
@@ -109,8 +111,17 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
           description: 'La propiedad se agregó a tus favoritos',
         });
       }
-    } catch (error) {
-      console.error('Error managing favorite:', error);
+    } catch (error: any) {
+      logError('Error managing favorite', {
+        component: 'HomeMap',
+        propertyId,
+        error,
+      });
+      captureException(error, {
+        component: 'HomeMap',
+        action: 'handleFavoriteClick',
+        propertyId,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo actualizar favoritos',

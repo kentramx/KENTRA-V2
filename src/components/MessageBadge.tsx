@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { monitoring } from '@/lib/monitoring';
 
 export const MessageBadge = () => {
   const { user } = useAuth();
@@ -52,8 +53,12 @@ export const MessageBadge = () => {
 
       const total = data?.reduce((sum, item) => sum + item.unread_count, 0) || 0;
       setUnreadCount(total);
-    } catch (error) {
-      console.error('Error fetching unread count:', error);
+    } catch (error: any) {
+      monitoring.warn('Error fetching unread count', {
+        component: 'MessageBadge',
+        userId: user?.id,
+        error,
+      });
     }
   };
 

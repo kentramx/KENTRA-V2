@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { useMonitoring } from "@/lib/monitoring";
 
 interface MetricsData {
   total_events: number;
@@ -94,6 +95,7 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 export const MarketingMetrics = () => {
+  const { error: logError, captureException } = useMonitoring();
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<MetricsData | null>(null);
   const [recentEvents, setRecentEvents] = useState<ConversionEvent[]>([]);
@@ -118,7 +120,11 @@ export const MarketingMetrics = () => {
       });
 
       if (error) {
-        console.error("Error fetching marketing metrics:", error);
+        logError("Error fetching marketing metrics", {
+          component: "MarketingMetrics",
+          dateRange,
+          error,
+        });
         throw error;
       }
 
@@ -138,8 +144,12 @@ export const MarketingMetrics = () => {
       };
 
       setMetrics(normalizedData);
-    } catch (error) {
-      console.error("Error fetching marketing metrics:", error);
+    } catch (error: any) {
+      captureException(error, {
+        component: "MarketingMetrics",
+        action: "fetchMetrics",
+        dateRange,
+      });
       toast({
         title: "Error",
         description: "No se pudieron cargar las métricas de marketing",
@@ -184,8 +194,13 @@ export const MarketingMetrics = () => {
       if (error) throw error;
 
       setRecentEvents(data || []);
-    } catch (error) {
-      console.error("Error fetching recent events:", error);
+    } catch (error: any) {
+      logError("Error fetching recent events", {
+        component: "MarketingMetrics",
+        eventTypeFilter,
+        eventSourceFilter,
+        error,
+      });
     }
   };
 

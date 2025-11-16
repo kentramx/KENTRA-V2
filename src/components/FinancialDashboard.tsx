@@ -12,6 +12,7 @@ import { ArrowUpIcon, ArrowDownIcon, TrendingUp, DollarSign, CreditCard, Users, 
 import { format, subDays, subWeeks, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { useMonitoring } from '@/lib/monitoring';
 
 interface DailyRevenue {
   date: string;
@@ -86,6 +87,7 @@ const PERIOD_OPTIONS = [
 
 export function FinancialDashboard() {
   const { toast } = useToast();
+  const { error: logError, captureException } = useMonitoring();
   const [metrics, setMetrics] = useState<FinancialMetrics | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,7 +141,15 @@ export function FinancialDashboard() {
       const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
       setMetrics(parsedData as FinancialMetrics);
     } catch (error: any) {
-      console.error('Error fetching financial data:', error);
+      logError('Error fetching financial data', {
+        component: 'FinancialDashboard',
+        period,
+        error,
+      });
+      captureException(error, {
+        component: 'FinancialDashboard',
+        action: 'fetchFinancialData',
+      });
       toast({
         title: 'Error',
         description: error.message || 'Error al cargar métricas financieras',
@@ -162,7 +172,10 @@ export function FinancialDashboard() {
 
       setTransactions(data || []);
     } catch (error: any) {
-      console.error('Error fetching transactions:', error);
+      logError('Error fetching transactions', {
+        component: 'FinancialDashboard',
+        error,
+      });
     }
   };
 

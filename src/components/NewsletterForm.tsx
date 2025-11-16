@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
+import { useMonitoring } from "@/lib/monitoring";
 
 // Esquema de validación simplificado para newsletter general
 const newsletterSchema = z.object({
@@ -36,6 +37,7 @@ type NewsletterFormData = z.infer<typeof newsletterSchema>;
 export const NewsletterForm = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { error: logError, captureException } = useMonitoring();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -95,8 +97,16 @@ export const NewsletterForm = () => {
 
       setIsOpen(false);
       form.reset();
-    } catch (error) {
-      console.error("Error al suscribirse:", error);
+    } catch (error: any) {
+      logError("Error al suscribirse al newsletter", {
+        component: "NewsletterForm",
+        email: data.email,
+        error,
+      });
+      captureException(error, {
+        component: "NewsletterForm",
+        action: "onSubmit",
+      });
       toast({
         title: "Error",
         description: "Hubo un problema al procesar tu suscripción. Intenta nuevamente.",

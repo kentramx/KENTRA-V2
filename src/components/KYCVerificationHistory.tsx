@@ -11,6 +11,7 @@ import {
   User,
   Calendar,
 } from "lucide-react";
+import { monitoring } from "@/lib/monitoring";
 
 interface HistoryEntry {
   id: string;
@@ -75,7 +76,11 @@ export const KYCVerificationHistory = ({ verificationId }: KYCVerificationHistor
         setHistory([]);
       }
     } catch (error: any) {
-      console.error("Error fetching KYC history:", error);
+      monitoring.error("Error fetching KYC history", {
+        component: "KYCVerificationHistory",
+        verificationId,
+        error,
+      });
     } finally {
       setLoading(false);
     }

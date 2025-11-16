@@ -19,6 +19,7 @@ import {
   Shield,
   Eye
 } from "lucide-react";
+import { useMonitoring } from "@/lib/monitoring";
 
 interface KYCVerification {
   id: string;
@@ -38,6 +39,7 @@ interface KYCVerification {
 
 export const IdentityVerification = () => {
   const { user } = useAuth();
+  const { error: logError, captureException } = useMonitoring();
   const [verification, setVerification] = useState<KYCVerification | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -76,7 +78,15 @@ export const IdentityVerification = () => {
         setAddress(data.address || "");
       }
     } catch (error: any) {
-      console.error("Error fetching verification:", error);
+      logError("Error fetching verification", {
+        component: "IdentityVerification",
+        userId: user?.id,
+        error,
+      });
+      captureException(error, {
+        component: "IdentityVerification",
+        action: "fetchVerification",
+      });
       toast({
         title: "Error",
         description: "No se pudo cargar el estado de verificación",
@@ -147,7 +157,15 @@ export const IdentityVerification = () => {
 
       await fetchVerification();
     } catch (error: any) {
-      console.error("Error submitting verification:", error);
+      logError("Error submitting verification", {
+        component: "IdentityVerification",
+        userId: user?.id,
+        error,
+      });
+      captureException(error, {
+        component: "IdentityVerification",
+        action: "handleSubmit",
+      });
       toast({
         title: "Error",
         description: error.message || "No se pudo enviar la solicitud",

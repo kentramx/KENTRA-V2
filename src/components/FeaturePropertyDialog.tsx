@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Star, Calendar, DollarSign, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useMonitoring } from '@/lib/monitoring';
 
 interface FeaturePropertyDialogProps {
   property: {
@@ -41,6 +42,7 @@ export const FeaturePropertyDialog = ({
   subscriptionInfo,
 }: FeaturePropertyDialogProps) => {
   const { toast } = useToast();
+  const { error: logError, captureException } = useMonitoring();
   const [loading, setLoading] = useState(false);
 
   const canFeature = subscriptionInfo 
@@ -82,8 +84,17 @@ export const FeaturePropertyDialog = ({
 
       onSuccess();
       onOpenChange(false);
-    } catch (error) {
-      console.error('Error featuring property:', error);
+    } catch (error: any) {
+      logError('Error featuring property', {
+        component: 'FeaturePropertyDialog',
+        propertyId: property.id,
+        error,
+      });
+      captureException(error, {
+        component: 'FeaturePropertyDialog',
+        action: 'handleFeature',
+        propertyId: property.id,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo destacar la propiedad',
