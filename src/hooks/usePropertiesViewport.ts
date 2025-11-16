@@ -80,8 +80,8 @@ export const usePropertiesViewport = (
       const status = filters?.status?.[0] || 'activa';
       const maxProperties = getMaxPropertiesForZoom(bounds.zoom);
 
-      // ✅ Si zoom alto (>=14), cargar propiedades individuales con límite
-      if (bounds.zoom >= 14) {
+        // Forzamos carga de propiedades individuales siempre (cluster off)
+        if (true) {
         console.log('[usePropertiesViewport] Cargando propiedades individuales...');
         const startTime = Date.now();
         

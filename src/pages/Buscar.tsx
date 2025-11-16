@@ -157,13 +157,13 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   // Centro en México con zoom que muestra todo el país
   const [mapCenter, setMapCenter] = useState({ lat: 23.6345, lng: -102.5528 });
   const [mapZoom, setMapZoom] = useState(5);
-  const [mapBounds, setMapBounds] = useState<ViewportBounds | null>(null);
+  const [mapBounds, setMapBounds] = useState<ViewportBounds | null>({ minLng: -118.0, minLat: 14.0, maxLng: -86.0, maxLat: 33.0, zoom: 5 });
 
   const { data: viewportData, isLoading: loading, isFetching, error } = usePropertiesViewport(mapBounds, queryFilters);
   
   const properties = (viewportData?.properties || []);
   const clusters = (viewportData?.clusters || []);
-  const isClusterMode = !!(mapBounds && mapBounds.zoom < 14);
+  const isClusterMode = !!(mapBounds && mapBounds.zoom < 14 && clusters.length > 0);
 
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
@@ -807,8 +807,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
           address: p.address,
         }));
 
-  // Conteo total considerando clusters en zoom bajo
-  const totalCount = isClusterMode 
+  // Conteo total considerando clusters en zoom bajo si existen
+  const totalCount = isClusterMode && clusters.length > 0
     ? clusters.reduce((sum, c) => sum + (c.property_count || 0), 0)
     : filteredProperties.length;
 
