@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { SearchMap } from '@/components/SearchMap';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,7 +36,8 @@ import { SEOHead } from '@/components/SEOHead';
 import { generateSearchTitle, generateSearchDescription } from '@/utils/seo';
 import { generatePropertyListStructuredData } from '@/utils/structuredData';
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
-import type { MapProperty } from '@/types/property';
+import { monitoring } from '@/lib/monitoring';
+import type { MapProperty, PropertyFilters } from '@/types/property';
 
 interface Filters {
   estado: string;
@@ -120,8 +122,16 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     orden: (searchParams.get('orden') as any) || 'price_desc',
   });
   
-  // Fetch de propiedades con React Query
-  const queryFilters = useMemo(() => ({
+  // ✅ Fetch optimizado para lista - carga inicial de todo el país
+  const initialBounds: ViewportBounds = { 
+    minLng: -118.0, 
+    minLat: 14.0, 
+    maxLng: -86.0, 
+    maxLat: 33.0, 
+    zoom: 5 
+  };
+
+  const queryFilters: PropertyFilters = useMemo(() => ({
     estado: filters.estado || undefined,
     municipio: filters.municipio || undefined,
     tipo: filters.tipo || undefined,
@@ -131,18 +141,11 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     recamaras: filters.recamaras || undefined,
     banos: filters.banos || undefined,
     status: ['activa'],
-  }), [filters.estado, filters.municipio, filters.tipo, filters.listingType, filters.precioMin, filters.precioMax, filters.recamaras, filters.banos]);
+  }), [filters]);
 
-  // Centro en México con zoom que muestra todo el país
-  const [mapCenter, setMapCenter] = useState({ lat: 23.6345, lng: -102.5528 });
-  const [mapZoom, setMapZoom] = useState(5);
-  const [mapBounds, setMapBounds] = useState<ViewportBounds | null>({ minLng: -118.0, minLat: 14.0, maxLng: -86.0, maxLat: 33.0, zoom: 5 });
-
-  const { data: viewportData, isLoading: loading, isFetching, error } = usePropertiesViewport(mapBounds, queryFilters);
+  const { data: viewportData, isLoading: loading, isFetching } = usePropertiesViewport(initialBounds, queryFilters);
   
   const properties = (viewportData?.properties || []);
-  const clusters = (viewportData?.clusters || []);
-  const isClusterMode = !!(mapBounds && mapBounds.zoom < 14 && clusters.length > 0);
 
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
@@ -708,8 +711,12 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
           description: 'La propiedad se agregó a tus favoritos',
         });
       }
-    } catch (error: any) {
-      console.error('Error managing favorite:', error);
+    } catch (error) {
+      monitoring.error('Error managing favorite', {
+        component: 'Buscar',
+        propertyId,
+        error,
+      });
       toast({
         title: 'Error',
         description: 'No se pudo actualizar favoritos',
@@ -763,37 +770,10 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   };
 
   // Memoizar marcadores para evitar recreación innecesaria
-  const mapMarkers = useMemo(() => {
-    if (isClusterMode) {
-      return clusters.map(c => ({
-        id: c.cluster_id,
-        lat: c.lat,
-        lng: c.lng,
-        title: `${c.property_count} propiedades`,
-        price: Number(c.avg_price) || undefined,
-      }));
-    }
-    return filteredProperties
-      .filter(p => p.lat != null && p.lng != null && !isNaN(Number(p.lat)) && !isNaN(Number(p.lng)))
-      .map(p => ({ 
-        id: p.id, 
-        lat: Number(p.lat),
-        lng: Number(p.lng),
-        title: p.title,
-        price: p.price,
-        currency: ('currency' in p ? (p.currency as string) : 'MXN') as 'MXN' | 'USD',
-        bedrooms: p.bedrooms,
-        bathrooms: p.bathrooms,
-        images: p.images,
-        listing_type: p.listing_type as "venta" | "renta",
-        address: p.address,
-      }));
-  }, [isClusterMode, clusters, filteredProperties]);
+  // Ya no se usa - SearchMap maneja su propia carga de propiedades
 
-  // Conteo total considerando clusters en zoom bajo si existen
-  const totalCount = isClusterMode && clusters.length > 0
-    ? clusters.reduce((sum, c) => sum + (c.property_count || 0), 0)
-    : filteredProperties.length;
+  // Conteo total de propiedades filtradas
+  const totalCount = filteredProperties.length;
 
   const hasActiveFilters = !!(
     filters.estado || 
@@ -817,20 +797,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     filters.banos
   );
 
-  // Map center and zoom are now managed by state for bounds-based loading
-  // Update map position based on search, hover, or filters
-  useEffect(() => {
-    if (searchCoordinates) {
-      setMapCenter(searchCoordinates);
-      setMapZoom(12);
-    } else if (hasLocationFilters && mapMarkers.length > 0) {
-      setMapCenter({ lat: mapMarkers[0].lat, lng: mapMarkers[0].lng });
-      setMapZoom(12);
-    } else {
-      setMapCenter({ lat: 23.6345, lng: -102.5528 });
-      setMapZoom(5);
-    }
-  }, [searchCoordinates, hasLocationFilters, mapMarkers]);
+  // Map center and zoom are now managed by SearchMap internally
+  // Ya no es necesario actualizar el centro y zoom manualmente
 
   const getBreadcrumbItems = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = [
@@ -871,14 +839,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
         <Navbar />
         <div className="flex flex-col items-center justify-center h-screen gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">
-            {error ? 'Error al cargar propiedades' : 'Cargando propiedades...'}
-          </p>
-          {error && (
-            <p className="text-sm text-destructive">
-              Intenta ajustar tus filtros de búsqueda
-            </p>
-          )}
+          <p className="text-muted-foreground">Cargando propiedades...</p>
         </div>
       </div>
     );
@@ -1474,27 +1435,26 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               </p>
             </div>
 
-            <BasicGoogleMap
-              center={mapCenter}
-              zoom={mapZoom}
-              markers={mapMarkers}
-              height="100%"
-              className="h-full w-full"
-              enableClustering={false}
-              onMarkerClick={handleMarkerClick}
-              onFavoriteClick={handleFavoriteClick}
-              disableAutoFit={!hasLocationFilters || !!searchCoordinates}
-              hoveredMarkerId={hoveredProperty?.id || null}
-              onBoundsChanged={setMapBounds}
-              onMarkerHover={(markerId) => {
-                if (markerId) {
-                  hoverFromMap.current = true;
-                  const property = filteredProperties.find(p => p.id === markerId) as MapProperty | undefined;
-                  setHoveredProperty(property || null);
-                } else {
-                  setHoveredProperty(null);
-                }
+            <SearchMap
+              filters={{
+                estado: filters.estado || undefined,
+                municipio: filters.municipio || undefined,
+                tipo: filters.tipo || undefined,
+                listingType: filters.listingType || undefined,
+                precioMin: filters.precioMin ? parseFloat(filters.precioMin) : undefined,
+                precioMax: filters.precioMax ? parseFloat(filters.precioMax) : undefined,
+                recamaras: filters.recamaras || undefined,
+                banos: filters.banos || undefined,
+                status: ['activa'],
               }}
+              searchCoordinates={searchCoordinates}
+              onMarkerClick={handleMarkerClick}
+              onPropertyHover={(property) => {
+                hoverFromMap.current = true;
+                setHoveredProperty(property);
+              }}
+              hoveredPropertyId={hoveredProperty?.id || null}
+              height="100%"
             />
           </div>
 

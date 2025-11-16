@@ -39,8 +39,8 @@ export const usePropertiesViewport = (
       const status = filters?.status?.[0] || 'activa';
       const maxProperties = getMaxPropertiesForZoom(bounds.zoom);
 
-        // Forzamos carga de propiedades individuales siempre (cluster off)
-        if (true) {
+      // ✅ Si zoom alto (>=14), cargar propiedades individuales
+      if (bounds.zoom >= 14) {
         const startTime = Date.now();
         
         const { data, error } = await supabase.rpc('get_properties_in_viewport', {
