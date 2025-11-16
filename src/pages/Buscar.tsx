@@ -69,22 +69,18 @@ const Buscar = () => {
   const { data: viewportData, isLoading, error } = usePropertiesViewport(mapBounds, {
     estado: filters.estado,
     municipio: filters.municipio,
-    tipo: filters.tipo === 'all' ? undefined : filters.tipo,
+    tipo: (filters.tipo && filters.tipo !== 'all') ? filters.tipo : undefined,
     listingType: filters.listingType,
     precioMin: filters.precioMin ? parseFloat(filters.precioMin) : undefined,
     precioMax: filters.precioMax ? parseFloat(filters.precioMax) : undefined,
+    recamaras: (filters.recamaras && filters.recamaras !== '0') ? filters.recamaras : undefined,
+    banos: (filters.banos && filters.banos !== '0') ? filters.banos : undefined,
   });
 
-  // Obtener propiedades y aplicar filtros adicionales
+  // Obtener propiedades (filtros ya aplicados en la query)
   const allProperties = useMemo(() => {
-    const properties = (viewportData?.properties || []) as Property[];
-    
-    return properties.filter((property) => {
-      if (filters.recamaras && property.bedrooms && property.bedrooms < parseInt(filters.recamaras)) return false;
-      if (filters.banos && property.bathrooms && property.bathrooms < parseInt(filters.banos)) return false;
-      return true;
-    });
-  }, [viewportData, filters.recamaras, filters.banos]);
+    return (viewportData?.properties || []) as Property[];
+  }, [viewportData]);
 
   // Ordenar propiedades
   const sortedProperties = useMemo(() => {
