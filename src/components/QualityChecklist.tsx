@@ -30,7 +30,7 @@ const QualityChecklist = ({ property }: QualityChecklistProps) => {
     images: imagesCount >= 3,
     description: descriptionWordCount >= 50,
     amenities: amenitiesCount > 0,
-    price: true, // TODO: validar contra precios promedio
+    price: Boolean(property.price && property.price > 0),
     location: hasLocation,
   };
 

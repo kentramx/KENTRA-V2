@@ -82,7 +82,6 @@ export const usePropertiesViewport = (
 
         // Forzamos carga de propiedades individuales siempre (cluster off)
         if (true) {
-        console.log('[usePropertiesViewport] Cargando propiedades individuales...');
         const startTime = Date.now();
         
         const { data, error } = await supabase.rpc('get_properties_in_viewport', {
@@ -105,8 +104,6 @@ export const usePropertiesViewport = (
           console.error('[usePropertiesViewport] Error:', error);
           throw error;
         }
-        
-        console.log(`[usePropertiesViewport] RPC completado en ${Date.now() - startTime}ms, ${data?.length || 0} propiedades`);
 
         // ✅ OPTIMIZACIÓN: Aplicar límite y batch load
         const limitedProperties = (data || []).slice(0, maxProperties);
@@ -143,8 +140,6 @@ export const usePropertiesViewport = (
           images: imagesMap.get(prop.id) || [],
           is_featured: featuredSet.has(prop.id),
         }));
-        
-        console.log(`[usePropertiesViewport] Total tiempo: ${Date.now() - startTime}ms`);
 
         return {
           clusters: [] as PropertyCluster[], 

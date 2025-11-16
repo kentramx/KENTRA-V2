@@ -78,8 +78,6 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
   useEffect(() => {
     if (!isAdmin) return;
 
-    console.log('Admin realtime notifications: Setting up channel');
-
     const channel = supabase
       .channel('subscription-changes-admin')
       .on(
@@ -90,16 +88,12 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
           table: 'subscription_changes',
         },
         async (payload) => {
-          console.log('New subscription change detected:', payload);
           await handleNewChange(payload.new as any);
         }
       )
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
-      console.log('Admin realtime notifications: Cleaning up channel');
       supabase.removeChannel(channel);
     };
   }, [isAdmin]);
@@ -111,7 +105,7 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
   const playNotificationSound = () => {
     const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVq/m7qxdGAg+ltzy');
     audio.volume = 0.3;
-    audio.play().catch(e => console.log('Could not play sound:', e));
+    audio.play().catch(() => {});
   };
 
   const sendEmailNotification = async (
@@ -126,7 +120,6 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user?.email) {
-        console.log('No email found for admin user');
         return;
       }
 
@@ -151,8 +144,6 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
 
       if (error) {
         console.error('Error sending email notification:', error);
-      } else {
-        console.log('Email notification sent successfully');
       }
     } catch (error) {
       console.error('Error in sendEmailNotification:', error);

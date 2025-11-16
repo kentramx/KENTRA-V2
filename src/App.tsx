@@ -74,7 +74,6 @@ const AppContent = () => {
   useEffect(() => {
     // Trackear pageview en cada cambio de ruta usando GTM
     trackPageView(location.pathname + location.search);
-    console.log('📊 GTM Pageview tracked:', location.pathname);
   }, [location, trackPageView]);
 
   return (

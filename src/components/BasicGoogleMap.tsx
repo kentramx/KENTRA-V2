@@ -161,11 +161,8 @@ export function BasicGoogleMap({
     markerRefs.current.clear();
 
     if (!markers || markers.length === 0) {
-      console.log('[BasicGoogleMap] No markers to render');
       return;
     }
-
-    console.log('[BasicGoogleMap] Rendering markers count =', markers.length, markers.slice(0, 3));
 
     const bounds = new google.maps.LatLngBounds();
     
