@@ -1,13 +1,17 @@
+/**
+ * PropertyCard OPTIMIZADO con React.memo
+ */
+
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart, Star, Bed, Bath, Car, Square, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, Star, Bed, Bath, Car, Square, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import propertyPlaceholder from "@/assets/property-placeholder.jpg";
 import { useTracking } from "@/hooks/useTracking";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { LazyImage } from "@/components/LazyImage";
 
 interface PropertyCardProps {
@@ -40,7 +44,7 @@ interface PropertyCardProps {
   onCardClick?: (id: string) => void;
 }
 
-const PropertyCard = ({
+const PropertyCardComponent = ({
   id,
   title,
   price,
@@ -73,7 +77,8 @@ const PropertyCard = ({
   const { trackGA4Event } = useTracking();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const formatPrice = (price: number, curr: string = currency) => {
+  // ✅ OPTIMIZACIÓN: Memoizar funciones costosas
+  const formatPrice = useCallback((price: number, curr: string = currency) => {
     const formatted = new Intl.NumberFormat("es-MX", {
       style: "currency",
       currency: curr,
@@ -82,14 +87,14 @@ const PropertyCard = ({
     
     // Agregar código de moneda para USD, mantener limpio para MXN
     return curr === 'USD' ? `${formatted} USD` : formatted;
-  };
+  }, [currency]);
 
-  const getListingBadge = () => {
+  const getListingBadge = useCallback(() => {
     if (for_sale && for_rent) return "Venta y Renta";
     if (for_sale) return "En Venta";
     if (for_rent) return "En Renta";
     return listingType === 'renta' ? "En Renta" : "En Venta";
-  };
+  }, [for_sale, for_rent, listingType]);
 
   const getDisplayPrice = () => {
     if (for_sale && for_rent) {
@@ -113,7 +118,7 @@ const PropertyCard = ({
     return <div className="text-2xl font-bold text-primary">{formatPrice(price, currency)}</div>;
   };
 
-  const getTypeLabel = () => {
+  const getTypeLabel = useCallback(() => {
     const labels: Record<string, string> = {
       casa: 'Casa',
       departamento: 'Condo',
@@ -125,9 +130,9 @@ const PropertyCard = ({
       rancho: 'Rancho'
     };
     return labels[type] || type;
-  };
+  }, [type]);
 
-  const getDaysOnMarket = () => {
+  const getDaysOnMarket = useCallback(() => {
     if (!createdAt) return null;
     const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
     if (days === 0) return "Hoy";
@@ -135,15 +140,15 @@ const PropertyCard = ({
     if (days < 7) return `Hace ${days} días`;
     if (days < 30) return `Hace ${Math.floor(days/7)} semanas`;
     return `Hace ${Math.floor(days/30)} meses`;
-  };
+  }, [createdAt]);
 
-  const isNew = () => {
+  const isNew = useCallback(() => {
     if (!createdAt) return false;
     const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
     return days < 7;
-  };
+  }, [createdAt]);
 
-  const handleCardClick = (e: React.MouseEvent) => {
+  const handleCardClick = useCallback((e: React.MouseEvent) => {
     if (onCardClick) {
       e.preventDefault();
       trackGA4Event('select_item', {
@@ -165,7 +170,7 @@ const PropertyCard = ({
         currency: 'MXN',
       });
     }
-  };
+  }, [onCardClick, id, title, type, price, trackGA4Event]);
 
   const displayImages = images && images.length > 0 
     ? images 
@@ -177,17 +182,17 @@ const PropertyCard = ({
     return url;
   };
 
-  const handlePrevImage = (e: React.MouseEvent) => {
+  const handlePrevImage = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev === 0 ? displayImages.length - 1 : prev - 1));
-  };
+  }, [displayImages.length]);
 
-  const handleNextImage = (e: React.MouseEvent) => {
+  const handleNextImage = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1));
-  };
+  }, [displayImages.length]);
 
   const Wrapper = onCardClick ? 'div' : Link;
   const wrapperProps = onCardClick 
@@ -343,5 +348,22 @@ const PropertyCard = ({
     </Card>
   );
 };
+
+// ✅ OPTIMIZACIÓN: Memoizar componente para evitar re-renders innecesarios
+const arePropsEqual = (
+  prevProps: PropertyCardProps,
+  nextProps: PropertyCardProps
+) => {
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.price === nextProps.price &&
+    prevProps.isFavorite === nextProps.isFavorite &&
+    prevProps.isHovered === nextProps.isHovered &&
+    prevProps.isFeatured === nextProps.isFeatured &&
+    prevProps.images?.length === nextProps.images?.length
+  );
+};
+
+const PropertyCard = memo(PropertyCardComponent, arePropsEqual);
 
 export default PropertyCard;
