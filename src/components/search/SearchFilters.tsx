@@ -131,7 +131,7 @@ export const SearchFilters = ({
           <Tag className="h-4 w-4" />
           Tipo de Propiedad
         </Label>
-        <Select value={filters.tipo} onValueChange={(value) => onFilterChange('tipo', value)}>
+        <Select value={filters.tipo || "all"} onValueChange={(value) => onFilterChange('tipo', value === "all" ? "" : value)}>
           <SelectTrigger>
             <SelectValue placeholder="Todos los tipos" />
           </SelectTrigger>
@@ -197,12 +197,12 @@ export const SearchFilters = ({
           <Bed className="h-4 w-4" />
           Recámaras
         </Label>
-        <Select value={filters.recamaras} onValueChange={(value) => onFilterChange('recamaras', value)}>
+        <Select value={filters.recamaras || "0"} onValueChange={(value) => onFilterChange('recamaras', value === "0" ? "" : value)}>
           <SelectTrigger>
             <SelectValue placeholder="Cualquier cantidad" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Cualquier cantidad</SelectItem>
+            <SelectItem value="0">Cualquier cantidad</SelectItem>
             <SelectItem value="1">1+</SelectItem>
             <SelectItem value="2">2+</SelectItem>
             <SelectItem value="3">3+</SelectItem>
@@ -218,12 +218,12 @@ export const SearchFilters = ({
           <Bath className="h-4 w-4" />
           Baños
         </Label>
-        <Select value={filters.banos} onValueChange={(value) => onFilterChange('banos', value)}>
+        <Select value={filters.banos || "0"} onValueChange={(value) => onFilterChange('banos', value === "0" ? "" : value)}>
           <SelectTrigger>
             <SelectValue placeholder="Cualquier cantidad" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Cualquier cantidad</SelectItem>
+            <SelectItem value="0">Cualquier cantidad</SelectItem>
             <SelectItem value="1">1+</SelectItem>
             <SelectItem value="2">2+</SelectItem>
             <SelectItem value="3">3+</SelectItem>
