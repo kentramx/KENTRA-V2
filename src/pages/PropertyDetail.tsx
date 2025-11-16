@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SEOHead } from "@/components/SEOHead";
 import { generatePropertyTitle, generatePropertyDescription } from "@/utils/seo";
 import { generatePropertyStructuredData, generateBreadcrumbStructuredData } from "@/utils/structuredData";
+import type { Property } from "@/types/property";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -476,20 +477,7 @@ const PropertyDetail = () => {
   });
 
   const structuredData = generatePropertyStructuredData({
-    id: property.id,
-    title: property.title,
-    description: property.description || seoDescription,
-    price: property.price,
-    currency: 'MXN',
-    type: property.type,
-    listingType: (property.listing_type || 'venta') as 'venta' | 'renta',
-    address: property.address,
-    municipality: property.municipality,
-    state: property.state,
-    bedrooms: property.bedrooms || undefined,
-    bathrooms: property.bathrooms || undefined,
-    sqft: property.sqft || undefined,
-    images,
+    property,
     url: propertyUrl,
     agentName: agent?.name,
     agentPhone: agent?.phone || undefined,

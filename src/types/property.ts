@@ -184,6 +184,7 @@ export type ListingType = 'venta' | 'renta';
 export type PropertyStatus =
   | 'activa'
   | 'pendiente'
+  | 'pendiente_aprobacion'
   | 'rechazada'
   | 'expirada'
   | 'vendida'
