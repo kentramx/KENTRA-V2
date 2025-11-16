@@ -372,26 +372,35 @@ export function BasicGoogleMap({
         } catch (e) {
           console.error('Error creating clusterer:', e);
           // Fallback: agregar marcadores directamente
-          markerArray.forEach(marker => marker.setMap(map));
+          const mapInstance = mapRef.current;
+          if (mapInstance) {
+            markerArray.forEach(marker => marker.setMap(mapInstance));
+          }
         }
       };
 
       // Intentar crear inmediatamente y añadir un fallback en 'idle' por si el mapa aún no está listo
       createClusterer();
-      if (!clustererRef.current) {
-        google.maps.event.addListenerOnce(map, 'idle', createClusterer);
+      if (!clustererRef.current && mapRef.current) {
+        google.maps.event.addListenerOnce(mapRef.current, 'idle', createClusterer);
       }
     } else {
       // Si clustering no está habilitado, agregar marcadores directamente al mapa
-      markerArray.forEach(marker => marker.setMap(map));
+      const mapInstance = mapRef.current;
+      if (mapInstance) {
+        markerArray.forEach(marker => marker.setMap(mapInstance));
+      }
     }
 
     // Ajustar vista del mapa a los marcadores solo si no está deshabilitado
     if (!disableAutoFit) {
-      if (markerArray.length > 1) {
-        map.fitBounds(bounds);
-      } else if (markerArray.length === 1) {
-        map.setCenter(markerArray[0].getPosition()!);
+      const mapInstance = mapRef.current;
+      if (mapInstance) {
+        if (markerArray.length > 1) {
+          mapInstance.fitBounds(bounds);
+        } else if (markerArray.length === 1) {
+          mapInstance.setCenter(markerArray[0].getPosition()!);
+        }
       }
     }
   }, [markers, enableClustering, onMarkerClick, onFavoriteClick, disableAutoFit, onMarkerHover]);
