@@ -82,6 +82,9 @@ const Buscar = () => {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   
+  // ✅ Estado para sincronizar clic en mapa con tarjeta de lista
+  const [selectedPropertyFromMap, setSelectedPropertyFromMap] = useState<string | null>(null);
+  
 // Rangos para VENTA (en millones)
 const SALE_MIN_PRICE = 0;
 const SALE_MAX_PRICE = 100; // $100M o más
@@ -206,13 +209,13 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   }, [searchParams]);
   
   // Función para abrir Sheet
-  const handlePropertyClick = (id: string) => {
+  const handlePropertyClick = useCallback((id: string) => {
     setSelectedPropertyId(id);
     setSheetOpen(true);
     const newParams = new URLSearchParams(searchParams);
     newParams.set('propiedad', id);
     setSearchParams(newParams, { replace: true });
-  };
+  }, [searchParams, setSearchParams]);
   
   // Función para cerrar Sheet
   const handleCloseSheet = () => {
@@ -651,9 +654,31 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     setHoveredProperty(property);
   }, []);
 
-  const handleMarkerClick = (propertyId: string) => {
+  // ✅ Handler: cuando se hace clic en un marcador del mapa
+  const handleMarkerClick = useCallback((propertyId: string) => {
+    monitoring.debug('[Buscar] Click en marcador del mapa', {
+      component: 'Buscar',
+      action: 'markerClick',
+      propertyId,
+    });
+    
+    // 1. Establecer la propiedad seleccionada para scroll + resaltado
+    setSelectedPropertyFromMap(propertyId);
+    
+    // 2. Abrir el Sheet con los detalles de la propiedad
     handlePropertyClick(propertyId);
-  };
+    
+    // 3. Remover el resaltado después de 2 segundos
+    setTimeout(() => {
+      setSelectedPropertyFromMap(null);
+    }, 2000);
+    
+    // 4. Tracking de evento
+    trackGA4Event('select_item', {
+      item_list_name: 'search_map',
+      items: [{ item_id: propertyId }],
+    });
+  }, [handlePropertyClick, trackGA4Event]);
 
   const handleFavoriteClick = async (propertyId: string) => {
     if (!user) {
@@ -1454,6 +1479,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 const element = document.getElementById('saved-searches');
                 element?.scrollIntoView({ behavior: 'smooth' });
               }}
+              highlightedPropertyId={selectedPropertyFromMap}
+              scrollToPropertyId={selectedPropertyFromMap}
             />
 
             {/* ✅ Paginación fuera del componente de lista */}

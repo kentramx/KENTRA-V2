@@ -24,6 +24,8 @@ interface SearchResultsListProps {
   onPropertyHover?: (property: MapProperty | null) => void;
   savedSearchesCount?: number;
   onScrollToSavedSearches?: () => void;
+  highlightedPropertyId?: string | null;  // 🆕 Propiedad a resaltar
+  scrollToPropertyId?: string | null;      // 🆕 Propiedad a la que hacer scroll
 }
 
 export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
@@ -37,8 +39,23 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
     onPropertyHover,
     savedSearchesCount = 0,
     onScrollToSavedSearches,
+    highlightedPropertyId,
+    scrollToPropertyId,
   }) => {
     const propertyCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+    // ✅ Efecto para hacer scroll a una propiedad específica desde el mapa
+    React.useEffect(() => {
+      if (scrollToPropertyId) {
+        const element = propertyCardRefs.current.get(scrollToPropertyId);
+        if (element) {
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+        }
+      }
+    }, [scrollToPropertyId]);
 
     // ✅ Memoizar propiedades paginadas y ordenadas
     const { paginatedProperties, featuredCount } = useMemo(() => {
@@ -167,6 +184,11 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
                         propertyCardRefs.current.delete(property.id);
                       }
                     }}
+                    className={`transition-all duration-300 ${
+                      highlightedPropertyId === property.id 
+                        ? 'ring-2 ring-sky-500 ring-offset-2 scale-[1.02]' 
+                        : ''
+                    }`}
                     onMouseEnter={() => handlePropertyHover(property)}
                     onMouseLeave={() => handlePropertyHover(null)}
                   >
