@@ -122,20 +122,20 @@ export const PlaceAutocomplete = ({
             };
 
             setInputValue(location.address);
-            onPlaceSelectRef.current?.(location);
+            onPlaceSelectRef.current(location);
 
             toast({
-              title: '📍 Ubicación obtenida',
-              description: colonia 
-                ? `${colonia}, ${municipality}` 
-                : municipality,
+              title: '📍 Ubicación detectada',
+              description: location.colonia 
+                ? `${location.colonia}, ${location.municipality}` 
+                : location.municipality,
             });
           }
         } catch (error) {
-          console.error('Error en geocodificación:', error);
+          console.error('Error getting location:', error);
           toast({
             title: '❌ Error',
-            description: 'No se pudo obtener la dirección',
+            description: 'No se pudo obtener tu ubicación',
             variant: 'destructive',
           });
         } finally {
@@ -143,185 +143,49 @@ export const PlaceAutocomplete = ({
         }
       },
       (error) => {
-        console.error('Error de geolocalización:', error);
-        setIsGettingLocation(false);
-        
-        let errorMsg = 'No se pudo obtener tu ubicación';
-        if (error.code === 1) {
-          errorMsg = 'Por favor, permite el acceso a tu ubicación';
-        } else if (error.code === 2) {
-          errorMsg = 'No se pudo determinar tu ubicación';
-        } else if (error.code === 3) {
-          errorMsg = 'Tiempo de espera agotado';
-        }
-        
+        console.error('Geolocation error:', error);
         toast({
           title: '❌ Error de geolocalización',
-          description: errorMsg,
+          description: 'No se pudo acceder a tu ubicación',
           variant: 'destructive',
         });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
+        setIsGettingLocation(false);
       }
     );
   };
 
-  useEffect(() => {
-    loadGoogleMaps()
-      .then(() => setIsLoaded(true))
-      .catch((err) => {
-        console.error('Error loading Google Maps:', err);
-        setLoadError(err.message);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    const initTimer = setTimeout(() => {
-      initAutocomplete();
-    }, 100);
-
-    return () => clearTimeout(initTimer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, unstyled]);
-
-  const initAutocomplete = async () => {
-    const handlePlaceSelection = (location: {
-      address: string;
-      municipality: string;
-      state: string;
-      colonia?: string;
-      lat?: number;
-      lng?: number;
-    }) => {
-      if (!location.municipality || !location.state) {
-        toast({
-          title: 'ℹ️ Información incompleta',
-          description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
-        });
-      }
-
-      setInputValue(location.address);
-      onPlaceSelectRef.current?.(location);
-      
-      if (location.colonia && location.municipality && location.state) {
-        toast({ 
-          title: '📍 Ubicación seleccionada', 
-          description: `${location.colonia}, ${location.municipality}` 
-        });
-      }
-    };
-
-    try {
-      if (!webComponentContainerRef.current || 
-          !document.contains(webComponentContainerRef.current)) {
-        console.warn('Web component container not ready, using legacy');
-        await initLegacyAutocomplete(handlePlaceSelection);
-        return;
-      }
-
-      const { PlaceAutocompleteElement } = await google.maps.importLibrary("places") as any;
-
-      const placeAutocomplete = new PlaceAutocompleteElement({
-        componentRestrictions: { country: 'mx' },
-        requestedLanguage: 'es',
-        requestedRegion: 'MX',
-      });
-      
-      placeAutocomplete.style.display = 'block';
-      placeAutocomplete.style.width = '100%';
-      placeAutocomplete.style.maxWidth = 'none';
-      placeAutocomplete.style.boxSizing = 'border-box';
-
-      const baseClasses = unstyled
-        ? 'h-12 w-full bg-transparent px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50'
-        : 'h-12 w-full rounded-full border-2 border-primary/60 bg-background px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50';
-      placeAutocomplete.className = showIcon ? `${baseClasses} pl-12` : baseClasses;
-      
-      if (placeholder) placeAutocomplete.placeholder = placeholder;
-      if (defaultValue) placeAutocomplete.value = defaultValue;
-      
-      placeAutocomplete.addEventListener('gmp-placeselect', async ({ place }: any) => {
-        if (!place) return;
-        
-        await place.fetchFields({
-          fields: ['addressComponents', 'formattedAddress', 'location']
-        });
-        
-        let municipality = '';
-        let state = '';
-        let colonia = '';
-        
-        place.addressComponents?.forEach((component: any) => {
-          if (component.types.includes('administrative_area_level_1')) {
-            state = component.longText;
-          }
-          if (component.types.includes('administrative_area_level_2')) {
-            municipality = component.longText;
-          } else if (!municipality && component.types.includes('locality')) {
-            municipality = component.longText;
-          }
-          if (component.types.includes('sublocality_level_1') || 
-              component.types.includes('sublocality') ||
-              component.types.includes('neighborhood')) {
-            colonia = component.longText;
-          }
-        });
-        
-        const location = {
-          address: place.formattedAddress || place.displayName || '',
-          municipality,
-          state,
-          colonia,
-          lat: place.location?.lat(),
-          lng: place.location?.lng(),
-        };
-        
-        handlePlaceSelection(location);
-      });
-      
-      if (onInputChange) {
-        const debouncedInputHandler = (e: Event) => {
-          if (debounceTimerRef.current) {
-            clearTimeout(debounceTimerRef.current);
-          }
-          debounceTimerRef.current = setTimeout(() => {
-            const target = e.target as HTMLInputElement;
-            onInputChange(target.value || '');
-          }, 300);
-        };
-        placeAutocomplete.addEventListener('input', debouncedInputHandler);
-      }
-
-      placeAutocomplete.addEventListener('gmp-error', () => {
-        console.warn('PlaceAutocompleteElement error, usando fallback legacy');
-        initLegacyAutocomplete(handlePlaceSelection);
-      });
-      
-      webComponentContainerRef.current.appendChild(placeAutocomplete);
-      autocompleteRef.current = placeAutocomplete;
-      setUseWebComponent(true);
-      
-    } catch (error) {
-      console.warn('PlaceAutocompleteElement no disponible, usando fallback legacy:', error);
-      await initLegacyAutocomplete(handlePlaceSelection);
-    }
-  };
-
-  const initLegacyAutocomplete = async (handlePlaceSelection: (location: {
+  // ✅ FASE 1: Mover handlePlaceSelection fuera de initAutocomplete
+  const handlePlaceSelection = React.useCallback((location: {
     address: string;
     municipality: string;
     state: string;
     colonia?: string;
     lat?: number;
     lng?: number;
-  }) => void) => {
+  }) => {
+    if (!location.municipality || !location.state) {
+      toast({
+        title: 'ℹ️ Información incompleta',
+        description: 'No se pudo extraer municipio/estado. Verifica la dirección.',
+      });
+    }
+
+    setInputValue(location.address);
+    onPlaceSelectRef.current?.(location);
+    
+    if (location.colonia && location.municipality && location.state) {
+      toast({ 
+        title: '📍 Ubicación seleccionada', 
+        description: `${location.colonia}, ${location.municipality}` 
+      });
+    }
+  }, []);
+
+  // ✅ FASE 1: Definir initLegacyAutocomplete como función independiente
+  const initLegacyAutocomplete = React.useCallback(async () => {
     if (!inputRef.current) return;
     
+    console.log('[PlaceAutocomplete] Inicializando modo LEGACY');
     setUseWebComponent(false);
     
     const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
@@ -379,7 +243,140 @@ export const PlaceAutocomplete = ({
         }, 300);
       });
     }
-  };
+  }, [handlePlaceSelection, onInputChange]);
+
+  // ✅ FASE 1: Simplificar initAutocomplete
+  const initAutocomplete = React.useCallback(async () => {
+    try {
+      // Verificar que el contenedor existe Y está montado en el DOM
+      if (!webComponentContainerRef.current || 
+          !document.contains(webComponentContainerRef.current)) {
+        console.warn('[PlaceAutocomplete] Container not ready, usando LEGACY');
+        await initLegacyAutocomplete();
+        return;
+      }
+
+      console.log('[PlaceAutocomplete] Intentando inicializar Web Component');
+      const { PlaceAutocompleteElement } = await google.maps.importLibrary("places") as any;
+
+      const placeAutocomplete = new PlaceAutocompleteElement({
+        componentRestrictions: { country: 'mx' },
+        requestedLanguage: 'es',
+        requestedRegion: 'MX',
+      });
+
+      placeAutocomplete.id = `${id}-web-component`;
+
+      const styleClasses = unstyled
+        ? 'h-12 w-full bg-transparent px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50'
+        : 'h-12 w-full rounded-full border-2 border-primary/60 bg-background px-5 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50';
+
+      placeAutocomplete.setAttribute('class', styleClasses);
+      if (showIcon) {
+        placeAutocomplete.style.paddingLeft = '3rem';
+      }
+      placeAutocomplete.placeholder = placeholder;
+
+      webComponentContainerRef.current.innerHTML = '';
+      webComponentContainerRef.current.appendChild(placeAutocomplete);
+
+      placeAutocomplete.addEventListener('gmp-placeselect', async (event: any) => {
+        const place = event.place;
+
+        if (!place.addressComponents) {
+          await place.fetchFields({
+            fields: ['addressComponents', 'location', 'formattedAddress', 'displayName'],
+          });
+        }
+
+        let municipality = '';
+        let state = '';
+        let colonia = '';
+
+        place.addressComponents?.forEach((component: any) => {
+          if (component.types.includes('administrative_area_level_1')) {
+            state = component.longText;
+          }
+          if (component.types.includes('administrative_area_level_2')) {
+            municipality = component.longText;
+          } else if (!municipality && component.types.includes('locality')) {
+            municipality = component.longText;
+          }
+          if (component.types.includes('sublocality_level_1') || 
+              component.types.includes('sublocality') ||
+              component.types.includes('neighborhood')) {
+            colonia = component.longText;
+          }
+        });
+
+        const location = {
+          address: place.formattedAddress || place.displayName || '',
+          municipality,
+          state,
+          colonia,
+          lat: place.location?.lat(),
+          lng: place.location?.lng(),
+        };
+
+        handlePlaceSelection(location);
+      });
+
+      if (onInputChange) {
+        const inputElement = placeAutocomplete.querySelector('input');
+        if (inputElement) {
+          inputElement.addEventListener('input', (e) => {
+            if (debounceTimerRef.current) {
+              clearTimeout(debounceTimerRef.current);
+            }
+            debounceTimerRef.current = setTimeout(() => {
+              const target = e.target as HTMLInputElement;
+              onInputChange(target.value || '');
+            }, 300);
+          });
+        }
+      }
+
+      console.log('[PlaceAutocomplete] Web Component inicializado exitosamente');
+      setUseWebComponent(true);
+      
+    } catch (error) {
+      console.warn('[PlaceAutocomplete] Web Component falló, usando LEGACY:', error);
+      await initLegacyAutocomplete();
+    }
+  }, [id, placeholder, showIcon, unstyled, handlePlaceSelection, initLegacyAutocomplete, onInputChange]);
+
+  // ✅ FASE 3: Agregar logs de debugging
+  useEffect(() => {
+    console.log('[PlaceAutocomplete] Cargando Google Maps...');
+    loadGoogleMaps()
+      .then(() => {
+        console.log('[PlaceAutocomplete] Google Maps cargado exitosamente');
+        setIsLoaded(true);
+      })
+      .catch((err) => {
+        console.error('[PlaceAutocomplete] Error loading Google Maps:', err);
+        setLoadError(err.message);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    
+    console.log('[PlaceAutocomplete] Iniciando autocomplete con delay de 100ms...');
+    const initTimer = setTimeout(() => {
+      initAutocomplete();
+    }, 100);
+    
+    return () => clearTimeout(initTimer);
+  }, [isLoaded, unstyled, initAutocomplete]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   if (loadError) {
     return (
@@ -387,12 +384,13 @@ export const PlaceAutocomplete = ({
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
-          No se pudo cargar Google Maps. Por favor, recarga la página o ingresa la dirección manualmente.
+          No se pudo cargar Google Maps: {loadError}
         </AlertDescription>
       </Alert>
     );
   }
 
+  // ✅ FASE 2: Mejorar renderizado del DOM
   return (
     <div className="w-full space-y-2">
       {label && (
@@ -402,28 +400,24 @@ export const PlaceAutocomplete = ({
       )}
       
       <div className="relative flex items-center gap-2">
-        {showIcon && useWebComponent !== false && (
+        {showIcon && (
           <div className="pointer-events-none absolute left-4 z-10 flex h-full items-center">
             <MapPin className="h-5 w-5 text-primary/70" />
           </div>
         )}
 
-        <div 
-          ref={webComponentContainerRef}
-          className="relative flex-1"
-          style={{ 
-            display: useWebComponent === false ? 'none' : 'block',
-            width: '100%'
-          }}
-        />
+        {/* Web Component Container - solo visible cuando useWebComponent === true */}
+        {useWebComponent === true && (
+          <div 
+            ref={webComponentContainerRef}
+            className="relative flex-1"
+            style={{ width: '100%' }}
+          />
+        )}
 
-        {useWebComponent === false && (
+        {/* Legacy Input - visible cuando useWebComponent === false O cuando aún no se decide (null) */}
+        {(useWebComponent === false || useWebComponent === null) && (
           <div className="relative flex-1">
-            {showIcon && (
-              <div className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2">
-                <MapPin className="h-5 w-5 text-primary/70" />
-              </div>
-            )}
             <input
               ref={inputRef}
               type="text"
