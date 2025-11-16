@@ -303,6 +303,9 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                           </Badge>
                         )}
                       </div>
+                      <Badge variant="outline" className="font-mono text-xs mt-1 w-fit">
+                        {(property as any).property_code || property.id.slice(0, 8)}
+                      </Badge>
                     </div>
                   </div>
                 </TableCell>

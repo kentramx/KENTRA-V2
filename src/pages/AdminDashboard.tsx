@@ -546,7 +546,12 @@ const AdminDashboard = () => {
                         <div className="flex-1">
                           <div className="flex items-start justify-between">
                             <div>
-                              <h3 className="font-semibold text-lg">{property.title}</h3>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold text-lg">{property.title}</h3>
+                                <Badge variant="secondary" className="font-mono text-xs">
+                                  {(property as any).property_code || property.id.slice(0, 8)}
+                                </Badge>
+                              </div>
                               <p className="text-sm text-muted-foreground">
                                 {property.municipality}, {property.state}
                               </p>

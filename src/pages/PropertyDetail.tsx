@@ -622,6 +622,9 @@ const PropertyDetail = () => {
                   <Home className="mr-1 h-3 w-3" />
                   {property.status === 'activa' ? 'Activa' : property.status}
                 </Badge>
+                <Badge variant="secondary" className="font-mono text-sm px-3 py-1">
+                  {(property as any).property_code || `ID: ${property.id.slice(0, 8)}`}
+                </Badge>
               </div>
 
               {/* Price - Large and Prominent */}

@@ -1169,6 +1169,7 @@ export type Database = {
           parking: number | null
           price: number
           price_history: Json | null
+          property_code: string | null
           rejection_history: Json | null
           rent_price: number | null
           requires_manual_review: boolean | null
@@ -1220,6 +1221,7 @@ export type Database = {
           parking?: number | null
           price: number
           price_history?: Json | null
+          property_code?: string | null
           rejection_history?: Json | null
           rent_price?: number | null
           requires_manual_review?: boolean | null
@@ -1271,6 +1273,7 @@ export type Database = {
           parking?: number | null
           price?: number
           price_history?: Json | null
+          property_code?: string | null
           rejection_history?: Json | null
           rent_price?: number | null
           requires_manual_review?: boolean | null
@@ -2242,6 +2245,7 @@ export type Database = {
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       expire_old_invitations: { Args: never; Returns: undefined }
+      generate_property_code: { Args: never; Returns: string }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
