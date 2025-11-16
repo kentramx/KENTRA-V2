@@ -2359,6 +2359,13 @@ export type Database = {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
       }
+      get_images_batch: {
+        Args: { property_ids: string[] }
+        Returns: {
+          images: Json
+          property_id: string
+        }[]
+      }
       get_marketing_metrics: {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
@@ -2377,6 +2384,42 @@ export type Database = {
           state: string
           total_agents: number
           total_properties: number
+        }[]
+      }
+      get_properties_cursor: {
+        Args: {
+          p_cursor?: string
+          p_limit?: number
+          p_listing_type?: string
+          p_municipality?: string
+          p_price_max?: number
+          p_price_min?: number
+          p_state?: string
+          p_type?: string
+        }
+        Returns: {
+          address: string
+          agent_id: string
+          bathrooms: number
+          bedrooms: number
+          created_at: string
+          currency: string
+          for_rent: boolean
+          for_sale: boolean
+          id: string
+          lat: number
+          listing_type: string
+          lng: number
+          municipality: string
+          next_cursor: string
+          parking: number
+          price: number
+          rent_price: number
+          sale_price: number
+          sqft: number
+          state: string
+          title: string
+          type: Database["public"]["Enums"]["property_type"]
         }[]
       }
       get_properties_in_viewport: {
