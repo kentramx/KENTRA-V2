@@ -47,6 +47,7 @@ export const loadGoogleMaps = (): Promise<typeof google.maps> => {
       // Callback global cuando el script se carga exitosamente
       (window as any).initGoogleMaps = () => {
         if (window.google && window.google.maps) {
+          console.log('[GoogleMaps] loaded OK ✓');
           window.dispatchEvent(new Event('google-maps-loaded'));
           resolve(window.google.maps);
         } else {

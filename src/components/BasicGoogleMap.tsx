@@ -181,7 +181,7 @@ export function BasicGoogleMap({
         animation: undefined,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 6,
+          scale: 8,
           fillColor: '#0ea5e9',
           fillOpacity: 0.9,
           strokeColor: '#ffffff',
@@ -195,6 +195,9 @@ export function BasicGoogleMap({
         },
         optimized: false,
       });
+      
+      // CRÍTICO: Asegurar que el marcador siempre se añade al mapa
+      marker.setMap(map);
       
       // Guardar referencia del marcador con su id
       markerRefs.current.set(m.id, marker);

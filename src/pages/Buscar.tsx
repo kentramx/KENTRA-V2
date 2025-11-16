@@ -1497,6 +1497,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               markers={mapMarkers}
               height="100%"
               className="h-full w-full"
+              enableClustering={false}
               onMarkerClick={handleMarkerClick}
               onFavoriteClick={handleFavoriteClick}
               disableAutoFit={!hasLocationFilters || !!searchCoordinates}
