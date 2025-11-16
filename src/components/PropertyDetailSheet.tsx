@@ -46,9 +46,6 @@ import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import propertyPlaceholder from "@/assets/property-placeholder.jpg";
 import { PropertyAmenities } from "@/components/PropertyAmenities";
-import { PropertyVirtualTour } from "@/components/PropertyVirtualTour";
-import { PropertyTimeline } from "@/components/PropertyTimeline";
-import { PropertyInvestmentMetrics } from "@/components/PropertyInvestmentMetrics";
 import { PropertyExportPDF } from "@/components/PropertyExportPDF";
 import { ContactPropertyDialog } from "@/components/ContactPropertyDialog";
 import { usePropertyCompare } from "@/hooks/usePropertyCompare";
@@ -588,12 +585,6 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
             )}
           </div>
 
-          {/* Virtual Tour */}
-          <PropertyVirtualTour
-            videoUrl={property.video_url}
-            title={property.title}
-          />
-
           {/* Descripción */}
           {property.description && (
             <Card>
@@ -610,24 +601,6 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
           {property.amenities && typeof property.amenities === 'object' && (
             <PropertyAmenities amenities={property.amenities as any} />
           )}
-
-          {/* Investment Metrics */}
-          <PropertyInvestmentMetrics
-            price={property.price}
-            sqft={property.sqft}
-            listingType={property.listing_type}
-            state={property.state}
-            municipality={property.municipality}
-            type={property.type}
-          />
-
-          {/* Timeline */}
-          <PropertyTimeline
-            createdAt={property.created_at}
-            updatedAt={property.updated_at}
-            priceHistory={property.price_history as any || []}
-            currentPrice={property.price}
-          />
 
           {/* Additional Details */}
           <Card>

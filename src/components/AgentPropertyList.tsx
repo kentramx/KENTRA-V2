@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { RefreshCw, Star } from 'lucide-react';
 import { FeaturePropertyDialog } from './FeaturePropertyDialog';
-import { EmptyStatePublish } from './EmptyStatePublish';
 import {
   Table,
   TableBody,
@@ -258,10 +257,14 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   if (properties.length === 0) {
     return (
-      <EmptyStatePublish 
-        onCreateProperty={onCreateProperty || (() => {})}
-        role="agent"
-      />
+      <div className="text-center py-12 space-y-4">
+        <p className="text-muted-foreground">No tienes propiedades publicadas</p>
+        {onCreateProperty && (
+          <Button onClick={onCreateProperty}>
+            Publicar Primera Propiedad
+          </Button>
+        )}
+      </div>
     );
   }
 

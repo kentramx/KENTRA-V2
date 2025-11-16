@@ -49,9 +49,6 @@ import propertyPlaceholder from "@/assets/property-placeholder.jpg";
 import { AgentReviews } from "@/components/AgentReviews";
 import { ReviewForm } from "@/components/ReviewForm";
 import { PropertyAmenities } from "@/components/PropertyAmenities";
-import { PropertyVirtualTour } from "@/components/PropertyVirtualTour";
-import { PropertyTimeline } from "@/components/PropertyTimeline";
-import { PropertyInvestmentMetrics } from "@/components/PropertyInvestmentMetrics";
 import { PropertyExportPDF } from "@/components/PropertyExportPDF";
 import { ContactPropertyDialog } from "@/components/ContactPropertyDialog";
 import { usePropertyCompare } from "@/hooks/usePropertyCompare";
@@ -718,12 +715,6 @@ const PropertyDetail = () => {
               </div>
             </div>
 
-            {/* Virtual Tour */}
-            <PropertyVirtualTour
-              videoUrl={property.video_url}
-              title={property.title}
-            />
-
             {/* Description */}
             <Card className="mb-6">
               <CardHeader>
@@ -739,24 +730,6 @@ const PropertyDetail = () => {
 
             {/* Amenities */}
             <PropertyAmenities amenities={property.amenities as any || []} />
-
-            {/* Investment Metrics */}
-            <PropertyInvestmentMetrics
-              price={property.price}
-              sqft={property.sqft}
-              listingType={property.listing_type}
-              state={property.state}
-              municipality={property.municipality}
-              type={property.type}
-            />
-
-            {/* Timeline */}
-            <PropertyTimeline
-              createdAt={property.created_at}
-              updatedAt={property.updated_at}
-              priceHistory={property.price_history as any || []}
-              currentPrice={property.price}
-            />
 
             {/* Additional Details */}
             <Card className="mb-6">

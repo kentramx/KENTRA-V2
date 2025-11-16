@@ -7,7 +7,6 @@ import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight, Slid
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
 import { PlaceAutocomplete } from "@/components/PlaceAutocomplete";
-import { SearchBar } from "@/components/SearchBar";
 import { VirtualizedPropertyGrid } from '@/components/VirtualizedPropertyGrid';
 import { PropertyDetailSheet } from "@/components/PropertyDetailSheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,32 +30,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-interface Property {
-  id: string;
-  title: string;
-  price: number;
-  type: string;
-  listing_type: string;
-  for_sale?: boolean;
-  for_rent?: boolean;
-  sale_price?: number | null;
-  rent_price?: number | null;
-  currency?: string;
-  address: string;
-  colonia?: string;
-  municipality: string;
-  state: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  parking?: number;
-  sqft?: number;
-  lat?: number;
-  lng?: number;
-  images?: { url: string; position: number }[];
-  agent_id: string;
-  is_featured?: boolean;
-  created_at?: string;
-}
+import type { Property } from '@/types/property';
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -361,14 +335,6 @@ const Home = () => {
                   </div>
                 </CollapsibleContent>
               </Collapsible>
-
-              {/* Barra de búsqueda */}
-              <SearchBar
-                onPlaceSelect={handlePlaceSelect}
-                onSearch={handleSearch}
-                placeholder="Ciudad, colonia o código postal"
-                defaultValue={searchQuery}
-              />
             </div>
           </div>
         </div>
