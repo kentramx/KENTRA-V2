@@ -5,8 +5,25 @@ import { useToast } from '@/hooks/use-toast';
 
 export const SentryTestButton = () => {
   const { toast } = useToast();
+  const DSN_PRESENT = Boolean(import.meta.env.VITE_SENTRY_DSN);
 
   const testSentryError = () => {
+    if (!DSN_PRESENT) {
+      toast({
+        title: 'Sentry no está configurado',
+        description: 'No se detectó VITE_SENTRY_DSN en el build actual. Si ya la agregaste, republish o indica tu DSN público para usarlo temporalmente.',
+        duration: 6000,
+        variant: 'destructive'
+      });
+      try {
+        captureMessage('sentry_diagnostics: DSN missing in build', 'warning', {
+          dsnPresent: DSN_PRESENT,
+          env: import.meta.env.MODE,
+        });
+      } catch {}
+      return;
+    }
+
     try {
       // Generar un error de prueba
       throw new Error('This is your first error!');

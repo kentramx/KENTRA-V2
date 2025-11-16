@@ -15,24 +15,25 @@ export const initSentry = () => {
     return;
   }
 
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    environment: IS_PRODUCTION ? 'production' : 'development',
-    
-    // Sampling: capturar 100% de errores, 10% de transacciones en producción
-    tracesSampleRate: IS_PRODUCTION ? 0.1 : 1.0,
-    
-    // Capturar replays de sesión en caso de error
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
+    Sentry.init({
+      dsn: SENTRY_DSN,
+      environment: IS_PRODUCTION ? 'production' : 'preview',
+      debug: !IS_PRODUCTION,
+      
+      // Sampling: capturar 100% de errores, 10% de transacciones en producción
+      tracesSampleRate: IS_PRODUCTION ? 0.1 : 1.0,
+      
+      // Capturar replays de sesión en caso de error
+      replaysSessionSampleRate: 0.1,
+      replaysOnErrorSampleRate: 1.0,
 
-    integrations: [
-      browserTracingIntegration(),
-      replayIntegration({
-        maskAllText: false,
-        blockAllMedia: false,
-      }),
-    ],
+      integrations: [
+        browserTracingIntegration(),
+        replayIntegration({
+          maskAllText: false,
+          blockAllMedia: false,
+        }),
+      ],
 
     // Filtrar información sensible
     beforeSend(event, hint) {
