@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle, AlertTriangle, Smartphone, Loader2 } from "lucide-react";
+import { useMonitoring } from "@/lib/monitoring";
 
 interface PhoneVerificationProps {
   phoneNumber: string | null;
@@ -15,6 +16,7 @@ interface PhoneVerificationProps {
 }
 
 export const PhoneVerification = ({ phoneNumber, phoneVerified, onPhoneVerified }: PhoneVerificationProps) => {
+  const { error: logError, captureException } = useMonitoring();
   const [verificationCode, setVerificationCode] = useState("");
   const [sendingCode, setSendingCode] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -54,7 +56,15 @@ export const PhoneVerification = ({ phoneNumber, phoneVerified, onPhoneVerified 
 
       setCodeSent(true);
     } catch (error: any) {
-      console.error("Error sending verification code:", error);
+      logError("Error sending verification code", {
+        component: "PhoneVerification",
+        phoneNumber,
+        error,
+      });
+      captureException(error, {
+        component: "PhoneVerification",
+        action: "handleSendCode",
+      });
       toast({
         title: "Error",
         description: error.message || "No se pudo enviar el código",
@@ -92,7 +102,14 @@ export const PhoneVerification = ({ phoneNumber, phoneVerified, onPhoneVerified 
       setCodeSent(false);
       setVerificationCode("");
     } catch (error: any) {
-      console.error("Error verifying code:", error);
+      logError("Error verifying code", {
+        component: "PhoneVerification",
+        error,
+      });
+      captureException(error, {
+        component: "PhoneVerification",
+        action: "handleVerifyCode",
+      });
       toast({
         title: "Error",
         description: error.message || "Código incorrecto o expirado",

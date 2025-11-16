@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Shield, QrCode, Key, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import QRCode from "qrcode";
+import { useMonitoring } from "@/lib/monitoring";
 
 interface TwoFactorAuthProps {
   isAdminRole: boolean;
@@ -16,6 +17,7 @@ interface TwoFactorAuthProps {
 }
 
 export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => {
+  const { debug, error: logError, captureException } = useMonitoring();
   const [mfaEnabled, setMfaEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
@@ -60,7 +62,11 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
             try {
               await supabase.auth.mfa.unenroll({ factorId: factor.id });
             } catch (unenrollError) {
-              console.error('Error eliminando factor no verificado:', unenrollError);
+              debug('Error eliminando factor no verificado', {
+                component: 'TwoFactorAuth',
+                factorId: factor.id,
+                error: unenrollError,
+              });
             }
           }
         }
@@ -87,7 +93,14 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
         });
       }
     } catch (error: any) {
-      console.error("Error enrolling MFA:", error);
+      logError("Error enrolling MFA", {
+        component: "TwoFactorAuth",
+        error,
+      });
+      captureException(error, {
+        component: "TwoFactorAuth",
+        action: "startEnrollment",
+      });
       toast({
         title: "Error",
         description: error.message || "No se pudo iniciar la configuración de 2FA",
@@ -124,7 +137,14 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
         description: "La autenticación de dos factores está activa",
       });
     } catch (error: any) {
-      console.error("Error verifying MFA:", error);
+      logError("Error verifying MFA", {
+        component: "TwoFactorAuth",
+        error,
+      });
+      captureException(error, {
+        component: "TwoFactorAuth",
+        action: "verifyAndEnable",
+      });
       toast({
         title: "Error",
         description: error.message || "Código incorrecto. Intenta de nuevo.",
@@ -151,7 +171,14 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
         description: "La autenticación de dos factores ha sido desactivada",
       });
     } catch (error: any) {
-      console.error("Error disabling MFA:", error);
+      logError("Error disabling MFA", {
+        component: "TwoFactorAuth",
+        error,
+      });
+      captureException(error, {
+        component: "TwoFactorAuth",
+        action: "disableMFA",
+      });
       toast({
         title: "Error",
         description: error.message || "No se pudo desactivar 2FA",

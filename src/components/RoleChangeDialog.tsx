@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Building2, User, Check, Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useMonitoring } from "@/lib/monitoring";
 
 interface RoleChangeDialogProps {
   currentRole: 'buyer' | 'agent' | 'agency';
@@ -23,6 +24,7 @@ interface RoleChangeDialogProps {
 }
 
 const RoleChangeDialog = ({ currentRole, onRoleChanged }: RoleChangeDialogProps) => {
+  const { error: logError, captureException } = useMonitoring();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [targetRole, setTargetRole] = useState<'agent' | 'agency' | null>(null);

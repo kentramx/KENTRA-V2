@@ -6,6 +6,7 @@ import { Loader2, History, ArrowRight, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useMonitoring } from '@/lib/monitoring';
 
 interface PropertyAssignmentHistoryProps {
   propertyId?: string;
@@ -19,6 +20,7 @@ export const PropertyAssignmentHistory = ({
   limit 
 }: PropertyAssignmentHistoryProps) => {
   const { toast } = useToast();
+  const { error: logError, captureException } = useMonitoring();
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
+import { useMonitoring } from "@/lib/monitoring";
 
 const reviewSchema = z.object({
   rating: z.number().min(1, "Debes seleccionar una calificación").max(5),
@@ -41,6 +42,7 @@ interface ReviewFormProps {
 
 export const ReviewForm = ({ agentId, propertyId, onReviewSubmitted }: ReviewFormProps) => {
   const { user } = useAuth();
+  const { warn, error: logError, captureException } = useMonitoring();
   const [open, setOpen] = useState(false);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [canReview, setCanReview] = useState<boolean | null>(null);

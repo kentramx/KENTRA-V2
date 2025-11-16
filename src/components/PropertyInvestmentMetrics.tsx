@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, DollarSign, Percent, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { monitoring } from "@/lib/monitoring";
 
 interface PropertyInvestmentMetricsProps {
   price: number;
