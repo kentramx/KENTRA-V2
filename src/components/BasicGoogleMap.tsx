@@ -55,7 +55,23 @@ export function BasicGoogleMap({
   const clustererRef = useRef<MarkerClusterer | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentZoom, setCurrentZoom] = useState<number | null>(null);
   const { formatPrice } = useCurrencyConversion();
+
+  // Helper para formatear precio abreviado según zoom
+  const formatShortPrice = (price: number, currency: string = 'MXN') => {
+    const symbol = currency === 'MXN' ? '$' : '$';
+    
+    if (price >= 1_000_000) {
+      const millions = price / 1_000_000;
+      return `${symbol}${millions.toFixed(1)}M`;
+    } else if (price >= 1_000) {
+      const thousands = price / 1_000;
+      return `${symbol}${thousands.toFixed(0)}k`;
+    } else {
+      return `${symbol}${price}`;
+    }
+  };
 
   // Mantener callbacks estables sin re-crear marcadores
   const onMarkerClickRef = useRef<((id: string) => void) | undefined>(onMarkerClick);
@@ -99,8 +115,14 @@ export function BasicGoogleMap({
             boundsChangeTimeout = setTimeout(() => {
               if (!mapRef.current) return;
               const bounds = mapRef.current.getBounds();
-              const currentZoom = mapRef.current.getZoom();
-              if (bounds && currentZoom) {
+              const zoom = mapRef.current.getZoom();
+              
+              // Actualizar estado de zoom para re-renderizar markers
+              if (zoom !== undefined) {
+                setCurrentZoom(zoom);
+              }
+              
+              if (bounds && zoom) {
                 const ne = bounds.getNorthEast();
                 const sw = bounds.getSouthWest();
                 onBoundsChanged({
@@ -108,11 +130,17 @@ export function BasicGoogleMap({
                   minLat: sw.lat(),
                   maxLng: ne.lng(),
                   maxLat: ne.lat(),
-                  zoom: currentZoom,
+                  zoom: zoom,
                 });
               }
             }, 500); // ✅ Aumentado de 300ms a 500ms para reducir queries
           });
+        }
+
+        // Inicializar currentZoom
+        const initialZoom = mapRef.current.getZoom();
+        if (initialZoom !== undefined) {
+          setCurrentZoom(initialZoom);
         }
 
         if (onReady && mapRef.current) onReady(mapRef.current);
@@ -147,6 +175,9 @@ export function BasicGoogleMap({
     const map = mapRef.current;
     if (!map) return;
 
+    // Obtener zoom actual
+    const zoom = currentZoom ?? map.getZoom() ?? 12;
+
     // Limpiar clusterer anterior si existe - de forma segura
     if (clustererRef.current) {
       try {
@@ -165,6 +196,11 @@ export function BasicGoogleMap({
       return;
     }
 
+    // Reglas de visualización según zoom
+    const showFullPriceLabel = zoom >= 14;
+    const showShortPriceLabel = zoom >= 11 && zoom < 14;
+    const hidePriceLabel = zoom < 11;
+
     const bounds = new google.maps.LatLngBounds();
     
     // Crear info window si no existe
@@ -179,8 +215,18 @@ export function BasicGoogleMap({
       const lat = Number(m.lat);
       const lng = Number(m.lng);
       
-      // Formatear el precio para el label
-      const priceLabel = m.price ? formatPrice(m.price, m.currency || 'MXN') : '';
+      // Determinar el label según el zoom
+      let priceLabel = '';
+      if (!hidePriceLabel && m.price) {
+        if (showFullPriceLabel) {
+          priceLabel = formatPrice(m.price, m.currency || 'MXN');
+        } else if (showShortPriceLabel) {
+          priceLabel = formatShortPrice(m.price, m.currency || 'MXN');
+        }
+      }
+
+      // Ajustar tamaño según zoom
+      const markerScale = zoom < 11 ? 7 : 9;
       
       const marker = new google.maps.Marker({ 
         position: { lat, lng },
@@ -188,19 +234,19 @@ export function BasicGoogleMap({
         animation: undefined,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 9,
+          scale: markerScale,
           fillColor: '#0ea5e9',
           fillOpacity: 0.95,
           strokeColor: '#ffffff',
           strokeWeight: 2,
           labelOrigin: new google.maps.Point(0, -18),
         },
-        label: {
+        label: priceLabel ? {
           text: priceLabel,
           color: '#111827',
           fontSize: '13px',
           fontWeight: '600',
-        },
+        } : undefined,
         optimized: false,
         zIndex: Number(google.maps.Marker.MAX_ZINDEX) + 2,
       });
@@ -421,7 +467,7 @@ export function BasicGoogleMap({
         }
       }
     }
-  }, [markers, enableClustering, disableAutoFit]);
+  }, [markers, enableClustering, disableAutoFit, currentZoom]);
   
   // Efecto para resaltar el marcador cuando se hace hover sobre una tarjeta
   useEffect(() => {
