@@ -130,83 +130,83 @@ export default function BareGoogleMap({
     };
   }, []);
 
-  // Clase para labels personalizados de precio
-  class PriceLabel extends google.maps.OverlayView {
-    private position: google.maps.LatLng;
-    private text: string;
-    private div: HTMLDivElement | null = null;
-    private markerId: string;
-
-    constructor(position: google.maps.LatLng, text: string, markerId: string) {
-      super();
-      this.position = position;
-      this.text = text;
-      this.markerId = markerId;
-    }
-
-    onAdd() {
-      this.div = document.createElement('div');
-      this.div.className = 'price-label';
-      this.div.style.cssText = `
-        position: absolute;
-        background: white;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 700;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        white-space: nowrap;
-        cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
-        z-index: 1;
-      `;
-      this.div.textContent = this.text;
-      
-      this.div.addEventListener('click', () => {
-        onMarkerClickRef.current?.(this.markerId);
-      });
-      this.div.addEventListener('mouseenter', () => {
-        if (this.div) {
-          this.div.style.transform = 'scale(1.05)';
-          this.div.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-        }
-        onMarkerHoverRef.current?.(this.markerId);
-      });
-      this.div.addEventListener('mouseleave', () => {
-        if (this.div) {
-          this.div.style.transform = 'scale(1)';
-          this.div.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
-        }
-        onMarkerHoverRef.current?.(null);
-      });
-
-      const panes = this.getPanes();
-      panes?.overlayMouseTarget.appendChild(this.div);
-    }
-
-    draw() {
-      if (!this.div) return;
-      const projection = this.getProjection();
-      if (!projection) return;
-      const point = projection.fromLatLngToDivPixel(this.position);
-      if (point) {
-        this.div.style.left = point.x + 'px';
-        this.div.style.top = (point.y - 35) + 'px';
-      }
-    }
-
-    onRemove() {
-      if (this.div?.parentNode) {
-        this.div.parentNode.removeChild(this.div);
-      }
-      this.div = null;
-    }
-  }
-
   // Renderizar marcadores con clustering opcional y labels de precio
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !window.google) return;
+
+    // Clase para labels personalizados de precio (definida aquí donde google está disponible)
+    class PriceLabel extends google.maps.OverlayView {
+      private position: google.maps.LatLng;
+      private text: string;
+      private div: HTMLDivElement | null = null;
+      private markerId: string;
+
+      constructor(position: google.maps.LatLng, text: string, markerId: string) {
+        super();
+        this.position = position;
+        this.text = text;
+        this.markerId = markerId;
+      }
+
+      onAdd() {
+        this.div = document.createElement('div');
+        this.div.className = 'price-label';
+        this.div.style.cssText = `
+          position: absolute;
+          background: white;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 700;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+          white-space: nowrap;
+          cursor: pointer;
+          transition: transform 0.2s, box-shadow 0.2s;
+          z-index: 1;
+        `;
+        this.div.textContent = this.text;
+        
+        this.div.addEventListener('click', () => {
+          onMarkerClickRef.current?.(this.markerId);
+        });
+        this.div.addEventListener('mouseenter', () => {
+          if (this.div) {
+            this.div.style.transform = 'scale(1.05)';
+            this.div.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+          }
+          onMarkerHoverRef.current?.(this.markerId);
+        });
+        this.div.addEventListener('mouseleave', () => {
+          if (this.div) {
+            this.div.style.transform = 'scale(1)';
+            this.div.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+          }
+          onMarkerHoverRef.current?.(null);
+        });
+
+        const panes = this.getPanes();
+        panes?.overlayMouseTarget.appendChild(this.div);
+      }
+
+      draw() {
+        if (!this.div) return;
+        const projection = this.getProjection();
+        if (!projection) return;
+        const point = projection.fromLatLngToDivPixel(this.position);
+        if (point) {
+          this.div.style.left = point.x + 'px';
+          this.div.style.top = (point.y - 35) + 'px';
+        }
+      }
+
+      onRemove() {
+        if (this.div?.parentNode) {
+          this.div.parentNode.removeChild(this.div);
+        }
+        this.div = null;
+      }
+    }
 
     const incoming = (markers || []).filter(
       (m) => m && m.lat != null && m.lng != null && !isNaN(Number(m.lat)) && !isNaN(Number(m.lng))
