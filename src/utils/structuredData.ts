@@ -7,21 +7,10 @@
  * - https://developers.google.com/search/docs/appearance/structured-data/product
  */
 
-interface PropertyStructuredDataProps {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  currency?: string;
-  type: string;
-  listingType: 'venta' | 'renta';
-  address: string;
-  municipality: string;
-  state: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  sqft?: number;
-  images?: string[];
+import type { Property } from '@/types/property';
+
+interface PropertyStructuredDataInput {
+  property: Property;
   url: string;
   agentName?: string;
   agentPhone?: string;
@@ -31,8 +20,9 @@ interface PropertyStructuredDataProps {
  * Genera JSON-LD para una propiedad inmobiliaria
  */
 export function generatePropertyStructuredData(
-  property: PropertyStructuredDataProps
+  input: PropertyStructuredDataInput
 ): object {
+  const { property, url, agentName, agentPhone } = input;
   const propertyTypeMap: Record<string, string> = {
     casa: 'SingleFamilyResidence',
     departamento: 'Apartment',
@@ -44,17 +34,19 @@ export function generatePropertyStructuredData(
     rancho: 'Farm',
   };
 
-  const offerType = property.listingType === 'venta' ? 'SalePrice' : 'RentPrice';
-  const priceSpecification = property.listingType === 'renta' 
+  const offerType = property.listing_type === 'venta' ? 'SalePrice' : 'RentPrice';
+  const priceSpecification = property.listing_type === 'renta' 
     ? { unitText: 'MONTH', unitCode: 'MON' }
     : {};
+
+  const imageUrls = property.images?.map(img => img.url) || [];
 
   return {
     '@context': 'https://schema.org',
     '@type': propertyTypeMap[property.type] || 'Residence',
-    '@id': property.url,
+    '@id': url,
     name: property.title,
-    description: property.description,
+    description: property.description || '',
     address: {
       '@type': 'PostalAddress',
       streetAddress: property.address,
@@ -64,34 +56,33 @@ export function generatePropertyStructuredData(
     },
     ...(property.bedrooms && { numberOfRooms: property.bedrooms }),
     ...(property.bathrooms && { numberOfBathroomsTotal: property.bathrooms }),
-    // sqft field contains square meters (despite the name) - using MTK for schema.org
     ...(property.sqft && { floorSize: { '@type': 'QuantitativeValue', value: property.sqft, unitCode: 'MTK' } }),
     offers: {
       '@type': 'Offer',
-      priceCurrency: property.currency || 'MXN',
+      priceCurrency: property.currency,
       price: property.price,
       priceSpecification: {
         '@type': 'UnitPriceSpecification',
         price: property.price,
-        priceCurrency: property.currency || 'MXN',
+        priceCurrency: property.currency,
         ...priceSpecification,
       },
       availability: 'https://schema.org/InStock',
-      priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 90 días
-      url: property.url,
+      priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      url,
     },
-    ...(property.images && property.images.length > 0 && {
-      image: property.images.map(url => ({
+    ...(imageUrls.length > 0 && {
+      image: imageUrls.map(imgUrl => ({
         '@type': 'ImageObject',
-        url,
-        contentUrl: url,
+        url: imgUrl,
+        contentUrl: imgUrl,
       })),
     }),
-    ...(property.agentName && {
+    ...(agentName && {
       realEstateAgent: {
         '@type': 'RealEstateAgent',
-        name: property.agentName,
-        ...(property.agentPhone && { telephone: property.agentPhone }),
+        name: agentName,
+        ...(agentPhone && { telephone: agentPhone }),
       },
     }),
   };

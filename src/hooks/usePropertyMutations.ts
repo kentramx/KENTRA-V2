@@ -1,13 +1,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { Property } from '@/types/property';
+import type { Database } from '@/integrations/supabase/types';
+
+type PropertyInsert = Database['public']['Tables']['properties']['Insert'];
+type PropertyUpdate = Database['public']['Tables']['properties']['Update'];
 
 export const useCreateProperty = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (propertyData: any) => {
+    mutationFn: async (propertyData: PropertyInsert) => {
       const { data, error } = await supabase
         .from('properties')
         .insert(propertyData)
@@ -42,7 +47,7 @@ export const useUpdateProperty = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: PropertyUpdate }) => {
       const { data, error } = await supabase
         .from('properties')
         .update(updates)

@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { PropertyStatus } from '@/types/property';
+
+interface ExistingPropertyInfo {
+  id: string;
+  title: string;
+  address: string;
+  price: number;
+  status: PropertyStatus;
+  agent_id: string;
+}
 
 interface TitleValidationResult {
   isDuplicate: boolean;
   duplicateCount: number;
-  existingProperties: Array<{
-    id: string;
-    title: string;
-    address: string;
-    price: number;
-    status: string;
-    agent_id: string;
-  }>;
+  existingProperties: ExistingPropertyInfo[];
   loading: boolean;
 }
 

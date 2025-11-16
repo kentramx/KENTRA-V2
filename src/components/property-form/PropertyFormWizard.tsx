@@ -16,6 +16,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Save } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type PropertyInsert = Database['public']['Tables']['properties']['Insert'];
+type PropertyUpdate = Database['public']['Tables']['properties']['Update'];
 
 interface PropertyFormWizardProps {
   property?: any;
@@ -155,16 +159,16 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
       ? formData.sale_price 
       : formData.rent_price || 0;
 
-    const propertyData = {
+    const propertyData: PropertyInsert = {
       title: generatedTitle,
       price: mainPrice,
-      agent_id: user?.id,
+      agent_id: user?.id!,
       for_sale: formData.for_sale,
       for_rent: formData.for_rent,
       sale_price: formData.sale_price,
       rent_price: formData.rent_price,
-      currency: formData.currency,
-      type: formData.type,
+      currency: formData.currency as 'MXN' | 'USD',
+      type: formData.type as Database['public']['Enums']['property_type'],
       listing_type: formData.for_sale ? 'venta' : 'renta',
       address: formData.address,
       colonia: formData.colonia,
