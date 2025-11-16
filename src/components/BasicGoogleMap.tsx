@@ -56,6 +56,14 @@ export function BasicGoogleMap({
   const [error, setError] = useState<string | null>(null);
   const { formatPrice } = useCurrencyConversion();
 
+  // Mantener callbacks estables sin re-crear marcadores
+  const onMarkerClickRef = useRef<((id: string) => void) | undefined>(onMarkerClick);
+  const onFavoriteClickRef = useRef<((id: string) => void) | undefined>(onFavoriteClick);
+  const onMarkerHoverRef = useRef<((id: string | null) => void) | undefined>(onMarkerHover);
+  useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
+  useEffect(() => { onFavoriteClickRef.current = onFavoriteClick; }, [onFavoriteClick]);
+  useEffect(() => { onMarkerHoverRef.current = onMarkerHover; }, [onMarkerHover]);
+
   const waitForSize = async (el: HTMLElement, tries = 60, delayMs = 50) => {
     for (let i = 0; i < tries; i++) {
       const rect = el.getBoundingClientRect();
@@ -195,7 +203,7 @@ export function BasicGoogleMap({
           fontSize: '13px',
           fontWeight: '600',
         },
-        optimized: true,
+        optimized: false,
         zIndex: Number(google.maps.Marker.MAX_ZINDEX) + 2,
       });
       
@@ -207,15 +215,11 @@ export function BasicGoogleMap({
       
       // Agregar hover listeners al marcador
       marker.addListener('mouseover', () => {
-        if (onMarkerHover) {
-          onMarkerHover(m.id || null);
-        }
+        onMarkerHoverRef.current?.(m.id || null);
       });
       
       marker.addListener('mouseout', () => {
-        if (onMarkerHover) {
-          onMarkerHover(null);
-        }
+        onMarkerHoverRef.current?.(null);
       });
       
       // Agregar click listener al marcador
@@ -324,15 +328,15 @@ export function BasicGoogleMap({
           const viewDetailsBtn = document.getElementById(`view-details-${m.id}`);
           const addFavoriteBtn = document.getElementById(`add-favorite-${m.id}`);
           
-          if (viewDetailsBtn && onMarkerClick) {
+          if (viewDetailsBtn && onMarkerClickRef.current) {
             viewDetailsBtn.addEventListener('click', () => {
-              onMarkerClick(m.id || '');
+              onMarkerClickRef.current?.(m.id || '');
             });
           }
           
-          if (addFavoriteBtn && onFavoriteClick) {
+          if (addFavoriteBtn && onFavoriteClickRef.current) {
             addFavoriteBtn.addEventListener('click', () => {
-              onFavoriteClick(m.id || '');
+              onFavoriteClickRef.current?.(m.id || '');
             });
           }
         });
@@ -416,7 +420,7 @@ export function BasicGoogleMap({
         }
       }
     }
-  }, [markers, enableClustering, onMarkerClick, onFavoriteClick, disableAutoFit, onMarkerHover]);
+  }, [markers, enableClustering, disableAutoFit]);
   
   // Efecto para resaltar el marcador cuando se hace hover sobre una tarjeta
   useEffect(() => {
