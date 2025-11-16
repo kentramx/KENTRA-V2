@@ -32,6 +32,7 @@ interface BasicGoogleMapProps {
   hoveredMarkerId?: string | null;
   onMarkerHover?: (markerId: string | null) => void;
   onBoundsChanged?: (bounds: { minLng: number; minLat: number; maxLng: number; maxLat: number; zoom: number }) => void;
+  onMapError?: (error: string) => void;
 }
 
 export function BasicGoogleMap({
@@ -48,6 +49,7 @@ export function BasicGoogleMap({
   hoveredMarkerId = null,
   onMarkerHover,
   onBoundsChanged,
+  onMapError,
 }: BasicGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -133,7 +135,7 @@ export function BasicGoogleMap({
                   zoom: zoom,
                 });
               }
-            }, 500); // ✅ Aumentado de 300ms a 500ms para reducir queries
+            }, 200); // ✅ Reducido a 200ms para mejor respuesta
           });
         }
 
@@ -145,7 +147,9 @@ export function BasicGoogleMap({
 
         if (onReady && mapRef.current) onReady(mapRef.current);
       } catch (e: any) {
-        setError(e?.message || 'No se pudo cargar el mapa');
+        const errorMessage = e?.message || 'No se pudo cargar el mapa';
+        setError(errorMessage);
+        onMapError?.(errorMessage);
       }
     };
 

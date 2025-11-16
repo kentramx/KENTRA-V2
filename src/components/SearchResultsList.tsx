@@ -12,7 +12,7 @@ import { PropertyStats } from '@/components/PropertyStats';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { PropertySummary, MapProperty } from '@/types/property';
+import type { PropertySummary, HoveredProperty } from '@/types/property';
 
 interface SearchResultsListProps {
   properties: PropertySummary[];
@@ -21,7 +21,7 @@ interface SearchResultsListProps {
   currentPage: number;
   propertiesPerPage: number;
   onPropertyClick: (id: string) => void;
-  onPropertyHover?: (property: MapProperty | null) => void;
+  onPropertyHover?: (property: HoveredProperty | null) => void;
   savedSearchesCount?: number;
   onScrollToSavedSearches?: () => void;
   highlightedPropertyId?: string | null;  // 🆕 Propiedad a resaltar
@@ -66,7 +66,7 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
       return { paginatedProperties: paginated, featuredCount: featured };
     }, [properties, currentPage, propertiesPerPage]);
 
-    // ✅ Callback memoizado para hover
+    // ✅ Callback memoizado para hover (solo datos esenciales, sin coordenadas)
     const handlePropertyHover = useCallback(
       (property: PropertySummary | null) => {
         if (onPropertyHover && property) {
@@ -75,22 +75,6 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
             title: property.title,
             price: property.price,
             currency: property.currency,
-            lat: 0, // PropertySummary doesn't have lat/lng
-            lng: 0,
-            type: property.type,
-            listing_type: property.listing_type,
-            bedrooms: property.bedrooms,
-            bathrooms: property.bathrooms,
-            parking: property.parking,
-            sqft: property.sqft,
-            address: property.address,
-            state: property.state,
-            municipality: property.municipality,
-            images: property.images,
-            agent_id: property.agent_id,
-            status: 'activa', // PropertySummary has active status
-            is_featured: property.is_featured,
-            created_at: property.created_at,
           });
         } else if (onPropertyHover) {
           onPropertyHover(null);

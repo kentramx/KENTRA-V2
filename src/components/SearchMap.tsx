@@ -20,6 +20,7 @@ interface SearchMapProps {
   onPropertyHover?: (property: MapProperty | null) => void;
   hoveredPropertyId?: string | null;
   height?: string;
+  onMapError?: (error: string) => void;
 }
 
 export const SearchMap: React.FC<SearchMapProps> = ({
@@ -29,6 +30,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   onPropertyHover,
   hoveredPropertyId,
   height = '100%',
+  onMapError,
 }) => {
   const navigate = useNavigate();
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
@@ -128,6 +130,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         onMarkerHover={handleMarkerHover}
         hoveredMarkerId={hoveredPropertyId}
         disableAutoFit={true}
+        onMapError={onMapError}
       />
     </div>
   );

@@ -39,7 +39,7 @@ import { generateSearchTitle, generateSearchDescription } from '@/utils/seo';
 import { generatePropertyListStructuredData } from '@/utils/structuredData';
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import { monitoring } from '@/lib/monitoring';
-import type { MapProperty, PropertyFilters } from '@/types/property';
+import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/property';
 
 interface Filters {
   estado: string;
@@ -277,6 +277,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [currentPage, setCurrentPage] = useState(1);
   const PROPERTIES_PER_PAGE = 20;
   const [mobileView, setMobileView] = useState<'map' | 'list'>('list');
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const filteredSavedSearches = savedSearches
     .filter(search => 
@@ -648,10 +649,17 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     setIsFiltering(isFetching && properties.length === 0);
   }, [isFetching, properties.length]);
 
-  // ✅ Callback para hover de propiedades desde la lista
-  const handlePropertyHoverFromList = useCallback((property: MapProperty | null) => {
+  // ✅ Callback para hover de propiedades desde la lista (sin coordenadas)
+  const handlePropertyHoverFromList = useCallback((property: HoveredProperty | null) => {
     hoverFromMap.current = false;
-    setHoveredProperty(property);
+    // Convertir HoveredProperty a MapProperty parcial para hoveredProperty state
+    // Como no tenemos lat/lng desde la lista, solo guardamos los datos básicos
+    if (property) {
+      // No establecer hoveredProperty ya que no tenemos coordenadas para resaltar en el mapa
+      // El mapa ya tiene su propio sistema de hover desde handleMarkerHover
+      return;
+    }
+    setHoveredProperty(null);
   }, []);
 
   // ✅ Handler: cuando se hace clic en un marcador del mapa
@@ -1453,15 +1461,30 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               </p>
             </div>
 
-            {/* ✅ Mapa con filtros unificados */}
-            <SearchMap
-              filters={propertyFilters}
-              searchCoordinates={searchCoordinates}
-              onMarkerClick={handleMarkerClick}
-              onPropertyHover={handlePropertyHoverFromMap}
-              hoveredPropertyId={hoveredProperty?.id || null}
-              height="100%"
-            />
+            {/* ✅ Mapa con filtros unificados y manejo de errores */}
+            {mapError ? (
+              <div className="flex h-full items-center justify-center p-8">
+                <div className="text-center max-w-md">
+                  <MapIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <p className="text-sm text-muted-foreground mb-2">
+                    No pudimos cargar el mapa en este momento.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Puedes seguir usando la lista de propiedades sin problema.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <SearchMap
+                filters={propertyFilters}
+                searchCoordinates={searchCoordinates}
+                onMarkerClick={handleMarkerClick}
+                onPropertyHover={handlePropertyHoverFromMap}
+                hoveredPropertyId={hoveredProperty?.id || null}
+                height="100%"
+                onMapError={setMapError}
+              />
+            )}
           </div>
 
           {/* ✅ Lista de propiedades usando SearchResultsList */}

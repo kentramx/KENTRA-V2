@@ -149,6 +149,16 @@ export interface PropertyCluster {
   property_ids: string[];
 }
 
+/**
+ * Versión ligera para hover (sin coordenadas)
+ */
+export interface HoveredProperty {
+  id: string;
+  title: string;
+  price: number;
+  currency: string;
+}
+
 // ============= INTERFACES DE SOPORTE =============
 
 export interface PropertyImage {
