@@ -38,11 +38,11 @@ const SearchMapComponent = ({
   height = 'calc(100vh - 8rem)'
 }: SearchMapProps) => {
   const markers = properties
-    .filter(p => typeof p.lat === 'number' && typeof p.lng === 'number')
+    .filter(p => p.lat != null && p.lng != null && !isNaN(Number(p.lat)) && !isNaN(Number(p.lng)))
     .map(p => ({
       id: p.id,
-      lat: p.lat as number,
-      lng: p.lng as number,
+      lat: Number(p.lat),
+      lng: Number(p.lng),
       title: p.title,
       price: p.price,
       bedrooms: p.bedrooms,
@@ -52,6 +52,8 @@ const SearchMapComponent = ({
       address: p.address,
       currency: 'MXN' as 'MXN' | 'USD',
     }));
+
+  console.log('[SearchMap] markers', markers.length, markers.slice(0, 3));
 
   return (
     <BasicGoogleMap

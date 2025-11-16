@@ -138,8 +138,8 @@ export const usePropertiesViewport = (
 
         const enrichedProperties = limitedProperties.map((prop: any) => ({
           ...prop,
-          lat: Number(prop.lat),
-          lng: Number(prop.lng),
+          lat: prop.lat === null || prop.lat === undefined ? null : Number(prop.lat),
+          lng: prop.lng === null || prop.lng === undefined ? null : Number(prop.lng),
           images: imagesMap.get(prop.id) || [],
           is_featured: featuredSet.has(prop.id),
         }));

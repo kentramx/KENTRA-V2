@@ -152,7 +152,12 @@ export function BasicGoogleMap({
     markerRefs.current.forEach(m => m.setMap(null));
     markerRefs.current.clear();
 
-    if (!markers || markers.length === 0) return;
+    if (!markers || markers.length === 0) {
+      console.log('[BasicGoogleMap] No markers to render');
+      return;
+    }
+
+    console.log('[BasicGoogleMap] Rendering markers count =', markers.length, markers.slice(0, 3));
 
     const bounds = new google.maps.LatLngBounds();
     
@@ -175,14 +180,16 @@ export function BasicGoogleMap({
         position: { lat, lng },
         animation: undefined,
         icon: {
-          path: 'M 0,0',
-          scale: 1,
-          fillOpacity: 0,
-          strokeWeight: 0,
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 6,
+          fillColor: '#0ea5e9',
+          fillOpacity: 0.9,
+          strokeColor: '#ffffff',
+          strokeWeight: 2,
         },
         label: {
           text: priceLabel,
-          className: 'custom-price-marker',
+          color: '#111827',
           fontSize: '13px',
           fontWeight: '600',
         },
