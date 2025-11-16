@@ -115,6 +115,19 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [savedSearchSort, setSavedSearchSort] = useState<'date' | 'name'>('date');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   
+  // Valores por defecto para filtros
+  const DEFAULT_FILTERS: Filters = {
+    estado: '',
+    municipio: '',
+    precioMin: '',
+    precioMax: '',
+    tipo: '',
+    listingType: '',
+    recamaras: '',
+    banos: '',
+    orden: 'price_desc',
+  };
+
   const [filters, setFilters] = useState<Filters>({
     estado: searchParams.get('estado') || '',
     municipio: searchParams.get('municipio') || '',
@@ -127,6 +140,30 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     orden: (searchParams.get('orden') as any) || 'price_desc',
   });
   
+  // ✅ Sincronización bidireccional: actualizar URL cuando cambien los filtros
+  useEffect(() => {
+    if (syncingFromUrl.current) return;
+    
+    const newParams = new URLSearchParams();
+    
+    // Solo agregar parámetros que no sean valores por defecto
+    if (filters.estado) newParams.set('estado', filters.estado);
+    if (filters.municipio) newParams.set('municipio', filters.municipio);
+    if (filters.precioMin) newParams.set('precioMin', filters.precioMin);
+    if (filters.precioMax) newParams.set('precioMax', filters.precioMax);
+    if (filters.tipo) newParams.set('tipo', filters.tipo);
+    if (filters.listingType) newParams.set('listingType', filters.listingType);
+    if (filters.recamaras) newParams.set('recamaras', filters.recamaras);
+    if (filters.banos) newParams.set('banos', filters.banos);
+    if (filters.orden && filters.orden !== 'price_desc') newParams.set('orden', filters.orden);
+    
+    // Mantener parámetro de propiedad si existe
+    const propertyId = searchParams.get('propiedad');
+    if (propertyId) newParams.set('propiedad', propertyId);
+    
+    setSearchParams(newParams, { replace: true });
+  }, [filters, setSearchParams, searchParams]);
+  
   // ✅ Construir filtros de manera unificada
   const propertyFilters = useMemo(
     () => buildPropertyFilters(filters),
@@ -138,6 +175,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     properties,
     isLoading: loading,
     isFetching,
+    error: searchError,
     totalCount,
     hasNextPage,
     fetchNextPage,
@@ -1397,22 +1435,13 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                   size="sm"
                   className="h-6 text-xs px-2"
                   onClick={() => {
-                    setFilters({
-                      estado: '',
-                      municipio: '',
-                      precioMin: '',
-                      precioMax: '',
-                      tipo: '',
-                      listingType: '',
-                      recamaras: '',
-                      banos: '',
-                      orden: 'price_desc',
-                    });
+                    setFilters(DEFAULT_FILTERS);
                     setSearchCoordinates(null);
                     setPriceRange([SALE_MIN_PRICE, SALE_MAX_PRICE]);
+                    // La URL se limpiará automáticamente por el useEffect de sincronización
                   }}
                 >
-                  Limpiar todo
+                  Limpiar filtros
                 </Button>
               </div>
             )}
@@ -1491,55 +1520,125 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
             )}
           </div>
 
-          {/* ✅ Lista de propiedades usando SearchResultsList */}
+          {/* ✅ Lista de propiedades con estados mejorados */}
           <div className={`w-full lg:w-1/2 overflow-y-auto ${mobileView === 'list' ? 'block' : 'hidden'} lg:block`}>
-            <SearchResultsList
-              properties={filteredProperties}
-              isLoading={loading}
-              listingType={filters.listingType}
-              currentPage={currentPage}
-              propertiesPerPage={PROPERTIES_PER_PAGE}
-              onPropertyClick={handlePropertyClick}
-              onPropertyHover={handlePropertyHoverFromList}
-              savedSearchesCount={user ? savedSearches.length : 0}
-              onScrollToSavedSearches={() => {
-                const element = document.getElementById('saved-searches');
-                element?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              highlightedPropertyId={selectedPropertyFromMap}
-              scrollToPropertyId={selectedPropertyFromMap}
-            />
-
-            {/* ✅ Paginación fuera del componente de lista */}
-            {filteredProperties.length > PROPERTIES_PER_PAGE && (
-              <div className="p-4">
-                <div className="flex items-center justify-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setCurrentPage(p => Math.max(1, p - 1));
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    disabled={currentPage === 1}
-                  >
-                    Anterior
-                  </Button>
-                  {renderPagination()}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const totalPages = Math.ceil(filteredProperties.length / PROPERTIES_PER_PAGE);
-                      setCurrentPage(p => Math.min(totalPages, p + 1));
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    disabled={currentPage === Math.ceil(filteredProperties.length / PROPERTIES_PER_PAGE)}
-                  >
-                    Siguiente
-                  </Button>
+            {/* Estado de error */}
+            {searchError && (
+              <div className="flex flex-col items-center justify-center p-8 space-y-4 min-h-[400px]">
+                <AlertCircle className="h-12 w-12 text-destructive" />
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-semibold">Error al cargar propiedades</h3>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Ocurrió un problema al buscar las propiedades. Por favor, intenta de nuevo.
+                  </p>
                 </div>
+                <Button 
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                >
+                  Reintentar
+                </Button>
               </div>
+            )}
+
+            {/* Estado de carga inicial */}
+            {!searchError && loading && properties.length === 0 && (
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Buscando propiedades...</span>
+                </div>
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-48 w-full" />
+                ))}
+              </div>
+            )}
+
+            {/* Estado vacío - sin resultados */}
+            {!searchError && !loading && filteredProperties.length === 0 && (
+              <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center min-h-[400px]">
+                <div className="rounded-full bg-muted p-6">
+                  <Search className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold">No encontramos propiedades</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    No hay propiedades que coincidan con tus filtros actuales.
+                  </p>
+                </div>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>Intenta:</p>
+                  <ul className="space-y-1">
+                    <li>• Ampliar el rango de precio</li>
+                    <li>• Cambiar la ubicación</li>
+                    <li>• Ajustar los filtros de recámaras y baños</li>
+                  </ul>
+                </div>
+                <Button 
+                  onClick={() => {
+                    setFilters(DEFAULT_FILTERS);
+                    setSearchCoordinates(null);
+                    setPriceRange([SALE_MIN_PRICE, SALE_MAX_PRICE]);
+                  }}
+                  variant="outline"
+                >
+                  Limpiar todos los filtros
+                </Button>
+              </div>
+            )}
+
+            {/* Lista de propiedades con resultados */}
+            {!searchError && filteredProperties.length > 0 && (
+              <>
+                <SearchResultsList
+                  properties={filteredProperties}
+                  isLoading={loading}
+                  listingType={filters.listingType}
+                  currentPage={currentPage}
+                  propertiesPerPage={PROPERTIES_PER_PAGE}
+                  onPropertyClick={handlePropertyClick}
+                  onPropertyHover={handlePropertyHoverFromList}
+                  savedSearchesCount={user ? savedSearches.length : 0}
+                  onScrollToSavedSearches={() => {
+                    const element = document.getElementById('saved-searches');
+                    element?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  highlightedPropertyId={selectedPropertyFromMap}
+                  scrollToPropertyId={selectedPropertyFromMap}
+                />
+
+                {/* ✅ Paginación fuera del componente de lista */}
+                {filteredProperties.length > PROPERTIES_PER_PAGE && (
+                  <div className="p-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCurrentPage(p => Math.max(1, p - 1));
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        disabled={currentPage === 1}
+                      >
+                        Anterior
+                      </Button>
+                      {renderPagination()}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const totalPages = Math.ceil(filteredProperties.length / PROPERTIES_PER_PAGE);
+                          setCurrentPage(p => Math.min(totalPages, p + 1));
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        disabled={currentPage === Math.ceil(filteredProperties.length / PROPERTIES_PER_PAGE)}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Búsquedas guardadas expandido */}
