@@ -35,6 +35,50 @@ declare global {
   }
 }
 
+// Helper function to extract colonia with multiple fallback strategies
+const extractColoniaFromComponents = (
+  addressComponents: google.maps.GeocoderAddressComponent[] | any[],
+  formattedAddress?: string
+): string => {
+  let colonia = '';
+  
+  // Priority 1: Standard neighborhood/sublocality types
+  const primaryTypes = ['sublocality_level_1', 'sublocality', 'neighborhood'];
+  for (const component of addressComponents) {
+    if (primaryTypes.some(type => component.types.includes(type))) {
+      colonia = component.long_name || component.longText;
+      if (colonia) return colonia;
+    }
+  }
+  
+  // Priority 2: Additional location types that might contain colonia
+  const secondaryTypes = ['route', 'postal_town', 'premise', 'sublocality_level_2'];
+  for (const component of addressComponents) {
+    if (secondaryTypes.some(type => component.types.includes(type))) {
+      const value = component.long_name || component.longText;
+      // Only use if it doesn't look like a street number or too generic
+      if (value && !value.match(/^\d+$/) && value.length > 3) {
+        colonia = value;
+        if (colonia) return colonia;
+      }
+    }
+  }
+  
+  // Priority 3: Extract from formatted address (first part before comma)
+  if (formattedAddress) {
+    const parts = formattedAddress.split(',');
+    if (parts.length > 0) {
+      const firstPart = parts[0].trim();
+      // Check if first part looks like a colonia name (not just numbers)
+      if (firstPart && !firstPart.match(/^\d+/) && firstPart.length > 5) {
+        return firstPart;
+      }
+    }
+  }
+  
+  return colonia;
+};
+
 export const PlaceAutocomplete = ({ 
   onPlaceSelect,
   onInputChange,
@@ -96,7 +140,6 @@ export const PlaceAutocomplete = ({
             
             let municipality = '';
             let state = '';
-            let colonia = '';
             
             addressComponents?.forEach((component) => {
               if (component.types.includes('administrative_area_level_1')) {
@@ -107,12 +150,13 @@ export const PlaceAutocomplete = ({
               } else if (!municipality && component.types.includes('locality')) {
                 municipality = component.long_name;
               }
-              if (component.types.includes('sublocality_level_1') || 
-                  component.types.includes('sublocality') ||
-                  component.types.includes('neighborhood')) {
-                colonia = component.long_name;
-              }
             });
+            
+            // Use enhanced colonia extraction
+            const colonia = extractColoniaFromComponents(
+              addressComponents || [], 
+              place.formatted_address
+            );
 
             const location = {
               address: place.formatted_address || '',
@@ -215,7 +259,6 @@ export const PlaceAutocomplete = ({
       
       let municipality = '';
       let state = '';
-      let colonia = '';
       
       place.address_components.forEach((component) => {
         if (component.types.includes('administrative_area_level_1')) {
@@ -226,12 +269,13 @@ export const PlaceAutocomplete = ({
         } else if (!municipality && component.types.includes('locality')) {
           municipality = component.long_name;
         }
-        if (component.types.includes('sublocality_level_1') || 
-            component.types.includes('sublocality') ||
-            component.types.includes('neighborhood')) {
-          colonia = component.long_name;
-        }
       });
+      
+      // Use enhanced colonia extraction
+      const colonia = extractColoniaFromComponents(
+        place.address_components, 
+        place.formatted_address
+      );
       
       const location = {
         address: place.formatted_address || place.name || '',
@@ -308,7 +352,6 @@ export const PlaceAutocomplete = ({
 
         let municipality = '';
         let state = '';
-        let colonia = '';
 
         place.addressComponents?.forEach((component: any) => {
           if (component.types.includes('administrative_area_level_1')) {
@@ -319,12 +362,13 @@ export const PlaceAutocomplete = ({
           } else if (!municipality && component.types.includes('locality')) {
             municipality = component.longText;
           }
-          if (component.types.includes('sublocality_level_1') || 
-              component.types.includes('sublocality') ||
-              component.types.includes('neighborhood')) {
-            colonia = component.longText;
-          }
         });
+        
+        // Use enhanced colonia extraction
+        const colonia = extractColoniaFromComponents(
+          place.addressComponents || [], 
+          place.formattedAddress
+        );
 
         const location = {
           address: place.formattedAddress || place.displayName || '',
