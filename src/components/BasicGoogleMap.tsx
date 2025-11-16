@@ -39,13 +39,14 @@ function createCustomPropertyOverlay() {
       div.style.position = 'absolute';
       div.style.cursor = 'pointer';
       div.style.userSelect = 'none';
+      div.style.background = 'transparent';
       
       // Contenedor para centrar todo
       div.style.transform = 'translate(-50%, -100%)';
       
       // Crear el contenido: precio arriba, dot abajo
       div.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; background: transparent;">
           ${this.priceText ? `
             <div style="
               background: white;
@@ -120,11 +121,13 @@ function createCustomPropertyOverlay() {
       if (dot) {
         if (this.isHovered) {
           dot.style.background = '#b8281f';
-          dot.style.transform = 'scale(1.3)';
+          dot.style.transform = 'scale(1.2)';
+          dot.style.boxShadow = '0 3px 10px rgba(184, 40, 31, 0.5)';
           dot.style.transition = 'all 0.2s ease';
         } else {
           dot.style.background = '#e0332d';
           dot.style.transform = 'scale(1)';
+          dot.style.boxShadow = '0 2px 8px rgba(224, 51, 45, 0.4)';
           dot.style.transition = 'all 0.2s ease';
         }
       }
