@@ -21,10 +21,10 @@ export interface ViewportBounds {
 
 // ✅ OPTIMIZACIÓN: Límites inteligentes según zoom
 const getMaxPropertiesForZoom = (zoom: number): number => {
-  if (zoom >= 16) return 500; // Vista muy cercana
-  if (zoom >= 14) return 300; // Vista de barrio
-  if (zoom >= 12) return 150; // Vista de ciudad
-  return 100; // Vista amplia
+  if (zoom >= 16) return 500;
+  if (zoom >= 14) return 300;
+  if (zoom >= 12) return 150;
+  return 100;
 };
 
 export const usePropertiesViewport = (
@@ -72,13 +72,18 @@ export const usePropertiesViewport = (
         }
 
         // ✅ Batch loading de imágenes
-        const propertyIds = limitedProperties.map((p: any) => p.id);
+        const propertyIds = (limitedProperties as any[]).map((p) => p.id);
         const { data: imagesData } = await supabase.rpc('get_images_batch', {
           property_ids: propertyIds,
         });
 
-        const imagesMap = new Map();
-        imagesData?.forEach((item: any) => {
+        interface ImageBatch {
+          property_id: string;
+          images: Array<{ url: string; position: number }>;
+        }
+
+        const imagesMap = new Map<string, Array<{ url: string; position: number }>>();
+        (imagesData as ImageBatch[] || []).forEach((item) => {
           imagesMap.set(item.property_id, item.images || []);
         });
 
@@ -90,19 +95,35 @@ export const usePropertiesViewport = (
           .eq('status', 'active')
           .gte('end_date', new Date().toISOString());
 
-        const featuredSet = new Set(featuredData?.map((f: any) => f.property_id) || []);
+        const featuredSet = new Set(featuredData?.map((f) => f.property_id) || []);
 
-        const enrichedProperties = limitedProperties.map((prop: any) => ({
-          ...prop,
+        // Normalizar a MapProperty
+        const enrichedProperties: MapProperty[] = (limitedProperties as any[]).map((prop) => ({
+          id: prop.id,
+          title: prop.title,
+          price: prop.price,
+          currency: prop.currency || 'MXN',
           lat: prop.lat === null || prop.lat === undefined ? null : Number(prop.lat),
           lng: prop.lng === null || prop.lng === undefined ? null : Number(prop.lng),
+          type: prop.type,
+          listing_type: prop.listing_type,
+          bedrooms: prop.bedrooms,
+          bathrooms: prop.bathrooms,
+          parking: prop.parking,
+          sqft: prop.sqft,
+          address: prop.address,
+          state: prop.state,
+          municipality: prop.municipality,
+          agent_id: prop.agent_id,
+          status: prop.status,
+          created_at: prop.created_at,
           images: imagesMap.get(prop.id) || [],
           is_featured: featuredSet.has(prop.id),
         }));
 
       return { 
         clusters: [] as PropertyCluster[], 
-        properties: enrichedProperties as MapProperty[]
+        properties: enrichedProperties
       };
       }
 
@@ -112,7 +133,7 @@ export const usePropertiesViewport = (
         min_lat: bounds.minLat,
         max_lng: bounds.maxLng,
         max_lat: bounds.maxLat,
-        zoom_level: Math.round(bounds.zoom),
+        zoom_level: bounds.zoom,
         p_status: status,
         p_state: filters?.estado || null,
         p_municipality: filters?.municipio || null,
@@ -125,29 +146,15 @@ export const usePropertiesViewport = (
       });
 
       if (error) {
-        monitoring.error('[usePropertiesViewport] Error clusters', { hook: 'usePropertiesViewport', error });
+        monitoring.error('[usePropertiesViewport] Cluster error', { hook: 'usePropertiesViewport', error });
         throw error;
       }
 
-      return { 
-        clusters: (data || []) as PropertyCluster[], 
-        properties: [] as MapProperty[]
-      };
+      const clusters = (data || []) as PropertyCluster[];
+      return { clusters, properties: [] };
     },
     enabled: !!bounds,
-    staleTime: 3 * 60 * 1000, // ✅ 3 minutos de cache para reducir recargas
-    gcTime: 5 * 60 * 1000, // 5 minutos
-    retry: (failureCount, error: any) => {
-      // ✅ NO reintentar si es error SQL permanente (42xxx codes)
-      if (error?.code?.startsWith('42') || error?.code?.startsWith('4')) {
-        monitoring.error('[usePropertiesViewport] Error permanente, no reintentar', { hook: 'usePropertiesViewport', error });
-        return false;
-      }
-      // Solo reintentar 1 vez para otros errores
-      return failureCount < 1;
-    },
-    retryDelay: 500, // ✅ Esperar 0.5 segundos (más rápido)
-    refetchOnWindowFocus: false, // ✅ No refrescar al cambiar de ventana
-    refetchOnMount: false, // ✅ No refrescar si hay datos en cache
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 };

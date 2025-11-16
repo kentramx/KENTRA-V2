@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { monitoring } from '@/lib/monitoring';
+import type { AppRole } from '@/types/user';
 
 const IMPERSONATION_KEY = 'kentra_impersonated_role';
 
-export type UserRole = 'buyer' | 'agent' | 'agency' | 'super_admin' | 'moderator';
+export type UserRole = AppRole;
 
 export const useUserRole = () => {
   const { user } = useAuth();
@@ -29,7 +30,7 @@ export const useUserRole = () => {
       const impersonatedRole = localStorage.getItem(IMPERSONATION_KEY);
       if (impersonatedRole) {
         // Verify user is actually super admin
-        const { data: isSuperData } = await (supabase.rpc as any)('is_super_admin', {
+        const { data: isSuperData } = await supabase.rpc('is_super_admin', {
           _user_id: user.id,
         });
 
@@ -59,9 +60,10 @@ export const useUserRole = () => {
         return;
       }
 
-      // Role priority: super_admin > moderator > agency > agent > buyer
+      // Role priority: super_admin > admin > moderator > agency > agent > buyer
       const rolePriority: Record<UserRole, number> = {
-        super_admin: 5,
+        super_admin: 6,
+        admin: 5,
         moderator: 4,
         agency: 3,
         agent: 2,

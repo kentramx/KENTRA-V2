@@ -31,6 +31,8 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { ChangePlanDialog } from './ChangePlanDialog';
 import { ActiveUpsells } from './ActiveUpsells';
+import type { SubscriptionFeatures } from '@/types/subscription';
+import type { Json } from '@/integrations/supabase/types';
 
 interface SubscriptionManagementProps {
   userId: string;
@@ -47,7 +49,7 @@ interface SubscriptionDetails {
   current_period_start: string;
   current_period_end: string;
   cancel_at_period_end: boolean;
-  features: any;
+  features: SubscriptionFeatures;
 }
 
 interface PaymentRecord {
@@ -57,7 +59,7 @@ interface PaymentRecord {
   status: string;
   payment_type: string;
   created_at: string;
-  metadata: any;
+  metadata: Json | null;
 }
 
 export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) => {
@@ -121,7 +123,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           current_period_start: subData.current_period_start,
           current_period_end: subData.current_period_end,
           cancel_at_period_end: subData.cancel_at_period_end,
-          features: subData.subscription_plans.features,
+          features: subData.subscription_plans.features as SubscriptionFeatures,
         });
       }
 
