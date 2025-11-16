@@ -1,3 +1,4 @@
+import './App.css';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
@@ -6,7 +7,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useTracking } from "@/hooks/useTracking";
+import { monitoring } from "@/lib/monitoring";
 import Home from "./pages/Home";
 import PropertyDetail from "./pages/PropertyDetail";
 import Favorites from "./pages/Favorites";
@@ -121,18 +124,20 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <MapPreloader />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <MapPreloader />
+        <BrowserRouter>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
