@@ -158,7 +158,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [mapZoom, setMapZoom] = useState(12);
   const [mapBounds, setMapBounds] = useState<ViewportBounds | null>(null);
 
-  const { data: viewportData, isLoading: loading, isFetching } = usePropertiesViewport(mapBounds, queryFilters);
+  const { data: viewportData, isLoading: loading, isFetching, error } = usePropertiesViewport(mapBounds, queryFilters);
   
   const properties = (viewportData?.properties || []);
   const clusters = (viewportData?.clusters || []);
@@ -878,7 +878,14 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
         <Navbar />
         <div className="flex flex-col items-center justify-center h-screen gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Cargando propiedades...</p>
+          <p className="text-muted-foreground">
+            {error ? 'Error al cargar propiedades' : 'Cargando propiedades...'}
+          </p>
+          {error && (
+            <p className="text-sm text-destructive">
+              Intenta ajustar tus filtros de búsqueda
+            </p>
+          )}
         </div>
       </div>
     );

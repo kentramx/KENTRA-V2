@@ -181,7 +181,15 @@ export const usePropertiesViewport = (
     enabled: !!bounds,
     staleTime: 3 * 60 * 1000, // ✅ 3 minutos de cache para reducir recargas
     gcTime: 5 * 60 * 1000, // 5 minutos
-    retry: 1, // ✅ Solo 1 reintento para ser más rápido
+    retry: (failureCount, error: any) => {
+      // ✅ NO reintentar si es error SQL permanente (42xxx codes)
+      if (error?.code?.startsWith('42') || error?.code?.startsWith('4')) {
+        console.error('[usePropertiesViewport] Error permanente, no reintentar:', error);
+        return false;
+      }
+      // Solo reintentar 1 vez para otros errores
+      return failureCount < 1;
+    },
     retryDelay: 500, // ✅ Esperar 0.5 segundos (más rápido)
     refetchOnWindowFocus: false, // ✅ No refrescar al cambiar de ventana
     refetchOnMount: false, // ✅ No refrescar si hay datos en cache
