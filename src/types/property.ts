@@ -230,6 +230,14 @@ export type AIModerationStatus =
 
 // ============= FILTROS =============
 
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+  zoom: number;
+}
+
 export interface PropertyFilters {
   estado?: string;
   municipio?: string;
@@ -240,4 +248,5 @@ export interface PropertyFilters {
   recamaras?: string;
   banos?: string;
   status?: string[];
+  mapBounds?: MapBounds | null; // ✅ Nuevo: búsqueda por viewport del mapa
 }

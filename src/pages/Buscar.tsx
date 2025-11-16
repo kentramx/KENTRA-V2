@@ -4,9 +4,11 @@ import { SearchResultsList } from '@/components/SearchResultsList';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePropertySearch } from '@/hooks/usePropertySearch';
+import { useSmartPropertySearch } from '@/hooks/useSmartPropertySearch';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
 import { buildPropertyFilters } from '@/utils/buildPropertyFilters';
+import type { ViewportBounds } from '@/hooks/usePropertiesViewport';
 import BasicGoogleMap from '@/components/BasicGoogleMap';
 import Navbar from '@/components/Navbar';
 import PropertyCard from '@/components/PropertyCard';
@@ -19,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2, Map as MapIcon, List as ListIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -84,6 +87,11 @@ const Buscar = () => {
   
   // ✅ Estado para sincronizar clic en mapa con tarjeta de lista
   const [selectedPropertyFromMap, setSelectedPropertyFromMap] = useState<string | null>(null);
+  
+  // ✅ Estados para búsqueda por mapa (Módulo 3)
+  const [searchByMap, setSearchByMap] = useState(false);
+  const [mapBounds, setMapBounds] = useState<ViewportBounds | null>(null);
+  const debouncedMapBounds = useDebouncedValue(mapBounds, 500);
   
 // Rangos para VENTA (en millones)
 const SALE_MIN_PRICE = 0;
@@ -170,7 +178,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     [filters]
   );
 
-  // ✅ Usar hook centralizado usePropertySearch
+  // ✅ Usar hook inteligente que decide entre búsqueda normal o por viewport
   const {
     properties,
     isLoading: loading,
@@ -179,7 +187,13 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     totalCount,
     hasNextPage,
     fetchNextPage,
-  } = usePropertySearch(propertyFilters);
+    hasTooManyResults,
+    actualTotal,
+  } = useSmartPropertySearch({
+    filters: propertyFilters,
+    searchByMap,
+    mapBounds: debouncedMapBounds,
+  });
 
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
@@ -1476,17 +1490,39 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 
           {/* Mapa a la izquierda - 50% width en desktop, condicional en móvil */}
           <div className={`relative ${mobileView === 'map' ? 'block' : 'hidden'} lg:block lg:w-1/2 lg:h-full`} style={{ height: 'calc(100vh - 200px)' }}>
-            {/* Contador de resultados sobre el mapa */}
-            <div className="absolute top-4 left-4 z-10 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border">
-              <p className="text-sm font-medium flex items-center gap-2">
+            {/* Toggle para buscar en zona del mapa */}
+            <div className="absolute top-4 left-4 z-10 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border space-y-2">
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="search-by-map"
+                  checked={searchByMap}
+                  onCheckedChange={setSearchByMap}
+                />
+                <Label htmlFor="search-by-map" className="text-sm font-medium cursor-pointer">
+                  Buscar solo en esta zona
+                </Label>
+              </div>
+              
+              <div className="flex items-center gap-2 pt-1 border-t">
                 <span className="font-bold text-lg">{totalCount}</span>
-                <span className="text-muted-foreground">
+                <span className="text-muted-foreground text-sm">
                   {totalCount === 1 ? 'propiedad' : 'propiedades'}
                 </span>
                 {isFetching && properties.length > 0 && (
                   <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                 )}
-              </p>
+              </div>
+              
+              {/* Alerta de demasiados resultados */}
+              {hasTooManyResults && (
+                <Alert variant="default" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Mostrando {totalCount} de {actualTotal} propiedades. 
+                    {searchByMap ? ' Haz zoom para ver más detalles.' : ' Activa "Buscar solo en esta zona" y haz zoom.'}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
 
             {/* ✅ Mapa con filtros unificados y manejo de errores */}
@@ -1516,6 +1552,11 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 }
                 height="100%"
                 onMapError={setMapError}
+                onBoundsChange={(bounds) => {
+                  if (searchByMap) {
+                    setMapBounds(bounds);
+                  }
+                }}
               />
             )}
           </div>
