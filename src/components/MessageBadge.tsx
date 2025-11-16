@@ -4,14 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAppBadge } from '@/hooks/useAppBadge';
 
 export const MessageBadge = () => {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
-  
-  // Actualizar el badge del icono de la app con el conteo de no leídos
-  useAppBadge(unreadCount);
 
   useEffect(() => {
     if (!user) {

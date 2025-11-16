@@ -27,8 +27,6 @@ import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import Buscar from "./pages/Buscar";
 import MessagesPage from "./pages/MessagesPage";
-import InstallPWA from "./pages/InstallPWA";
-import SetupDemo from "./pages/SetupDemo";
 import NotFound from "./pages/NotFound";
 import MapPreloader from "@/components/MapPreloader";
 import Publicar from "./pages/Publicar";
@@ -94,8 +92,6 @@ const AppContent = () => {
               <Route path="/panel-agente" element={<AgentDashboard />} />
               <Route path="/panel-inmobiliaria" element={<AgencyDashboard />} />
               <Route path="/mensajes" element={<MessagesPage />} />
-              <Route path="/instalar" element={<InstallPWA />} />
-              <Route path="/setup-demo" element={<SetupDemo />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/publicar" element={<Publicar />} />
               <Route path="/pricing-agente" element={<PricingAgente />} />
