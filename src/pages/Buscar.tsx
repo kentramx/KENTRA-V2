@@ -4,7 +4,7 @@ import { SearchResultsList } from '@/components/SearchResultsList';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePropertiesInfinite } from '@/hooks/usePropertiesInfinite';
+import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
 import { buildPropertyFilters } from '@/utils/buildPropertyFilters';
 import BasicGoogleMap from '@/components/BasicGoogleMap';
@@ -133,22 +133,15 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     [filters]
   );
 
-  // ✅ Usar usePropertiesInfinite para la lista (paginación)
+  // ✅ Usar hook centralizado usePropertySearch
   const {
-    data: infiniteData,
+    properties,
     isLoading: loading,
     isFetching,
-    fetchNextPage,
+    totalCount,
     hasNextPage,
-  } = usePropertiesInfinite(propertyFilters);
-
-  // ✅ Construir arreglo plano de propiedades desde las páginas
-  const properties = useMemo(
-    () => infiniteData?.pages.flatMap((page) => page.properties) ?? [],
-    [infiniteData]
-  );
-
-  const totalCount = properties.length;
+    fetchNextPage,
+  } = usePropertySearch(propertyFilters);
 
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
