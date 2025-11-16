@@ -18,6 +18,7 @@ import { generateWebsiteStructuredData, generateOrganizationStructuredData } fro
 import { usePropertiesInfinite } from "@/hooks/usePropertiesInfinite";
 import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
 import { LazyImage } from "@/components/LazyImage";
+import type { PropertySummary } from '@/types/property';
 import {
   Select,
   SelectContent,
@@ -30,33 +31,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-
-interface Property {
-  id: string;
-  title: string;
-  price: number;
-  type: string;
-  listing_type: string;
-  for_sale?: boolean;
-  for_rent?: boolean;
-  sale_price?: number | null;
-  rent_price?: number | null;
-  currency?: string;
-  address: string;
-  colonia?: string;
-  municipality: string;
-  state: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  parking?: number;
-  sqft?: number;
-  lat?: number;
-  lng?: number;
-  images?: { url: string; position: number }[];
-  agent_id: string;
-  is_featured?: boolean;
-  created_at?: string;
-}
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,8 +60,8 @@ const Home = () => {
     status: ['activa'],
   });
 
-  const featuredProperties = featuredData?.pages.flatMap(page => page.properties) || [];
-  const recentProperties = recentData?.pages.flatMap(page => page.properties) || [];
+  const featuredProperties = featuredData?.pages.flatMap(page => page.properties) || [] as PropertySummary[];
+  const recentProperties = recentData?.pages.flatMap(page => page.properties) || [] as PropertySummary[];
   const isLoadingProperties = isLoadingFeatured || isLoadingRecent;
   
   // Estado para almacenar la ubicación seleccionada del autocomplete

@@ -8,27 +8,37 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { DynamicBreadcrumbs } from '@/components/DynamicBreadcrumbs';
+import type { PropertySummary } from '@/types/property';
 
-interface Property {
+// Tipo para los datos que vienen de la DB con relación de properties
+interface DBProperty {
   id: string;
   title: string;
   price: number;
+  currency: string;
   type: string;
   listing_type: string;
+  for_sale: boolean;
+  for_rent: boolean;
+  sale_price: number | null;
+  rent_price: number | null;
   address: string;
+  colonia: string | null;
   municipality: string;
   state: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  parking?: number;
-  sqft?: number;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  parking: number | null;
+  sqft: number | null;
   agent_id: string;
+  created_at: string;
+  images: Array<{ url: string; position: number }>;
 }
 
 interface FavoriteWithProperty {
   id: string;
   property_id: string;
-  properties: Property;
+  properties: DBProperty;
 }
 
 const Favorites = () => {
@@ -61,16 +71,24 @@ const Favorites = () => {
             id,
             title,
             price,
+            currency,
             type,
             listing_type,
+            for_sale,
+            for_rent,
+            sale_price,
+            rent_price,
             address,
+            colonia,
             municipality,
             state,
             bedrooms,
             bathrooms,
             parking,
             sqft,
-            agent_id
+            agent_id,
+            created_at,
+            images (url, position)
           )
         `)
         .order('created_at', { ascending: false });
@@ -125,7 +143,6 @@ const Favorites = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 py-8">
-        {/* Breadcrumbs */}
         <DynamicBreadcrumbs 
           items={[
             { label: 'Inicio', href: '/', active: false },
@@ -166,10 +183,29 @@ const Favorites = () => {
         ) : (
           <VirtualizedPropertyGrid 
             properties={favorites.map(fav => ({
-              ...fav.properties,
+              id: fav.properties.id,
+              title: fav.properties.title,
+              price: fav.properties.price,
+              currency: fav.properties.currency,
+              type: fav.properties.type as any,
+              listing_type: fav.properties.listing_type,
+              for_sale: fav.properties.for_sale,
+              for_rent: fav.properties.for_rent,
+              sale_price: fav.properties.sale_price,
+              rent_price: fav.properties.rent_price,
+              address: fav.properties.address,
+              colonia: fav.properties.colonia,
+              municipality: fav.properties.municipality,
+              state: fav.properties.state,
+              bedrooms: fav.properties.bedrooms,
+              bathrooms: fav.properties.bathrooms,
+              parking: fav.properties.parking,
+              sqft: fav.properties.sqft,
+              images: fav.properties.images.sort((a, b) => a.position - b.position),
               agent_id: fav.properties.agent_id,
-              images: [] // Las imágenes se cargarán del PropertyCard
-            }))}
+              is_featured: false,
+              created_at: fav.properties.created_at,
+            } as PropertySummary))} 
           />
         )}
       </main>

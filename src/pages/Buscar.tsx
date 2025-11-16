@@ -34,27 +34,8 @@ import { useTracking } from '@/hooks/useTracking';
 import { SEOHead } from '@/components/SEOHead';
 import { generateSearchTitle, generateSearchDescription } from '@/utils/seo';
 import { generatePropertyListStructuredData } from '@/utils/structuredData';
-
-interface Property {
-  id: string;
-  title: string;
-  price: number;
-  bedrooms: number | null;
-  bathrooms: number | null;
-  parking: number | null;
-  lat: number | null;
-  lng: number | null;
-  address: string;
-  state: string;
-  municipality: string;
-  type: 'casa' | 'departamento' | 'terreno' | 'oficina' | 'local' | 'bodega' | 'edificio' | 'rancho';
-  listing_type: string;
-  images: { url: string; position: number }[];
-  created_at: string | null;
-  sqft: number | null;
-  agent_id: string;
-  is_featured?: boolean;
-}
+import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
+import type { MapProperty } from '@/types/property';
 
 interface Filters {
   estado: string;
@@ -67,8 +48,6 @@ interface Filters {
   banos: string;
   orden: 'price_desc' | 'price_asc' | 'newest' | 'oldest' | 'bedrooms_desc' | 'sqft_desc';
 }
-
-import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 
 const getTipoLabel = (tipo: string) => {
   const labels: Record<string, string> = {
@@ -287,7 +266,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 
   const [estados] = useState<string[]>(mexicoStates);
   const [municipios, setMunicipios] = useState<string[]>([]);
-  const [hoveredProperty, setHoveredProperty] = useState<Property | null>(null);
+  const [hoveredProperty, setHoveredProperty] = useState<MapProperty | null>(null);
   const propertyCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const hoverFromMap = useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -673,7 +652,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     setIsFiltering(isFetching && properties.length === 0);
   }, [isFetching, properties.length]);
 
-  const handlePropertyHover = (property: Property) => {
+  const handlePropertyHover = (property: MapProperty) => {
     setHoveredProperty(property);
   };
 
@@ -1510,7 +1489,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               onMarkerHover={(markerId) => {
                 if (markerId) {
                   hoverFromMap.current = true;
-                  const property = filteredProperties.find(p => p.id === markerId) as Property | undefined;
+                  const property = filteredProperties.find(p => p.id === markerId) as MapProperty | undefined;
                   setHoveredProperty(property || null);
                 } else {
                   setHoveredProperty(null);
@@ -1617,7 +1596,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                             }}
                             onMouseEnter={() => {
                               hoverFromMap.current = false;
-                              setHoveredProperty(property as Property);
+                              setHoveredProperty(property as MapProperty);
                             }}
                             onMouseLeave={() => setHoveredProperty(null)}
                           >
