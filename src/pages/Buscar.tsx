@@ -154,8 +154,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     status: ['activa'],
   }), [filters.estado, filters.municipio, filters.tipo, filters.listingType, filters.precioMin, filters.precioMax, filters.recamaras, filters.banos]);
 
-  const [mapCenter, setMapCenter] = useState({ lat: 19.4326, lng: -99.1332 });
-  const [mapZoom, setMapZoom] = useState(12);
+  // Centro en México con zoom que muestra todo el país
+  const [mapCenter, setMapCenter] = useState({ lat: 23.6345, lng: -102.5528 });
+  const [mapZoom, setMapZoom] = useState(5);
   const [mapBounds, setMapBounds] = useState<ViewportBounds | null>(null);
 
   const { data: viewportData, isLoading: loading, isFetching, error } = usePropertiesViewport(mapBounds, queryFilters);
