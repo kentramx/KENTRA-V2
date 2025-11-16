@@ -13,7 +13,7 @@ export const useAgentProperties = (agentId: string | undefined, statusFilter?: s
           id, title, price, bedrooms, bathrooms, type, listing_type,
           status, created_at, expires_at, last_renewed_at, address,
           state, municipality, colonia, sqft, parking, description, video_url,
-          ai_moderation_score, ai_moderation_status, agent_id,
+          ai_moderation_score, ai_moderation_status, agent_id, property_code,
           rejection_history, resubmission_count,
           images (id, url, position)
         `)
