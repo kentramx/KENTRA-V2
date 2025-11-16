@@ -133,11 +133,18 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
         property_id: propertyId
       });
       
-      if (error) throw error;
-      
-      if (!data?.success) {
+      if (error) {
         toast({
           title: 'Error',
+          description: error.message || 'No se pudo conectar con el servidor',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!data?.success) {
+        toast({
+          title: 'No se pudo reenviar',
           description: data?.error || 'Error desconocido',
           variant: 'destructive',
         });
@@ -145,9 +152,24 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
       }
       
       toast({
-        title: '✅ Reenviada',
-        description: `Propiedad reenviada para revisión. Te quedan ${data?.remaining_attempts || 0} intentos.`,
+        title: '✅ Reenviada para revisión',
+        description: `La propiedad está en revisión. Intentos restantes: ${data.remaining_attempts}`,
       });
+
+      // Notificar a admins sobre el reenvío
+      try {
+        await supabase.functions.invoke('notify-admin-resubmission', {
+          body: {
+            propertyId,
+            propertyTitle: data.property_title,
+            agentName: data.agent_name,
+            resubmissionNumber: data.resubmission_number
+          }
+        });
+      } catch (notificationError) {
+        console.error('Error sending admin notification:', notificationError);
+        // No mostrar error al usuario ya que el reenvío fue exitoso
+      }
       
       // Invalidar caché de React Query
       queryClient.invalidateQueries({ queryKey: ['agent-properties', effectiveAgentId] });
@@ -319,27 +341,45 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                       </TooltipContent>
                     </Tooltip>
                   ) : property.status === 'pausada' && (property as any).rejection_history?.length > 0 ? (
+                    <div className="flex flex-col gap-1">
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge variant="destructive">
+                            ❌ Rechazada
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          {(() => {
+                            const lastRejection = (property as any).rejection_history[(property as any).rejection_history.length - 1] as RejectionRecord;
+                            return (
+                              <>
+                                <p className="font-semibold">Motivos: {lastRejection.reasons.join(', ')}</p>
+                                {lastRejection.comments && (
+                                  <p className="text-xs mt-1">{lastRejection.comments}</p>
+                                )}
+                                <p className="text-xs mt-2 text-muted-foreground">
+                                  Reenvíos: {(property as any).resubmission_count || 0}/3
+                                </p>
+                              </>
+                            );
+                          })()}
+                        </TooltipContent>
+                      </Tooltip>
+                      {(property as any).resubmission_count > 0 && (
+                        <Badge variant="outline" className="text-xs w-fit">
+                          Intento {(property as any).resubmission_count}/3
+                        </Badge>
+                      )}
+                    </div>
+                  ) : (property as any).status === 'pendiente_aprobacion' ? (
                     <Tooltip>
                       <TooltipTrigger>
-                        <Badge variant="destructive">
-                          ❌ Rechazada
+                        <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                          ⏳ En revisión
                         </Badge>
                       </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        {(() => {
-                          const lastRejection = (property as any).rejection_history[(property as any).rejection_history.length - 1] as RejectionRecord;
-                          return (
-                            <>
-                              <p className="font-semibold">Motivos: {lastRejection.reasons.join(', ')}</p>
-                              {lastRejection.comments && (
-                                <p className="text-xs mt-1">{lastRejection.comments}</p>
-                              )}
-                              <p className="text-xs mt-2 text-muted-foreground">
-                                Reenvíos: {(property as any).resubmission_count || 0}/3
-                              </p>
-                            </>
-                          );
-                        })()}
+                      <TooltipContent>
+                        Tu propiedad está siendo revisada por un administrador
                       </TooltipContent>
                     </Tooltip>
                   ) : (
@@ -416,15 +456,26 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                     </Button>
                     
                     {property.status === 'pausada' && (property as any).rejection_history?.length > 0 && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleResubmitProperty(property.id)}
-                        disabled={(property as any).resubmission_count >= 3}
-                      >
-                        <RefreshCw className="h-3 w-3 mr-1" />
-                        Reenviar ({3 - ((property as any).resubmission_count || 0)})
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleResubmitProperty(property.id)}
+                            disabled={(property as any).resubmission_count >= 3}
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            {(property as any).resubmission_count >= 3 
+                              ? 'Límite alcanzado' 
+                              : `Reenviar (${3 - ((property as any).resubmission_count || 0)})`}
+                          </Button>
+                        </TooltipTrigger>
+                        {(property as any).resubmission_count >= 3 && (
+                          <TooltipContent>
+                            Has alcanzado el límite máximo de reintentos. Contacta a soporte.
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
                     )}
                     
                     {property.status === 'pausada' && (!(property as any).rejection_history || (property as any).rejection_history.length === 0) && (
