@@ -54,6 +54,14 @@ export function generatePropertyStructuredData(
       addressRegion: property.state,
       addressCountry: 'MX',
     },
+    // Incluir coordenadas geográficas para mejor SEO local
+    ...(property.lat && property.lng && {
+      geo: {
+        '@type': 'GeoCoordinates',
+        latitude: property.lat,
+        longitude: property.lng,
+      },
+    }),
     ...(property.bedrooms && { numberOfRooms: property.bedrooms }),
     ...(property.bathrooms && { numberOfBathroomsTotal: property.bathrooms }),
     ...(property.sqft && { floorSize: { '@type': 'QuantitativeValue', value: property.sqft, unitCode: 'MTK' } }),

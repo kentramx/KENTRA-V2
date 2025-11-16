@@ -167,6 +167,23 @@ export interface PropertyAgent {
   avatar_url: string | null;
 }
 
+export interface AgentStats {
+  activeProperties: number;
+  avgRating: string | null;
+  totalReviews: number;
+}
+
+export interface PropertyPriceHistory {
+  price: number;
+  date: string;
+  change_type: 'increase' | 'reduction' | 'initial';
+}
+
+export interface PropertyAmenity {
+  category: string;
+  items: string[];
+}
+
 // ============= ENUMS Y TIPOS =============
 
 export type PropertyType =

@@ -13,6 +13,7 @@ export function generatePropertyTitle(property: {
   price: number;
   bedrooms?: number;
   listingType: string;
+  colonia?: string | null;
 }): string {
   const typeLabels: Record<string, string> = {
     casa: 'Casa',
@@ -34,10 +35,13 @@ export function generatePropertyTitle(property: {
     maximumFractionDigits: 0,
   }).format(property.price);
 
-  const bedroomInfo = property.bedrooms ? ` ${property.bedrooms} Rec` : '';
+  // Usar colonia si está disponible, sino usar municipio
+  const location = property.colonia 
+    ? `${property.colonia}, ${property.municipality}` 
+    : property.municipality;
 
-  // "[Tipo] en [Ciudad], [Estado] - [Precio] | Kentra"
-  const title = `${typeLabel} ${actionLabel} en ${property.municipality}, ${property.state}${bedroomInfo} - ${priceFormatted}`;
+  // "[Tipo] [operación] en [Ubicación], [Estado] - [Precio] | Kentra"
+  const title = `${typeLabel} ${actionLabel} en ${location}, ${property.state} - ${priceFormatted} | Kentra`;
   
   // Truncar a 60 caracteres si es necesario
   return title.length > 60 ? title.substring(0, 57) + '...' : title;
@@ -54,8 +58,10 @@ export function generatePropertyDescription(property: {
   bedrooms?: number;
   bathrooms?: number;
   sqft?: number;
+  parking?: number;
   listingType: string;
   description?: string;
+  colonia?: string | null;
 }): string {
   const typeLabels: Record<string, string> = {
     casa: 'casa',
@@ -78,16 +84,18 @@ export function generatePropertyDescription(property: {
   }).format(property.price);
 
   const features = [];
-  if (property.bedrooms) features.push(`${property.bedrooms} recámaras`);
+  if (property.bedrooms) features.push(`${property.bedrooms} rec`);
   if (property.bathrooms) features.push(`${property.bathrooms} baños`);
+  if (property.parking) features.push(`${property.parking} estacionamiento${property.parking > 1 ? 's' : ''}`);
   if (property.sqft) features.push(`${property.sqft} m²`);
 
-  const featuresText = features.length > 0 ? ` con ${features.join(', ')}` : '';
+  const featuresText = features.length > 0 ? features.join(', ') : '';
+  const location = property.colonia 
+    ? `${property.colonia}, ${property.municipality}` 
+    : property.municipality;
 
-  // Usar inicio de la descripción si existe, sino generar una
-  let description = property.description 
-    ? property.description.substring(0, 100)
-    : `Excelente ${typeLabel} ${actionLabel} en ${property.municipality}, ${property.state}${featuresText}. Precio: ${priceFormatted}.`;
+  // Generar descripción optimizada para SEO
+  const description = `${typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)} ${actionLabel} en ${location}, ${property.state}. ${featuresText}. ${priceFormatted}. Encuentra más propiedades en Kentra.`;
 
   // Truncar a 160 caracteres
   return description.length > 160 ? description.substring(0, 157) + '...' : description;

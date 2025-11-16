@@ -58,6 +58,56 @@ import { ContactPropertyDialog } from "@/components/ContactPropertyDialog";
 import { usePropertyCompare } from "@/hooks/usePropertyCompare";
 import { getWhatsAppUrl, WhatsAppTemplates } from "@/utils/whatsapp";
 import { useTracking } from "@/hooks/useTracking";
+import { monitoring } from '@/lib/monitoring';
+import type { AgentStats, PropertyAmenity, PropertyPriceHistory } from '@/types/property';
+import { useMemo } from 'react';
+
+// Helper para normalizar amenities
+const normalizeAmenities = (amenities: Record<string, any> | null | undefined): PropertyAmenity[] => {
+  if (!amenities || typeof amenities !== 'object') return [];
+  
+  // Si ya es un array, devolverlo
+  if (Array.isArray(amenities)) {
+    return amenities.filter(a => a.category && Array.isArray(a.items));
+  }
+  
+  // Si es un objeto, convertirlo a array
+  return Object.entries(amenities)
+    .filter(([_, value]) => Array.isArray(value) && value.length > 0)
+    .map(([category, items]) => ({
+      category,
+      items: items as string[],
+    }));
+};
+
+// Helper para normalizar price history
+const normalizePriceHistory = (priceHistory: Record<string, any> | null | undefined): PropertyPriceHistory[] => {
+  if (!priceHistory) return [];
+  
+  if (Array.isArray(priceHistory)) {
+    return priceHistory
+      .filter(item => item.price && item.date)
+      .map(item => {
+        // Normalizar change_type para que coincida con el tipo esperado
+        let changeType: 'increase' | 'reduction' | 'initial' = 'initial';
+        const rawType = item.change_type || item.changeType;
+        
+        if (rawType === 'decrease' || rawType === 'reduction') {
+          changeType = 'reduction';
+        } else if (rawType === 'increase') {
+          changeType = 'increase';
+        }
+        
+        return {
+          price: item.price,
+          date: item.date,
+          change_type: changeType,
+        };
+      });
+  }
+  
+  return [];
+};
 
 const PropertyDetail = () => {
   const { id } = useParams();
@@ -65,7 +115,7 @@ const PropertyDetail = () => {
   const { user } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
   const [reviewsKey, setReviewsKey] = useState(0);
-  const [agentStats, setAgentStats] = useState<any>(null);
+  const [agentStats, setAgentStats] = useState<AgentStats | null>(null);
   const { toast } = useToast();
   const { addToCompare, isInCompare, removeFromCompare } = usePropertyCompare();
   const { trackGA4Event } = useTracking();
@@ -101,6 +151,15 @@ const PropertyDetail = () => {
 
   useEffect(() => {
     if (propertyError) {
+      monitoring.error('Error loading property', {
+        component: 'PropertyDetail',
+        propertyId: id,
+        error: propertyError,
+      });
+      monitoring.captureException(propertyError, {
+        component: 'PropertyDetail',
+        propertyId: id,
+      });
       toast({
         title: "Error",
         description: "No se pudo cargar la propiedad",
@@ -108,7 +167,7 @@ const PropertyDetail = () => {
       });
       navigate("/buscar");
     }
-  }, [propertyError]);
+  }, [propertyError, id]);
 
   const trackPropertyView = async () => {
     try {
@@ -147,8 +206,12 @@ const PropertyDetail = () => {
         }
       }
     } catch (error) {
-      // Silently fail - analytics shouldn't break the page
-      console.error("Error tracking view:", error);
+      // Log but don't break the page - analytics shouldn't block user experience
+      monitoring.warn('Error tracking property view', {
+        component: 'PropertyDetail',
+        propertyId: id,
+        error,
+      });
     }
   };
 
@@ -166,7 +229,12 @@ const PropertyDetail = () => {
       if (error) throw error;
       setIsFavorite(!!data);
     } catch (error) {
-      console.error('Error checking favorite:', error);
+      monitoring.error('Error checking favorite status', {
+        component: 'PropertyDetail',
+        propertyId: id,
+        userId: user?.id,
+        error,
+      });
     }
   };
 
@@ -209,7 +277,16 @@ const PropertyDetail = () => {
         navigate(`/mensajes?conversation=${newConvo.id}&new=true`);
       }
     } catch (error) {
-      console.error('Error creating conversation:', error);
+      monitoring.error('Error creating conversation', {
+        component: 'PropertyDetail',
+        propertyId: property.id,
+        userId: user?.id,
+        error,
+      });
+      monitoring.captureException(error, {
+        component: 'PropertyDetail',
+        action: 'create_conversation',
+      });
       sonnerToast.error('Error al iniciar la conversación');
     }
   };
@@ -307,7 +384,11 @@ const PropertyDetail = () => {
         totalReviews: reviewsData?.length || 0,
       });
     } catch (error) {
-      console.error("Error fetching agent stats:", error);
+      monitoring.error('Error fetching agent stats', {
+        component: 'PropertyDetail',
+        agentId,
+        error,
+      });
     }
   };
 
@@ -444,59 +525,89 @@ const PropertyDetail = () => {
   }
 
   if (!property) {
-    return null;
+    return (
+      <>
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+            <div className="mb-6 text-6xl">🏠</div>
+            <h1 className="text-3xl font-bold mb-2">Propiedad no encontrada</h1>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              La propiedad que buscas no existe o ya no está disponible.
+            </p>
+            <Button onClick={() => navigate('/buscar')}>
+              Ver propiedades disponibles
+            </Button>
+          </div>
+        </div>
+      </>
+    );
   }
 
-  const images = property.images?.length > 0
-    ? property.images.map((img: any) => img.url)
-    : [propertyPlaceholder];
+  // Memoizar cálculos pesados para evitar recomputación en cada render
+  const propertyUrl = `${window.location.origin}/propiedad/${id}`;
+  const mainImage = property.images?.[0]?.url || propertyPlaceholder;
 
-  const propertyUrl = `${window.location.origin}/property/${id}`;
-  const mainImage = images[0];
+  const seoTitle = useMemo(
+    () => generatePropertyTitle({
+      type: property.type,
+      municipality: property.municipality,
+      state: property.state,
+      price: property.price,
+      bedrooms: property.bedrooms || undefined,
+      listingType: property.listing_type,
+      colonia: property.colonia,
+    }),
+    [property]
+  );
 
-  // Generar metadatos SEO dinámicos
-  const seoTitle = generatePropertyTitle({
-    type: property.type,
-    municipality: property.municipality,
-    state: property.state,
-    price: property.price,
-    bedrooms: property.bedrooms || undefined,
-    listingType: (property.listing_type || 'venta') as 'venta' | 'renta',
-  });
+  const seoDescription = useMemo(
+    () => generatePropertyDescription({
+      type: property.type,
+      municipality: property.municipality,
+      state: property.state,
+      price: property.price,
+      bedrooms: property.bedrooms || undefined,
+      bathrooms: property.bathrooms || undefined,
+      sqft: property.sqft || undefined,
+      parking: property.parking || undefined,
+      listingType: property.listing_type,
+      description: property.description || undefined,
+      colonia: property.colonia,
+    }),
+    [property]
+  );
 
-  const seoDescription = generatePropertyDescription({
-    type: property.type,
-    municipality: property.municipality,
-    state: property.state,
-    price: property.price,
-    bedrooms: property.bedrooms || undefined,
-    bathrooms: property.bathrooms || undefined,
-    sqft: property.sqft || undefined,
-    listingType: (property.listing_type || 'venta') as 'venta' | 'renta',
-    description: property.description,
-  });
+  const structuredData = useMemo(
+    () => generatePropertyStructuredData({
+      property,
+      url: propertyUrl,
+      agentName: agent?.name,
+      agentPhone: agent?.phone || undefined,
+    }),
+    [property, propertyUrl, agent]
+  );
 
-  const structuredData = generatePropertyStructuredData({
-    property,
-    url: propertyUrl,
-    agentName: agent?.name,
-    agentPhone: agent?.phone || undefined,
-  });
-
-  const breadcrumbsData = [
-    { name: 'Inicio', href: '/' },
-    { name: 'Propiedades', href: '/buscar' },
-    { name: property.title, href: `/property/${id}` },
-  ];
-
-  const breadcrumbStructuredData = generateBreadcrumbStructuredData(breadcrumbsData);
+  const breadcrumbStructuredData = useMemo(
+    () => generateBreadcrumbStructuredData([
+      { name: 'Inicio', href: '/' },
+      { name: 'Buscar', href: '/buscar' },
+      { name: property.state, href: `/buscar?estado=${property.state}` },
+      { 
+        name: property.municipality, 
+        href: `/buscar?estado=${property.state}&municipio=${property.municipality}` 
+      },
+      { name: property.title, href: `/propiedad/${id}` }
+    ]),
+    [property, id]
+  );
 
   return (
     <div className="min-h-screen bg-background">
       <SEOHead
         title={seoTitle}
         description={seoDescription}
-        canonical={`/property/${id}`}
+        canonical={`/propiedad/${id}`}
         ogType="product"
         ogImage={mainImage}
         ogUrl={propertyUrl}
@@ -726,7 +837,7 @@ const PropertyDetail = () => {
             </Card>
 
             {/* Amenities */}
-            <PropertyAmenities amenities={property.amenities as any || []} />
+            <PropertyAmenities amenities={normalizeAmenities(property.amenities)} />
 
             {/* Investment Metrics */}
             <PropertyInvestmentMetrics
@@ -742,7 +853,7 @@ const PropertyDetail = () => {
             <PropertyTimeline
               createdAt={property.created_at}
               updatedAt={property.updated_at}
-              priceHistory={property.price_history as any || []}
+              priceHistory={normalizePriceHistory(property.price_history)}
               currentPrice={property.price}
             />
 
