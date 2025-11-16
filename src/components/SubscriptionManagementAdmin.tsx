@@ -102,7 +102,7 @@ export const SubscriptionManagementAdmin = () => {
 
       setSubscriptions(subsWithEmails as Subscription[]);
     } catch (error) {
-      console.error('Error fetching subscriptions:', error);
+      monitoring.error('Error fetching subscriptions', { component: 'SubscriptionManagementAdmin', error });
       toast.error('Error al cargar suscripciones');
     } finally {
       setLoading(false);
@@ -133,7 +133,7 @@ export const SubscriptionManagementAdmin = () => {
       setActionDialog(null);
       setSelectedSubscription(null);
     } catch (error) {
-      console.error('Error canceling subscription:', error);
+      monitoring.error('Error canceling subscription', { component: 'SubscriptionManagementAdmin', error });
       toast.error('Error al cancelar suscripción');
     }
   };
@@ -153,7 +153,7 @@ export const SubscriptionManagementAdmin = () => {
       setActionDialog(null);
       setSelectedSubscription(null);
     } catch (error) {
-      console.error('Error reactivating subscription:', error);
+      monitoring.error('Error reactivating subscription', { component: 'SubscriptionManagementAdmin', error });
       toast.error('Error al reactivar suscripción');
     }
   };

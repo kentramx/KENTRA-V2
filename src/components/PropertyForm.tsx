@@ -251,7 +251,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         validFiles,
         { maxSizeMB: 2, maxWidthOrHeight: 1920, quality: 0.85, format: 'webp' },
         (completed, total) => {
-          console.log(`Comprimiendo: ${completed}/${total}`);
+          monitoring.debug(`Comprimiendo: ${completed}/${total}`, { component: 'PropertyForm' });
         }
       );
 
@@ -262,7 +262,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         description: `${compressedFiles.length} imágenes listas para subir`,
       });
     } catch (error: any) {
-      console.error('Error comprimiendo imágenes:', error);
+      monitoring.error('Error comprimiendo imágenes', { component: 'PropertyForm', error });
       toast({
         title: '❌ Error',
         description: error.message || 'Error al comprimir imágenes',
@@ -295,7 +295,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         description: 'La imagen ha sido eliminada correctamente',
       });
     } catch (error) {
-      console.error('Error removing image:', error);
+      monitoring.error('Error removing image', { component: 'PropertyForm', error });
       toast({
         title: 'Error',
         description: 'No se pudo eliminar la imagen',
@@ -456,7 +456,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
       onSuccess();
     } catch (error: any) {
-      console.error('Error saving property:', error);
+      monitoring.captureException(error as Error, { component: 'PropertyForm', action: 'saveProperty' });
       
       if (error instanceof z.ZodError) {
         toast({

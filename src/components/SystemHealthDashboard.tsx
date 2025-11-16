@@ -60,7 +60,7 @@ export const SystemHealthDashboard = () => {
       if (error) throw error;
       setMetrics(data as unknown as SystemHealthMetrics);
     } catch (error) {
-      console.error('Error fetching system health:', error);
+      monitoring.error('Error fetching system health', { component: 'SystemHealthDashboard', error });
       toast.error('Error al cargar métricas del sistema');
     } finally {
       setLoading(false);

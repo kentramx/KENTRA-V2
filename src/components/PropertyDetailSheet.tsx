@@ -131,7 +131,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
         }
       }
     } catch (error) {
-      console.error("Error tracking view:", error);
+      monitoring.debug("Error tracking view", { component: 'PropertyDetailSheet', error });
     }
   };
 
@@ -148,7 +148,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
 
       setIsFavorite(!!data);
     } catch (error) {
-      console.error('Error checking favorite:', error);
+      monitoring.error('Error checking favorite', { component: 'PropertyDetailSheet', error });
     }
   };
 
@@ -181,7 +181,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
         toast({ title: 'Agregado', description: 'Propiedad agregada a favoritos' });
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      monitoring.error('Error toggling favorite', { component: 'PropertyDetailSheet', error });
     }
   };
 
@@ -208,7 +208,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
         totalReviews: reviewsData?.length || 0,
       });
     } catch (error) {
-      console.error("Error fetching agent stats:", error);
+      monitoring.error("Error fetching agent stats", { component: 'PropertyDetailSheet', error });
     }
   };
 
@@ -232,7 +232,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
           break;
       }
     } catch (error) {
-      console.error('Error sharing:', error);
+      monitoring.error('Error sharing', { component: 'PropertyDetailSheet', error });
     }
   };
 

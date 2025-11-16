@@ -138,7 +138,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
       setPayments(paymentsData || []);
     } catch (error) {
-      console.error('Error fetching subscription data:', error);
+      monitoring.error('Error fetching subscription data', { component: 'SubscriptionManagement', error });
       toast({
         title: 'Error',
         description: 'No se pudo cargar la información de la suscripción',
@@ -169,7 +169,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
       // Recargar datos
       await fetchSubscriptionData();
     } catch (error) {
-      console.error('Error canceling subscription:', error);
+      monitoring.error('Error canceling subscription', { component: 'SubscriptionManagement', error });
       toast({
         title: 'Error',
         description: 'No se pudo cancelar la suscripción. Intenta de nuevo.',

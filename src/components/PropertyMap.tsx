@@ -77,7 +77,7 @@ export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMap
               description: "La dirección se mostró en el mapa correctamente",
             });
           } else {
-            console.error('Geocoding failed:', status);
+            monitoring.warn('Geocoding failed', { component: 'PropertyMap', status });
             
             let errorMsg = '';
             let solution = '';
@@ -130,7 +130,7 @@ export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMap
         });
       }
     } catch (error) {
-      console.error('Error creating map:', error);
+      monitoring.captureException(error as Error, { component: 'PropertyMap', action: 'createMap' });
       setMapError('Error al crear el mapa');
       
       toast({

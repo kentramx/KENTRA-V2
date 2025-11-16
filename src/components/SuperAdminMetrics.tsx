@@ -221,7 +221,7 @@ export const SuperAdminMetrics = () => {
       setSubscriptionDist(distribution);
 
     } catch (error) {
-      console.error('Error fetching super admin metrics:', error);
+      monitoring.error('Error fetching super admin metrics', { component: 'SuperAdminMetrics', error });
     } finally {
       setLoading(false);
     }

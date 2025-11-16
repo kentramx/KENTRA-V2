@@ -34,7 +34,7 @@ export const PropertyExportPDF = ({ property, agent }: PropertyExportPDFProps) =
         }
       });
     } catch (error) {
-      console.error("Error generating QR code:", error);
+      monitoring.error("Error generating QR code", { component: 'PropertyExportPDF', error });
       throw error;
     }
   };

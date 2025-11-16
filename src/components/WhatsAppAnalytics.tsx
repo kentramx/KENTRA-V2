@@ -143,7 +143,7 @@ export const WhatsAppAnalytics = ({ agentId }: { agentId: string }) => {
 
       setTimeline(timelineData);
     } catch (error) {
-      console.error("Error fetching WhatsApp analytics:", error);
+      monitoring.error("Error fetching WhatsApp analytics", { component: 'WhatsAppAnalytics', error });
     } finally {
       setLoading(false);
     }

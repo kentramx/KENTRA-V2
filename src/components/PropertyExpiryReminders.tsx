@@ -85,7 +85,7 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
           filter: `agent_id=eq.${agentId}`,
         },
         async (payload) => {
-          console.log('🔔 Nuevo recordatorio recibido:', payload);
+          monitoring.info('🔔 Nuevo recordatorio recibido', { component: 'PropertyExpiryReminders', payload });
           
           // Obtener información completa del recordatorio con la propiedad
           const { data: newReminder, error } = await supabase
@@ -185,7 +185,7 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
       calculateMonthlyData(formattedData);
       calculateUrgencyData(formattedData);
     } catch (error) {
-      console.error('Error fetching reminders:', error);
+      monitoring.error('Error fetching reminders', { component: 'PropertyExpiryReminders', error });
     } finally {
       setLoading(false);
     }
