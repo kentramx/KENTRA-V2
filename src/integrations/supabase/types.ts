@@ -2394,6 +2394,13 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      promote_user_to_admin: {
+        Args: {
+          new_admin_role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
+        }
+        Returns: undefined
+      }
       reactivate_property: { Args: { property_id: string }; Returns: undefined }
       renew_property: { Args: { property_id: string }; Returns: undefined }
       st_3dclosestpoint: {
