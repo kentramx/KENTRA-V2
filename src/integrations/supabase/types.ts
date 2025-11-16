@@ -1174,6 +1174,7 @@ export type Database = {
           requires_manual_review: boolean | null
           resubmission_count: number
           sale_price: number | null
+          search_vector: unknown
           sqft: number | null
           state: string
           status: Database["public"]["Enums"]["property_status"] | null
@@ -1224,6 +1225,7 @@ export type Database = {
           requires_manual_review?: boolean | null
           resubmission_count?: number
           sale_price?: number | null
+          search_vector?: unknown
           sqft?: number | null
           state: string
           status?: Database["public"]["Enums"]["property_status"] | null
@@ -1274,6 +1276,7 @@ export type Database = {
           requires_manual_review?: boolean | null
           resubmission_count?: number
           sale_price?: number | null
+          search_vector?: unknown
           sqft?: number | null
           state?: string
           status?: Database["public"]["Enums"]["property_status"] | null
@@ -1969,6 +1972,35 @@ export type Database = {
         }
         Relationships: []
       }
+      property_stats_by_municipality: {
+        Row: {
+          active_properties: number | null
+          avg_price: number | null
+          avg_sqft: number | null
+          max_price: number | null
+          min_price: number | null
+          municipality: string | null
+          properties_for_rent: number | null
+          properties_for_sale: number | null
+          state: string | null
+          total_agents: number | null
+          total_properties: number | null
+        }
+        Relationships: []
+      }
+      property_stats_by_state: {
+        Row: {
+          active_properties: number | null
+          avg_price: number | null
+          max_price: number | null
+          min_price: number | null
+          state: string | null
+          total_agents: number | null
+          total_municipalities: number | null
+          total_properties: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _postgis_deprecate: {
@@ -2299,6 +2331,22 @@ export type Database = {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
       }
+      get_municipality_stats: {
+        Args: { p_municipality: string; p_state: string }
+        Returns: {
+          active_properties: number
+          avg_price: number
+          avg_sqft: number
+          max_price: number
+          min_price: number
+          municipality: string
+          properties_for_rent: number
+          properties_for_sale: number
+          state: string
+          total_agents: number
+          total_properties: number
+        }[]
+      }
       get_properties_in_viewport: {
         Args: {
           max_lat: number
@@ -2361,6 +2409,19 @@ export type Database = {
           lng: number
           property_count: number
           property_ids: string[]
+        }[]
+      }
+      get_state_stats: {
+        Args: { p_state: string }
+        Returns: {
+          active_properties: number
+          avg_price: number
+          max_price: number
+          min_price: number
+          state: string
+          total_agents: number
+          total_municipalities: number
+          total_properties: number
         }[]
       }
       get_system_health_metrics: { Args: never; Returns: Json }
@@ -2448,6 +2509,38 @@ export type Database = {
       }
       reactivate_property: { Args: { property_id: string }; Returns: undefined }
       renew_property: { Args: { property_id: string }; Returns: undefined }
+      search_properties_fts: {
+        Args: {
+          p_limit?: number
+          p_listing_type?: string
+          p_municipality?: string
+          p_offset?: number
+          p_price_max?: number
+          p_price_min?: number
+          p_state?: string
+          p_type?: string
+          search_query: string
+        }
+        Returns: {
+          address: string
+          agent_id: string
+          bathrooms: number
+          bedrooms: number
+          created_at: string
+          id: string
+          lat: number
+          listing_type: string
+          lng: number
+          municipality: string
+          parking: number
+          price: number
+          rank: number
+          sqft: number
+          state: string
+          title: string
+          type: Database["public"]["Enums"]["property_type"]
+        }[]
+      }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown

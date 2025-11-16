@@ -6,6 +6,11 @@ interface LazyImageProps {
   alt: string;
   className?: string;
   blurDataURL?: string;
+  width?: number;
+  height?: number;
+  priority?: boolean;
+  onLoad?: () => void;
+  onError?: () => void;
 }
 
 // Generar URLs responsivas usando Supabase Transform
@@ -31,15 +36,25 @@ const getOptimizedSizes = (): string => {
   return '(max-width: 640px) 400px, (max-width: 1024px) 800px, (max-width: 1920px) 1200px, 1920px';
 };
 
-export const LazyImage = ({ src, alt, className, blurDataURL }: LazyImageProps) => {
+export const LazyImage = ({ 
+  src, 
+  alt, 
+  className, 
+  blurDataURL,
+  width,
+  height,
+  priority = false,
+  onLoad: onLoadCallback,
+  onError: onErrorCallback
+}: LazyImageProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isInView, setIsInView] = useState(false);
+  const [isInView, setIsInView] = useState(priority);
   const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
 
   // Intersection Observer para detectar cuando entra en viewport
   useEffect(() => {
-    if (!imgRef.current) return;
+    if (priority || !imgRef.current) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -49,7 +64,7 @@ export const LazyImage = ({ src, alt, className, blurDataURL }: LazyImageProps) 
         }
       },
       { 
-        rootMargin: '50px', // Comienza a cargar 50px antes de entrar al viewport
+        rootMargin: '100px', // Comienza a cargar 100px antes de entrar al viewport
         threshold: 0.01
       }
     );
@@ -57,10 +72,25 @@ export const LazyImage = ({ src, alt, className, blurDataURL }: LazyImageProps) 
     observer.observe(imgRef.current);
     
     return () => observer.disconnect();
-  }, []);
+  }, [priority]);
+
+  const handleLoad = () => {
+    setIsLoaded(true);
+    onLoadCallback?.();
+  };
+
+  const handleError = () => {
+    setHasError(true);
+    setIsLoaded(true);
+    onErrorCallback?.();
+  };
 
   return (
-    <div ref={imgRef} className={cn("relative overflow-hidden bg-muted", className)}>
+    <div 
+      ref={imgRef} 
+      className={cn("relative overflow-hidden bg-muted", className)}
+      style={{ width, height }}
+    >
       {/* Placeholder blur - solo se muestra mientras carga */}
       {!isLoaded && blurDataURL && !hasError && (
         <img
@@ -78,11 +108,11 @@ export const LazyImage = ({ src, alt, className, blurDataURL }: LazyImageProps) 
           srcSet={generateResponsiveSrcSet(src)}
           sizes={getOptimizedSizes()}
           alt={alt}
-          onLoad={() => setIsLoaded(true)}
-          onError={() => {
-            setHasError(true);
-            setIsLoaded(true);
-          }}
+          width={width}
+          height={height}
+          loading={priority ? 'eager' : 'lazy'}
+          onLoad={handleLoad}
+          onError={handleError}
           className={cn(
             "w-full h-full object-cover transition-opacity duration-500",
             isLoaded ? "opacity-100" : "opacity-0"
