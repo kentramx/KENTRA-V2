@@ -5,7 +5,18 @@
 
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { PropertyFilters } from '@/types/property';
+
+interface PropertyFilters {
+  estado?: string;
+  municipio?: string;
+  tipo?: string;
+  listingType?: string;
+  precioMin?: number;
+  precioMax?: number;
+  recamaras?: string;
+  banos?: string;
+  status?: string[];
+}
 
 const PAGE_SIZE = 50;
 
