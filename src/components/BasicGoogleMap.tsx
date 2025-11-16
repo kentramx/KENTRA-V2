@@ -117,11 +117,12 @@ function createCustomPropertyOverlay() {
     private updateStyle() {
       if (!this.containerDiv) return;
       
-      const dot = this.containerDiv.querySelector('div:last-child') as HTMLElement;
+      const wrapper = this.containerDiv.firstElementChild as HTMLElement | null;
+      const dot = wrapper?.lastElementChild as HTMLElement | null;
       if (dot) {
         if (this.isHovered) {
           dot.style.background = '#b8281f';
-          dot.style.transform = 'scale(1.2)';
+          dot.style.transform = 'scale(1.15)';
           dot.style.boxShadow = '0 3px 10px rgba(184, 40, 31, 0.5)';
           dot.style.transition = 'all 0.2s ease';
         } else {
