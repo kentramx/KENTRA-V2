@@ -14,12 +14,24 @@ interface QualityChecklistProps {
 }
 
 const QualityChecklist = ({ property }: QualityChecklistProps) => {
+  // Normalizamos campos para evitar falsos negativos
+  const descriptionWordCount = typeof property.description === 'string'
+    ? property.description.trim().split(/\s+/).filter(Boolean).length
+    : 0;
+  const amenitiesCount = Array.isArray(property.amenities)
+    ? property.amenities.filter(Boolean).length
+    : property.amenities && typeof property.amenities === 'object'
+      ? Object.values(property.amenities).filter(Boolean).length
+      : 0;
+  const hasLocation = typeof property.lat === 'number' && typeof property.lng === 'number';
+  const imagesCount = Array.isArray(property.images) ? property.images.length : 0;
+
   const checks = {
-    images: property.images?.length >= 3,
-    description: property.description?.split(' ').filter(Boolean).length >= 50,
-    amenities: property.amenities?.length > 0,
+    images: imagesCount >= 3,
+    description: descriptionWordCount >= 50,
+    amenities: amenitiesCount > 0,
     price: true, // TODO: validar contra precios promedio
-    location: !!property.lat && !!property.lng,
+    location: hasLocation,
   };
 
   const passedCount = Object.values(checks).filter(Boolean).length;
