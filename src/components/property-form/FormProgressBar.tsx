@@ -57,7 +57,7 @@ export const FormProgressBar = ({
                     : "bg-background border-muted-foreground/30 text-muted-foreground"
                 )}
               >
-                {isCompleted && step < currentStep ? (
+                {isCompleted ? (
                   <Check className="w-5 h-5" />
                 ) : (
                   <span className="font-semibold">{step}</span>
