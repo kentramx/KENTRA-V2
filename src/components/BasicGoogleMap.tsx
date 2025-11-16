@@ -5,132 +5,134 @@ import { MarkerClusterer, GridAlgorithm } from '@googlemaps/markerclusterer';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { monitoring } from '@/lib/monitoring';
 
-// ✅ Overlay personalizado que unifica dot + precio en un solo elemento HTML
-class CustomPropertyOverlay extends google.maps.OverlayView {
-  private position: google.maps.LatLng;
-  private containerDiv: HTMLDivElement | null = null;
-  private priceText: string;
-  private propertyId: string;
-  private isHovered: boolean = false;
-  private onClick: (id: string) => void;
-  private onMouseOver: (id: string) => void;
-  private onMouseOut: () => void;
+// ✅ Factory function para crear la clase CustomPropertyOverlay después de que google esté disponible
+function createCustomPropertyOverlay() {
+  return class CustomPropertyOverlay extends google.maps.OverlayView {
+    private position: google.maps.LatLng;
+    private containerDiv: HTMLDivElement | null = null;
+    private priceText: string;
+    private propertyId: string;
+    private isHovered: boolean = false;
+    private onClick: (id: string) => void;
+    private onMouseOver: (id: string) => void;
+    private onMouseOut: () => void;
 
-  constructor(
-    position: google.maps.LatLng,
-    priceText: string,
-    propertyId: string,
-    onClick: (id: string) => void,
-    onMouseOver: (id: string) => void,
-    onMouseOut: () => void
-  ) {
-    super();
-    this.position = position;
-    this.priceText = priceText;
-    this.propertyId = propertyId;
-    this.onClick = onClick;
-    this.onMouseOver = onMouseOver;
-    this.onMouseOut = onMouseOut;
-  }
+    constructor(
+      position: google.maps.LatLng,
+      priceText: string,
+      propertyId: string,
+      onClick: (id: string) => void,
+      onMouseOver: (id: string) => void,
+      onMouseOut: () => void
+    ) {
+      super();
+      this.position = position;
+      this.priceText = priceText;
+      this.propertyId = propertyId;
+      this.onClick = onClick;
+      this.onMouseOver = onMouseOver;
+      this.onMouseOut = onMouseOut;
+    }
 
-  onAdd() {
-    const div = document.createElement('div');
-    div.style.position = 'absolute';
-    div.style.cursor = 'pointer';
-    div.style.userSelect = 'none';
-    
-    // Contenedor para centrar todo
-    div.style.transform = 'translate(-50%, -100%)';
-    
-    // Crear el contenido: precio arriba, dot abajo
-    div.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-        ${this.priceText ? `
+    onAdd() {
+      const div = document.createElement('div');
+      div.style.position = 'absolute';
+      div.style.cursor = 'pointer';
+      div.style.userSelect = 'none';
+      
+      // Contenedor para centrar todo
+      div.style.transform = 'translate(-50%, -100%)';
+      
+      // Crear el contenido: precio arriba, dot abajo
+      div.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+          ${this.priceText ? `
+            <div style="
+              background: white;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 13px;
+              font-weight: 600;
+              color: #111827;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+              white-space: nowrap;
+              border: 1px solid rgba(0,0,0,0.1);
+            ">${this.priceText}</div>
+          ` : ''}
           <div style="
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
             background: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #111827;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-            white-space: nowrap;
-            border: 1px solid rgba(0,0,0,0.1);
-          ">${this.priceText}</div>
-        ` : ''}
-        <div style="
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: white;
-          border: 3px solid #0ea5e9;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        "></div>
-      </div>
-    `;
+            border: 3px solid #0ea5e9;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+          "></div>
+        </div>
+      `;
 
-    // Event listeners
-    div.addEventListener('click', () => this.onClick(this.propertyId));
-    div.addEventListener('mouseover', () => {
-      this.isHovered = true;
-      this.onMouseOver(this.propertyId);
-      this.updateStyle();
-    });
-    div.addEventListener('mouseout', () => {
-      this.isHovered = false;
-      this.onMouseOut();
-      this.updateStyle();
-    });
+      // Event listeners
+      div.addEventListener('click', () => this.onClick(this.propertyId));
+      div.addEventListener('mouseover', () => {
+        this.isHovered = true;
+        this.onMouseOver(this.propertyId);
+        this.updateStyle();
+      });
+      div.addEventListener('mouseout', () => {
+        this.isHovered = false;
+        this.onMouseOut();
+        this.updateStyle();
+      });
 
-    this.containerDiv = div;
-    const panes = this.getPanes();
-    panes?.overlayMouseTarget.appendChild(div);
-  }
-
-  draw() {
-    if (!this.containerDiv) return;
-    
-    const overlayProjection = this.getProjection();
-    const pos = overlayProjection.fromLatLngToDivPixel(this.position);
-    
-    if (pos) {
-      this.containerDiv.style.left = pos.x + 'px';
-      this.containerDiv.style.top = pos.y + 'px';
+      this.containerDiv = div;
+      const panes = this.getPanes();
+      panes?.overlayMouseTarget.appendChild(div);
     }
-  }
 
-  onRemove() {
-    if (this.containerDiv) {
-      this.containerDiv.parentNode?.removeChild(this.containerDiv);
-      this.containerDiv = null;
-    }
-  }
-
-  setHovered(hovered: boolean) {
-    this.isHovered = hovered;
-    this.updateStyle();
-  }
-
-  private updateStyle() {
-    if (!this.containerDiv) return;
-    
-    const container = this.containerDiv.firstElementChild as HTMLElement;
-    if (container) {
-      if (this.isHovered) {
-        container.style.transform = 'scale(1.15)';
-        container.style.transition = 'transform 0.2s ease';
-        container.style.zIndex = '1000';
-      } else {
-        container.style.transform = 'scale(1)';
-        container.style.transition = 'transform 0.2s ease';
-        container.style.zIndex = 'auto';
+    draw() {
+      if (!this.containerDiv) return;
+      
+      const overlayProjection = this.getProjection();
+      const pos = overlayProjection.fromLatLngToDivPixel(this.position);
+      
+      if (pos) {
+        this.containerDiv.style.left = pos.x + 'px';
+        this.containerDiv.style.top = pos.y + 'px';
       }
     }
-  }
 
-  getPosition() {
-    return this.position;
-  }
+    onRemove() {
+      if (this.containerDiv) {
+        this.containerDiv.parentNode?.removeChild(this.containerDiv);
+        this.containerDiv = null;
+      }
+    }
+
+    setHovered(hovered: boolean) {
+      this.isHovered = hovered;
+      this.updateStyle();
+    }
+
+    private updateStyle() {
+      if (!this.containerDiv) return;
+      
+      const container = this.containerDiv.firstElementChild as HTMLElement;
+      if (container) {
+        if (this.isHovered) {
+          container.style.transform = 'scale(1.15)';
+          container.style.transition = 'transform 0.2s ease';
+          container.style.zIndex = '1000';
+        } else {
+          container.style.transform = 'scale(1)';
+          container.style.transition = 'transform 0.2s ease';
+          container.style.zIndex = 'auto';
+        }
+      }
+    }
+
+    getPosition() {
+      return this.position;
+    }
+  };
 }
 
 type LatLng = { lat: number; lng: number };
@@ -181,7 +183,7 @@ export function BasicGoogleMap({
 }: BasicGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const overlayRefs = useRef<Map<string, CustomPropertyOverlay>>(new Map());
+  const overlayRefs = useRef<Map<string, google.maps.OverlayView & { setHovered: (hovered: boolean) => void }>>(new Map());
   const invisibleMarkerRefs = useRef<Map<string, google.maps.Marker>>(new Map());
   const clustererRef = useRef<MarkerClusterer | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
@@ -308,10 +310,13 @@ export function BasicGoogleMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || typeof google === 'undefined') return;
 
     // Obtener zoom actual
     const zoom = currentZoom ?? map.getZoom() ?? 12;
+
+    // Crear la clase CustomPropertyOverlay ahora que google está disponible
+    const CustomPropertyOverlay = createCustomPropertyOverlay();
 
     // Limpiar clusterer anterior si existe - de forma segura
     if (clustererRef.current) {
