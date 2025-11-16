@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import Navbar from "@/components/Navbar";
+import { monitoring } from '@/lib/monitoring';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -126,7 +127,7 @@ const Settings = () => {
 
       setEmailNotifications(profileData.email_notifications ?? true);
     } catch (error) {
-      console.error("Error fetching user data:", error);
+      monitoring.error("Error fetching user data", { page: 'Settings', error });
       toast.error("No se pudo cargar la información del perfil");
     } finally {
       setLoading(false);
@@ -149,7 +150,7 @@ const Settings = () => {
       toast.success("Perfil actualizado correctamente");
       fetchUserData();
     } catch (error) {
-      console.error("Error updating profile:", error);
+      monitoring.error("Error updating profile", { page: 'Settings', error });
       toast.error("No se pudo actualizar tu perfil");
     } finally {
       setSavingAccount(false);
@@ -166,7 +167,7 @@ const Settings = () => {
       toast.success("Contraseña actualizada correctamente");
       passwordForm.reset();
     } catch (error) {
-      console.error("Error updating password:", error);
+      monitoring.error("Error updating password", { page: 'Settings', error });
       toast.error("No se pudo actualizar la contraseña");
     } finally {
       setSavingPassword(false);
@@ -198,7 +199,7 @@ const Settings = () => {
 
       toast.success(enabled ? "Notificaciones por email activadas" : "Notificaciones por email desactivadas");
     } catch (error) {
-      console.error("Error updating email notifications:", error);
+      monitoring.error("Error updating email notifications", { page: 'Settings', error });
       toast.error("No se pudo actualizar las preferencias");
       setEmailNotifications(!enabled);
     }
@@ -222,7 +223,7 @@ const Settings = () => {
       await signOut();
       navigate('/');
     } catch (error) {
-      console.error("Error deleting account:", error);
+      monitoring.captureException(error as Error, { page: 'Settings', action: 'deleteAccount' });
       toast.dismiss(loadingToast);
       toast.error("Error al eliminar la cuenta. Por favor intenta de nuevo.");
     } finally {

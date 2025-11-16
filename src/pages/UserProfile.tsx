@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
+import { monitoring } from '@/lib/monitoring';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -156,7 +157,7 @@ const UserProfile = () => {
       if (searchesError) throw searchesError;
       setSavedSearches(searchesData || []);
     } catch (error) {
-      console.error("Error fetching user data:", error);
+      monitoring.error("Error fetching user data", { page: 'UserProfile', error });
       toast({
         title: "Error",
         description: "No se pudo cargar la información del perfil",
@@ -189,7 +190,7 @@ const UserProfile = () => {
 
       fetchUserData();
     } catch (error) {
-      console.error("Error updating profile:", error);
+      monitoring.error("Error updating profile", { page: 'UserProfile', error });
       toast({
         title: "Error",
         description: "No se pudo actualizar tu perfil",
@@ -214,7 +215,7 @@ const UserProfile = () => {
 
       fetchUserData();
     } catch (error) {
-      console.error("Error deleting search:", error);
+      monitoring.error("Error deleting search", { page: 'UserProfile', error });
       toast({
         title: "Error",
         description: "No se pudo eliminar la búsqueda",

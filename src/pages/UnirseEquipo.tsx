@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { monitoring } from '@/lib/monitoring';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -84,7 +85,7 @@ export default function UnirseEquipo() {
 
       setInvitation(data);
     } catch (error) {
-      console.error('Error loading invitation:', error);
+      monitoring.error('Error loading invitation', { page: 'UnirseEquipo', error });
       setError('Error al cargar la invitación');
     } finally {
       setLoading(false);
@@ -167,7 +168,7 @@ export default function UnirseEquipo() {
       }, 2000);
 
     } catch (error: any) {
-      console.error('Error accepting invitation:', error);
+      monitoring.error('Error accepting invitation', { page: 'UnirseEquipo', error });
       toast({
         title: 'Error',
         description: error.message || 'No se pudo aceptar la invitación',
@@ -198,7 +199,7 @@ export default function UnirseEquipo() {
 
       navigate('/');
     } catch (error) {
-      console.error('Error rejecting invitation:', error);
+      monitoring.error('Error rejecting invitation', { page: 'UnirseEquipo', error });
       toast({
         title: 'Error',
         description: 'No se pudo rechazar la invitación',

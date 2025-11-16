@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProperty } from "@/hooks/useProperty";
 import { useSimilarProperties } from "@/hooks/useSimilarProperties";
 import Navbar from "@/components/Navbar";
+import { monitoring } from '@/lib/monitoring';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -148,7 +149,7 @@ const PropertyDetail = () => {
       }
     } catch (error) {
       // Silently fail - analytics shouldn't break the page
-      console.error("Error tracking view:", error);
+      monitoring.debug("Error tracking view", { page: 'PropertyDetail', error });
     }
   };
 
@@ -166,7 +167,7 @@ const PropertyDetail = () => {
       if (error) throw error;
       setIsFavorite(!!data);
     } catch (error) {
-      console.error('Error checking favorite:', error);
+      monitoring.error('Error checking favorite', { page: 'PropertyDetail', error });
     }
   };
 
@@ -209,7 +210,7 @@ const PropertyDetail = () => {
         navigate(`/mensajes?conversation=${newConvo.id}&new=true`);
       }
     } catch (error) {
-      console.error('Error creating conversation:', error);
+      monitoring.error('Error creating conversation', { page: 'PropertyDetail', error });
       sonnerToast.error('Error al iniciar la conversación');
     }
   };
@@ -274,7 +275,7 @@ const PropertyDetail = () => {
         });
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      monitoring.error('Error toggling favorite', { page: 'PropertyDetail', error });
       toast({
         title: 'Error',
         description: 'No se pudo actualizar favoritos',
@@ -307,7 +308,7 @@ const PropertyDetail = () => {
         totalReviews: reviewsData?.length || 0,
       });
     } catch (error) {
-      console.error("Error fetching agent stats:", error);
+      monitoring.error("Error fetching agent stats", { page: 'PropertyDetail', error });
     }
   };
 
@@ -389,7 +390,7 @@ const PropertyDetail = () => {
           break;
       }
     } catch (error) {
-      console.error('Error sharing:', error);
+      monitoring.error('Error sharing', { page: 'PropertyDetail', error });
       toast({
         title: 'Error',
         description: 'No se pudo compartir',
