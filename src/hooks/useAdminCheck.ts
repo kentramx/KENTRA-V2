@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { monitoring } from '@/lib/monitoring';
 
 const IMPERSONATION_KEY = 'kentra_impersonated_role';
 
@@ -49,7 +50,7 @@ export const useAdminCheck = () => {
       });
 
       if (accessError) {
-        console.error('Error checking admin access:', accessError);
+        monitoring.error('Error checking admin access', { hook: 'useAdminCheck', error: accessError });
         setIsAdmin(false);
         setIsSuperAdmin(false);
         setAdminRole(null);
@@ -89,7 +90,7 @@ export const useAdminCheck = () => {
         }
       }
     } catch (error) {
-      console.error('Error in admin check:', error);
+      monitoring.captureException(error as Error, { hook: 'useAdminCheck' });
       setIsAdmin(false);
       setIsSuperAdmin(false);
       setAdminRole(null);

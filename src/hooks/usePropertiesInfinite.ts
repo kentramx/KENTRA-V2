@@ -6,6 +6,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { PropertyFilters, PropertySummary } from '@/types/property';
+import { monitoring } from '@/lib/monitoring';
 
 const PAGE_SIZE = 50;
 
@@ -26,7 +27,7 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
       });
       
       if (error) {
-        console.error('[usePropertiesInfinite] Error:', error);
+        monitoring.error('[usePropertiesInfinite] Error', { hook: 'usePropertiesInfinite', error });
         throw error;
       }
 

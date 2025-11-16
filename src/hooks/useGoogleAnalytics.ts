@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { monitoring } from '@/lib/monitoring';
 
 declare global {
   interface Window {
@@ -52,9 +53,9 @@ export const trackGA4Event = (
   if (typeof window !== 'undefined' && window.gtag) {
     try {
       window.gtag('event', eventName, parameters);
-      console.log(`Google Analytics 4: ${eventName}`, parameters);
+      monitoring.debug(`Google Analytics 4: ${eventName}`, { parameters });
     } catch (error) {
-      console.error('Error tracking GA4 event:', error);
+      monitoring.error('Error tracking GA4 event', { eventName, error });
     }
   }
 };
@@ -105,7 +106,7 @@ const saveEventToDatabase = async (
       user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
     });
   } catch (error) {
-    console.error('Error saving GA4 event to database:', error);
+    monitoring.error('Error saving GA4 event to database', { error });
   }
 };
 
@@ -116,7 +117,7 @@ export const useGoogleAnalytics = () => {
       const ga4EventName = EVENT_MAPPING[fbEventName as keyof typeof EVENT_MAPPING];
       
       if (!ga4EventName) {
-        console.warn(`No GA4 mapping found for event: ${fbEventName}`);
+        monitoring.warn(`No GA4 mapping found for event`, { fbEventName });
         return;
       }
 
@@ -124,12 +125,12 @@ export const useGoogleAnalytics = () => {
       if (typeof window !== 'undefined' && window.gtag) {
         try {
           window.gtag('event', ga4EventName, parameters);
-          console.log(`Google Analytics 4: ${ga4EventName} (original: ${fbEventName})`, parameters);
+          monitoring.debug(`Google Analytics 4: ${ga4EventName}`, { original: fbEventName, parameters });
         } catch (error) {
-          console.error('Error tracking GA4 event:', error);
+          monitoring.error('Error tracking GA4 event', { ga4EventName, error });
         }
       } else {
-        console.warn('Google Analytics 4 no está disponible');
+        monitoring.debug('Google Analytics 4 no está disponible');
       }
 
       // 2. Guardar en la base de datos local
@@ -145,7 +146,7 @@ export const useGoogleAnalytics = () => {
         page_path,
         page_title: page_title || document.title,
       });
-      console.log(`Google Analytics 4: page_view`, { page_path, page_title });
+      monitoring.debug(`Google Analytics 4: page_view`, { page_path, page_title });
     }
   }, []);
 

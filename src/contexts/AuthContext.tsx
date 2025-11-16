@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { monitoring } from '@/lib/monitoring';
 
 interface AuthContextType {
   user: User | null;
@@ -100,10 +101,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Si hay error de sesión no encontrada, ignorarlo porque igual queremos limpiar el estado local
       if (error && !error.message.includes('session') && !error.message.includes('Session')) {
-        console.error('Error al cerrar sesión:', error);
+        monitoring.error('Error al cerrar sesión', { context: 'AuthContext', error });
       }
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      monitoring.captureException(error as Error, { context: 'AuthContext', function: 'signOut' });
     } finally {
       // Siempre limpiar el estado local y redirigir, incluso si falla el signOut
       setSession(null);

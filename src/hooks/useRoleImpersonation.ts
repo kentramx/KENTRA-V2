@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { monitoring } from '@/lib/monitoring';
 
 const IMPERSONATION_KEY = 'kentra_impersonated_role';
 
@@ -41,7 +42,7 @@ export const useRoleImpersonation = () => {
 
   const startImpersonation = (role: ImpersonatedRole) => {
     if (!isSuperAdmin) {
-      console.error('Only super admins can impersonate roles');
+      monitoring.warn('Only super admins can impersonate roles', { hook: 'useRoleImpersonation' });
       return;
     }
 

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { monitoring } from '@/lib/monitoring';
 
 export type WhatsAppInteractionType = 'contact_agent' | 'share_property';
 
@@ -32,7 +33,7 @@ export const trackWhatsAppInteraction = async ({
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.log('Usuario no autenticado, no se registra interacción');
+      monitoring.debug('Usuario no autenticado, no se registra interacción', { util: 'whatsappTracking' });
       return;
     }
 
@@ -65,9 +66,9 @@ export const trackWhatsAppInteraction = async ({
       });
 
     if (error) {
-      console.error('Error tracking WhatsApp interaction:', error);
+      monitoring.error('Error tracking WhatsApp interaction', { util: 'whatsappTracking', error });
     }
   } catch (error) {
-    console.error('Error tracking WhatsApp interaction:', error);
+    monitoring.captureException(error as Error, { util: 'whatsappTracking' });
   }
 };

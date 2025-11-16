@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { monitoring } from '@/lib/monitoring';
 
 export interface PropertyFormData {
   // Opciones de listado
@@ -68,7 +69,7 @@ export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
         const parsed = JSON.parse(savedDraft);
         setFormData(parsed);
       } catch (error) {
-        console.error('Error loading draft:', error);
+        monitoring.warn('Error loading draft', { hook: 'useFormWizard', error });
       }
     }
   }, []);

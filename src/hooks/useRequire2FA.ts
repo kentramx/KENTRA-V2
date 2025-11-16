@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminCheck } from "./useAdminCheck";
 import { toast } from "./use-toast";
+import { monitoring } from '@/lib/monitoring';
 
 /**
  * Hook para forzar 2FA en administradores
@@ -52,7 +53,7 @@ export const useRequire2FA = () => {
         }, 2000);
       }
     } catch (error) {
-      console.error("Error checking 2FA requirement:", error);
+      monitoring.error("Error checking 2FA requirement", { hook: 'useRequire2FA', error });
       setMfaEnabled(null);
     } finally {
       setChecking(false);

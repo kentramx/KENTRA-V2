@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { monitoring } from '@/lib/monitoring';
 
 /**
  * Inicia el proceso de checkout para una nueva suscripción
@@ -35,7 +36,7 @@ export const startSubscriptionCheckout = async (
     });
 
     if (error) {
-      console.error('Error creating checkout:', error);
+      monitoring.error('Error creating checkout', { util: 'stripeCheckout', error });
       return { success: false, error: error.message };
     }
 
@@ -46,7 +47,7 @@ export const startSubscriptionCheckout = async (
 
     return { success: false, error: 'No se pudo crear la sesión de pago' };
   } catch (error) {
-    console.error('Exception in startSubscriptionCheckout:', error);
+    monitoring.captureException(error as Error, { util: 'stripeCheckout', function: 'startSubscriptionCheckout' });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
@@ -67,7 +68,7 @@ export const changePlan = async (
     });
 
     if (error) {
-      console.error('Error changing plan:', error);
+      monitoring.error('Error changing plan', { util: 'stripeCheckout', error });
       return { success: false, error: error.message };
     }
 
@@ -77,7 +78,7 @@ export const changePlan = async (
 
     return { success: true };
   } catch (error) {
-    console.error('Exception in changePlan:', error);
+    monitoring.captureException(error as Error, { util: 'stripeCheckout', function: 'changePlan' });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
@@ -96,7 +97,7 @@ export const cancelSubscription = async (): Promise<{
     const { data, error } = await supabase.functions.invoke('cancel-subscription');
 
     if (error) {
-      console.error('Error canceling subscription:', error);
+      monitoring.error('Error canceling subscription', { util: 'stripeCheckout', error });
       return { success: false, error: error.message };
     }
 
@@ -106,7 +107,7 @@ export const cancelSubscription = async (): Promise<{
 
     return { success: true };
   } catch (error) {
-    console.error('Exception in cancelSubscription:', error);
+    monitoring.captureException(error as Error, { util: 'stripeCheckout', function: 'cancelSubscription' });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
@@ -147,7 +148,7 @@ export const getCurrentSubscription = async () => {
 
     return { subscription: data };
   } catch (error) {
-    console.error('Error getting current subscription:', error);
+    monitoring.error('Error getting current subscription', { util: 'stripeCheckout', error });
     return { subscription: null };
   }
 };

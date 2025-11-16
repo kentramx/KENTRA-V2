@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { monitoring } from '@/lib/monitoring';
 
 const IMPERSONATION_KEY = 'kentra_impersonated_role';
 
@@ -46,7 +47,7 @@ export const useUserRole = () => {
         .eq('user_id', user.id);
 
       if (error) {
-        console.error('Error fetching user roles:', error);
+        monitoring.error('Error fetching user roles', { hook: 'useUserRole', error });
         setUserRole('buyer');
         setLoading(false);
         return;
@@ -77,7 +78,7 @@ export const useUserRole = () => {
 
       setUserRole(highestRole);
     } catch (error) {
-      console.error('Error fetching user role:', error);
+      monitoring.captureException(error as Error, { hook: 'useUserRole' });
       setUserRole('buyer');
     } finally {
       setLoading(false);

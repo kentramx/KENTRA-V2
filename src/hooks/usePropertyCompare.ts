@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { monitoring } from '@/lib/monitoring';
 
 const STORAGE_KEY = "propertyCompare";
 const MAX_COMPARE = 4;
@@ -13,7 +14,7 @@ export const usePropertyCompare = () => {
       try {
         setCompareList(JSON.parse(stored));
       } catch (error) {
-        console.error("Error loading compare list:", error);
+        monitoring.warn("Error loading compare list", { hook: 'usePropertyCompare', error });
       }
     }
   }, []);

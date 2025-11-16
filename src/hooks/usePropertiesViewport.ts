@@ -9,6 +9,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { MapProperty, PropertyCluster, PropertyFilters } from '@/types/property';
+import { monitoring } from '@/lib/monitoring';
 
 export interface ViewportBounds {
   minLng: number;
@@ -59,7 +60,7 @@ export const usePropertiesViewport = (
         });
 
         if (error) {
-          console.error('[usePropertiesViewport] Error:', error);
+          monitoring.error('[usePropertiesViewport] Error', { hook: 'usePropertiesViewport', error });
           throw error;
         }
 
@@ -124,7 +125,7 @@ export const usePropertiesViewport = (
       });
 
       if (error) {
-        console.error('[usePropertiesViewport] Error clusters:', error);
+        monitoring.error('[usePropertiesViewport] Error clusters', { hook: 'usePropertiesViewport', error });
         throw error;
       }
 
@@ -139,7 +140,7 @@ export const usePropertiesViewport = (
     retry: (failureCount, error: any) => {
       // ✅ NO reintentar si es error SQL permanente (42xxx codes)
       if (error?.code?.startsWith('42') || error?.code?.startsWith('4')) {
-        console.error('[usePropertiesViewport] Error permanente, no reintentar:', error);
+        monitoring.error('[usePropertiesViewport] Error permanente, no reintentar', { hook: 'usePropertiesViewport', error });
         return false;
       }
       // Solo reintentar 1 vez para otros errores

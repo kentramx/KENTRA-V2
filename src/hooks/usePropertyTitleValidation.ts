@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { PropertyStatus } from '@/types/property';
+import { monitoring } from '@/lib/monitoring';
 
 interface ExistingPropertyInfo {
   id: string;
@@ -70,7 +71,7 @@ export const usePropertyTitleValidation = (
           loading: false,
         });
       } catch (error) {
-        console.error('Error checking duplicate title:', error);
+        monitoring.error('Error checking duplicate title', { hook: 'usePropertyTitleValidation', error });
         setResult({
           isDuplicate: false,
           duplicateCount: 0,

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getCountryByCode } from '@/data/countryCodes';
+import { monitoring } from '@/lib/monitoring';
 
 /**
  * Schema de validación para número de WhatsApp internacional
@@ -94,7 +95,7 @@ export const getWhatsAppUrl = (phoneNumber: string, message: string): string => 
   const formattedNumber = formatWhatsAppNumber(phoneNumber);
   
   if (!formattedNumber) {
-    console.error('Invalid phone number for WhatsApp');
+    monitoring.warn('Invalid phone number for WhatsApp', { util: 'whatsapp', phoneNumber });
     return '#';
   }
   
