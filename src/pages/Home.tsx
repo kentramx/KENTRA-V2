@@ -60,7 +60,8 @@ const Home = () => {
     status: ['activa'],
   });
 
-  const featuredProperties = featuredData?.pages.flatMap(page => page.properties) || [] as PropertySummary[];
+  const featuredProperties = (featuredData?.pages.flatMap(page => page.properties) || [])
+    .filter(p => p.is_featured === true) as PropertySummary[];
   const recentProperties = recentData?.pages.flatMap(page => page.properties) || [] as PropertySummary[];
   const isLoadingProperties = isLoadingFeatured || isLoadingRecent;
   
@@ -349,54 +350,50 @@ const Home = () => {
       </section>
 
       {/* Featured Properties */}
-      <section className="py-16 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold">Propiedades Destacadas</h2>
-              <p className="mt-2 text-muted-foreground">
-                Las mejores propiedades seleccionadas para ti
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/buscar")}
-              className="hidden md:flex items-center gap-2"
-            >
-              Ver Todas
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {isLoadingProperties ? (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-[4/3] w-full rounded-lg" />
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-8 w-1/2" />
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              ))}
-            </div>
-          ) : featuredProperties.length > 0 ? (
-            <>
-              <VirtualizedPropertyGrid properties={featuredProperties.slice(0, 6)} />
-              <div className="mt-8 text-center">
-                <Button variant="outline" size="lg" onClick={() => navigate("/buscar")}>
-                  Ver Todas las Propiedades <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+      {featuredProperties.length > 0 && (
+        <section className="py-16 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="mb-8 flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold">Propiedades Destacadas</h2>
+                <p className="mt-2 text-muted-foreground">
+                  Las mejores propiedades seleccionadas para ti
+                </p>
               </div>
-            </>
-          ) : (
-            <div className="py-12 text-center">
-              <p className="text-muted-foreground">
-                No hay propiedades disponibles en este momento
-              </p>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/buscar")}
+                className="hidden md:flex items-center gap-2"
+              >
+                Ver Todas
+                <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
-          )}
-        </div>
-      </section>
+
+            {isLoadingProperties ? (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="space-y-3">
+                    <Skeleton className="aspect-[4/3] w-full rounded-lg" />
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-8 w-1/2" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <VirtualizedPropertyGrid properties={featuredProperties.slice(0, 6)} />
+                <div className="mt-8 text-center">
+                  <Button variant="outline" size="lg" onClick={() => navigate("/buscar")}>
+                    Ver Todas las Propiedades <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Recent Properties */}
       <section className="py-16 bg-muted">
