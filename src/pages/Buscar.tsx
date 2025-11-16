@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePropertiesInfinite } from '@/hooks/usePropertiesInfinite';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
-import { buildPropertyFilters } from '@/utils/buildPropertyFilters';
+import { usePropertySearch } from '@/hooks/usePropertySearch';
 import BasicGoogleMap from '@/components/BasicGoogleMap';
 import Navbar from '@/components/Navbar';
 import PropertyCard from '@/components/PropertyCard';
@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2, Map as MapIcon, List as ListIcon } from 'lucide-react';
+import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2, Map as MapIcon, List as ListIcon, RotateCcw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -40,18 +40,6 @@ import { generatePropertyListStructuredData } from '@/utils/structuredData';
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import { monitoring } from '@/lib/monitoring';
 import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/property';
-
-interface Filters {
-  estado: string;
-  municipio: string;
-  precioMin: string;
-  precioMax: string;
-  tipo: string;
-  listingType: string;
-  recamaras: string;
-  banos: string;
-  orden: 'price_desc' | 'price_asc' | 'newest' | 'oldest' | 'bedrooms_desc' | 'sqft_desc';
-}
 
 const getTipoLabel = (tipo: string) => {
   const labels: Record<string, string> = {
@@ -114,24 +102,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [savedSearchQuery, setSavedSearchQuery] = useState('');
   const [savedSearchSort, setSavedSearchSort] = useState<'date' | 'name'>('date');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  
-  const [filters, setFilters] = useState<Filters>({
-    estado: searchParams.get('estado') || '',
-    municipio: searchParams.get('municipio') || '',
-    precioMin: searchParams.get('precioMin') || '',
-    precioMax: searchParams.get('precioMax') || '',
-    tipo: searchParams.get('tipo') || '',
-    listingType: searchParams.get('listingType') || '',
-    recamaras: searchParams.get('recamaras') || '',
-    banos: searchParams.get('banos') || '',
-    orden: (searchParams.get('orden') as any) || 'price_desc',
-  });
-  
-  // ✅ Construir filtros de manera unificada
-  const propertyFilters = useMemo(
-    () => buildPropertyFilters(filters),
-    [filters]
-  );
 
   // ✅ Usar usePropertiesInfinite para la lista (paginación)
   const {
@@ -298,10 +268,11 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 
   // Reiniciar rango de precios cuando cambia el tipo de operación
   useEffect(() => {
-    const [minRange, maxRange] = getPriceRangeForListingType(filters.listingType);
+    const listingType = filters.operation === 'comprar' ? 'venta' : 'renta';
+    const [minRange, maxRange] = getPriceRangeForListingType(listingType);
     setPriceRange([minRange, maxRange]);
     // No modificar filters aquí para evitar loop infinito
-  }, [filters.listingType]);
+  }, [filters.operation]);
 
   // Reiniciar a página 1 cuando cambien los filtros
   useEffect(() => {
