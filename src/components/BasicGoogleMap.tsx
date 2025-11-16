@@ -63,9 +63,10 @@ function createCustomPropertyOverlay() {
             width: 16px;
             height: 16px;
             border-radius: 50%;
-            background: white;
-            border: 3px solid #0ea5e9;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            background: #f97316;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+            transition: all 0.2s ease;
           "></div>
         </div>
       `;
@@ -160,6 +161,7 @@ interface BasicGoogleMapProps {
   onFavoriteClick?: (markerId: string) => void;
   disableAutoFit?: boolean;
   hoveredMarkerId?: string | null;
+  hoveredPropertyCoords?: { lat: number; lng: number } | null;
   onMarkerHover?: (markerId: string | null) => void;
   onBoundsChanged?: (bounds: { minLng: number; minLat: number; maxLng: number; maxLat: number; zoom: number }) => void;
   onMapError?: (error: string) => void;
@@ -177,6 +179,7 @@ export function BasicGoogleMap({
   onFavoriteClick,
   disableAutoFit = false,
   hoveredMarkerId = null,
+  hoveredPropertyCoords = null,
   onMarkerHover,
   onBoundsChanged,
   onMapError,
@@ -502,6 +505,40 @@ export function BasicGoogleMap({
       }
     }
   }, [center, zoom, disableAutoFit]);
+
+  // Efecto para hacer zoom y centrar cuando hay hover desde la lista
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !hoveredPropertyCoords) return;
+    
+    const { lat, lng } = hoveredPropertyCoords;
+    
+    // Verificar que las coordenadas sean válidas
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+    
+    // Obtener zoom actual
+    const currentZoom = map.getZoom() ?? 12;
+    
+    // Si el zoom es muy bajo, acercarse más
+    const targetZoom = currentZoom < 15 ? 15 : currentZoom;
+    
+    // Animar hacia la propiedad con hover
+    map.panTo({ lat, lng });
+    
+    // Ajustar zoom si es necesario
+    if (currentZoom < 15) {
+      setTimeout(() => {
+        map.setZoom(targetZoom);
+      }, 300); // Pequeño delay para que la animación de pan se vea bien
+    }
+    
+    monitoring.debug('[BasicGoogleMap] Zoom to hovered property', {
+      lat,
+      lng,
+      currentZoom,
+      targetZoom,
+    });
+  }, [hoveredPropertyCoords]);
 
   if (error) {
     return (

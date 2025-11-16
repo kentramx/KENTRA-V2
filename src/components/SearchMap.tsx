@@ -19,6 +19,7 @@ interface SearchMapProps {
   onMarkerClick: (id: string) => void;
   onPropertyHover?: (property: MapProperty | null) => void;
   hoveredPropertyId?: string | null;
+  hoveredPropertyCoords?: { lat: number; lng: number } | null;
   height?: string;
   onMapError?: (error: string) => void;
 }
@@ -29,6 +30,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   onMarkerClick,
   onPropertyHover,
   hoveredPropertyId,
+  hoveredPropertyCoords,
   height = '100%',
   onMapError,
 }) => {
@@ -129,6 +131,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         onMarkerClick={handleMarkerClickInternal}
         onMarkerHover={handleMarkerHover}
         hoveredMarkerId={hoveredPropertyId}
+        hoveredPropertyCoords={hoveredPropertyCoords}
         disableAutoFit={true}
         onMapError={onMapError}
       />

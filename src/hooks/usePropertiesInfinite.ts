@@ -79,6 +79,8 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
         colonia: property.colonia,
         municipality: property.municipality,
         state: property.state,
+        lat: property.lat,
+        lng: property.lng,
         bedrooms: property.bedrooms,
         bathrooms: property.bathrooms,
         parking: property.parking,
