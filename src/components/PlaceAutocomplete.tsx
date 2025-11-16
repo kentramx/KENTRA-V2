@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
 import { toast } from '@/hooks/use-toast';
+import { monitoring } from '@/lib/monitoring';
 
 interface PlaceAutocompleteProps {
   onPlaceSelect: (location: {

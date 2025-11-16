@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { AlertCircle, MapPin } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
+import { monitoring } from '@/lib/monitoring';
 
 interface PropertyMapProps {
   address?: string;

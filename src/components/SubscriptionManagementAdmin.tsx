@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { Search, Calendar, CreditCard, AlertCircle, XCircle, CheckCircle2, Clock, TrendingUp, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { monitoring } from '@/lib/monitoring';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {

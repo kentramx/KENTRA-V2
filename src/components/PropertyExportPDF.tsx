@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode";
+import { monitoring } from '@/lib/monitoring';
 
 interface PropertyExportPDFProps {
   property: any;

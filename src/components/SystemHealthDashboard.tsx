@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Activity, AlertCircle, CheckCircle2, Clock, TrendingDown, TrendingUp, Zap, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { monitoring } from '@/lib/monitoring';
 
 interface SystemHealthMetrics {
   subscriptions: {

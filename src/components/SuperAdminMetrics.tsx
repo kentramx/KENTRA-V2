@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, DollarSign, Home, TrendingUp, TrendingDown, Calendar, Activity } from "lucide-react";
+import { monitoring } from '@/lib/monitoring';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { format, subMonths, startOfMonth, endOfMonth, subYears } from "date-fns";
 import { es } from "date-fns/locale";

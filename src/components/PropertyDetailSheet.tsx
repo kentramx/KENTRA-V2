@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProperty } from "@/hooks/useProperty";
 import { useSimilarProperties } from "@/hooks/useSimilarProperties";
 import { Button } from "@/components/ui/button";
+import { monitoring } from '@/lib/monitoring';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
