@@ -138,7 +138,8 @@ const AdminDashboard = () => {
         images (url, position),
         profiles!properties_agent_id_fkey (id, name)
       `, { count: 'exact' })
-      .eq('status', 'pendiente_aprobacion');
+      .eq('status', 'pendiente_aprobacion')
+      .lt('resubmission_count', 3); // Excluir propiedades que ya alcanzaron el límite
 
       if (activeTab === 'nuevas') {
         query = query.eq('resubmission_count', 0);
@@ -311,6 +312,17 @@ const AdminDashboard = () => {
 
       const currentResubmissions = currentProperty?.resubmission_count || 0;
       const currentHistory = currentProperty?.rejection_history || [];
+
+      // Verificar límite de resubmisiones (máximo 3)
+      if (currentResubmissions >= 3) {
+        toast({
+          title: "Límite alcanzado",
+          description: "Esta propiedad ya ha sido rechazada 3 veces. No puede ser reenviada nuevamente.",
+          variant: "destructive",
+        });
+        setProcessing(false);
+        return;
+      }
 
       // Format selected reasons as readable text
       const selectedReasonsList = Object.entries(rejectionReasons)
