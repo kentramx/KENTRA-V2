@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import kentraLogo from "@/assets/kentra-logo.png";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -56,21 +56,29 @@ const Navbar = () => {
     return user.email.charAt(0).toUpperCase();
   };
 
-  const handleComprarClick = () => {
+  const handleComprarClick = useCallback(() => {
+    // ✅ Evitar navegación redundante
+    if (listingType === "venta") {
+      return;
+    }
+    
     const params = new URLSearchParams(searchParams);
     params.set("listingType", "venta");
-    params.delete("lat");
-    params.delete("lng");
-    navigate(`/buscar?${params.toString()}`, { replace: true });
-  };
+    // ✅ Mantener coordenadas para no resetear el mapa
+    navigate(`/buscar?${params.toString()}`);
+  }, [listingType, searchParams, navigate]);
 
-  const handleRentarClick = () => {
+  const handleRentarClick = useCallback(() => {
+    // ✅ Evitar navegación redundante
+    if (listingType === "renta") {
+      return;
+    }
+    
     const params = new URLSearchParams(searchParams);
     params.set("listingType", "renta");
-    params.delete("lat");
-    params.delete("lng");
-    navigate(`/buscar?${params.toString()}`, { replace: true });
-  };
+    // ✅ Mantener coordenadas para no resetear el mapa
+    navigate(`/buscar?${params.toString()}`);
+  }, [listingType, searchParams, navigate]);
 
   const isComprarActive = !listingType || listingType === "venta";
   const isRentarActive = listingType === "renta";
@@ -124,6 +132,7 @@ const Navbar = () => {
           {/* Left Navigation - Desktop */}
           <div className="hidden md:flex items-center gap-1 justify-start">
             <Button 
+              type="button"
               variant={isComprarActive ? "default" : "ghost"} 
               size="sm"
               className={isComprarActive ? "shadow-sm" : ""}
@@ -132,6 +141,7 @@ const Navbar = () => {
               Comprar
             </Button>
             <Button 
+              type="button"
               variant={isRentarActive ? "default" : "ghost"} 
               size="sm"
               className={isRentarActive ? "shadow-sm" : ""}
