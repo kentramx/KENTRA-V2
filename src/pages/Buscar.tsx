@@ -38,6 +38,7 @@ import { SEOHead } from '@/components/SEOHead';
 import { generateSearchTitle, generateSearchDescription } from '@/utils/seo';
 import { generatePropertyListStructuredData } from '@/utils/structuredData';
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
+import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
 import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/property';
 
@@ -307,8 +308,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [municipios, setMunicipios] = useState<string[]>([]);
   const [hoveredProperty, setHoveredProperty] = useState<MapProperty | null>(null);
   const hoverFromMap = useRef(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const PROPERTIES_PER_PAGE = 20;
   const [mobileView, setMobileView] = useState<'map' | 'list'>('list');
   const [mapError, setMapError] = useState<string | null>(null);
 
@@ -336,11 +335,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     // No modificar filters aquí para evitar loop infinito
   }, [filters.listingType]);
 
-  // Reiniciar a página 1 cuando cambien los filtros
+  // Track búsqueda en GA4 cuando se aplican filtros
   useEffect(() => {
-    setCurrentPage(1);
-    
-    // Track búsqueda en GA4 cuando se aplican filtros
     const hasFilters = !!(
       filters.estado || 
       filters.municipio || 
@@ -946,44 +942,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     setSavedSearchSort(value as 'date' | 'name');
   };
 
-  const renderPagination = () => {
-    const totalPages = Math.ceil(filteredProperties.length / PROPERTIES_PER_PAGE);
-    const pages: (number | '...')[] = [];
-
-    // Siempre incluye primera página
-    pages.push(1);
-
-    if (currentPage > 3) pages.push('...');
-
-    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
-      pages.push(i);
-    }
-
-    if (currentPage < totalPages - 2) pages.push('...');
-    if (totalPages > 1) pages.push(totalPages);
-
-    return pages.map((page, idx) =>
-      page === '...'
-        ? (
-            <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
-          )
-        : (
-            <Button
-              key={page as number}
-              variant={currentPage === page ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                setCurrentPage(page as number);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="min-w-[2.5rem]"
-            >
-              {page}
-            </Button>
-          )
-    );
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <SEOHead
@@ -1455,15 +1413,15 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
           {/* Toggle móvil para cambiar entre mapa y lista */}
           <div className="lg:hidden sticky top-0 z-20 bg-background border-b p-2">
             <div className="flex gap-2">
-              <Button
-                variant={mobileView === 'list' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setMobileView('list')}
-                className="flex-1"
-              >
-                <ListIcon className="h-4 w-4 mr-2" />
-                Lista ({filteredProperties.length})
-              </Button>
+                    <Button
+                      variant={mobileView === 'list' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setMobileView('list')}
+                      className="flex-1"
+                    >
+                      <ListIcon className="h-4 w-4 mr-2" />
+                      Lista ({properties.length})
+                    </Button>
               <Button
                 variant={mobileView === 'map' ? 'default' : 'outline'}
                 size="sm"
@@ -1591,13 +1549,38 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 
             {/* Lista de propiedades con resultados */}
             {!searchError && filteredProperties.length > 0 && (
-              <>
+              <InfiniteScrollContainer
+                onLoadMore={() => {
+                  if (hasNextPage && !isFetching) {
+                    fetchNextPage();
+                  }
+                }}
+                hasMore={!!hasNextPage}
+                isLoading={isFetching}
+                className="space-y-4"
+              >
+                {/* Contador de resultados */}
+                <div className="px-4 pt-2 pb-1 text-sm text-muted-foreground">
+                  {hasTooManyResults ? (
+                    <p>
+                      Mostrando <span className="font-medium text-foreground">{properties.length}</span> de{' '}
+                      <span className="font-medium text-foreground">{actualTotal}+</span> resultados.{' '}
+                      <span className="text-amber-600 dark:text-amber-500">
+                        Refina tus filtros para ver todos.
+                      </span>
+                    </p>
+                  ) : (
+                    <p>
+                      Mostrando <span className="font-medium text-foreground">{properties.length}</span> de{' '}
+                      <span className="font-medium text-foreground">{actualTotal}</span> resultados
+                    </p>
+                  )}
+                </div>
+
                 <SearchResultsList
                   properties={filteredProperties}
-                  isLoading={loading}
+                  isLoading={loading && properties.length === 0}
                   listingType={filters.listingType}
-                  currentPage={currentPage}
-                  propertiesPerPage={PROPERTIES_PER_PAGE}
                   onPropertyClick={handlePropertyClick}
                   onPropertyHover={handlePropertyHoverFromList}
                   savedSearchesCount={user ? savedSearches.length : 0}
@@ -1609,38 +1592,19 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                   scrollToPropertyId={selectedPropertyFromMap}
                 />
 
-                {/* ✅ Paginación fuera del componente de lista */}
-                {filteredProperties.length > PROPERTIES_PER_PAGE && (
-                  <div className="p-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setCurrentPage(p => Math.max(1, p - 1));
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        disabled={currentPage === 1}
-                      >
-                        Anterior
-                      </Button>
-                      {renderPagination()}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const totalPages = Math.ceil(filteredProperties.length / PROPERTIES_PER_PAGE);
-                          setCurrentPage(p => Math.min(totalPages, p + 1));
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        disabled={currentPage === Math.ceil(filteredProperties.length / PROPERTIES_PER_PAGE)}
-                      >
-                        Siguiente
-                      </Button>
-                    </div>
+                {/* Botón fallback para cargar más si IntersectionObserver falla */}
+                {hasNextPage && !isFetching && (
+                  <div className="flex justify-center py-4 px-4">
+                    <Button 
+                      onClick={() => fetchNextPage()} 
+                      variant="outline"
+                      size="lg"
+                    >
+                      Cargar más propiedades
+                    </Button>
                   </div>
                 )}
-              </>
+              </InfiniteScrollContainer>
             )}
 
             {/* Búsquedas guardadas expandido */}
