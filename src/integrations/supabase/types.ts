@@ -1521,6 +1521,51 @@ export type Database = {
         }
         Relationships: []
       }
+      property_tiles_cache: {
+        Row: {
+          access_count: number
+          bounds: unknown
+          clusters: Json | null
+          created_at: string
+          expires_at: string
+          filters_hash: string
+          id: string
+          last_accessed_at: string
+          properties: Json | null
+          property_count: number
+          tile_key: string
+          zoom: number
+        }
+        Insert: {
+          access_count?: number
+          bounds: unknown
+          clusters?: Json | null
+          created_at?: string
+          expires_at?: string
+          filters_hash: string
+          id?: string
+          last_accessed_at?: string
+          properties?: Json | null
+          property_count?: number
+          tile_key: string
+          zoom: number
+        }
+        Update: {
+          access_count?: number
+          bounds?: unknown
+          clusters?: Json | null
+          created_at?: string
+          expires_at?: string
+          filters_hash?: string
+          id?: string
+          last_accessed_at?: string
+          properties?: Json | null
+          property_count?: number
+          tile_key?: string
+          zoom?: number
+        }
+        Relationships: []
+      }
       property_views: {
         Row: {
           id: string
@@ -2274,6 +2319,7 @@ export type Database = {
         Args: { new_role: Database["public"]["Enums"]["app_role"] }
         Returns: Json
       }
+      cleanup_expired_tiles: { Args: never; Returns: number }
       cleanup_old_data: { Args: never; Returns: undefined }
       cleanup_old_tiles: { Args: { p_days_old?: number }; Returns: number }
       database_health_check: {
@@ -2318,6 +2364,7 @@ export type Database = {
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       expire_old_invitations: { Args: never; Returns: undefined }
+      generate_filters_hash: { Args: { p_filters: Json }; Returns: string }
       generate_property_code: { Args: never; Returns: string }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
@@ -2443,64 +2490,39 @@ export type Database = {
           property_id: string
         }[]
       }
-      get_map_tiles:
-        | {
-            Args: {
-              p_filters?: Json
-              p_max_lat: number
-              p_max_lng: number
-              p_min_lat: number
-              p_min_lng: number
-              p_zoom: number
-            }
-            Returns: {
-              clusters: Json
-              properties: Json
-              tile_key: string
-              zoom: number
-            }[]
-          }
-        | {
-            Args: {
-              p_bathrooms?: number
-              p_bedrooms?: number
-              p_listing_type?: string
-              p_max_lat: number
-              p_max_lng: number
-              p_max_price?: number
-              p_min_lat: number
-              p_min_lng: number
-              p_min_price?: number
-              p_municipality?: string
-              p_property_type?: string
-              p_state?: string
-              p_zoom: number
-            }
-            Returns: {
-              agent_id: string
-              avg_price: number
-              bathrooms: number
-              bedrooms: number
-              count: number
-              created_at: string
-              id: string
-              image_url: string
-              lat: number
-              listing_type: string
-              lng: number
-              max_price: number
-              min_price: number
-              municipality: string
-              parking: number
-              price: number
-              property_type: string
-              sqft: number
-              state: string
-              status: Database["public"]["Enums"]["property_status"]
-              title: string
-              type: string
-            }[]
-          }
+      get_map_tiles: {
+        Args: {
+          p_filters?: Json
+          p_max_lat: number
+          p_max_lng: number
+          p_min_lat: number
+          p_min_lng: number
+          p_zoom: number
+        }
+        Returns: {
+          clusters: Json
+          properties: Json
+          tile_key: string
+          zoom: number
+        }[]
+      }
+      get_map_tiles_cached: {
+        Args: {
+          p_filters?: Json
+          p_max_lat: number
+          p_max_lng: number
+          p_min_lat: number
+          p_min_lng: number
+          p_zoom: number
+        }
+        Returns: {
+          clusters: Json
+          from_cache: boolean
+          properties: Json
+          tile_key: string
+          zoom: number
+        }[]
+      }
       get_marketing_metrics: {
         Args: { end_date?: string; start_date?: string }
         Returns: Json

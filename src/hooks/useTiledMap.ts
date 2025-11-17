@@ -42,7 +42,7 @@ export const useTiledMap = (
         minBathrooms: filters?.banos ? parseInt(filters.banos) : null,
       };
 
-      // 🎯 Llamar a nueva función RPC get_map_tiles
+      // 🎯 Llamar a función RPC simple
       const { data, error } = await supabase.rpc('get_map_tiles', {
         p_min_lng: bounds.minLng,
         p_min_lat: bounds.minLat,
@@ -75,58 +75,41 @@ export const useTiledMap = (
         return { clusters: [], properties: [] };
       }
 
-      // 🔄 Procesar salida agregada (fila única con clusters/properties)
+      // 🔄 Procesar salida agregada: data[0] tiene clusters o properties
       const result = (data as any[])[0] || {};
       const clusters: PropertyCluster[] = [];
       const properties: MapProperty[] = [];
 
-      if (bounds.zoom >= 17 && Array.isArray(result.properties)) {
-        // Modo propiedades individuales
-        for (const prop of result.properties) {
-          if (prop.lat == null || prop.lng == null) continue;
+      if (Array.isArray(result.properties)) {
+        result.properties.forEach((prop: any) => {
+          if (!prop.lat || !prop.lng) return;
           properties.push({
-            id: prop.id,
-            title: prop.title,
-            price: prop.price,
-            currency: 'MXN',
-            lat: Number(prop.lat),
-            lng: Number(prop.lng),
-            type: prop.property_type,
-            listing_type: prop.listing_type,
-            bedrooms: prop.bedrooms,
-            bathrooms: prop.bathrooms,
-            parking: prop.parking,
-            sqft: prop.sqft,
-            municipality: prop.municipality,
-            state: prop.state,
+            id: prop.id, title: prop.title, price: prop.price, currency: 'MXN',
+            lat: Number(prop.lat), lng: Number(prop.lng),
+            type: prop.property_type, listing_type: prop.listing_type,
+            bedrooms: prop.bedrooms, bathrooms: prop.bathrooms,
+            parking: prop.parking, sqft: prop.sqft,
+            municipality: prop.municipality, state: prop.state,
             address: `${prop.municipality}, ${prop.state}`,
             images: prop.image_url ? [{ url: prop.image_url, position: 0 }] : [],
-            agent_id: prop.agent_id || '',
-            status: 'activa' as PropertyStatus,
-            is_featured: !!prop.is_featured,
-            created_at: prop.created_at || '',
+            agent_id: prop.agent_id || '', status: 'activa' as PropertyStatus,
+            is_featured: !!prop.is_featured, created_at: prop.created_at || '',
           });
-        }
+        });
       } else if (Array.isArray(result.clusters)) {
-        // Modo clusters (zoom bajo)
-        for (const c of result.clusters) {
+        result.clusters.forEach((c: any) => {
           clusters.push({
             cluster_id: `cluster-${bounds.zoom}-${c.lat}-${c.lng}`,
-            lat: Number(c.lat),
-            lng: Number(c.lng),
+            lat: Number(c.lat), lng: Number(c.lng),
             property_count: Number(c.count || 0),
-            avg_price: c.avg_price,
-            property_ids: [],
+            avg_price: c.avg_price, property_ids: [],
           });
-        }
+        });
       }
 
       monitoring.debug('[useTiledMap] Data processed', {
-        zoom: bounds.zoom,
-        clustersCount: clusters.length,
-        propertiesCount: properties.length,
-        totalItems: (result.properties?.length || 0) + (result.clusters?.length || 0),
-        loadTimeMs: Math.round(loadTime),
+        zoom: bounds.zoom, clustersCount: clusters.length,
+        propertiesCount: properties.length, loadTimeMs: Math.round(loadTime),
       });
 
       return { clusters, properties };
