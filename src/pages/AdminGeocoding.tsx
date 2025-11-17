@@ -60,13 +60,14 @@ export default function AdminGeocoding() {
         return;
       }
 
-      const { data: roleData } = await supabase
+      const { data: roles } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', user.id);
 
-      if (!roleData || roleData.role !== 'super_admin') {
+      const isSuperAdmin = roles?.some(r => r.role === 'super_admin');
+      
+      if (!isSuperAdmin) {
         toast({
           variant: "destructive",
           title: "Acceso denegado",
