@@ -349,6 +349,9 @@ export function BasicGoogleMap({
     const showFullPriceLabel = zoom >= 14;
     const showShortPriceLabel = zoom >= 11 && zoom < 14;
     const hidePriceLabel = zoom < 11;
+    
+    // ✅ Clustering solo activo en zooms bajos (< 15)
+    const clusteringActive = enableClustering && zoom < 15;
 
     const bounds = new google.maps.LatLngBounds();
     
@@ -357,7 +360,7 @@ export function BasicGoogleMap({
       infoWindowRef.current = new google.maps.InfoWindow();
     }
     
-    // ✅ Crear nuevos marcadores con overlays personalizados
+    // ✅ Crear marcadores según el modo (clustering vs individual)
     for (const m of markers) {
       if (!m.id || m.lat == null || m.lng == null || isNaN(Number(m.lat)) || isNaN(Number(m.lng))) continue;
       
@@ -365,52 +368,51 @@ export function BasicGoogleMap({
       const lng = Number(m.lng);
       const position = new google.maps.LatLng(lat, lng);
       
-      // Determinar el texto del precio según el zoom
-      let priceText = '';
-      if (!hidePriceLabel && m.price) {
-        if (showFullPriceLabel) {
-          priceText = formatPrice(m.price, m.currency || 'MXN');
-        } else if (showShortPriceLabel) {
-          priceText = formatShortPrice(m.price, m.currency || 'MXN');
+      if (clusteringActive) {
+        // ✅ MODO CLUSTERING: Solo crear marcadores invisibles para el clusterer
+        const invisibleMarker = new google.maps.Marker({
+          position,
+          map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 0, // Invisible
+            fillOpacity: 0,
+            strokeOpacity: 0,
+          },
+          optimized: false,
+        });
+        invisibleMarkerRefs.current.set(m.id, invisibleMarker);
+      } else {
+        // ✅ MODO INDIVIDUAL: Crear overlays personalizados con precio
+        let priceText = '';
+        if (!hidePriceLabel && m.price) {
+          if (showFullPriceLabel) {
+            priceText = formatPrice(m.price, m.currency || 'MXN');
+          } else if (showShortPriceLabel) {
+            priceText = formatShortPrice(m.price, m.currency || 'MXN');
+          }
         }
-      }
 
-      // ✅ Crear overlay personalizado (visual)
-      const overlay = new CustomPropertyOverlay(
-        position,
-        priceText,
-        m.id,
-        (id) => onMarkerClickRef.current?.(id),
-        (id) => onMarkerHoverRef.current?.(id),
-        () => onMarkerHoverRef.current?.(null)
-      );
-      overlay.setMap(map);
-      overlayRefs.current.set(m.id, overlay);
-      
-      // ✅ Crear marcador invisible para clustering
-      const invisibleMarker = new google.maps.Marker({
-        position,
-        map,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 0, // Invisible
-          fillOpacity: 0,
-          strokeOpacity: 0,
-        },
-        optimized: false,
-      });
-      invisibleMarkerRefs.current.set(m.id, invisibleMarker);
+        const overlay = new CustomPropertyOverlay(
+          position,
+          priceText,
+          m.id,
+          (id) => onMarkerClickRef.current?.(id),
+          (id) => onMarkerHoverRef.current?.(id),
+          () => onMarkerHoverRef.current?.(null)
+        );
+        overlay.setMap(map);
+        overlayRefs.current.set(m.id, overlay);
+      }
       
       bounds.extend(position);
     }
     
-    // Convertir Map a Array para el clusterer (usa los marcadores invisibles)
+    // Convertir Map a Array para el clusterer
     const markerArray = Array.from(invisibleMarkerRefs.current.values());
 
-    // Si clustering está habilitado, crear el clusterer
-    // Esperar a que el mapa esté completamente listo antes de crear el clusterer
-    if (enableClustering && markerArray.length > 0) {
-      // Usar idle event para asegurar que el mapa está completamente inicializado
+    // ✅ Si clustering está habilitado Y activo en este zoom, crear el clusterer
+    if (clusteringActive && markerArray.length > 0) {
       const createClusterer = () => {
         if (!mapRef.current) return;
         
@@ -421,7 +423,6 @@ export function BasicGoogleMap({
             algorithm: new GridAlgorithm({ maxZoom: 15 }),
             renderer: {
               render: ({ count, position }) => {
-                // Personalizar el aspecto del cluster
                 const color = count > 50 ? '#e11d48' : count > 20 ? '#f97316' : count > 10 ? '#eab308' : '#0ea5e9';
                 
                 return new google.maps.Marker({
@@ -450,35 +451,26 @@ export function BasicGoogleMap({
             component: 'BasicGoogleMap',
             error: e,
           });
-          // Fallback: agregar marcadores directamente
-          const mapInstance = mapRef.current;
-          if (mapInstance) {
-            markerArray.forEach(marker => marker.setMap(mapInstance));
-          }
         }
       };
 
-      // Intentar crear inmediatamente y añadir un fallback en 'idle' por si el mapa aún no está listo
       createClusterer();
       if (!clustererRef.current && mapRef.current) {
         google.maps.event.addListenerOnce(mapRef.current, 'idle', createClusterer);
-      }
-    } else {
-      // Si clustering no está habilitado, agregar marcadores directamente al mapa
-      const mapInstance = mapRef.current;
-      if (mapInstance) {
-        markerArray.forEach(marker => marker.setMap(mapInstance));
       }
     }
 
     // Ajustar vista del mapa a los marcadores solo si no está deshabilitado
     if (!disableAutoFit) {
       const mapInstance = mapRef.current;
-      if (mapInstance) {
-        if (markerArray.length > 1) {
+      if (mapInstance && markers.length > 0) {
+        if (markers.length > 1) {
           mapInstance.fitBounds(bounds);
-        } else if (markerArray.length === 1) {
-          mapInstance.setCenter(markerArray[0].getPosition()!);
+        } else if (markers.length === 1) {
+          const firstMarker = markers[0];
+          if (firstMarker.lat && firstMarker.lng) {
+            mapInstance.setCenter(new google.maps.LatLng(Number(firstMarker.lat), Number(firstMarker.lng)));
+          }
         }
       }
     }
