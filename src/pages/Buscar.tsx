@@ -311,6 +311,13 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [mobileView, setMobileView] = useState<'map' | 'list'>('list');
   const [mapError, setMapError] = useState<string | null>(null);
 
+  // Normalizar rango de precios para evitar valores fuera de rango al alternar Venta/Renta
+  const [minRangeForType, maxRangeForType] = getPriceRangeForListingType(filters.listingType);
+  const safePriceRange: [number, number] = [
+    Math.max(minRangeForType, Math.min(priceRange[0], maxRangeForType)),
+    Math.max(minRangeForType, Math.min(priceRange[1], maxRangeForType)),
+  ];
+
   const filteredSavedSearches = savedSearches
     .filter(search => 
       search.name.toLowerCase().includes(savedSearchQuery.toLowerCase())
@@ -328,11 +335,17 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     setHoveredProperty(property);
   }, []);
 
-  // Reiniciar rango de precios cuando cambia el tipo de operación
+  // Reiniciar y normalizar precio al cambiar tipo de operación
   useEffect(() => {
     const [minRange, maxRange] = getPriceRangeForListingType(filters.listingType);
+    // 1) Resetear slider al rango válido del nuevo tipo
     setPriceRange([minRange, maxRange]);
-    // No modificar filters aquí para evitar loop infinito
+    // 2) Limpiar filtros de precio para evitar unidades cruzadas (venta vs renta)
+    setFilters((prev) => ({
+      ...prev,
+      precioMin: '',
+      precioMax: '',
+    }));
   }, [filters.listingType]);
 
   // Track búsqueda en GA4 cuando se aplican filtros
@@ -1061,7 +1074,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                           min={getPriceRangeForListingType(filters.listingType)[0]}
                           max={getPriceRangeForListingType(filters.listingType)[1]}
                           step={filters.listingType === 'renta' ? 1 : 0.5}
-                          value={priceRange}
+                          value={safePriceRange}
                           onValueChange={handlePriceRangeChange}
                         />
                         <div className="flex justify-between text-sm text-muted-foreground">
@@ -1232,7 +1245,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                       min={getPriceRangeForListingType(filters.listingType)[0]}
                       max={getPriceRangeForListingType(filters.listingType)[1]}
                       step={filters.listingType === 'renta' ? 1 : 0.5}
-                      value={priceRange}
+                      value={safePriceRange}
                       onValueChange={handlePriceRangeChange}
                     />
                     <div className="flex justify-between text-sm text-muted-foreground">
