@@ -51,14 +51,14 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Obtener propiedades activas sin coordenadas (límite 50 por ejecución para evitar timeout)
+    // Obtener propiedades activas sin coordenadas (límite 500 por ejecución - ~50 segundos con delay de 100ms)
     const { data: properties, error: fetchError } = await supabase
       .from('properties')
       .select('id, colonia, municipality, state')
       .eq('status', 'activa')
       .is('lat', null)
       .is('lng', null)
-      .limit(50);
+      .limit(500);
 
     if (fetchError) {
       console.error('[BATCH GEOCODE] Fetch error:', fetchError);
