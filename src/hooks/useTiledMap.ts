@@ -75,52 +75,57 @@ export const useTiledMap = (
         return { clusters: [], properties: [] };
       }
 
-      // 🔄 Procesar resultados según estructura real de get_map_tiles
+      // 🔄 Procesar salida agregada (fila única con clusters/properties)
+      const result = (data as any[])[0] || {};
       const clusters: PropertyCluster[] = [];
       const properties: MapProperty[] = [];
 
-      // La RPC retorna array de filas, cada fila con campo 'type'
-      data.forEach((item: any) => {
-        if (item.type === 'cluster') {
-          clusters.push({
-            cluster_id: item.id,
-            lat: parseFloat(item.lat),
-            lng: parseFloat(item.lng),
-            property_count: item.count,
-            avg_price: item.avg_price,
-            property_ids: [],
-          });
-        } else if (item.type === 'property') {
+      if (bounds.zoom >= 17 && Array.isArray(result.properties)) {
+        // Modo propiedades individuales
+        for (const prop of result.properties) {
+          if (prop.lat == null || prop.lng == null) continue;
           properties.push({
-            id: item.id,
-            title: item.title,
-            price: item.price,
+            id: prop.id,
+            title: prop.title,
+            price: prop.price,
             currency: 'MXN',
-            lat: parseFloat(item.lat),
-            lng: parseFloat(item.lng),
-            type: item.property_type,
-            listing_type: item.listing_type,
-            bedrooms: item.bedrooms,
-            bathrooms: item.bathrooms,
-            parking: item.parking,
-            sqft: item.sqft,
-            municipality: item.municipality,
-            state: item.state,
-            address: `${item.municipality}, ${item.state}`,
-            images: item.image_url ? [{ url: item.image_url, position: 0 }] : [],
-            agent_id: item.agent_id || '',
+            lat: Number(prop.lat),
+            lng: Number(prop.lng),
+            type: prop.property_type,
+            listing_type: prop.listing_type,
+            bedrooms: prop.bedrooms,
+            bathrooms: prop.bathrooms,
+            parking: prop.parking,
+            sqft: prop.sqft,
+            municipality: prop.municipality,
+            state: prop.state,
+            address: `${prop.municipality}, ${prop.state}`,
+            images: prop.image_url ? [{ url: prop.image_url, position: 0 }] : [],
+            agent_id: prop.agent_id || '',
             status: 'activa' as PropertyStatus,
-            is_featured: item.is_featured || false,
-            created_at: item.created_at || '',
+            is_featured: !!prop.is_featured,
+            created_at: prop.created_at || '',
           });
         }
-      });
+      } else if (Array.isArray(result.clusters)) {
+        // Modo clusters (zoom bajo)
+        for (const c of result.clusters) {
+          clusters.push({
+            cluster_id: `cluster-${bounds.zoom}-${c.lat}-${c.lng}`,
+            lat: Number(c.lat),
+            lng: Number(c.lng),
+            property_count: Number(c.count || 0),
+            avg_price: c.avg_price,
+            property_ids: [],
+          });
+        }
+      }
 
       monitoring.debug('[useTiledMap] Data processed', {
         zoom: bounds.zoom,
         clustersCount: clusters.length,
         propertiesCount: properties.length,
-        totalItems: data.length,
+        totalItems: (result.properties?.length || 0) + (result.clusters?.length || 0),
         loadTimeMs: Math.round(loadTime),
       });
 
