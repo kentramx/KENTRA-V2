@@ -18,14 +18,12 @@ interface SearchResultsListProps {
   properties: PropertySummary[];
   isLoading: boolean;
   listingType: string;
-  currentPage: number;
-  propertiesPerPage: number;
   onPropertyClick: (id: string) => void;
   onPropertyHover?: (property: HoveredProperty | null) => void;
   savedSearchesCount?: number;
   onScrollToSavedSearches?: () => void;
-  highlightedPropertyId?: string | null;  // 🆕 Propiedad a resaltar
-  scrollToPropertyId?: string | null;      // 🆕 Propiedad a la que hacer scroll
+  highlightedPropertyId?: string | null;
+  scrollToPropertyId?: string | null;
 }
 
 export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
@@ -33,8 +31,6 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
     properties,
     isLoading,
     listingType,
-    currentPage,
-    propertiesPerPage,
     onPropertyClick,
     onPropertyHover,
     savedSearchesCount = 0,
@@ -57,14 +53,10 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
       }
     }, [scrollToPropertyId]);
 
-    // ✅ Memoizar propiedades paginadas y ordenadas
-    const { paginatedProperties, featuredCount } = useMemo(() => {
-      const startIndex = (currentPage - 1) * propertiesPerPage;
-      const endIndex = startIndex + propertiesPerPage;
-      const paginated = properties.slice(startIndex, endIndex);
-      const featured = paginated.filter((p) => p.is_featured).length;
-      return { paginatedProperties: paginated, featuredCount: featured };
-    }, [properties, currentPage, propertiesPerPage]);
+    // ✅ Contar propiedades destacadas
+    const featuredCount = useMemo(() => {
+      return properties.filter((p) => p.is_featured).length;
+    }, [properties]);
 
     // ✅ Callback memoizado para hover (solo datos esenciales, sin coordenadas)
     const handlePropertyHover = useCallback(
@@ -140,9 +132,9 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
         ) : (
           // Property cards
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {paginatedProperties.map((property, index) => {
+            {properties.map((property, index) => {
               const isFeatured = property.is_featured;
-              const prevProperty = paginatedProperties[index - 1];
+              const prevProperty = properties[index - 1];
               const isFirstRegular = index > 0 && prevProperty?.is_featured && !isFeatured;
 
               return (
