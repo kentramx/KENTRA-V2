@@ -58,15 +58,6 @@ export const SearchMap: React.FC<SearchMapProps> = ({
 
   const { properties = [], clusters = [] } = viewportData || {};
 
-  // 🔒 Protección: no mostrar nada si el zoom está demasiado alejado
-  if (!viewportBounds || (viewportBounds.zoom < MIN_ZOOM_FOR_TILES)) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
-        Acerca un poco más el mapa para ver propiedades.
-      </div>
-    );
-  }
-
   // ✅ Memoizar markers - Mostrar propiedades o clusters según zoom
   const mapMarkers = useMemo(() => {
     // Si hay propiedades individuales, mostrarlas
@@ -154,7 +145,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   );
 
   return (
-    <div style={{ height, width: '100%' }}>
+    <div className="relative w-full" style={{ height }}>
       <BasicGoogleMap
         center={mapCenter}
         zoom={mapZoom}
@@ -168,6 +159,14 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         disableAutoFit={true}
         onMapError={onMapError}
       />
+
+      {viewportBounds && viewportBounds.zoom < MIN_ZOOM_FOR_TILES && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="rounded-full bg-background/90 px-4 py-2 text-sm text-muted-foreground shadow-lg backdrop-blur-sm">
+            Acerca un poco más el mapa para ver propiedades.
+          </div>
+        </div>
+      )}
     </div>
   );
 };
