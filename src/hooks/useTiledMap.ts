@@ -58,16 +58,16 @@ export const useTiledMap = (
 
       // Prefetch cada tile vecino en background (sin bloquear)
       adjacentBounds.forEach((adjBounds) => {
-        const filtersJson = {
-          state: filters?.estado || null,
-          municipality: filters?.municipio || null,
-          listingType: filters?.listingType || null,
-          propertyType: filters?.tipo || null,
-          minPrice: filters?.precioMin || null,
-          maxPrice: filters?.precioMax || null,
-          minBedrooms: filters?.recamaras ? parseInt(filters.recamaras) : null,
-          minBathrooms: filters?.banos ? parseInt(filters.banos) : null,
-        };
+        // 🔥 Construir filtersJson sin incluir campos null/undefined
+        const filtersJson: Record<string, any> = {};
+        if (filters?.estado) filtersJson.state = filters.estado;
+        if (filters?.municipio) filtersJson.municipality = filters.municipio;
+        if (filters?.listingType) filtersJson.listingType = filters.listingType;
+        if (filters?.tipo) filtersJson.propertyType = filters.tipo;
+        if (filters?.precioMin) filtersJson.minPrice = filters.precioMin;
+        if (filters?.precioMax) filtersJson.maxPrice = filters.precioMax;
+        if (filters?.recamaras) filtersJson.minBedrooms = parseInt(filters.recamaras);
+        if (filters?.banos) filtersJson.minBathrooms = parseInt(filters.banos);
 
         queryClient.prefetchQuery({
           queryKey: ['map-tiles', adjBounds, filters],
@@ -108,17 +108,23 @@ export const useTiledMap = (
 
       const startTime = performance.now();
 
-      // Construir objeto de filtros en formato JSONB
-      const filtersJson = {
-        state: filters?.estado || null,
-        municipality: filters?.municipio || null,
-        listingType: filters?.listingType || null,
-        propertyType: filters?.tipo || null,
-        minPrice: filters?.precioMin || null,
-        maxPrice: filters?.precioMax || null,
-        minBedrooms: filters?.recamaras ? parseInt(filters.recamaras) : null,
-        minBathrooms: filters?.banos ? parseInt(filters.banos) : null,
-      };
+      // 🔥 Construir objeto de filtros en formato JSONB sin incluir campos null/undefined
+      const filtersJson: Record<string, any> = {};
+      if (filters?.estado) filtersJson.state = filters.estado;
+      if (filters?.municipio) filtersJson.municipality = filters.municipio;
+      if (filters?.listingType) filtersJson.listingType = filters.listingType;
+      if (filters?.tipo) filtersJson.propertyType = filters.tipo;
+      if (filters?.precioMin) filtersJson.minPrice = filters.precioMin;
+      if (filters?.precioMax) filtersJson.maxPrice = filters.precioMax;
+      if (filters?.recamaras) filtersJson.minBedrooms = parseInt(filters.recamaras);
+      if (filters?.banos) filtersJson.minBathrooms = parseInt(filters.banos);
+
+      // 🐛 Logging temporal para debugging
+      console.log('[useTiledMap] Filters enviados a get_map_tiles:', {
+        listingType: filters?.listingType,
+        filtersJson,
+        bounds: { zoom: bounds.zoom }
+      });
 
       // 🎯 Llamar a función RPC simple
       const { data, error } = await supabase.rpc('get_map_tiles', {
