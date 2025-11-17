@@ -135,7 +135,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     precioMin: searchParams.get('precioMin') || '',
     precioMax: searchParams.get('precioMax') || '',
     tipo: searchParams.get('tipo') || '',
-    listingType: searchParams.get('listingType') || '',
+    listingType: searchParams.get('listingType') || 'venta',
     recamaras: searchParams.get('recamaras') || '',
     banos: searchParams.get('banos') || '',
     orden: (searchParams.get('orden') as any) || 'price_desc',
@@ -153,7 +153,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     if (filters.precioMin) newParams.set('precioMin', filters.precioMin);
     if (filters.precioMax) newParams.set('precioMax', filters.precioMax);
     if (filters.tipo) newParams.set('tipo', filters.tipo);
-    if (filters.listingType) newParams.set('listingType', filters.listingType);
+    // Siempre persistir listingType (por defecto 'venta')
+    newParams.set('listingType', filters.listingType || 'venta');
     if (filters.recamaras) newParams.set('recamaras', filters.recamaras);
     if (filters.banos) newParams.set('banos', filters.banos);
     if (filters.orden && filters.orden !== 'price_desc') newParams.set('orden', filters.orden);
@@ -282,7 +283,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       precioMin: searchParams.get('precioMin') || '',
       precioMax: searchParams.get('precioMax') || '',
       tipo: searchParams.get('tipo') || '',
-      listingType: searchParams.get('listingType') || '',
+      listingType: searchParams.get('listingType') || 'venta',
       recamaras: searchParams.get('recamaras') || '',
       banos: searchParams.get('banos') || '',
       orden: (searchParams.get('orden') as any) || 'price_desc',
