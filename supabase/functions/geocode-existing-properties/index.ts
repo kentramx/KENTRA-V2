@@ -51,14 +51,14 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Obtener propiedades activas sin coordenadas (límite 500 por ejecución - ~50 segundos con delay de 100ms)
+    // Obtener propiedades activas sin coordenadas (límite 1000 por ejecución - ~15-20 segundos con lotes paralelos)
     const { data: properties, error: fetchError } = await supabase
       .from('properties')
       .select('id, colonia, municipality, state')
       .eq('status', 'activa')
       .is('lat', null)
       .is('lng', null)
-      .limit(500);
+      .limit(1000);
 
     if (fetchError) {
       console.error('[BATCH GEOCODE] Fetch error:', fetchError);
@@ -76,43 +76,62 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[BATCH GEOCODE] Processing ${properties.length} properties`);
+    console.log(`[BATCH GEOCODE] Processing ${properties.length} properties in parallel batches`);
 
     let successCount = 0;
     let failCount = 0;
 
-    // Procesar cada propiedad con delay para respetar límites de API
-    for (const property of properties) {
-      const coords = await geocodeAddress(
-        property.colonia,
-        property.municipality,
-        property.state
-      );
+    // Procesar en lotes de 10 propiedades en paralelo
+    const BATCH_SIZE = 10;
+    const batches = [];
+    for (let i = 0; i < properties.length; i += BATCH_SIZE) {
+      batches.push(properties.slice(i, i + BATCH_SIZE));
+    }
 
-      if (coords) {
-        const { error: updateError } = await supabase
-          .from('properties')
-          .update({
-            lat: coords.lat,
-            lng: coords.lng,
-            geom: `POINT(${coords.lng} ${coords.lat})`,
-          })
-          .eq('id', property.id);
+    for (const batch of batches) {
+      const batchPromises = batch.map(async (property) => {
+        try {
+          const coords = await geocodeAddress(
+            property.colonia,
+            property.municipality,
+            property.state
+          );
 
-        if (updateError) {
-          console.error(`[BATCH GEOCODE] Update error for ${property.id}:`, updateError);
-          failCount++;
-        } else {
-          successCount++;
-          console.log(`[BATCH GEOCODE] ✓ ${property.id}`);
+          if (coords) {
+            const { error: updateError } = await supabase
+              .from('properties')
+              .update({
+                lat: coords.lat,
+                lng: coords.lng,
+                geom: `POINT(${coords.lng} ${coords.lat})`,
+              })
+              .eq('id', property.id);
+
+            if (updateError) {
+              console.error(`[BATCH GEOCODE] Update error for ${property.id}:`, updateError);
+              return { success: false, id: property.id };
+            } else {
+              console.log(`[BATCH GEOCODE] ✓ ${property.id}`);
+              return { success: true, id: property.id };
+            }
+          } else {
+            console.log(`[BATCH GEOCODE] ✗ ${property.id} - geocoding failed`);
+            return { success: false, id: property.id };
+          }
+        } catch (error) {
+          console.error(`[BATCH GEOCODE] Error processing ${property.id}:`, error);
+          return { success: false, id: property.id };
         }
-      } else {
-        failCount++;
-        console.log(`[BATCH GEOCODE] ✗ ${property.id} - geocoding failed`);
-      }
+      });
 
-      // Delay de 100ms entre requests para respetar rate limits
-      await new Promise(resolve => setTimeout(resolve, 100));
+      const results = await Promise.all(batchPromises);
+      successCount += results.filter(r => r.success).length;
+      failCount += results.filter(r => !r.success).length;
+
+      // Pequeño delay entre lotes para no saturar la API
+      if (batches.indexOf(batch) < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
     }
 
     return new Response(
