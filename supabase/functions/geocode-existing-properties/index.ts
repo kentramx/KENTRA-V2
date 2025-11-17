@@ -55,7 +55,6 @@ serve(async (req) => {
     const { data: properties, error: fetchError } = await supabase
       .from('properties')
       .select('id, colonia, municipality, state')
-      .eq('status', 'activa')
       .is('lat', null)
       .is('lng', null)
       .limit(1000);
