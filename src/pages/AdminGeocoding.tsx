@@ -52,18 +52,27 @@ export default function AdminGeocoding() {
   };
 
   const loadStats = async () => {
-    const { data, error } = await supabase
+    // Contar total de propiedades activas
+    const { count: totalCount, error: totalError } = await supabase
       .from('properties')
-      .select('id, lat, lng', { count: 'exact' })
+      .select('*', { count: 'exact', head: true })
       .eq('status', 'activa');
 
-    if (error) {
-      console.error('Error loading stats:', error);
+    // Contar propiedades con coordenadas
+    const { count: withCoordsCount, error: coordsError } = await supabase
+      .from('properties')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'activa')
+      .not('lat', 'is', null)
+      .not('lng', 'is', null);
+
+    if (totalError || coordsError) {
+      console.error('Error loading stats:', totalError || coordsError);
       return;
     }
 
-    const withCoords = data?.filter(p => p.lat !== null && p.lng !== null).length || 0;
-    const total = data?.length || 0;
+    const total = totalCount || 0;
+    const withCoords = withCoordsCount || 0;
 
     setStats({
       total,
@@ -111,7 +120,7 @@ export default function AdminGeocoding() {
         <div>
           <h1 className="text-3xl font-bold mb-2">Geocodificación Masiva</h1>
           <p className="text-muted-foreground">
-            Procesa hasta 50 propiedades por ejecución con Google Geocoding API
+            Procesa hasta 500 propiedades por ejecución con Google Geocoding API
           </p>
         </div>
 
@@ -172,10 +181,10 @@ export default function AdminGeocoding() {
                   <AlertTitle>Propiedades pendientes</AlertTitle>
                   <AlertDescription>
                     Hay {stats.withoutCoords} propiedades sin geocodificar. 
-                    Se procesarán hasta 50 por ejecución.
-                    {stats.withoutCoords > 50 && (
+                    Se procesarán hasta 500 por ejecución.
+                    {stats.withoutCoords > 500 && (
                       <span className="block mt-2 text-amber-600 font-medium">
-                        Necesitarás ejecutar el proceso {Math.ceil(stats.withoutCoords / 50)} veces para completar todas.
+                        Necesitarás ejecutar el proceso {Math.ceil(stats.withoutCoords / 500)} veces para completar todas.
                       </span>
                     )}
                   </AlertDescription>
@@ -248,7 +257,7 @@ export default function AdminGeocoding() {
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-2">
             <p><strong>Geocodificación automática:</strong> Las nuevas propiedades se geocodifican automáticamente al crearse.</p>
-            <p><strong>Cron job:</strong> Ejecuta diariamente a las 4 AM procesando 50 propiedades/día.</p>
+            <p><strong>Cron job:</strong> Ejecuta diariamente a las 4 AM procesando 500 propiedades/día.</p>
             <p><strong>Variación espacial:</strong> ±500 metros para evitar marcadores apilados en la misma ubicación exacta.</p>
             <p><strong>Rate limit:</strong> Delay de 100ms entre requests para respetar límites de Google Maps API.</p>
           </CardContent>
