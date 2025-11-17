@@ -1420,7 +1420,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                       className="flex-1"
                     >
                       <ListIcon className="h-4 w-4 mr-2" />
-                      Lista ({properties.length})
+                      Lista ({totalCount > 0 ? totalCount.toLocaleString() : '0'})
                     </Button>
               <Button
                 variant={mobileView === 'map' ? 'default' : 'outline'}

@@ -3,15 +3,42 @@
  * Elimina offset-based y agrega batch loading
  */
 
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { PropertyFilters, PropertySummary } from '@/types/property';
 import { monitoring } from '@/lib/monitoring';
 
 const PAGE_SIZE = 50;
 
+// Hook separado para obtener el total count (se ejecuta una sola vez)
+const useTotalCount = (filters?: PropertyFilters) => {
+  return useQuery({
+    queryKey: ['properties-total-count', filters],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_properties_total_count', {
+        p_state: filters?.estado || null,
+        p_municipality: filters?.municipio || null,
+        p_type: filters?.tipo || null,
+        p_listing_type: filters?.listingType || null,
+        p_price_min: filters?.precioMin || null,
+        p_price_max: filters?.precioMax || null,
+      });
+      
+      if (error) {
+        monitoring.error('[useTotalCount] Error', { error });
+        return 0;
+      }
+      
+      return data || 0;
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
 export const usePropertiesInfinite = (filters?: PropertyFilters) => {
-  return useInfiniteQuery({
+  const { data: totalCount } = useTotalCount(filters);
+  
+  const infiniteQuery = useInfiniteQuery({
     queryKey: ['properties-infinite', filters],
     queryFn: async ({ pageParam }) => {
       // ✅ OPTIMIZACIÓN: Cursor-based en lugar de offset
@@ -98,7 +125,6 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
       return {
         properties: enrichedProperties,
         nextPage: nextCursor,
-        totalCount: enrichedProperties.length,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
@@ -106,4 +132,9 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
+  
+  return {
+    ...infiniteQuery,
+    totalCount: totalCount || 0,
+  };
 };

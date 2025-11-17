@@ -2464,6 +2464,17 @@ export type Database = {
           type: string
         }[]
       }
+      get_properties_total_count: {
+        Args: {
+          p_listing_type?: string
+          p_municipality?: string
+          p_price_max?: number
+          p_price_min?: number
+          p_state?: string
+          p_type?: string
+        }
+        Returns: number
+      }
       get_property_clusters: {
         Args: {
           max_lat: number

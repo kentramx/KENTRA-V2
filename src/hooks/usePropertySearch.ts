@@ -29,6 +29,7 @@ export const usePropertySearch = (filters: PropertyFilters): UsePropertySearchRe
     fetchNextPage,
     hasNextPage,
     error,
+    totalCount: realTotalCount,
   } = usePropertiesInfinite(filters);
 
   // Construir arreglo plano de propiedades desde las páginas
@@ -50,7 +51,7 @@ export const usePropertySearch = (filters: PropertyFilters): UsePropertySearchRe
     isLoading,
     isFetching,
     error: error as Error | null,
-    totalCount: properties.length,
+    totalCount: realTotalCount, // ✅ Total real de propiedades disponibles
     hasNextPage: hasNextPage ?? false,
     fetchNextPage,
     hasTooManyResults,
