@@ -273,7 +273,7 @@ export function BasicGoogleMap({
                   zoom: zoom,
                 });
               }
-            }, 200); // ✅ Reducido a 200ms para mejor respuesta
+            }, 500); // ✅ FASE 3: Aumentado de 200ms a 500ms para reducir requests
           });
         }
 
@@ -325,6 +325,9 @@ export function BasicGoogleMap({
     // Crear la clase CustomPropertyOverlay ahora que google está disponible
     const CustomPropertyOverlay = createCustomPropertyOverlay();
 
+    // ✅ FASE 4: Iniciar medición de performance
+    const renderStartTime = performance.now();
+
     // Limpiar clusterer anterior si existe - de forma segura
     if (clustererRef.current) {
       try {
@@ -342,6 +345,7 @@ export function BasicGoogleMap({
     invisibleMarkerRefs.current.clear();
 
     if (!markers || markers.length === 0) {
+      monitoring.debug('[BasicGoogleMap] Sin marcadores para renderizar');
       return;
     }
 
@@ -350,8 +354,8 @@ export function BasicGoogleMap({
     const showShortPriceLabel = zoom >= 11 && zoom < 14;
     const hidePriceLabel = zoom < 11;
     
-    // ✅ Clustering activo en zoom < 18 (más zoom para mantener clusters)
-    const clusteringActive = enableClustering && zoom < 18;
+    // ✅ FASE 1: Clustering activo hasta zoom 15 (antes 18)
+    const clusteringActive = enableClustering && zoom < 15;
 
     const bounds = new google.maps.LatLngBounds();
     
@@ -417,12 +421,16 @@ export function BasicGoogleMap({
         if (!mapRef.current) return;
         
         try {
+          // ✅ FASE 4: Métricas de clustering
+          const startTime = performance.now();
+          
           clustererRef.current = new MarkerClusterer({
             map: mapRef.current,
             markers: markerArray,
             algorithm: new GridAlgorithm({ 
-              maxZoom: 18, // Mantener clusters hasta zoom 18
-              gridSize: 120 // Radio aumentado para mejor agrupación
+              maxZoom: 15,      // ✅ FASE 2: Reducido de 18 a 15
+              gridSize: 80,      // ✅ FASE 2: Más agresivo (antes 120)
+              maxDistance: 40000 // ✅ FASE 2: Limitar distancia de agrupación
             }),
             renderer: {
               render: ({ count, position }) => {
@@ -474,6 +482,14 @@ export function BasicGoogleMap({
               },
             },
           });
+          
+          // ✅ FASE 4: Log de métricas de clustering
+          const endTime = performance.now();
+          monitoring.debug('[BasicGoogleMap] Clustering creado', {
+            markers: markerArray.length,
+            timeMs: (endTime - startTime).toFixed(2),
+            zoom,
+          });
         } catch (e) {
           monitoring.warn('Error creating clusterer', {
             component: 'BasicGoogleMap',
@@ -501,6 +517,29 @@ export function BasicGoogleMap({
           }
         }
       }
+    }
+
+    // ✅ FASE 4: Log de métricas finales de renderizado
+    const renderEndTime = performance.now();
+    const individualMarkers = clusteringActive ? 0 : markers.length;
+    const clusteredMarkers = clusteringActive ? markers.length : 0;
+    
+    monitoring.debug('[BasicGoogleMap] Renderizado completo', {
+      totalMarkers: markers.length,
+      individualMarkers,
+      clusteredMarkers,
+      clusteringActive,
+      zoom,
+      renderTimeMs: (renderEndTime - renderStartTime).toFixed(2),
+    });
+
+    // ✅ FASE 4: Alerta si se renderizan muchos marcadores individuales
+    if (!clusteringActive && markers.length > 100) {
+      monitoring.warn('[BasicGoogleMap] Renderizando muchos marcadores individuales', {
+        count: markers.length,
+        zoom,
+        recommendation: 'Considera reducir límite de propiedades o ajustar clustering threshold',
+      });
     }
   }, [markers, enableClustering, disableAutoFit, currentZoom]);
   

@@ -19,12 +19,12 @@ export interface ViewportBounds {
   zoom: number;
 }
 
-// ✅ OPTIMIZACIÓN: Límites inteligentes según zoom
+// ✅ OPTIMIZACIÓN FASE 1: Límites reducidos según zoom para mejor rendimiento
 const getMaxPropertiesForZoom = (zoom: number): number => {
-  if (zoom >= 16) return 500;
-  if (zoom >= 14) return 300;
-  if (zoom >= 12) return 150;
-  return 100;
+  if (zoom >= 16) return 200;  // Reducido de 500
+  if (zoom >= 14) return 150;  // Reducido de 300
+  if (zoom >= 12) return 100;  // Reducido de 150
+  return 50;                   // Reducido de 100
 };
 
 export const usePropertiesViewport = (
@@ -39,8 +39,7 @@ export const usePropertiesViewport = (
       const status = filters?.status?.[0] || 'activa';
       const maxProperties = getMaxPropertiesForZoom(bounds.zoom);
 
-      // ✅ SIEMPRE usar get_properties_in_viewport (sin importar el zoom)
-      // El frontend (MarkerClusterer) se encarga del clustering visual
+      // ✅ FASE 1: Pasar límite al RPC para reducir transferencia de datos
       const { data, error } = await supabase.rpc('get_properties_in_viewport', {
         min_lng: bounds.minLng,
         min_lat: bounds.minLat,
@@ -55,6 +54,7 @@ export const usePropertiesViewport = (
         p_price_max: filters?.precioMax || null,
         p_bedrooms: filters?.recamaras ? parseInt(filters.recamaras) : null,
         p_bathrooms: filters?.banos ? parseInt(filters.banos) : null,
+        p_limit: maxProperties, // ✅ Nuevo parámetro de límite
       });
 
       if (error) {
@@ -67,27 +67,24 @@ export const usePropertiesViewport = (
         throw error;
       }
 
-      // ✅ Aplicar límite según zoom
-      const limitedProperties = (data || []).slice(0, maxProperties);
-      
-      if (limitedProperties.length === 0) {
+      // ✅ FASE 3: Eliminar slice porque el límite ya se aplicó en el RPC
+      if (!data || data.length === 0) {
         return { clusters: [], properties: [] };
       }
 
-      // ✅ Batch loading de imágenes
-      const propertyIds = (limitedProperties as any[]).map((p) => p.id);
-      const { data: imagesData } = await supabase.rpc('get_images_batch', {
-        property_ids: propertyIds,
-      });
+      // ✅ FASE 3: Lazy loading - solo cargar primera imagen por propiedad
+      const propertyIds = (data as any[]).map((p) => p.id);
+      const { data: imagesData } = await supabase
+        .from('images')
+        .select('property_id, url, position')
+        .in('property_id', propertyIds)
+        .eq('position', 0) // Solo primera imagen
+        .order('position', { ascending: true });
 
-      interface ImageBatch {
-        property_id: string;
-        images: Array<{ url: string; position: number }>;
-      }
-
+      // ✅ FASE 3: Mapear solo primera imagen
       const imagesMap = new Map<string, Array<{ url: string; position: number }>>();
-      (imagesData as ImageBatch[] || []).forEach((item) => {
-        imagesMap.set(item.property_id, item.images || []);
+      (imagesData || []).forEach((img: any) => {
+        imagesMap.set(img.property_id, [{ url: img.url, position: img.position }]);
       });
 
       // Cargar featured
@@ -100,8 +97,8 @@ export const usePropertiesViewport = (
 
       const featuredSet = new Set(featuredData?.map((f) => f.property_id) || []);
 
-      // Normalizar a MapProperty
-      const enrichedProperties: MapProperty[] = (limitedProperties as any[]).map((prop) => ({
+      // ✅ FASE 4: Log de performance
+      const enrichedProperties: MapProperty[] = (data as any[]).map((prop) => ({
         id: prop.id,
         title: prop.title,
         price: prop.price,
@@ -124,8 +121,16 @@ export const usePropertiesViewport = (
         is_featured: featuredSet.has(prop.id),
       }));
 
+      // ✅ FASE 4: Métricas de performance
+      monitoring.debug('[usePropertiesViewport] Propiedades cargadas', {
+        count: enrichedProperties.length,
+        limit: maxProperties,
+        zoom: bounds.zoom,
+        bounds: { minLat: bounds.minLat, maxLat: bounds.maxLat, minLng: bounds.minLng, maxLng: bounds.maxLng },
+      });
+
       return { 
-        clusters: [], // Por ahora no usamos clusters del backend
+        clusters: [],
         properties: enrichedProperties
       };
 
