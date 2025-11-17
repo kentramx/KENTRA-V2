@@ -350,8 +350,8 @@ export function BasicGoogleMap({
     const showShortPriceLabel = zoom >= 11 && zoom < 14;
     const hidePriceLabel = zoom < 11;
     
-    // ✅ Clustering solo activo en zooms bajos (< 15)
-    const clusteringActive = enableClustering && zoom < 15;
+    // ✅ Clustering activo en zoom < 18 (más zoom para mantener clusters)
+    const clusteringActive = enableClustering && zoom < 18;
 
     const bounds = new google.maps.LatLngBounds();
     
@@ -420,25 +420,53 @@ export function BasicGoogleMap({
           clustererRef.current = new MarkerClusterer({
             map: mapRef.current,
             markers: markerArray,
-            algorithm: new GridAlgorithm({ maxZoom: 15 }),
+            algorithm: new GridAlgorithm({ 
+              maxZoom: 18, // Mantener clusters hasta zoom 18
+              gridSize: 120 // Radio aumentado para mejor agrupación
+            }),
             renderer: {
               render: ({ count, position }) => {
-                const color = count > 50 ? '#e11d48' : count > 20 ? '#f97316' : count > 10 ? '#eab308' : '#0ea5e9';
+                // Mejorar escala y colores para densidades altas
+                let color: string;
+                let scale: number;
+                let fontSize: string;
+                
+                if (count > 100) {
+                  color = '#dc2626'; // Rojo intenso
+                  scale = 55;
+                  fontSize = '16px';
+                } else if (count > 50) {
+                  color = '#ea580c'; // Naranja intenso
+                  scale = 45;
+                  fontSize = '15px';
+                } else if (count > 20) {
+                  color = '#f59e0b'; // Amarillo/naranja
+                  scale = 35;
+                  fontSize = '14px';
+                } else if (count > 10) {
+                  color = '#3b82f6'; // Azul
+                  scale = 28;
+                  fontSize = '13px';
+                } else {
+                  color = '#6366f1'; // Índigo
+                  scale = 22;
+                  fontSize = '12px';
+                }
                 
                 return new google.maps.Marker({
                   position,
                   icon: {
                     path: google.maps.SymbolPath.CIRCLE,
                     fillColor: color,
-                    fillOpacity: 0.8,
+                    fillOpacity: 0.85,
                     strokeColor: '#ffffff',
                     strokeWeight: 3,
-                    scale: Math.min(20 + count / 2, 35),
+                    scale,
                   },
                   label: {
-                    text: String(count),
+                    text: count > 999 ? '999+' : String(count),
                     color: '#ffffff',
-                    fontSize: '14px',
+                    fontSize,
                     fontWeight: 'bold',
                   },
                   zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,

@@ -58,11 +58,11 @@ export const SearchMap: React.FC<SearchMapProps> = ({
 
   const { properties = [], clusters = [] } = viewportData || {};
 
-  // ✅ Memoizar markers para evitar recálculo en cada render
+  // ✅ Memoizar markers - SOLO mostrar propiedades con coordenadas válidas
   const mapMarkers = useMemo(
     () =>
       properties
-        .filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number')
+        .filter((p) => p.lat != null && p.lng != null) // Excluir propiedades sin coordenadas
         .map((p) => ({
           id: p.id,
           lat: p.lat as number,
