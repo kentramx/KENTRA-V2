@@ -4,12 +4,14 @@
  * - Soporta desde 1K hasta 10M+ propiedades con rendimiento constante
  * - Clustering adaptativo según zoom level
  * - Cache de 5 minutos por tile
+ * - FASE 4: Prefetching de tiles vecinos para navegación fluida
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { MapProperty, PropertyCluster, PropertyFilters, PropertyStatus } from '@/types/property';
 import { monitoring } from '@/lib/monitoring';
+import { useEffect } from 'react';
 
 export interface ViewportBounds {
   minLng: number;
@@ -23,6 +25,65 @@ export const useTiledMap = (
   bounds: ViewportBounds | null,
   filters?: PropertyFilters
 ) => {
+  const queryClient = useQueryClient();
+
+  // 🔥 Prefetch de tiles vecinos en background
+  useEffect(() => {
+    if (!bounds) return;
+
+    const prefetchAdjacentTiles = async () => {
+      const { minLng, minLat, maxLng, maxLat, zoom } = bounds;
+      const lngSpan = maxLng - minLng;
+      const latSpan = maxLat - minLat;
+
+      // Definir 8 tiles vecinos (arriba, abajo, izq, der, y diagonales)
+      const adjacentBounds = [
+        { minLng, minLat: maxLat, maxLng, maxLat: maxLat + latSpan }, // Arriba
+        { minLng, minLat: minLat - latSpan, maxLng, maxLat: minLat }, // Abajo
+        { minLng: minLng - lngSpan, minLat, maxLng: minLng, maxLat }, // Izquierda
+        { minLng: maxLng, minLat, maxLng: maxLng + lngSpan, maxLat }, // Derecha
+        { minLng: minLng - lngSpan, minLat: maxLat, maxLng: minLng, maxLat: maxLat + latSpan }, // Arriba-izq
+        { minLng: maxLng, minLat: maxLat, maxLng: maxLng + lngSpan, maxLat: maxLat + latSpan }, // Arriba-der
+        { minLng: minLng - lngSpan, minLat: minLat - latSpan, maxLng: minLng, maxLat: minLat }, // Abajo-izq
+        { minLng: maxLng, minLat: minLat - latSpan, maxLng: maxLng + lngSpan, maxLat: minLat }, // Abajo-der
+      ];
+
+      // Prefetch cada tile vecino en background (sin bloquear)
+      adjacentBounds.forEach((adjBounds) => {
+        const filtersJson = {
+          state: filters?.estado || null,
+          municipality: filters?.municipio || null,
+          listingType: filters?.listingType || null,
+          propertyType: filters?.tipo || null,
+          minPrice: filters?.precioMin || null,
+          maxPrice: filters?.precioMax || null,
+          minBedrooms: filters?.recamaras ? parseInt(filters.recamaras) : null,
+          minBathrooms: filters?.banos ? parseInt(filters.banos) : null,
+        };
+
+        queryClient.prefetchQuery({
+          queryKey: ['map-tiles', adjBounds, filters],
+          queryFn: async () => {
+            const { data } = await supabase.rpc('get_map_tiles', {
+              p_min_lng: adjBounds.minLng,
+              p_min_lat: adjBounds.minLat,
+              p_max_lng: adjBounds.maxLng,
+              p_max_lat: adjBounds.maxLat,
+              p_zoom: zoom,
+              p_filters: filtersJson,
+            });
+            return data;
+          },
+          staleTime: 5 * 60 * 1000,
+        });
+      });
+    };
+
+    // Ejecutar prefetch después de 500ms para no interferir con carga principal
+    const timer = setTimeout(prefetchAdjacentTiles, 500);
+    return () => clearTimeout(timer);
+  }, [bounds, filters, queryClient]);
+
   return useQuery({
     queryKey: ['map-tiles', bounds, filters],
     queryFn: async () => {

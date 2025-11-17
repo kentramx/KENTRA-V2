@@ -428,10 +428,15 @@ export function BasicGoogleMap({
             map: mapRef.current,
             markers: markerArray,
             algorithm: new GridAlgorithm({ 
-              maxZoom: 15,      // ✅ FASE 2: Reducido de 18 a 15
-              gridSize: 80,      // ✅ FASE 2: Más agresivo (antes 120)
-              maxDistance: 40000 // ✅ FASE 2: Limitar distancia de agrupación
+              maxZoom: 15,        // ✅ FASE 2: Reducido de 18 a 15
+              gridSize: 60,       // ✅ FASE 4: Más agresivo (antes 80) para agrupar más rápido
+              maxDistance: 30000, // ✅ FASE 4: Reducido de 40000 a 30000 para clusters más compactos
             }),
+            onClusterClick: (_, cluster, map) => {
+              // ✅ FASE 4: Al hacer clic en cluster, zoom in suave
+              map.setCenter(cluster.position);
+              map.setZoom(Math.min((map.getZoom() || 5) + 3, 15));
+            },
             renderer: {
               render: ({ count, position }) => {
                 // Mejorar escala y colores para densidades altas

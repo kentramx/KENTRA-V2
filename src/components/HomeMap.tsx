@@ -5,6 +5,7 @@ import BasicGoogleMap from "@/components/BasicGoogleMap";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTiledMap, ViewportBounds } from "@/hooks/useTiledMap";
+import { useAdaptiveDebounce } from "@/hooks/useAdaptiveDebounce";
 import type { MapProperty } from "@/types/property";
 import { useMonitoring } from "@/lib/monitoring";
 
@@ -16,9 +17,12 @@ const HomeMap = ({ height = "450px" }: { height?: string }) => {
   const [hoveredProperty, setHoveredProperty] = useState<MapProperty | null>(null);
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
 
+  // ✅ FASE 4: Debounce adaptativo según FPS del dispositivo
+  const debouncedBounds = useAdaptiveDebounce(viewportBounds, 300);
+
   // 🚀 TILE-BASED ARCHITECTURE: fetch con escalabilidad infinita
   const { data: viewportData, isLoading: loading } = useTiledMap(
-    viewportBounds,
+    debouncedBounds,
     { status: ['activa'] }
   );
 
