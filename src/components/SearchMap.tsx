@@ -8,10 +8,12 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BasicGoogleMap from '@/components/BasicGoogleMap';
-import { useTiledMap, ViewportBounds, MIN_ZOOM_FOR_TILES } from '@/hooks/useTiledMap';
+import { useTiledMap, ViewportBounds, MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE } from '@/hooks/useTiledMap';
 import { useAdaptiveDebounce } from '@/hooks/useAdaptiveDebounce';
 import type { MapProperty, PropertyFilters } from '@/types/property';
 import { monitoring } from '@/lib/monitoring';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface SearchMapProps {
   filters: PropertyFilters;
@@ -160,6 +162,56 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         onMapError={onMapError}
       />
 
+      {/* 📊 Panel de debug */}
+      <div className="pointer-events-none absolute top-3 right-3">
+        <div className="pointer-events-auto rounded-md bg-background/90 px-3 py-2 text-[11px] shadow-lg backdrop-blur-sm">
+          <div className="font-mono">Zoom: {viewportBounds?.zoom ?? '-'}</div>
+          <div className="font-mono">Props: {properties?.length ?? 0}</div>
+          <div className="font-mono">Clusters: {clusters?.length ?? 0}</div>
+          {properties && properties.length >= MAX_PROPERTIES_PER_TILE && (
+            <div className="mt-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+              CAP 5K aplicado
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 🔄 Overlay de carga */}
+      {isLoading && viewportBounds && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[2px]">
+          <div className="rounded-lg bg-background/95 px-4 py-3 shadow-lg">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Cargando propiedades en el mapa...</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ❌ Overlay de error */}
+      {error && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/30 backdrop-blur-sm">
+          <div className="pointer-events-auto rounded-lg bg-background border border-destructive/20 px-6 py-4 shadow-xl max-w-sm">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <AlertCircle className="h-10 w-10 text-destructive" />
+              <div>
+                <p className="font-medium text-foreground">No pudimos cargar las propiedades</p>
+                <p className="text-sm text-muted-foreground mt-1">Intenta de nuevo en un momento</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className="mt-2"
+              >
+                Reintentar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ℹ️ Mensaje de zoom bajo */}
       {viewportBounds && viewportBounds.zoom < MIN_ZOOM_FOR_TILES && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="rounded-full bg-background/90 px-4 py-2 text-sm text-muted-foreground shadow-lg backdrop-blur-sm">

@@ -22,8 +22,8 @@ export interface ViewportBounds {
 }
 
 // 🔒 Límites de seguridad para escalabilidad
-export const MIN_ZOOM_FOR_TILES = 4;          // No hacer queries cuando el zoom está demasiado lejos (país, mundo completo)
-const MAX_PROPERTIES_PER_TILE = 5000;  // Hard cap por tile en el frontend para evitar saturar el cliente
+export const MIN_ZOOM_FOR_TILES = 3;          // No hacer queries cuando el zoom está demasiado lejos (país, mundo completo)
+export const MAX_PROPERTIES_PER_TILE = 5000;  // Hard cap por tile en el frontend para evitar saturar el cliente
 
 export const useTiledMap = (
   bounds: ViewportBounds | null,
