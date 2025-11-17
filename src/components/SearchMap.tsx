@@ -38,6 +38,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
 }) => {
   const navigate = useNavigate();
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
   
   // ✅ Debounce adaptativo de viewport según FPS del dispositivo
   const debouncedBounds = useAdaptiveDebounce(viewportBounds, 300);
@@ -59,6 +60,26 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   }
 
   const { properties = [], clusters = [] } = viewportData || {};
+
+  // ✅ Handler para errores críticos del mapa (Google Maps no carga)
+  const handleMapError = useCallback((errorMsg: string) => {
+    setMapError(errorMsg);
+    monitoring.error('[SearchMap] Error crítico del mapa', {
+      component: 'SearchMap',
+      error: errorMsg,
+    });
+    onMapError?.(errorMsg);
+  }, [onMapError]);
+
+  // ✅ Log de errores de tiles (NO bloqueante, se mantienen datos anteriores)
+  if (error) {
+    monitoring.error('[SearchMap] Error cargando tiles (no crítico)', {
+      component: 'SearchMap',
+      error,
+      filters,
+      bounds: debouncedBounds,
+    });
+  }
 
   // ✅ Memoizar markers - Mostrar propiedades o clusters según zoom
   const mapMarkers = useMemo(() => {
@@ -159,7 +180,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         hoveredMarkerId={hoveredPropertyId}
         hoveredPropertyCoords={hoveredPropertyCoords}
         disableAutoFit={true}
-        onMapError={onMapError}
+        onMapError={handleMapError}
       />
 
       {/* 📊 Panel de debug */}
@@ -188,20 +209,23 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         </div>
       )}
 
-      {/* ❌ Overlay de error */}
-      {error && (
+      {/* ❌ Overlay de error crítico (solo para fallos de Google Maps) */}
+      {mapError && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/30 backdrop-blur-sm">
           <div className="pointer-events-auto rounded-lg bg-background border border-destructive/20 px-6 py-4 shadow-xl max-w-sm">
             <div className="flex flex-col items-center gap-3 text-center">
               <AlertCircle className="h-10 w-10 text-destructive" />
               <div>
-                <p className="font-medium text-foreground">No pudimos cargar las propiedades</p>
-                <p className="text-sm text-muted-foreground mt-1">Intenta de nuevo en un momento</p>
+                <p className="font-medium text-foreground">No pudimos cargar el mapa</p>
+                <p className="text-sm text-muted-foreground mt-1">Puedes seguir usando la lista de propiedades sin problema.</p>
               </div>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => window.location.reload()}
+                onClick={() => {
+                  setMapError(null);
+                  window.location.reload();
+                }}
                 className="mt-2"
               >
                 Reintentar
