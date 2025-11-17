@@ -100,6 +100,7 @@ export const useTiledMap = (
     retry: 1,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    placeholderData: (previousData) => previousData, // ✅ Mantener datos anteriores en caso de error
     queryFn: async () => {
       if (!bounds || bounds.zoom < MIN_ZOOM_FOR_TILES) {
         return { clusters: [], properties: [] };
