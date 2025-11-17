@@ -58,11 +58,12 @@ export const SearchMap: React.FC<SearchMapProps> = ({
 
   const { properties = [], clusters = [] } = viewportData || {};
 
-  // ✅ Memoizar markers - SOLO mostrar propiedades con coordenadas válidas
-  const mapMarkers = useMemo(
-    () =>
-      properties
-        .filter((p) => p.lat != null && p.lng != null) // Excluir propiedades sin coordenadas
+  // ✅ Memoizar markers - Mostrar propiedades o clusters según zoom
+  const mapMarkers = useMemo(() => {
+    // Si hay propiedades individuales, mostrarlas
+    if (properties && properties.length > 0) {
+      return properties
+        .filter((p) => p.lat != null && p.lng != null)
         .map((p) => ({
           id: p.id,
           lat: p.lat as number,
@@ -75,9 +76,28 @@ export const SearchMap: React.FC<SearchMapProps> = ({
           images: p.images,
           listing_type: p.listing_type as 'venta' | 'renta',
           address: p.address,
-        })),
-    [properties]
-  );
+        }));
+    }
+
+    // Si solo hay clusters (zoom bajo), convertirlos a marcadores sintéticos
+    if (clusters && clusters.length > 0) {
+      return clusters.map((cluster) => ({
+        id: cluster.cluster_id,
+        lat: cluster.lat,
+        lng: cluster.lng,
+        title: `${cluster.property_count} propiedades`,
+        price: cluster.avg_price,
+        currency: 'MXN' as const,
+        bedrooms: 0,
+        bathrooms: 0,
+        images: [],
+        listing_type: 'venta' as const,
+        address: '',
+      }));
+    }
+
+    return [];
+  }, [properties, clusters]);
 
   // ✅ Centro del mapa
   const mapCenter = useMemo(() => {
@@ -95,9 +115,13 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     setViewportBounds(bounds);
   }, []);
 
-  // ✅ Callback memoizado para marker click
+  // ✅ Callback memoizado para marker click (no navegar si es cluster)
   const handleMarkerClickInternal = useCallback(
     (id: string) => {
+      // No hacer nada si es un cluster (empieza con "cluster-")
+      if (id.startsWith('cluster-')) {
+        return;
+      }
       onMarkerClick(id);
     },
     [onMarkerClick]

@@ -75,23 +75,22 @@ export const useTiledMap = (
         return { clusters: [], properties: [] };
       }
 
-      // 🔄 Procesar array de resultados directamente
+      // 🔄 Procesar resultados según estructura real de get_map_tiles
       const clusters: PropertyCluster[] = [];
       const properties: MapProperty[] = [];
 
+      // La RPC retorna array de filas, cada fila con campo 'type'
       data.forEach((item: any) => {
         if (item.type === 'cluster') {
-          // Es un cluster
           clusters.push({
             cluster_id: item.id,
             lat: parseFloat(item.lat),
             lng: parseFloat(item.lng),
             property_count: item.count,
             avg_price: item.avg_price,
-            property_ids: [], // No disponible en respuesta de cluster
+            property_ids: [],
           });
         } else if (item.type === 'property') {
-          // Es una propiedad individual
           properties.push({
             id: item.id,
             title: item.title,
@@ -111,7 +110,7 @@ export const useTiledMap = (
             images: item.image_url ? [{ url: item.image_url, position: 0 }] : [],
             agent_id: item.agent_id || '',
             status: 'activa' as PropertyStatus,
-            is_featured: false,
+            is_featured: item.is_featured || false,
             created_at: item.created_at || '',
           });
         }
