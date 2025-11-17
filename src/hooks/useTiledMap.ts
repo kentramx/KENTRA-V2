@@ -68,19 +68,19 @@ export const useTiledMap = (
       monitoring.debug('[useTiledMap] Tiles loaded', {
         zoom: bounds.zoom,
         loadTimeMs: Math.round(loadTime),
-        dataReceived: data ? data.length : 0,
+        dataReceived: data ? 'yes' : 'no',
       });
 
-      if (!data || data.length === 0) {
+      if (!data) {
         return { clusters: [], properties: [] };
       }
 
-      // 🔄 Procesar salida agregada: data[0] tiene clusters o properties
-      const result = (data as any[])[0] || {};
+      // 🔄 Procesar respuesta: data tiene clusters o properties directamente
+      const result = data as any;
       const clusters: PropertyCluster[] = [];
       const properties: MapProperty[] = [];
 
-      if (Array.isArray(result.properties)) {
+      if (result.properties && Array.isArray(result.properties)) {
         result.properties.forEach((prop: any) => {
           if (!prop.lat || !prop.lng) return;
           properties.push({
@@ -96,7 +96,7 @@ export const useTiledMap = (
             is_featured: !!prop.is_featured, created_at: prop.created_at || '',
           });
         });
-      } else if (Array.isArray(result.clusters)) {
+      } else if (result.clusters && Array.isArray(result.clusters)) {
         result.clusters.forEach((c: any) => {
           clusters.push({
             cluster_id: `cluster-${bounds.zoom}-${c.lat}-${c.lng}`,

@@ -2499,12 +2499,7 @@ export type Database = {
           p_min_lng: number
           p_zoom: number
         }
-        Returns: {
-          clusters: Json
-          properties: Json
-          tile_key: string
-          zoom: number
-        }[]
+        Returns: Json
       }
       get_map_tiles_cached: {
         Args: {
