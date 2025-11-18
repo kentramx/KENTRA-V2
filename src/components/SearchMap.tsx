@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import BasicGoogleMap from '@/components/BasicGoogleMap';
 import { useTiledMap, ViewportBounds, MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE } from '@/hooks/useTiledMap';
 import { useAdaptiveDebounce } from '@/hooks/useAdaptiveDebounce';
-import type { MapProperty, PropertyFilters } from '@/types/property';
+import type { MapProperty, PropertyFilters, PropertySummary } from '@/types/property';
 import { monitoring } from '@/lib/monitoring';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,10 @@ interface SearchMapProps {
   hoveredPropertyCoords?: { lat: number; lng: number } | null;
   height?: string;
   onMapError?: (error: string) => void;
+  fallbackProperties?: PropertySummary[];
 }
+
+const MAX_FALLBACK_MARKERS = 500;
 
 export const SearchMap: React.FC<SearchMapProps> = ({
   filters,
@@ -35,6 +38,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   hoveredPropertyCoords,
   height = '100%',
   onMapError,
+  fallbackProperties,
 }) => {
   const navigate = useNavigate();
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
@@ -83,17 +87,17 @@ export const SearchMap: React.FC<SearchMapProps> = ({
 
   // ✅ Memoizar markers - Mostrar propiedades o clusters según zoom
   const mapMarkers = useMemo(() => {
-    // Si hay propiedades individuales, mostrarlas
+    // 1) Si hay propiedades del sistema tileado, úsalas primero
     if (properties && properties.length > 0) {
       return properties
         .filter((p) => p.lat != null && p.lng != null)
         .map((p) => ({
           id: p.id,
-          lat: p.lat as number,
-          lng: p.lng as number,
+          lat: Number(p.lat),
+          lng: Number(p.lng),
           title: p.title,
           price: p.price,
-          currency: p.currency as 'MXN' | 'USD',
+          currency: (p.currency ?? 'MXN') as 'MXN' | 'USD',
           bedrooms: p.bedrooms,
           bathrooms: p.bathrooms,
           images: p.images,
@@ -102,14 +106,14 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         }));
     }
 
-    // Si solo hay clusters (zoom bajo), convertirlos a marcadores sintéticos
+    // 2) Si hay clusters (zoom bajo), úsalos
     if (clusters && clusters.length > 0) {
-      return clusters.map((cluster) => ({
-        id: cluster.cluster_id,
-        lat: cluster.lat,
-        lng: cluster.lng,
-        title: `${cluster.property_count} propiedades`,
-        price: cluster.avg_price,
+      return clusters.map((c) => ({
+        id: c.cluster_id,
+        lat: c.lat,
+        lng: c.lng,
+        title: `${c.property_count} propiedades`,
+        price: c.avg_price,
         currency: 'MXN' as const,
         bedrooms: 0,
         bathrooms: 0,
@@ -119,8 +123,28 @@ export const SearchMap: React.FC<SearchMapProps> = ({
       }));
     }
 
+    // 3) Fallback: usar propiedades de la lista (usePropertySearch)
+    if (fallbackProperties && fallbackProperties.length > 0) {
+      return fallbackProperties
+        .filter((p) => p.lat != null && p.lng != null)
+        .slice(0, MAX_FALLBACK_MARKERS)
+        .map((p) => ({
+          id: p.id,
+          lat: Number(p.lat),
+          lng: Number(p.lng),
+          title: p.title,
+          price: p.price,
+          currency: (p.currency ?? 'MXN') as 'MXN' | 'USD',
+          bedrooms: p.bedrooms,
+          bathrooms: p.bathrooms,
+          images: p.images,
+          listing_type: p.listing_type as 'venta' | 'renta',
+          address: p.address,
+        }));
+    }
+
     return [];
-  }, [properties, clusters]);
+  }, [properties, clusters, fallbackProperties]);
 
   // ✅ Centro del mapa
   const mapCenter = useMemo(() => {

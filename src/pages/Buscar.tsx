@@ -1490,6 +1490,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 }
                 height="100%"
                 onMapError={setMapError}
+                fallbackProperties={sortedProperties}
               />
             )}
           </div>
