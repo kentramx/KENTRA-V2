@@ -7,7 +7,10 @@ import { useMemo } from 'react';
 import { usePropertiesInfinite } from './usePropertiesInfinite';
 import type { PropertyFilters, PropertySummary } from '@/types/property';
 
-const MAX_RESULTS = 300; // ✅ Límite para evitar sobrecarga
+// Límite global de resultados cargados en memoria.
+// Afecta tanto la lista como el mapa (fallback de marcadores).
+// 300 era muy bajo para 9,000+ propiedades; lo subimos a 3000 como punto intermedio.
+const MAX_RESULTS = 3000;
 
 export interface UsePropertySearchResult {
   properties: PropertySummary[];
