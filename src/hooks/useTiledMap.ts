@@ -61,8 +61,9 @@ export const useTiledMap = (
         // 🔥 Construir filtersJson sin incluir campos null/undefined
         const filtersJson: Record<string, any> = {};
         if (filters?.estado) filtersJson.state = filters.estado;
-        if (filters?.municipio) filtersJson.municipality = filters.municipio;
-        if (filters?.listingType) filtersJson.listingType = filters.listingType;
+        const ltPref = filters?.listingType;
+        const mappedLtPref = ltPref === 'venta' ? 'sale' : ltPref === 'renta' ? 'rent' : ltPref;
+        if (mappedLtPref) filtersJson.listingType = mappedLtPref;
         if (filters?.tipo && typeof filters.tipo === 'string') {
           filtersJson.propertyType = filters.tipo;
         }
@@ -114,7 +115,9 @@ export const useTiledMap = (
       const filtersJson: Record<string, any> = {};
       if (filters?.estado) filtersJson.state = filters.estado;
       if (filters?.municipio) filtersJson.municipality = filters.municipio;
-      if (filters?.listingType) filtersJson.listingType = filters.listingType;
+      const lt = filters?.listingType;
+      const mappedLt = lt === 'venta' ? 'sale' : lt === 'renta' ? 'rent' : lt;
+      if (mappedLt) filtersJson.listingType = mappedLt;
       if (filters?.tipo && typeof filters.tipo === 'string') {
         filtersJson.propertyType = filters.tipo;
       }
