@@ -2538,42 +2538,83 @@ export type Database = {
           total_properties: number
         }[]
       }
-      get_properties_cursor: {
-        Args: {
-          p_cursor?: string
-          p_limit?: number
-          p_listing_type?: string
-          p_municipality?: string
-          p_price_max?: number
-          p_price_min?: number
-          p_state?: string
-          p_type?: string
-        }
-        Returns: {
-          address: string
-          agent_id: string
-          bathrooms: number
-          bedrooms: number
-          created_at: string
-          currency: string
-          for_rent: boolean
-          for_sale: boolean
-          id: string
-          lat: number
-          listing_type: string
-          lng: number
-          municipality: string
-          next_cursor: string
-          parking: number
-          price: number
-          rent_price: number
-          sale_price: number
-          sqft: number
-          state: string
-          title: string
-          type: Database["public"]["Enums"]["property_type"]
-        }[]
-      }
+      get_properties_cursor:
+        | {
+            Args: {
+              p_cursor?: string
+              p_limit?: number
+              p_listing_type?: string
+              p_municipality?: string
+              p_price_max?: number
+              p_price_min?: number
+              p_state?: string
+              p_type?: string
+            }
+            Returns: {
+              address: string
+              agent_id: string
+              amenities: Json
+              bathrooms: number
+              bedrooms: number
+              colonia: string
+              created_at: string
+              currency: string
+              description: string
+              for_rent: boolean
+              for_sale: boolean
+              id: string
+              lat: number
+              listing_type: string
+              lng: number
+              lot_size: number
+              municipality: string
+              parking: number
+              price: number
+              rent_price: number
+              sale_price: number
+              sqft: number
+              state: string
+              title: string
+              type: string
+              video_url: string
+            }[]
+          }
+        | {
+            Args: {
+              p_cursor?: string
+              p_limit?: number
+              p_listing_type?: string
+              p_municipality?: string
+              p_price_max?: number
+              p_price_min?: number
+              p_state?: string
+              p_type?: string
+            }
+            Returns: {
+              address: string
+              agent_id: string
+              bathrooms: number
+              bedrooms: number
+              created_at: string
+              currency: string
+              for_rent: boolean
+              for_sale: boolean
+              id: string
+              lat: number
+              listing_type: string
+              lng: number
+              municipality: string
+              next_cursor: string
+              parking: number
+              price: number
+              rent_price: number
+              sale_price: number
+              sqft: number
+              state: string
+              title: string
+              type: Database["public"]["Enums"]["property_type"]
+            }[]
+          }
       get_properties_in_viewport:
         | {
             Args: {
