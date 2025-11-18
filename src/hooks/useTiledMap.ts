@@ -67,9 +67,13 @@ export const useTiledMap = (
           filtersJson.municipality = filters.municipio;
         }
         
-        const ltPref = filters?.listingType;
-        const mappedLtPref = ltPref === 'venta' ? 'sale' : ltPref === 'renta' ? 'rent' : ltPref;
-        if (mappedLtPref) filtersJson.listingType = mappedLtPref;
+        // ✅ Enviar listingType en español directamente al backend
+        if (filters?.listingType && typeof filters.listingType === 'string') {
+          const ltPref = filters.listingType.toLowerCase();
+          if (ltPref === 'venta' || ltPref === 'renta') {
+            filtersJson.listingType = ltPref;
+          }
+        }
         if (filters?.tipo && typeof filters.tipo === 'string') {
           filtersJson.propertyType = filters.tipo;
         }
@@ -126,9 +130,13 @@ export const useTiledMap = (
         filtersJson.municipality = filters.municipio;
       }
       
-      const lt = filters?.listingType;
-      const mappedLt = lt === 'venta' ? 'sale' : lt === 'renta' ? 'rent' : lt;
-      if (mappedLt) filtersJson.listingType = mappedLt;
+        // ✅ Enviar listingType en español directamente al backend
+        if (filters?.listingType && typeof filters.listingType === 'string') {
+          const lt = filters.listingType.toLowerCase();
+          if (lt === 'venta' || lt === 'renta') {
+            filtersJson.listingType = lt;
+          }
+        }
       if (filters?.tipo && typeof filters.tipo === 'string') {
         filtersJson.propertyType = filters.tipo;
       }
