@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
 import { buildPropertyFilters } from '@/utils/buildPropertyFilters';
-import BasicGoogleMap from '@/components/BasicGoogleMap';
 import Navbar from '@/components/Navbar';
 import PropertyCard from '@/components/PropertyCard';
 import { PropertyImageGallery } from '@/components/PropertyImageGallery';
