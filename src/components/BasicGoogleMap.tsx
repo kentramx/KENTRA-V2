@@ -227,12 +227,31 @@ export function BasicGoogleMap({
         await loadGoogleMaps();
         if (!mounted || !containerRef.current) return;
         
+        // 🔴 LOGGING AGRESIVO: Ver qué centro/zoom se está usando
+        console.log('🗺️ [BasicGoogleMap] Inicializando mapa con:', {
+          center,
+          zoom,
+          centerType: typeof center,
+          centerLat: center?.lat,
+          centerLng: center?.lng
+        });
+
         mapRef.current = new google.maps.Map(containerRef.current, {
           center,
           zoom,
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
+          // 🔴 FORZAR restricción a México
+          restriction: {
+            latLngBounds: {
+              north: 32.72,  // Frontera norte de México
+              south: 14.53,  // Frontera sur de México
+              west: -118.40, // Frontera oeste de México
+              east: -86.70,  // Frontera este de México
+            },
+            strictBounds: false, // Permitir zoom out pero mantener centro
+          },
         });
 
         // Setup bounds changed listener with debounce
@@ -252,6 +271,18 @@ export function BasicGoogleMap({
               if (bounds && zoom) {
                 const ne = bounds.getNorthEast();
                 const sw = bounds.getSouthWest();
+                
+                // 🔴 LOGGING AGRESIVO: Ver qué bounds se están enviando
+                console.log('🗺️ [BasicGoogleMap] Bounds cambiados:', {
+                  zoom,
+                  minLng: sw.lng().toFixed(4),
+                  maxLng: ne.lng().toFixed(4),
+                  minLat: sw.lat().toFixed(4),
+                  maxLat: ne.lat().toFixed(4),
+                  centerLng: ((sw.lng() + ne.lng()) / 2).toFixed(4),
+                  centerLat: ((sw.lat() + ne.lat()) / 2).toFixed(4),
+                });
+                
                 onBoundsChanged({
                   minLng: sw.lng(),
                   minLat: sw.lat(),
