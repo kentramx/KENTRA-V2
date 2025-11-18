@@ -354,8 +354,8 @@ export function BasicGoogleMap({
     const showShortPriceLabel = zoom >= 11 && zoom < 14;
     const hidePriceLabel = zoom < 11;
     
-    // ✅ FASE 1: Clustering activo hasta zoom 15 (antes 18)
-    const clusteringActive = enableClustering && zoom < 15;
+    // ✅ Clustering activo solo hasta zoom 11 (alineado con backend)
+    const clusteringActive = enableClustering && zoom < 11;
 
     const bounds = new google.maps.LatLngBounds();
     
