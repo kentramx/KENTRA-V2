@@ -36,41 +36,31 @@ function createCustomPropertyOverlay() {
 
     onAdd() {
       const div = document.createElement('div');
+      div.className = 'marker-price-label';
       div.style.position = 'absolute';
       div.style.cursor = 'pointer';
       div.style.userSelect = 'none';
-      div.style.background = 'transparent';
+      div.style.transform = 'translate(-50%, -50%)';
+      div.style.transition = 'all 0.2s ease';
+      div.style.zIndex = '1';
       
-      // Contenedor para centrar todo
-      div.style.transform = 'translate(-50%, -100%)';
-      
-      // Crear el contenido: precio arriba, dot abajo
-      div.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; background: transparent;">
-          ${this.priceText ? `
-            <div style="
-              background: white;
-              padding: 4px 8px;
-              border-radius: 4px;
-              font-size: 13px;
-              font-weight: 600;
-              color: #111827;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-              white-space: nowrap;
-              border: 1px solid rgba(0,0,0,0.1);
-            ">${this.priceText}</div>
-          ` : ''}
-          <div style="
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: #e0332d;
-            border: 3px solid white;
-            box-shadow: 0 2px 8px rgba(224, 51, 45, 0.4);
+      // Pastilla estilo Zillow: blanca con precio dentro
+      if (this.priceText) {
+        div.innerHTML = `
+          <div class="price-pill" style="
+            background: white;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #111827;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            white-space: nowrap;
+            border: 1px solid rgba(0,0,0,0.08);
             transition: all 0.2s ease;
-          "></div>
-        </div>
-      `;
+          ">${this.priceText}</div>
+        `;
+      }
 
       // Event listeners
       div.addEventListener('click', () => this.onClick(this.propertyId));
@@ -117,20 +107,26 @@ function createCustomPropertyOverlay() {
     private updateStyle() {
       if (!this.containerDiv) return;
       
-      const wrapper = this.containerDiv.firstElementChild as HTMLElement | null;
-      const dot = wrapper?.lastElementChild as HTMLElement | null;
-      if (dot) {
-        if (this.isHovered) {
-          dot.style.background = '#b8281f';
-          dot.style.transform = 'scale(1.15)';
-          dot.style.boxShadow = '0 3px 10px rgba(184, 40, 31, 0.5)';
-          dot.style.transition = 'all 0.2s ease';
-        } else {
-          dot.style.background = '#e0332d';
-          dot.style.transform = 'scale(1)';
-          dot.style.boxShadow = '0 2px 8px rgba(224, 51, 45, 0.4)';
-          dot.style.transition = 'all 0.2s ease';
+      const pill = this.containerDiv.querySelector('.price-pill') as HTMLDivElement;
+
+      if (this.isHovered) {
+        // Hover: invertir colores (negro con texto blanco) y elevar z-index
+        if (pill) {
+          pill.style.background = '#111827';
+          pill.style.color = 'white';
+          pill.style.transform = 'scale(1.08)';
+          pill.style.boxShadow = '0 4px 16px rgba(0,0,0,0.35)';
         }
+        this.containerDiv.style.zIndex = '999';
+      } else {
+        // Normal: blanco con texto negro
+        if (pill) {
+          pill.style.background = 'white';
+          pill.style.color = '#111827';
+          pill.style.transform = 'scale(1)';
+          pill.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+        }
+        this.containerDiv.style.zIndex = '1';
       }
     }
 
@@ -198,20 +194,20 @@ export function BasicGoogleMap({
   const [currentZoom, setCurrentZoom] = useState<number | null>(null);
   const { formatPrice } = useCurrencyConversion();
 
-  // Helper para formatear precio abreviado según zoom
-  const formatShortPrice = (price: number, currency: string = 'MXN') => {
-    const symbol = currency === 'MXN' ? '$' : '$';
+  // ✅ Formatear precios de forma corta estilo Zillow (k para miles, M para millones)
+  const formatShortPrice = (price: number, currency: 'MXN' | 'USD'): string => {
+    const symbol = currency === 'USD' ? '$' : '$';
     
     if (price >= 1_000_000) {
-      const millions = price / 1_000_000;
-      return `${symbol}${millions.toFixed(1)}M`;
+      const millions = (price / 1_000_000).toFixed(1);
+      return `${symbol}${millions}M`;
     } else if (price >= 1_000) {
-      const thousands = price / 1_000;
-      return `${symbol}${thousands.toFixed(0)}k`;
-    } else {
-      return `${symbol}${price}`;
+      const thousands = Math.round(price / 1_000);
+      return `${symbol}${thousands}k`;
     }
+    return `${symbol}${price.toLocaleString()}`;
   };
+
 
   // Mantener callbacks estables sin re-crear marcadores
   const onMarkerClickRef = useRef<((id: string) => void) | undefined>(onMarkerClick);
@@ -424,21 +420,57 @@ export function BasicGoogleMap({
           // ✅ FASE 4: Métricas de clustering
           const startTime = performance.now();
           
+          // ✅ Renderer personalizado para clusters con color Kentra
+          const customRenderer = {
+            render: ({ count, position }: { count: number; position: google.maps.LatLng }) => {
+              const baseSize = 40;
+              const size = Math.min(baseSize + Math.log10(count) * 10, 70);
+              
+              const svg = `
+                <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" 
+                    fill="hsl(var(--primary))" 
+                    stroke="white" 
+                    stroke-width="3" 
+                    opacity="0.95"/>
+                  <text x="${size/2}" y="${size/2}" 
+                    text-anchor="middle" 
+                    dominant-baseline="central"
+                    fill="white" 
+                    font-size="${size/3}"
+                    font-weight="700"
+                    font-family="system-ui, -apple-system, sans-serif">
+                    ${count}
+                  </text>
+                </svg>
+              `;
+
+              return new google.maps.Marker({
+                position,
+                icon: {
+                  url: `data:image/svg+xml;base64,${btoa(svg)}`,
+                  scaledSize: new google.maps.Size(size, size),
+                  anchor: new google.maps.Point(size / 2, size / 2),
+                },
+                zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+              });
+            },
+          };
+
           clustererRef.current = new MarkerClusterer({
             map: mapRef.current,
             markers: markerArray,
             algorithm: new GridAlgorithm({ 
-              maxZoom: 15,        // ✅ FASE 2: Reducido de 18 a 15
-              gridSize: 60,       // ✅ FASE 4: Más agresivo (antes 80) para agrupar más rápido
-              maxDistance: 30000, // ✅ FASE 4: Reducido de 40000 a 30000 para clusters más compactos
+              maxZoom: 15,
+              gridSize: 60,
+              maxDistance: 30000,
             }),
             onClusterClick: (_, cluster, map) => {
-              // ✅ FASE 4: Al hacer clic en cluster, zoom in suave
               map.setCenter(cluster.position);
               map.setZoom(Math.min((map.getZoom() || 5) + 3, 15));
             },
-            renderer: {
-              render: ({ count, position }) => {
+            renderer: customRenderer,
+          });
                 // Mejorar escala y colores para densidades altas
                 let color: string;
                 let scale: number;
