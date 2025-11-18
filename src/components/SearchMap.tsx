@@ -216,7 +216,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
             <div className="font-mono">Clusters: {clusters?.length ?? 0}</div>
             {properties && properties.length >= MAX_PROPERTIES_PER_TILE && (
               <div className="mt-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
-                CAP 5K aplicado
+                CAP 1K aplicado
               </div>
             )}
           </div>
