@@ -193,6 +193,11 @@ export const SearchMap: React.FC<SearchMapProps> = ({
 
   return (
     <div className="relative w-full" style={{ height }}>
+      {/* 🔴 CAMBIO VISUAL FORZADO PARA VERIFICAR CACHÉ */}
+      <div className="absolute top-2 left-2 z-[9999] bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-lg shadow-xl border-4 border-red-800">
+        🔴 MAPA ACTUALIZADO v2 - BACKEND FUNCIONA
+      </div>
+      
       <BasicGoogleMap
         center={mapCenter}
         zoom={mapZoom}
