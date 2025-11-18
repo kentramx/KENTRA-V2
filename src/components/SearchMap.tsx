@@ -207,21 +207,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         onMapError={handleMapError}
       />
 
-      {/* 📊 Panel de debug (solo en desarrollo) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="pointer-events-none absolute top-3 right-3">
-          <div className="pointer-events-auto rounded-md bg-background/90 px-3 py-2 text-[11px] shadow-lg backdrop-blur-sm">
-            <div className="font-mono">Zoom: {viewportBounds?.zoom ?? '-'}</div>
-            <div className="font-mono">Props: {properties?.length ?? 0}</div>
-            <div className="font-mono">Clusters: {clusters?.length ?? 0}</div>
-            {properties && properties.length >= MAX_PROPERTIES_PER_TILE && (
-              <div className="mt-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
-                CAP 1K aplicado
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Debug overlay eliminado para producción */}
 
       {/* 🔄 Overlay de carga */}
       {isLoading && viewportBounds && (
