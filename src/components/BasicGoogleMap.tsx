@@ -11,6 +11,8 @@ export interface MapMarker {
   title?: string;
   price?: number;
   currency?: 'MXN' | 'USD';
+  isCluster?: boolean;
+  propertyCount?: number;
 }
 
 interface BasicGoogleMapProps {
@@ -21,6 +23,7 @@ interface BasicGoogleMapProps {
   className?: string;
   onReady?: (map: google.maps.Map) => void;
   enableClustering?: boolean;
+  isServerClustered?: boolean;
   onMarkerClick?: (id: string) => void;
   onFavoriteClick?: (id: string) => void;
   disableAutoFit?: boolean;
@@ -46,6 +49,7 @@ export function BasicGoogleMap({
   className,
   onReady,
   enableClustering = true,
+  isServerClustered = false,
   onMarkerClick,
   disableAutoFit = false,
   onBoundsChanged,
@@ -158,13 +162,17 @@ export function BasicGoogleMap({
     return () => { mounted = false; };
   }, [center.lat, center.lng, zoom, onReady, onBoundsChanged, onMapError]);
 
-  // ✅ Renderizar pastillas de precios estilo Zillow
+  // ✅ Renderizar marcadores: Server Clusters o Properties
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !window.google) return;
 
-    const renderStartTime = performance.now();
-    console.log('🎯 [BasicGoogleMap] Renderizando pastillas de precios:', { count: markers.length });
+    console.log('🎯 [BasicGoogleMap] Renderizando marcadores:', { 
+      count: markers.length,
+      isServerClustered,
+      enableClustering,
+      currentZoom
+    });
 
     // Limpiar marcadores existentes
     markerRefs.current.forEach(marker => marker.setMap(null));
@@ -179,11 +187,72 @@ export function BasicGoogleMap({
       infoWindowRef.current.close();
     }
 
-    // Crear bounds para auto-fit
+    if (markers.length === 0) return;
+
+    // ✅ MODO 1: Server Clusters - Renderizar círculos grandes con números
+    if (isServerClustered) {
+      console.log('🔵 [BasicGoogleMap] Modo Server Clusters:', markers.length);
+      
+      markers.forEach(m => {
+        const lat = Number(m.lat);
+        const lng = Number(m.lng);
+        const position = new google.maps.LatLng(lat, lng);
+        const count = m.propertyCount || 0;
+        
+        // Tamaño dinámico basado en count
+        const baseSize = 50;
+        const size = Math.min(baseSize + Math.log10(count) * 15, 90);
+        
+        const svg = `
+          <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" 
+              fill="#000000" 
+              stroke="white" 
+              stroke-width="3" 
+              opacity="0.95"/>
+            <text x="${size/2}" y="${size/2 + 6}" 
+              text-anchor="middle" 
+              font-family="system-ui, -apple-system, sans-serif" 
+              font-size="18" 
+              font-weight="700" 
+              fill="white">
+              ${count.toLocaleString()}
+            </text>
+          </svg>
+        `;
+        
+        const marker = new google.maps.Marker({
+          position,
+          map,
+          icon: {
+            url: `data:image/svg+xml;base64,${btoa(svg)}`,
+            scaledSize: new google.maps.Size(size, size),
+            anchor: new google.maps.Point(size/2, size/2),
+          },
+          title: `${count} propiedades`,
+          optimized: false,
+        });
+
+        // Hacer zoom in cuando se hace clic en un cluster del servidor
+        marker.addListener('click', () => {
+          if (map) {
+            map.setCenter(position);
+            const currentZoom = map.getZoom() || 7;
+            map.setZoom(currentZoom + 2);
+          }
+        });
+
+        markerRefs.current.set(m.id, marker);
+      });
+
+      return; // No usar clustering del cliente
+    }
+
+    // ✅ MODO 2: Properties - Crear marcadores con pastillas de precios
+    console.log('🏠 [BasicGoogleMap] Modo Properties:', markers.length);
+    
     const bounds = new google.maps.LatLngBounds();
     let validMarkersCount = 0;
-
-    // Crear marcadores con pastillas de precios
     const newMarkers: google.maps.Marker[] = [];
     
     for (const m of markers) {
@@ -246,8 +315,8 @@ export function BasicGoogleMap({
       valid: validMarkersCount 
     });
 
-    // Aplicar clustering si está habilitado
-    if (enableClustering && newMarkers.length > 0) {
+    // Aplicar clustering del cliente solo si está habilitado (propiedades individuales)
+    if (enableClustering && !isServerClustered && newMarkers.length > 0) {
       try {
         // Renderer personalizado para clusters con color negro (marca Kentra)
         const customRenderer = {
@@ -309,30 +378,12 @@ export function BasicGoogleMap({
       }
     }
 
-    // Auto-fit al bounds si está habilitado
+    // Auto-fit bounds si es necesario
     if (!disableAutoFit && validMarkersCount > 0 && !bounds.isEmpty()) {
       map.fitBounds(bounds);
-      
-      const listener = google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
-        const currentZoom = map.getZoom();
-        if (currentZoom && currentZoom > 15) {
-          map.setZoom(15);
-        }
-      });
-
-      setTimeout(() => {
-        google.maps.event.removeListener(listener);
-      }, 100);
     }
 
-    const renderTime = performance.now() - renderStartTime;
-    monitoring.debug(`[BasicGoogleMap] Renderizado completo`, { 
-      markersCount: validMarkersCount,
-      renderTime: `${renderTime.toFixed(2)}ms`,
-      clustering: enableClustering 
-    });
-
-  }, [markers, enableClustering, disableAutoFit]);
+  }, [markers, currentZoom, enableClustering, isServerClustered, disableAutoFit]);
 
   if (error) {
     return (
