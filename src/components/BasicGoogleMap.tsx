@@ -187,8 +187,6 @@ export function BasicGoogleMap({
     const newMarkers: google.maps.Marker[] = [];
     
     for (const m of markers) {
-      console.log('🔴 INTENTANDO DIBUJAR:', m.id, { lat: m.lat, lng: m.lng });
-      
       const lat = Number(m.lat);
       const lng = Number(m.lng);
       const position = new google.maps.LatLng(lat, lng);

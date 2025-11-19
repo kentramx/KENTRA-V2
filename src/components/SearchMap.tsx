@@ -64,6 +64,9 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   }
 
   const { properties = [], clusters = [] } = viewportData || {};
+  
+  // 🔴 LOG CRÍTICO: Verificar cuántos datos llegaron del backend
+  console.log('🔴 COUNT CHECK:', { properties: properties.length, clusters: clusters.length });
 
   // ✅ Handler para errores críticos del mapa (Google Maps no carga)
   const handleMapError = useCallback((error: Error) => {
