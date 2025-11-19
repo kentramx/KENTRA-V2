@@ -360,7 +360,7 @@ export function BasicGoogleMap({
           map,
           markers: newMarkers,
           algorithm: new GridAlgorithm({ 
-            maxZoom: 11,
+            maxZoom: 10,
             gridSize: 40,
             maxDistance: 30000,
           }),
