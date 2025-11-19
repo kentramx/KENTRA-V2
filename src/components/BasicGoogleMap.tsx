@@ -292,7 +292,7 @@ export function BasicGoogleMap({
           markers: newMarkers,
           algorithm: new GridAlgorithm({ 
             maxZoom: 11,
-            gridSize: 60,
+            gridSize: 40,
             maxDistance: 30000,
           }),
           onClusterClick: (_, cluster, map) => {
