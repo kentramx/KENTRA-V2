@@ -58,6 +58,7 @@ export function BasicGoogleMap({
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number | null>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   // Mantener callbacks estables sin re-crear marcadores
   const onMarkerClickRef = useRef<((id: string) => void) | undefined>(onMarkerClick);
@@ -143,6 +144,7 @@ export function BasicGoogleMap({
 
         setError(null);
         onReady?.(mapRef.current);
+        setMapReady(true);
         
         monitoring.debug('[BasicGoogleMap] Mapa inicializado correctamente');
       } catch (err) {
@@ -161,7 +163,7 @@ export function BasicGoogleMap({
   // ✅ Renderizar pastillas de precios estilo Zillow
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !window.google) return;
+    if (!map || !window.google || !mapReady) return;
 
     const renderStartTime = performance.now();
     console.log('🎯 [BasicGoogleMap] Renderizando pastillas de precios:', { count: markers.length });
@@ -332,7 +334,7 @@ export function BasicGoogleMap({
       clustering: enableClustering 
     });
 
-  }, [markers, enableClustering, disableAutoFit]);
+  }, [markers, enableClustering, disableAutoFit, mapReady]);
 
   if (error) {
     return (
