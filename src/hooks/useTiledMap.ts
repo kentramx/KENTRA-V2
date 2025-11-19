@@ -22,7 +22,7 @@ export interface ViewportBounds {
 }
 
 // 🔒 Límites de seguridad para escalabilidad (optimizado estilo Zillow)
-export const MIN_ZOOM_FOR_TILES = 3;          // No hacer queries cuando el zoom está demasiado lejos (país, mundo completo)
+export const MIN_ZOOM_FOR_TILES = 10;         // A partir de zoom 10, cargar properties individuales (pines)
 export const MAX_PROPERTIES_PER_TILE = 1000;  // ✅ Límite optimizado: 1000 marcadores para rendimiento fluido (-80% DOM)
 
 export const useTiledMap = (
