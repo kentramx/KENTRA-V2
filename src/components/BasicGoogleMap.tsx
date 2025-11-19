@@ -2,246 +2,66 @@
 import { useEffect, useRef, useState } from 'react';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
 import { MarkerClusterer, GridAlgorithm } from '@googlemaps/markerclusterer';
-import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { monitoring } from '@/lib/monitoring';
 
-// ✅ Factory function para crear la clase CustomPropertyOverlay después de que google esté disponible
-function createCustomPropertyOverlay() {
-  return class CustomPropertyOverlay extends google.maps.OverlayView {
-    private position: google.maps.LatLng;
-    private containerDiv: HTMLDivElement | null = null;
-    private priceText: string;
-    private propertyId: string;
-    private isHovered: boolean = false;
-    private onClick: (id: string) => void;
-    private onMouseOver: (id: string) => void;
-    private onMouseOut: () => void;
-
-    constructor(
-      position: google.maps.LatLng,
-      priceText: string,
-      propertyId: string,
-      onClick: (id: string) => void,
-      onMouseOver: (id: string) => void,
-      onMouseOut: () => void
-    ) {
-      super();
-      this.position = position;
-      this.priceText = priceText;
-      this.propertyId = propertyId;
-      this.onClick = onClick;
-      this.onMouseOver = onMouseOver;
-      this.onMouseOut = onMouseOut;
-    }
-
-    onAdd() {
-      const div = document.createElement('div');
-      div.className = 'marker-price-label';
-      div.style.position = 'absolute';
-      div.style.cursor = 'pointer';
-      div.style.userSelect = 'none';
-      div.style.transform = 'translate(-50%, -50%)';
-      div.style.transition = 'all 0.2s ease';
-      div.style.zIndex = '1';
-      
-      // 🔴 LÓGICA CORREGIDA: Renderizar algo SIEMPRE
-      if (this.priceText) {
-        // Si hay precio, pastilla estilo Zillow blanca con precio
-        div.innerHTML = `
-          <div class="price-pill" style="
-            background: white;
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 14px;
-            font-weight: 700;
-            color: #111827;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            white-space: nowrap;
-            border: 1px solid rgba(0,0,0,0.08);
-            transition: all 0.2s ease;
-          ">${this.priceText}</div>
-        `;
-      } else {
-        // Si NO hay precio, marcador circular simple (punto morado)
-        div.innerHTML = `
-          <div class="price-pill" style="
-            background: hsl(var(--primary));
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            border: 2px solid white;
-            transition: all 0.2s ease;
-          "></div>
-        `;
-      }
-
-      // Event listeners
-      div.addEventListener('click', () => this.onClick(this.propertyId));
-      div.addEventListener('mouseover', () => {
-        this.isHovered = true;
-        this.onMouseOver(this.propertyId);
-        this.updateStyle();
-      });
-      div.addEventListener('mouseout', () => {
-        this.isHovered = false;
-        this.onMouseOut();
-        this.updateStyle();
-      });
-
-      this.containerDiv = div;
-      const panes = this.getPanes();
-      panes?.overlayMouseTarget.appendChild(div);
-    }
-
-    draw() {
-      if (!this.containerDiv) return;
-      
-      const overlayProjection = this.getProjection();
-      const pos = overlayProjection.fromLatLngToDivPixel(this.position);
-      
-      if (pos) {
-        this.containerDiv.style.left = pos.x + 'px';
-        this.containerDiv.style.top = pos.y + 'px';
-      }
-    }
-
-    onRemove() {
-      if (this.containerDiv) {
-        this.containerDiv.parentNode?.removeChild(this.containerDiv);
-        this.containerDiv = null;
-      }
-    }
-
-    setHovered(hovered: boolean) {
-      this.isHovered = hovered;
-      this.updateStyle();
-    }
-
-    private updateStyle() {
-      if (!this.containerDiv) return;
-      
-      const pill = this.containerDiv.querySelector('.price-pill') as HTMLDivElement;
-      if (!pill) return;
-
-      if (this.isHovered) {
-        // Hover: elevar z-index
-        this.containerDiv.style.zIndex = '999';
-        
-        if (this.priceText) {
-          // Pastilla con precio: invertir colores (negro con texto blanco)
-          pill.style.background = '#111827';
-          pill.style.color = 'white';
-          pill.style.transform = 'scale(1.08)';
-          pill.style.boxShadow = '0 4px 16px rgba(0,0,0,0.35)';
-        } else {
-          // Punto circular sin precio: escalar y cambiar color
-          pill.style.transform = 'scale(1.5)';
-          pill.style.boxShadow = '0 3px 10px rgba(0,0,0,0.5)';
-        }
-      } else {
-        // Normal: restaurar estado
-        this.containerDiv.style.zIndex = '1';
-        
-        if (this.priceText) {
-          // Pastilla con precio: blanco con texto negro
-          pill.style.background = 'white';
-          pill.style.color = '#111827';
-          pill.style.transform = 'scale(1)';
-          pill.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
-        } else {
-          // Punto circular sin precio: restaurar tamaño
-          pill.style.transform = 'scale(1)';
-          pill.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-        }
-      }
-    }
-
-    getPosition() {
-      return this.position;
-    }
-  };
-}
-
-type LatLng = { lat: number; lng: number };
-type BasicMarker = LatLng & { 
-  id?: string;
+export interface MapMarker {
+  id: string;
+  lat: number;
+  lng: number;
   title?: string;
   price?: number;
   currency?: 'MXN' | 'USD';
-  bedrooms?: number | null;
-  bathrooms?: number | null;
-  images?: { url: string; position: number }[];
-  listing_type?: 'venta' | 'renta';
-  address?: string;
-};
+}
 
 interface BasicGoogleMapProps {
-  center?: LatLng;
+  center?: { lat: number; lng: number };
   zoom?: number;
-  markers?: BasicMarker[];
-  height?: number | string;
+  markers?: MapMarker[];
+  height?: string;
   className?: string;
   onReady?: (map: google.maps.Map) => void;
   enableClustering?: boolean;
-  onMarkerClick?: (markerId: string) => void;
-  onFavoriteClick?: (markerId: string) => void;
+  onMarkerClick?: (id: string) => void;
+  onFavoriteClick?: (id: string) => void;
   disableAutoFit?: boolean;
   hoveredMarkerId?: string | null;
   hoveredPropertyCoords?: { lat: number; lng: number } | null;
-  onMarkerHover?: (markerId: string | null) => void;
-  onBoundsChanged?: (bounds: { minLng: number; minLat: number; maxLng: number; maxLat: number; zoom: number }) => void;
-  onMapError?: (error: string) => void;
+  onMarkerHover?: (id: string | null) => void;
+  onBoundsChanged?: (bounds: {
+    minLat: number;
+    maxLat: number;
+    minLng: number;
+    maxLng: number;
+    zoom: number;
+    center: { lat: number; lng: number };
+  }) => void;
+  onMapError?: (error: Error) => void;
 }
 
 export function BasicGoogleMap({
-  center = { lat: 19.4326, lng: -99.1332 },
-  zoom = 12,
+  center = { lat: 23.6345, lng: -102.5528 },
+  zoom = 5,
   markers = [],
   height = 'calc(100vh - 8rem)',
   className,
   onReady,
   enableClustering = true,
   onMarkerClick,
-  onFavoriteClick,
   disableAutoFit = false,
-  hoveredMarkerId = null,
-  hoveredPropertyCoords = null,
-  onMarkerHover,
   onBoundsChanged,
   onMapError,
 }: BasicGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const overlayRefs = useRef<Map<string, google.maps.OverlayView & { setHovered: (hovered: boolean) => void }>>(new Map());
-  const invisibleMarkerRefs = useRef<Map<string, google.maps.Marker>>(new Map());
+  const markerRefs = useRef<Map<string, google.maps.Marker>>(new Map());
   const clustererRef = useRef<MarkerClusterer | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number | null>(null);
-  const { formatPrice } = useCurrencyConversion();
-
-  // ✅ Formatear precios de forma corta estilo Zillow (k para miles, M para millones)
-  const formatShortPrice = (price: number, currency: 'MXN' | 'USD'): string => {
-    const symbol = currency === 'USD' ? '$' : '$';
-    
-    if (price >= 1_000_000) {
-      const millions = (price / 1_000_000).toFixed(1);
-      return `${symbol}${millions}M`;
-    } else if (price >= 1_000) {
-      const thousands = Math.round(price / 1_000);
-      return `${symbol}${thousands}k`;
-    }
-    return `${symbol}${price.toLocaleString()}`;
-  };
 
   // Mantener callbacks estables sin re-crear marcadores
   const onMarkerClickRef = useRef<((id: string) => void) | undefined>(onMarkerClick);
-  const onFavoriteClickRef = useRef<((id: string) => void) | undefined>(onFavoriteClick);
-  const onMarkerHoverRef = useRef<((id: string | null) => void) | undefined>(onMarkerHover);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
-  useEffect(() => { onFavoriteClickRef.current = onFavoriteClick; }, [onFavoriteClick]);
-  useEffect(() => { onMarkerHoverRef.current = onMarkerHover; }, [onMarkerHover]);
 
   // ✅ Inicializar mapa con Google Maps API
   useEffect(() => {
@@ -254,13 +74,10 @@ export function BasicGoogleMap({
         await loadGoogleMaps();
         if (!mounted || !containerRef.current) return;
         
-        // 🔴 LOGGING AGRESIVO: Ver qué centro/zoom se está usando
-        console.log('🗺️ [BasicGoogleMap] Inicializando mapa con:', {
+        console.log('🗺️ [BasicGoogleMap] Inicializando mapa con marcadores nativos:', {
           center,
           zoom,
-          centerType: typeof center,
-          centerLat: center?.lat,
-          centerLng: center?.lng
+          totalMarkers: markers.length
         });
 
         mapRef.current = new google.maps.Map(containerRef.current, {
@@ -269,15 +86,14 @@ export function BasicGoogleMap({
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
-          // 🔴 FORZAR restricción a México
           restriction: {
             latLngBounds: {
-              north: 32.72,  // Frontera norte de México
-              south: 14.53,  // Frontera sur de México
-              west: -118.40, // Frontera oeste de México
-              east: -86.70,  // Frontera este de México
+              north: 32.72,
+              south: 14.53,
+              west: -118.40,
+              east: -86.70,
             },
-            strictBounds: false, // Permitir zoom out pero mantener centro
+            strictBounds: false,
           },
         });
 
@@ -298,282 +114,217 @@ export function BasicGoogleMap({
               if (bounds && zoom) {
                 const ne = bounds.getNorthEast();
                 const sw = bounds.getSouthWest();
+                const mapCenter = mapRef.current.getCenter();
                 
-                // 🔴 LOGGING AGRESIVO: Ver qué bounds se están enviando
                 console.log('🗺️ [BasicGoogleMap] Bounds cambiados:', {
-                  zoom,
-                  minLng: sw.lng().toFixed(4),
-                  maxLng: ne.lng().toFixed(4),
-                  minLat: sw.lat().toFixed(4),
-                  maxLat: ne.lat().toFixed(4),
-                  centerLng: ((sw.lng() + ne.lng()) / 2).toFixed(4),
-                  centerLat: ((sw.lat() + ne.lat()) / 2).toFixed(4),
-                });
-                
-                onBoundsChanged({
                   minLng: sw.lng(),
                   minLat: sw.lat(),
                   maxLng: ne.lng(),
                   maxLat: ne.lat(),
-                  zoom: zoom,
+                  zoom,
+                  center: { lat: mapCenter?.lat(), lng: mapCenter?.lng() }
+                });
+                
+                onBoundsChanged({
+                  minLat: sw.lat(),
+                  maxLat: ne.lat(),
+                  minLng: sw.lng(),
+                  maxLng: ne.lng(),
+                  zoom,
+                  center: { 
+                    lat: mapCenter?.lat() || center.lat, 
+                    lng: mapCenter?.lng() || center.lng 
+                  },
                 });
               }
-            }, 500);
+            }, 300);
           });
         }
 
-        const initialZoom = mapRef.current.getZoom();
-        if (initialZoom !== undefined) {
-          setCurrentZoom(initialZoom);
-        }
-
-        if (onReady && mapRef.current) onReady(mapRef.current);
-      } catch (e: any) {
-        const errorMessage = e?.message || 'No se pudo cargar el mapa';
+        setError(null);
+        onReady?.(mapRef.current);
+        
+        monitoring.debug('[BasicGoogleMap] Mapa inicializado correctamente');
+      } catch (err) {
+        console.error('❌ [BasicGoogleMap] Error al inicializar:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
         setError(errorMessage);
-        onMapError?.(errorMessage);
+        onMapError?.(err instanceof Error ? err : new Error(errorMessage));
+        monitoring.error('[BasicGoogleMap] Error al inicializar mapa', { error: err });
       }
     };
-
+    
     init();
+    return () => { mounted = false; };
+  }, [center.lat, center.lng, zoom, onReady, onBoundsChanged, onMapError]);
 
-    return () => {
-      mounted = false;
-      if (infoWindowRef.current) {
-        infoWindowRef.current.close();
-        infoWindowRef.current = null;
-      }
-      if (clustererRef.current) {
-        try {
-          clustererRef.current.clearMarkers();
-        } catch (e) {
-          monitoring.debug('Error clearing clusterer on unmount', { error: e });
-        }
-        clustererRef.current = null;
-      }
-      overlayRefs.current.forEach(o => o.setMap(null));
-      overlayRefs.current.clear();
-      invisibleMarkerRefs.current.forEach(m => m.setMap(null));
-      invisibleMarkerRefs.current.clear();
-      mapRef.current = null;
-    };
-  }, []);
-
+  // ✅ Renderizar marcadores nativos de Google Maps (globos rojos estándar)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || typeof google === 'undefined') return;
+    if (!map || !window.google) return;
 
-    const zoom = currentZoom ?? map.getZoom() ?? 12;
-    const CustomPropertyOverlay = createCustomPropertyOverlay();
     const renderStartTime = performance.now();
+    console.log('🎯 [BasicGoogleMap] Renderizando marcadores nativos:', { count: markers.length });
 
-    // Limpiar clusterer anterior
+    // Limpiar marcadores existentes
+    markerRefs.current.forEach(marker => marker.setMap(null));
+    markerRefs.current.clear();
+
     if (clustererRef.current) {
-      try {
-        clustererRef.current.clearMarkers();
-      } catch (e) {
-        monitoring.debug('Error clearing clusterer', { error: e });
-      }
+      clustererRef.current.clearMarkers();
       clustererRef.current = null;
     }
 
-    // Limpiar overlays y marcadores invisibles
-    overlayRefs.current.forEach(o => o.setMap(null));
-    overlayRefs.current.clear();
-    invisibleMarkerRefs.current.forEach(m => m.setMap(null));
-    invisibleMarkerRefs.current.clear();
-
-    if (!markers || markers.length === 0) {
-      monitoring.debug('[BasicGoogleMap] Sin marcadores para renderizar');
-      return;
+    if (infoWindowRef.current) {
+      infoWindowRef.current.close();
     }
 
-    const showFullPriceLabel = zoom >= 14;
-    const showShortPriceLabel = zoom >= 11 && zoom < 14;
-    const hidePriceLabel = zoom < 11;
-    const clusteringActive = enableClustering && zoom < 12;
-
+    // Crear bounds para auto-fit
     const bounds = new google.maps.LatLngBounds();
-    
-    if (!infoWindowRef.current) {
-      infoWindowRef.current = new google.maps.InfoWindow();
-    }
+    let validMarkersCount = 0;
+
+    // Crear marcadores nativos de Google Maps
+    const newMarkers: google.maps.Marker[] = [];
     
     for (const m of markers) {
-      if (!m.id || m.lat == null || m.lng == null || isNaN(Number(m.lat)) || isNaN(Number(m.lng))) continue;
+      if (!m.id || m.lat == null || m.lng == null || isNaN(Number(m.lat)) || isNaN(Number(m.lng))) {
+        continue;
+      }
       
       const lat = Number(m.lat);
       const lng = Number(m.lng);
       const position = new google.maps.LatLng(lat, lng);
       
-      if (clusteringActive) {
-        const invisibleMarker = new google.maps.Marker({
-          position,
-          map,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 0,
-            fillOpacity: 0,
-            strokeOpacity: 0,
-          },
-          optimized: false,
+      // ✅ Crear marcador nativo de Google Maps (globo rojo estándar)
+      const marker = new google.maps.Marker({
+        position,
+        map,
+        title: m.title || `Propiedad ${m.id}`,
+        // Sin icon personalizado = usa el globo rojo estándar de Google
+        optimized: true,
+      });
+
+      // Event listener para clic
+      if (onMarkerClickRef.current) {
+        marker.addListener('click', () => {
+          onMarkerClickRef.current?.(m.id);
         });
-        invisibleMarkerRefs.current.set(m.id, invisibleMarker);
-      } else {
-        let priceText = '';
-        if (!hidePriceLabel && m.price) {
-          if (showFullPriceLabel) {
-            priceText = formatPrice(m.price, m.currency || 'MXN');
-          } else if (showShortPriceLabel) {
-            priceText = formatShortPrice(m.price, m.currency || 'MXN');
-          }
-        }
-
-        const overlay = new CustomPropertyOverlay(
-          position,
-          priceText,
-          m.id,
-          (id) => onMarkerClickRef.current?.(id),
-          (id) => onMarkerHoverRef.current?.(id),
-          () => onMarkerHoverRef.current?.(null)
-        );
-        overlay.setMap(map);
-        overlayRefs.current.set(m.id, overlay);
       }
-      
+
+      markerRefs.current.set(m.id, marker);
+      newMarkers.push(marker);
       bounds.extend(position);
+      validMarkersCount++;
     }
-    
-    const markerArray = Array.from(invisibleMarkerRefs.current.values());
 
-    if (clusteringActive && markerArray.length > 0) {
-      const createClusterer = () => {
-        if (!mapRef.current) return;
+    console.log('✅ [BasicGoogleMap] Marcadores nativos creados:', { 
+      total: markers.length,
+      valid: validMarkersCount 
+    });
+
+    // Aplicar clustering si está habilitado
+    if (enableClustering && newMarkers.length > 0) {
+      try {
+        // Renderer personalizado para clusters con color Kentra
+        const customRenderer = {
+          render: ({ count, position }: { count: number; position: google.maps.LatLng }) => {
+            const baseSize = 40;
+            const size = Math.min(baseSize + Math.log10(count) * 10, 70);
+            
+            const svg = `
+              <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" 
+                  fill="hsl(var(--primary))" 
+                  stroke="white" 
+                  stroke-width="3" 
+                  opacity="0.95"/>
+                <text x="${size/2}" y="${size/2}" 
+                  text-anchor="middle" 
+                  dominant-baseline="central"
+                  fill="white" 
+                  font-size="${size/3}"
+                  font-weight="700"
+                  font-family="system-ui, -apple-system, sans-serif">
+                  ${count}
+                </text>
+              </svg>
+            `;
+
+            return new google.maps.Marker({
+              position,
+              icon: {
+                url: `data:image/svg+xml;base64,${btoa(svg)}`,
+                scaledSize: new google.maps.Size(size, size),
+                anchor: new google.maps.Point(size / 2, size / 2),
+              },
+              zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+            });
+          },
+        };
+
+        clustererRef.current = new MarkerClusterer({
+          map,
+          markers: newMarkers,
+          algorithm: new GridAlgorithm({ 
+            maxZoom: 15,
+            gridSize: 60,
+            maxDistance: 30000,
+          }),
+          onClusterClick: (_, cluster, map) => {
+            map.setCenter(cluster.position);
+            map.setZoom(Math.min((map.getZoom() || 5) + 3, 15));
+          },
+          renderer: customRenderer,
+        });
         
-        try {
-          // ✅ Renderer personalizado para clusters con color Kentra
-          const customRenderer = {
-            render: ({ count, position }: { count: number; position: google.maps.LatLng }) => {
-              const baseSize = 40;
-              const size = Math.min(baseSize + Math.log10(count) * 10, 70);
-              
-              const svg = `
-                <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" 
-                    fill="hsl(var(--primary))" 
-                    stroke="white" 
-                    stroke-width="3" 
-                    opacity="0.95"/>
-                  <text x="${size/2}" y="${size/2}" 
-                    text-anchor="middle" 
-                    dominant-baseline="central"
-                    fill="white" 
-                    font-size="${size/3}"
-                    font-weight="700"
-                    font-family="system-ui, -apple-system, sans-serif">
-                    ${count}
-                  </text>
-                </svg>
-              `;
-
-              return new google.maps.Marker({
-                position,
-                icon: {
-                  url: `data:image/svg+xml;base64,${btoa(svg)}`,
-                  scaledSize: new google.maps.Size(size, size),
-                  anchor: new google.maps.Point(size / 2, size / 2),
-                },
-                zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
-              });
-            },
-          };
-
-          clustererRef.current = new MarkerClusterer({
-            map: mapRef.current,
-            markers: markerArray,
-            algorithm: new GridAlgorithm({ 
-              maxZoom: 15,
-              gridSize: 60,
-              maxDistance: 30000,
-            }),
-            onClusterClick: (_, cluster, map) => {
-              map.setCenter(cluster.position);
-              map.setZoom(Math.min((map.getZoom() || 5) + 3, 15));
-            },
-            renderer: customRenderer,
-          });
-          
-          const renderTime = performance.now() - renderStartTime;
-          monitoring.debug(`[BasicGoogleMap] Renderizado completo`, { 
-            markers: markers.length,
-            renderTime: `${renderTime.toFixed(2)}ms`,
-            zoom,
-            clustering: clusteringActive,
-          });
-        } catch (e) {
-          monitoring.error('[BasicGoogleMap] Error creating clusterer', { error: e });
-        }
-      };
-
-      requestAnimationFrame(createClusterer);
+        console.log('🎨 [BasicGoogleMap] Clustering aplicado');
+      } catch (err) {
+        console.error('❌ Error al crear clusterer:', err);
+        monitoring.error('[BasicGoogleMap] Error al crear clusterer', { error: err });
+      }
     }
 
-    if (!disableAutoFit && markers.length > 0 && !bounds.isEmpty()) {
+    // Auto-fit al bounds si está habilitado
+    if (!disableAutoFit && validMarkersCount > 0 && !bounds.isEmpty()) {
       map.fitBounds(bounds);
+      
+      const listener = google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+        const currentZoom = map.getZoom();
+        if (currentZoom && currentZoom > 15) {
+          map.setZoom(15);
+        }
+      });
+
+      setTimeout(() => {
+        google.maps.event.removeListener(listener);
+      }, 100);
     }
 
     const renderTime = performance.now() - renderStartTime;
     monitoring.debug(`[BasicGoogleMap] Renderizado completo`, { 
-      markers: markers.length,
+      markersCount: validMarkersCount,
       renderTime: `${renderTime.toFixed(2)}ms`,
-      zoom,
-      clustering: clusteringActive,
+      clustering: enableClustering 
     });
-  }, [markers, currentZoom, disableAutoFit, enableClustering, formatPrice]);
 
-  // Manejo del hover desde props
-  useEffect(() => {
-    if (!hoveredMarkerId) {
-      overlayRefs.current.forEach(o => o.setHovered(false));
-      return;
-    }
-
-    const overlay = overlayRefs.current.get(hoveredMarkerId);
-    if (overlay) {
-      overlay.setHovered(true);
-      overlayRefs.current.forEach((o, id) => {
-        if (id !== hoveredMarkerId) o.setHovered(false);
-      });
-    }
-  }, [hoveredMarkerId]);
-
-  // Centrar mapa cuando cambian las coordenadas del hover
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !hoveredPropertyCoords) return;
-
-    const { lat, lng } = hoveredPropertyCoords;
-    map.panTo({ lat, lng });
-  }, [hoveredPropertyCoords]);
+  }, [markers, enableClustering, disableAutoFit]);
 
   if (error) {
     return (
-      <div className="w-full" style={{ height }}>
-        <div className="flex items-center justify-center h-full bg-gray-100">
-          <div className="text-center p-4">
-            <p className="text-red-600 mb-2">Error al cargar el mapa</p>
-            <p className="text-sm text-gray-600">{error}</p>
-          </div>
+      <div className={`flex items-center justify-center ${className}`} style={{ height }}>
+        <div className="text-center p-4">
+          <p className="text-destructive font-medium mb-2">Error al cargar el mapa</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={className} style={{ height, width: '100%' }}>
-      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
-    </div>
+    <div 
+      ref={containerRef} 
+      className={className} 
+      style={{ height, width: '100%' }}
+    />
   );
 }
-
-export default BasicGoogleMap;

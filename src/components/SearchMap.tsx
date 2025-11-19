@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import BasicGoogleMap from '@/components/BasicGoogleMap';
+import { BasicGoogleMap } from '@/components/BasicGoogleMap';
 import { useTiledMap, ViewportBounds, MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE } from '@/hooks/useTiledMap';
 import { useAdaptiveDebounce } from '@/hooks/useAdaptiveDebounce';
 import type { MapProperty, PropertyFilters, PropertySummary } from '@/types/property';
@@ -66,7 +66,8 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   const { properties = [], clusters = [] } = viewportData || {};
 
   // ✅ Handler para errores críticos del mapa (Google Maps no carga)
-  const handleMapError = useCallback((errorMsg: string) => {
+  const handleMapError = useCallback((error: Error) => {
+    const errorMsg = error.message;
     setMapError(errorMsg);
     monitoring.error('[SearchMap] Error crítico del mapa', {
       component: 'SearchMap',
