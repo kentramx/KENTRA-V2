@@ -157,7 +157,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     return { lat: 23.6345, lng: -102.5528 };
   }, [searchCoordinates]);
 
-  const mapZoom = searchCoordinates ? 12 : 7;
+  const mapZoom = searchCoordinates ? 12 : 5;
 
   // ✅ Callback memoizado para bounds change
   const handleBoundsChange = useCallback((bounds: ViewportBounds) => {

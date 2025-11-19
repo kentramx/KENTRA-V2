@@ -58,18 +58,18 @@ export const useTiledMap = (
 
       // Prefetch cada tile vecino en background (sin bloquear)
       adjacentBounds.forEach((adjBounds) => {
-      // 🔥 Construir filtersJson con nombres que el backend espera
+        // 🔥 Construir filtersJson sin incluir campos null/undefined
         const filtersJson: Record<string, any> = {};
-        if (filters?.estado) filtersJson.estado = filters.estado;
-        if (filters?.municipio) filtersJson.municipio = filters.municipio;
+        if (filters?.estado) filtersJson.state = filters.estado;
+        if (filters?.municipio) filtersJson.municipality = filters.municipio;
         if (filters?.listingType) filtersJson.listingType = filters.listingType;
         if (filters?.tipo && typeof filters.tipo === 'string') {
-          filtersJson.tipo = filters.tipo;
+          filtersJson.propertyType = filters.tipo;
         }
-        if (filters?.precioMin) filtersJson.precioMin = filters.precioMin;
-        if (filters?.precioMax) filtersJson.precioMax = filters.precioMax;
-        if (filters?.recamaras) filtersJson.recamaras = parseInt(filters.recamaras);
-        if (filters?.banos) filtersJson.banos = parseInt(filters.banos);
+        if (filters?.precioMin) filtersJson.minPrice = filters.precioMin;
+        if (filters?.precioMax) filtersJson.maxPrice = filters.precioMax;
+        if (filters?.recamaras) filtersJson.minBedrooms = parseInt(filters.recamaras);
+        if (filters?.banos) filtersJson.minBathrooms = parseInt(filters.banos);
 
         queryClient.prefetchQuery({
           queryKey: ['map-tiles', adjBounds, filters],
@@ -110,18 +110,18 @@ export const useTiledMap = (
 
       const startTime = performance.now();
 
-      // 🔥 Construir objeto de filtros con nombres que el backend espera
+      // 🔥 Construir objeto de filtros en formato JSONB sin incluir campos null/undefined
       const filtersJson: Record<string, any> = {};
-      if (filters?.estado) filtersJson.estado = filters.estado;
-      if (filters?.municipio) filtersJson.municipio = filters.municipio;
+      if (filters?.estado) filtersJson.state = filters.estado;
+      if (filters?.municipio) filtersJson.municipality = filters.municipio;
       if (filters?.listingType) filtersJson.listingType = filters.listingType;
       if (filters?.tipo && typeof filters.tipo === 'string') {
-        filtersJson.tipo = filters.tipo;
+        filtersJson.propertyType = filters.tipo;
       }
-      if (filters?.precioMin) filtersJson.precioMin = filters.precioMin;
-      if (filters?.precioMax) filtersJson.precioMax = filters.precioMax;
-      if (filters?.recamaras) filtersJson.recamaras = parseInt(filters.recamaras);
-      if (filters?.banos) filtersJson.banos = parseInt(filters.banos);
+      if (filters?.precioMin) filtersJson.minPrice = filters.precioMin;
+      if (filters?.precioMax) filtersJson.maxPrice = filters.precioMax;
+      if (filters?.recamaras) filtersJson.minBedrooms = parseInt(filters.recamaras);
+      if (filters?.banos) filtersJson.minBathrooms = parseInt(filters.banos);
 
       // 🗺️ Logging completo de filtros para debugging
       console.log('🗺️ [useTiledMap] Llamada a get_map_tiles:', {
