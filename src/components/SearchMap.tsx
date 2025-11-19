@@ -233,17 +233,29 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     isLoading
   });
 
+  // 🔴 AISLAMIENTO: Datos crudos del hook sin transformaciones
+  const rawProperties = properties || [];
+  const rawFallback = fallbackProperties || [];
+  const testMarkers = rawProperties.length > 0 ? rawProperties : rawFallback;
+  
+  console.log('🔴 FINAL MARKERS TO MAP:', testMarkers.length, {
+    source: rawProperties.length > 0 ? 'useTiledMap' : 'fallbackProperties',
+    rawPropertiesLength: rawProperties.length,
+    rawFallbackLength: rawFallback.length,
+    testMarkersSample: testMarkers.slice(0, 3)
+  });
+
   return (
     <div className="relative w-full" style={{ height }}>
       {/* 🔴 CAMBIO VISUAL FORZADO PARA VERIFICAR CACHÉ */}
       <div className="absolute top-2 left-2 z-[9999] bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-lg shadow-xl border-4 border-red-800">
-        🔴 MAPA v3 - AUDITORÍA COMPLETA | Marcadores: {mapMarkers.length}
+        🔴 DATOS CRUDOS | useTiledMap: {rawProperties.length} | Fallback: {rawFallback.length}
       </div>
       
       <BasicGoogleMap
         center={mapCenter}
         zoom={mapZoom}
-        markers={mapMarkers}
+        markers={testMarkers as any}
         enableClustering={true}
         onBoundsChanged={handleBoundsChange}
         onMarkerClick={handleMarkerClickInternal}
