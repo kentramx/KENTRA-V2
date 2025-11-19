@@ -24,10 +24,7 @@ interface SearchMapProps {
   hoveredPropertyCoords?: { lat: number; lng: number } | null;
   height?: string;
   onMapError?: (error: string) => void;
-  fallbackProperties?: PropertySummary[];
 }
-
-const MAX_FALLBACK_MARKERS = 500;
 
 export const SearchMap: React.FC<SearchMapProps> = ({
   filters,
@@ -38,7 +35,6 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   hoveredPropertyCoords,
   height = '100%',
   onMapError,
-  fallbackProperties,
 }) => {
   const navigate = useNavigate();
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
@@ -94,10 +90,8 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     console.log('🔍 [SearchMap] Auditando datos para marcadores:', {
       propertiesLength: properties?.length || 0,
       clustersLength: clusters?.length || 0,
-      fallbackPropertiesLength: fallbackProperties?.length || 0,
       propertiesSample: properties?.[0],
       clustersSample: clusters?.[0],
-      fallbackSample: fallbackProperties?.[0]
     });
 
     // 1) Si hay propiedades del sistema tileado, úsalas primero
@@ -150,36 +144,9 @@ export const SearchMap: React.FC<SearchMapProps> = ({
       return markers;
     }
 
-    // 3) Fallback: usar propiedades de la lista (usePropertySearch)
-    // 🔴 SOLUCIÓN DE EMERGENCIA: Si tenemos fallbackProperties, úsalas TODAS
-    if (fallbackProperties && fallbackProperties.length > 0) {
-      const markers = fallbackProperties
-        .filter((p) => p.lat != null && p.lng != null)
-        .map((p) => ({
-          id: p.id,
-          lat: Number(p.lat),
-          lng: Number(p.lng),
-          title: p.title,
-          price: p.price,
-          currency: (p.currency ?? 'MXN') as 'MXN' | 'USD',
-          bedrooms: p.bedrooms,
-          bathrooms: p.bathrooms,
-          images: p.images,
-          listing_type: p.listing_type as 'venta' | 'renta',
-          address: p.address,
-        }));
-      
-      console.log('✅ [SearchMap] FORZANDO fallback properties (TODAS):', {
-        total: markers.length,
-        sample: markers[0]
-      });
-      
-      return markers;
-    }
-
     console.warn('⚠️ [SearchMap] No hay datos disponibles para marcadores');
     return [];
-  }, [properties, clusters, fallbackProperties]);
+  }, [properties, clusters]);
 
   // ✅ Centro del mapa
   const mapCenter = useMemo(() => {
