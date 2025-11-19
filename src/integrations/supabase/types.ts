@@ -2490,17 +2490,29 @@ export type Database = {
           property_id: string
         }[]
       }
-      get_map_tiles: {
-        Args: {
-          p_filters?: Json
-          p_max_lat: number
-          p_max_lng: number
-          p_min_lat: number
-          p_min_lng: number
-          p_zoom: number
-        }
-        Returns: Json
-      }
+      get_map_tiles:
+        | {
+            Args: {
+              p_filters?: Json
+              p_max_lat: number
+              p_max_lng: number
+              p_min_lat: number
+              p_min_lng: number
+              p_zoom: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_filters?: Json
+              p_max_lat: number
+              p_max_lng: number
+              p_min_lat: number
+              p_min_lng: number
+              p_zoom: number
+            }
+            Returns: Json
+          }
       get_map_tiles_cached: {
         Args: {
           p_filters?: Json

@@ -158,13 +158,13 @@ export function BasicGoogleMap({
     return () => { mounted = false; };
   }, [center.lat, center.lng, zoom, onReady, onBoundsChanged, onMapError]);
 
-  // ✅ Renderizar marcadores nativos de Google Maps (globos rojos estándar)
+  // ✅ Renderizar pastillas de precios estilo Zillow
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !window.google) return;
 
     const renderStartTime = performance.now();
-    console.log('🎯 [BasicGoogleMap] Renderizando marcadores nativos:', { count: markers.length });
+    console.log('🎯 [BasicGoogleMap] Renderizando pastillas de precios:', { count: markers.length });
 
     // Limpiar marcadores existentes
     markerRefs.current.forEach(marker => marker.setMap(null));
@@ -183,7 +183,7 @@ export function BasicGoogleMap({
     const bounds = new google.maps.LatLngBounds();
     let validMarkersCount = 0;
 
-    // Crear marcadores nativos de Google Maps
+    // Crear marcadores con pastillas de precios
     const newMarkers: google.maps.Marker[] = [];
     
     for (const m of markers) {
@@ -191,13 +191,41 @@ export function BasicGoogleMap({
       const lng = Number(m.lng);
       const position = new google.maps.LatLng(lat, lng);
       
-      // ✅ Crear marcador nativo de Google Maps (globo rojo estándar)
+      // ✅ Solo renderizar si tiene precio válido
+      if (!m.price || m.price <= 0) continue;
+      
+      // Formatear precio
+      const priceFormatted = new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: m.currency || 'MXN',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(m.price);
+      
+      // Crear pastilla de precio estilo Zillow
+      const priceLabel = priceFormatted.replace('MXN', '$').replace('USD', '$');
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32">
+          <rect x="0" y="0" width="120" height="32" rx="16" 
+            fill="white" stroke="#000" stroke-width="2" opacity="0.95"/>
+          <text x="60" y="20" text-anchor="middle" 
+            font-family="system-ui, -apple-system, sans-serif" 
+            font-size="14" font-weight="700" fill="#000">
+            ${priceLabel}
+          </text>
+        </svg>
+      `;
+      
       const marker = new google.maps.Marker({
         position,
         map,
+        icon: {
+          url: `data:image/svg+xml;base64,${btoa(svg)}`,
+          scaledSize: new google.maps.Size(120, 32),
+          anchor: new google.maps.Point(60, 16),
+        },
         title: m.title || `Propiedad ${m.id}`,
-        // Sin icon personalizado = usa el globo rojo estándar de Google
-        optimized: true,
+        optimized: false,
       });
 
       // Event listener para clic
@@ -213,7 +241,7 @@ export function BasicGoogleMap({
       validMarkersCount++;
     }
 
-    console.log('✅ [BasicGoogleMap] Marcadores nativos creados:', { 
+    console.log('✅ [BasicGoogleMap] Pastillas de precios creadas:', { 
       total: markers.length,
       valid: validMarkersCount 
     });
@@ -221,16 +249,17 @@ export function BasicGoogleMap({
     // Aplicar clustering si está habilitado
     if (enableClustering && newMarkers.length > 0) {
       try {
-        // Renderer personalizado para clusters con color Kentra
+        // Renderer personalizado para clusters con color negro (marca Kentra)
         const customRenderer = {
           render: ({ count, position }: { count: number; position: google.maps.LatLng }) => {
-            const baseSize = 40;
-            const size = Math.min(baseSize + Math.log10(count) * 10, 70);
+            // Tamaño dinámico basado en count del backend
+            const baseSize = 50;
+            const size = Math.min(baseSize + Math.log10(count) * 15, 90);
             
             const svg = `
               <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" 
-                  fill="hsl(var(--primary))" 
+                  fill="#000000" 
                   stroke="white" 
                   stroke-width="3" 
                   opacity="0.95"/>
