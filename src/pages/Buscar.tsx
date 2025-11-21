@@ -316,6 +316,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [mobileView, setMobileView] = useState<'map' | 'list'>('list');
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapVisibleCount, setMapVisibleCount] = useState<number>(0);
+  const [mapLoading, setMapLoading] = useState<boolean>(false);
 
   // Normalizar rango de precios para evitar valores fuera de rango al alternar Venta/Renta
   const [minRangeForType, maxRangeForType] = getPriceRangeForListingType(filters.listingType);
@@ -1499,7 +1500,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 <span className="text-muted-foreground text-sm">
                   {(mobileView === 'map' || window.innerWidth >= 1024 ? mapVisibleCount : totalCount) === 1 ? 'propiedad' : 'propiedades'}
                 </span>
-                {isFetching && properties.length > 0 && (
+                {mapLoading && (
                   <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                 )}
               </div>
@@ -1534,6 +1535,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 onMapError={setMapError}
                 onVisibleCountChange={setMapVisibleCount}
                 onBoundsChange={setMapBounds}
+                onLoadingChange={setMapLoading}
               />
             )}
           </div>

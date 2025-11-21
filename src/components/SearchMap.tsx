@@ -26,6 +26,7 @@ interface SearchMapProps {
   onMapError?: (error: string) => void;
   onVisibleCountChange?: (count: number) => void;
   onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }) => void;
+  onLoadingChange?: (isLoading: boolean) => void;
 }
 
 export const SearchMap: React.FC<SearchMapProps> = ({
@@ -39,6 +40,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   onMapError,
   onVisibleCountChange,
   onBoundsChange,
+  onLoadingChange,
 }) => {
   const navigate = useNavigate();
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
@@ -77,6 +79,11 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     
     onVisibleCountChange(totalVisible);
   }, [properties, clusters, onVisibleCountChange]);
+
+  // ✅ Reportar estado de carga al padre
+  useEffect(() => {
+    onLoadingChange?.(isLoading);
+  }, [isLoading, onLoadingChange]);
 
   // ✅ Handler para errores críticos del mapa (Google Maps no carga)
   const handleMapError = useCallback((error: Error) => {
@@ -228,17 +235,6 @@ export const SearchMap: React.FC<SearchMapProps> = ({
 
       {/* Debug overlay eliminado para producción */}
 
-      {/* 🔄 Overlay de carga */}
-      {isLoading && viewportBounds && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[2px]">
-          <div className="rounded-lg bg-background/95 px-4 py-3 shadow-lg">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Cargando propiedades en el mapa...</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ❌ Overlay de error crítico (solo para fallos de Google Maps) */}
       {mapError && (

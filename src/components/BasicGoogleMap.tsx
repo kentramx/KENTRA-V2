@@ -187,8 +187,11 @@ export function BasicGoogleMap({
   const onMarkerClickRef = useRef<((id: string) => void) | undefined>(onMarkerClick);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
 
-  // ✅ Inicializar mapa con Google Maps API
+  // ✅ Inicializar mapa (SOLO UNA VEZ)
   useEffect(() => {
+    // 🛑 Evitar re-inicialización si ya existe
+    if (mapRef.current || !containerRef.current) return;
+    
     let mounted = true;
     
     const init = async () => {
@@ -198,11 +201,7 @@ export function BasicGoogleMap({
         await loadGoogleMaps();
         if (!mounted || !containerRef.current) return;
         
-        console.log('🗺️ [BasicGoogleMap] Inicializando mapa con marcadores nativos:', {
-          center,
-          zoom,
-          totalMarkers: markers.length
-        });
+        console.log('🗺️ [BasicGoogleMap] Inicializando mapa con marcadores nativos (PRIMERA VEZ)');
 
         mapRef.current = new google.maps.Map(containerRef.current, {
           center,
@@ -281,7 +280,26 @@ export function BasicGoogleMap({
     
     init();
     return () => { mounted = false; };
-  }, [center.lat, center.lng, zoom, onReady, onBoundsChanged, onMapError]);
+  }, []); // 👈 Array vacío: solo montar una vez
+
+  // ✅ Actualizar center/zoom programáticamente (ej: nueva búsqueda)
+  useEffect(() => {
+    if (!mapRef.current || !center) return;
+
+    // Solo mover si la diferencia es significativa para no pelear con el usuario
+    const currentCenter = mapRef.current.getCenter();
+    if (currentCenter) {
+      const dist = Math.sqrt(
+        Math.pow(currentCenter.lat() - center.lat, 2) + 
+        Math.pow(currentCenter.lng() - center.lng, 2)
+      );
+      if (dist > 0.001) { // Pequeño umbral
+        console.log('📍 [BasicGoogleMap] Actualizando center/zoom programáticamente');
+        mapRef.current.panTo(center);
+        mapRef.current.setZoom(zoom || 12);
+      }
+    }
+  }, [center.lat, center.lng, zoom]);
 
   // ✅ Renderizar pastillas de precios estilo Zillow (OPTIMIZADO con diffing)
   useEffect(() => {
