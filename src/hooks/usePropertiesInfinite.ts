@@ -87,21 +87,21 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
       // ✅ SIEMPRE filtrar por activas
       query = query.eq('status', 'activa');
 
-      // ✅ Solo aplicar filtros si tienen valor real
+      // ✅ Solo aplicar filtros si tienen valor real (usando ilike para case-insensitivity)
       if (filters?.estado && filters.estado.trim() !== '') {
-        query = query.eq('state', filters.estado);
+        query = query.ilike('state', filters.estado);
       }
 
       if (filters?.municipio && filters.municipio.trim() !== '') {
-        query = query.eq('municipality', filters.municipio);
+        query = query.ilike('municipality', filters.municipio);
       }
 
       if (filters?.tipo && filters.tipo.trim() !== '') {
-        query = query.eq('type', filters.tipo as any);
+        query = query.ilike('type', filters.tipo);
       }
 
       if (filters?.listingType && filters.listingType.trim() !== '') {
-        query = query.eq('listing_type', filters.listingType);
+        query = query.ilike('listing_type', filters.listingType);
       }
 
       const minPrice = Number(filters?.precioMin);
@@ -132,19 +132,53 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
       const to = from + PAGE_SIZE - 1;
       query = query.range(from, to);
       
-      const { data: properties, error } = await query;
+      const { data, error } = await query;
       
       if (error) {
+        console.error('❌ [List] Error fetching properties:', error);
         monitoring.error('[usePropertiesInfinite] Error', { hook: 'usePropertiesInfinite', error });
         throw error;
       }
 
-      if (!properties || properties.length === 0) {
+      if (!data || data.length === 0) {
         return { properties: [], nextPage: null };
       }
 
+      // ✅ MAPEO CRÍTICO: DB (snake_case) -> Frontend (camelCase/PropertySummary)
+      const mappedProperties: PropertySummary[] = data.map((p: any) => {
+        // Extraer primera imagen si existe
+        const firstImage = p.images?.[0] || null;
+        
+        return {
+          id: p.id,
+          title: p.title,
+          price: p.price,
+          currency: p.currency || 'MXN',
+          type: p.type === 'local_comercial' ? 'local' : p.type,
+          listing_type: p.listing_type as 'venta' | 'renta',
+          for_sale: p.for_sale ?? true,
+          for_rent: p.for_rent ?? false,
+          sale_price: p.sale_price,
+          rent_price: p.rent_price,
+          address: p.address || `${p.municipality}, ${p.state}`,
+          colonia: p.colonia,
+          municipality: p.municipality,
+          state: p.state,
+          lat: p.lat ? Number(p.lat) : null,
+          lng: p.lng ? Number(p.lng) : null,
+          bedrooms: p.bedrooms,
+          bathrooms: p.bathrooms,
+          parking: p.parking,
+          sqft: p.sqft,
+          agent_id: p.agent_id,
+          created_at: p.created_at,
+          images: [],  // Se cargarán en batch después
+          is_featured: false,  // Se actualizará después
+        };
+      });
+
       // ✅ Batch load de imágenes
-      const propertyIds = properties.map((p) => p.id);
+      const propertyIds = mappedProperties.map((p) => p.id);
       const { data: imagesData } = await supabase
         .from('images')
         .select('property_id, url, position')
@@ -177,38 +211,18 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
         featuredData?.map((f) => f.property_id) || []
       );
 
-      // Normalizar a PropertySummary
-      const enrichedProperties: PropertySummary[] = properties.map((property) => ({
-        id: property.id,
-        title: property.title,
-        price: property.price,
-        currency: property.currency || 'MXN',
-        type: property.type === 'local_comercial' ? 'local' : property.type,
-        listing_type: property.listing_type as 'venta' | 'renta',
-        for_sale: property.for_sale ?? true,
-        for_rent: property.for_rent ?? false,
-        sale_price: property.sale_price,
-        rent_price: property.rent_price,
-        address: property.address,
-        colonia: property.colonia,
-        municipality: property.municipality,
-        state: property.state,
-        lat: property.lat,
-        lng: property.lng,
-        bedrooms: property.bedrooms,
-        bathrooms: property.bathrooms,
-        parking: property.parking,
-        sqft: property.sqft,
-        agent_id: property.agent_id,
-        created_at: property.created_at,
-        images: imagesMap.get(property.id) || [],
-        is_featured: featuredSet.has(property.id),
-      }));
+      // Enriquecer con imágenes y featured
+      mappedProperties.forEach((property) => {
+        property.images = imagesMap.get(property.id) || [];
+        property.is_featured = featuredSet.has(property.id);
+      });
 
-      const hasMore = properties.length === PAGE_SIZE;
+      console.log(`✅ [List] Fetched ${mappedProperties.length} properties`);
+
+      const hasMore = data.length === PAGE_SIZE;
 
       return {
-        properties: enrichedProperties,
+        properties: mappedProperties,
         nextPage: hasMore ? pageParam + 1 : null,
       };
     },
