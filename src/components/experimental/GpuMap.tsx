@@ -1,206 +1,100 @@
 import { useEffect, useRef, useState } from 'react';
+import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
 import { GoogleMapsOverlay } from '@deck.gl/google-maps';
 import { ScatterplotLayer } from '@deck.gl/layers';
-import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
-// Generar 10,000 puntos aleatorios alrededor del centro de México
-const generateRandomPoints = (count: number) => {
-  const centerLat = 23.6345; // Centro de México
-  const centerLng = -102.5528;
-  const spread = 8; // Grados de dispersión
-
-  return Array.from({ length: count }, (_, i) => ({
-    id: i,
-    position: [
-      centerLng + (Math.random() - 0.5) * spread,
-      centerLat + (Math.random() - 0.5) * spread,
-    ] as [number, number],
-    price: Math.random() * 10000000, // Precio aleatorio 0-10M
-  }));
-};
-
-const GpuMap = () => {
+export default function GpuMap() {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const overlayRef = useRef<GoogleMapsOverlay | null>(null);
-  const [isReady, setIsReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
-  const [fps, setFps] = useState<number>(0);
-
-  // Generar puntos una sola vez
-  const pointsRef = useRef(generateRandomPoints(10000));
-
-  // FPS Counter
-  useEffect(() => {
-    let frameCount = 0;
-    let lastTime = performance.now();
-
-    const measureFPS = () => {
-      frameCount++;
-      const currentTime = performance.now();
-      
-      if (currentTime >= lastTime + 1000) {
-        setFps(Math.round(frameCount * 1000 / (currentTime - lastTime)));
-        frameCount = 0;
-        lastTime = currentTime;
-      }
-      
-      requestAnimationFrame(measureFPS);
-    };
-
-    const animationId = requestAnimationFrame(measureFPS);
-    return () => cancelAnimationFrame(animationId);
-  }, []);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
+    let mapInstance: google.maps.Map | null = null;
+    let overlayInstance: GoogleMapsOverlay | null = null;
+
     const initMap = async () => {
-      if (!mapRef.current) return;
-
       try {
+        // 1. Esperar a que cargue la API
         await loadGoogleMaps();
+        
+        if (!mapRef.current) return;
 
-        // Crear mapa base de Google Maps
-        const map = new google.maps.Map(mapRef.current, {
+        // 2. Inicializar Mapa
+        mapInstance = new google.maps.Map(mapRef.current, {
           center: { lat: 23.6345, lng: -102.5528 },
           zoom: 5,
-          mapTypeControl: true,
-          streetViewControl: false,
-          fullscreenControl: true,
+          mapId: 'DEMO_MAP_ID', // Importante para Vector Maps si se tiene
+          disableDefaultUI: false,
         });
 
-        mapInstanceRef.current = map;
+        // 3. Generar 10k puntos dummy
+        const data = Array.from({ length: 10000 }, () => ({
+          position: [
+            -102.5528 + (Math.random() - 0.5) * 15, 
+            23.6345 + (Math.random() - 0.5) * 10
+          ],
+          color: [255, 0, 0], // Rojo brillante
+          radius: 2000 // 2km de radio
+        }));
 
-        // Crear overlay de deck.gl
-        const overlay = new GoogleMapsOverlay({
-          layers: [],
+        // 4. Inicializar Deck.gl Overlay
+        overlayInstance = new GoogleMapsOverlay({
+          layers: [
+            new ScatterplotLayer({
+              id: 'scatter-layer',
+              data,
+              getPosition: (d: any) => d.position,
+              getFillColor: (d: any) => d.color,
+              getRadius: (d: any) => d.radius,
+              opacity: 0.8,
+              stroked: true,
+              radiusMinPixels: 3, // Asegurar visibilidad mínima
+            })
+          ],
         });
 
-        overlay.setMap(map);
-        overlayRef.current = overlay;
-        setIsReady(true);
-
-      } catch (err) {
-        console.error('Error inicializando GPU Map:', err);
-        setError(err instanceof Error ? err.message : 'Error desconocido');
+        // 5. Conectar Overlay al Mapa
+        overlayInstance.setMap(mapInstance);
+        setStatus('ready');
+      } catch (error: any) {
+        console.error('Error iniciando GpuMap:', error);
+        setErrorMessage(error.message || 'Error desconocido');
+        setStatus('error');
       }
     };
 
     initMap();
 
+    // Cleanup
     return () => {
-      overlayRef.current?.setMap(null);
-      overlayRef.current = null;
-      mapInstanceRef.current = null;
+      if (overlayInstance) overlayInstance.setMap(null);
     };
   }, []);
 
-  // Actualizar la capa de puntos cuando cambia el estado
-  useEffect(() => {
-    if (!isReady || !overlayRef.current) return;
-
-    const layer = new ScatterplotLayer({
-      id: 'scatterplot-layer',
-      data: pointsRef.current,
-      pickable: true,
-      opacity: 0.9,
-      stroked: true,
-      filled: true,
-      radiusScale: 1,
-      radiusMinPixels: 8,
-      radiusMaxPixels: 30,
-      lineWidthMinPixels: 1,
-      getPosition: (d: any) => d.position,
-      getRadius: (d: any) => (hoveredPoint === d.id ? 1000 : 500),
-      getFillColor: (d: any) => {
-        // Rojo brillante para máxima visibilidad
-        if (hoveredPoint === d.id) {
-          return [255, 255, 0, 255]; // Amarillo al hover
-        }
-        return [255, 0, 0, 255]; // Rojo brillante
-      },
-      getLineColor: [255, 255, 255, 150],
-      onHover: (info: any) => {
-        if (info.object) {
-          setHoveredPoint(info.object.id);
-        } else {
-          setHoveredPoint(null);
-        }
-      },
-      updateTriggers: {
-        getRadius: [hoveredPoint],
-        getFillColor: [hoveredPoint],
-      },
-    });
-
-    overlayRef.current.setProps({
-      layers: [layer],
-    });
-  }, [isReady, hoveredPoint]);
-
-  if (error) {
-    return (
-      <div className="w-full h-screen flex items-center justify-center p-4">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Error cargando mapa GPU: {error}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
+  // Renderizado Defensivo
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
-      <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
-      
-      {/* Stats overlay */}
-      <div className="absolute top-4 left-4 bg-background/95 backdrop-blur-sm border rounded-lg p-4 shadow-lg">
-        <h3 className="font-bold text-lg mb-2">🚀 GPU Map Test</h3>
-        <div className="space-y-1 text-sm">
-          <div>
-            <span className="text-muted-foreground">Puntos renderizados:</span>{' '}
-            <span className="font-mono font-bold">10,000</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">FPS:</span>{' '}
-            <span 
-              className={`font-mono font-bold ${
-                fps >= 55 ? 'text-green-500' : 
-                fps >= 30 ? 'text-yellow-500' : 
-                'text-red-500'
-              }`}
-            >
-              {fps}
-            </span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Estado:</span>{' '}
-            <span className={`font-medium ${isReady ? 'text-green-500' : 'text-yellow-500'}`}>
-              {isReady ? '✓ Listo' : '⏳ Cargando...'}
-            </span>
-          </div>
-          {hoveredPoint !== null && (
-            <div className="pt-2 border-t mt-2">
-              <span className="text-muted-foreground">Punto hover:</span>{' '}
-              <span className="font-mono">#{hoveredPoint}</span>
-            </div>
-          )}
+    <div style={{ width: '100vw', height: '100vh', position: 'relative', backgroundColor: '#f0f0f0' }}>
+      {/* Estado de Carga */}
+      {status === 'loading' && (
+        <div style={{ position: 'absolute', top: 20, left: 20, zIndex: 100, background: 'white', padding: 10, borderRadius: 8 }}>
+          Cargando librerías...
         </div>
-      </div>
+      )}
 
-      {/* Instructions */}
-      <div className="absolute bottom-4 right-4 bg-background/95 backdrop-blur-sm border rounded-lg p-3 shadow-lg max-w-xs">
-        <p className="text-xs text-muted-foreground">
-          💡 <strong>Interacción:</strong> Haz hover sobre los puntos para ver el efecto de cambio de color y tamaño.
-          Los colores representan rangos de precio simulados.
-        </p>
-      </div>
+      {/* Estado de Error */}
+      {status === 'error' && (
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'white', padding: 20, border: '2px solid red', color: 'red', borderRadius: 8 }}>
+          <AlertCircle style={{ display: 'inline', marginRight: 8 }} />
+          {errorMessage}
+        </div>
+      )}
+
+      {/* Contenedor del Mapa */}
+      <div 
+        ref={mapRef} 
+        style={{ width: '100%', height: '100%' }} 
+      />
     </div>
   );
-};
-
-export default GpuMap;
+}
