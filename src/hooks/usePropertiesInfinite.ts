@@ -31,7 +31,7 @@ export const usePropertiesInfinite = (
       // 1. STATUS: Filtrar solo propiedades activas
       query = query.eq('status', 'activa');
 
-      // 2. UBICACIÓN (Flexible con ilike)
+      // 2. UBICACIÓN (Flexible con ilike) - ✅ SIEMPRE APLICAR
       if (filters.estado && filters.estado.trim() !== '') {
         query = query.ilike('state', `%${filters.estado}%`);
       }
@@ -42,14 +42,13 @@ export const usePropertiesInfinite = (
 
       // ✅ Filtro por Colonia (buscar en colonia o address)
       if (filters.colonia && filters.colonia.trim() !== '') {
-        // Buscar en la columna 'colonia' O en 'address' como fallback
         query = query.or(`colonia.ilike.%${filters.colonia.trim()}%,address.ilike.%${filters.colonia.trim()}%`);
       }
 
-      // ✅ FILTRO GEOGRÁFICO: Priorizar bounds del mapa sobre radio fijo
+      // ✅ FILTRO GEOGRÁFICO: Usar bounds del mapa como REFINAMIENTO adicional
       if (searchBounds) {
-        // Si hay bounds del mapa, usamos esto (más preciso)
-        console.log('🗺️ Filtrando por vista del mapa:', searchBounds);
+        // Bounds del mapa refinan los resultados, pero NO reemplazan los filtros de ubicación
+        console.log('🗺️ Refinando con bounds del mapa:', searchBounds);
         query = query
           .lte('lat', searchBounds.north)
           .gte('lat', searchBounds.south)
