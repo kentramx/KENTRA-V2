@@ -26,7 +26,9 @@ export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMap
         setIsGoogleMapsReady(true);
       })
       .catch((err) => {
-        setMapError(err.message);
+        console.error('❌ [PropertyMap] Error cargando Google Maps API:', err);
+        const errorMessage = err?.message || 'Error desconocido al cargar Google Maps';
+        setMapError(errorMessage);
         toast({
           title: "🗺️ Error cargando mapa",
           description: "Verifica la configuración de Google Maps API. El mapa no se mostrará.",
@@ -39,19 +41,35 @@ export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMap
     if (!isGoogleMapsReady || !mapRef.current) return;
 
     try {
+      // ✅ Validación robusta de coordenadas
+      const isValidCoordinate = (value: any): value is number => {
+        return typeof value === 'number' && !isNaN(value) && isFinite(value);
+      };
+
+      const validLat = isValidCoordinate(lat) ? lat : null;
+      const validLng = isValidCoordinate(lng) ? lng : null;
+
+      // Coordenadas de fallback (Guadalajara centro)
+      const FALLBACK_LAT = 20.6597;
+      const FALLBACK_LNG = -103.3496;
+
+      const finalLat = validLat ?? FALLBACK_LAT;
+      const finalLng = validLng ?? FALLBACK_LNG;
+      const hasValidCoords = validLat !== null && validLng !== null;
+
       // Initialize map if not already done
       if (!mapInstanceRef.current) {
         mapInstanceRef.current = new google.maps.Map(mapRef.current, {
-          center: { lat: lat || 20.6597, lng: lng || -103.3496 }, // Guadalajara default
-          zoom: lat && lng ? 15 : 11,
+          center: { lat: finalLat, lng: finalLng },
+          zoom: hasValidCoords ? 15 : 11,
           mapTypeControl: true,
           streetViewControl: true,
           fullscreenControl: true,
         });
       }
 
-      // Geocode if we have address but no coordinates
-      if (address && (!lat || !lng)) {
+      // Geocode if we have address but no valid coordinates
+      if (address && !hasValidCoords) {
         const geocoder = new google.maps.Geocoder();
         
         geocoder.geocode({ address }, (results, status) => {
@@ -111,9 +129,9 @@ export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMap
             });
           }
         });
-      } else if (lat && lng) {
-        // We have coordinates, use them directly
-        const location = { lat, lng };
+      } else if (hasValidCoords) {
+        // We have valid coordinates, use them directly
+        const location = { lat: finalLat, lng: finalLng };
         
         mapInstanceRef.current?.setCenter(location);
         mapInstanceRef.current?.setZoom(15);
@@ -127,10 +145,16 @@ export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMap
           map: mapInstanceRef.current,
           title: address || 'Ubicación de la propiedad',
         });
+      } else {
+        // ✅ Sin coordenadas válidas ni dirección: mostrar mapa de fallback sin marcador
+        console.warn('[PropertyMap] Sin coordenadas válidas ni dirección para geocodificar');
+        mapInstanceRef.current?.setCenter({ lat: finalLat, lng: finalLng });
+        mapInstanceRef.current?.setZoom(11);
       }
     } catch (error) {
-      console.error('Error creating map:', error);
-      setMapError('Error al crear el mapa');
+      console.error('❌ [PropertyMap] Error creando mapa:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error al crear el mapa';
+      setMapError(errorMessage);
       
       toast({
         title: "❌ Error creando mapa",
