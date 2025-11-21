@@ -11,6 +11,8 @@ export interface MapMarker {
   title?: string;
   price?: number;
   currency?: 'MXN' | 'USD';
+  type?: 'property' | 'cluster';
+  count?: number;
 }
 
 interface BasicGoogleMapProps {
@@ -185,48 +187,83 @@ export function BasicGoogleMap({
     const bounds = new google.maps.LatLngBounds();
     let validMarkersCount = 0;
 
-    // Crear marcadores con pastillas de precios
+    // Crear marcadores con pastillas de precios o clusters del backend
     const newMarkers: google.maps.Marker[] = [];
+    const hasBackendClusters = markers.some(m => m.type === 'cluster');
     
     for (const m of markers) {
       const lat = Number(m.lat);
       const lng = Number(m.lng);
       const position = new google.maps.LatLng(lat, lng);
       
-      // ✅ Solo renderizar si tiene precio válido
-      if (!m.price || m.price <= 0) continue;
+      // ✅ Solo filtrar por precio si es property
+      if (m.type === 'property' && (!m.price || m.price <= 0)) continue;
       
-      // Formatear precio
-      const priceFormatted = new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: m.currency || 'MXN',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(m.price);
+      let svg: string;
+      let iconSize: google.maps.Size;
+      let iconAnchor: google.maps.Point;
       
-      // Crear pastilla de precio estilo Zillow
-      const priceLabel = priceFormatted.replace('MXN', '$').replace('USD', '$');
-      const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32">
-          <rect x="0" y="0" width="120" height="32" rx="16" 
-            fill="white" stroke="#000" stroke-width="2" opacity="0.95"/>
-          <text x="60" y="20" text-anchor="middle" 
-            font-family="system-ui, -apple-system, sans-serif" 
-            font-size="14" font-weight="700" fill="#000">
-            ${priceLabel}
-          </text>
-        </svg>
-      `;
+      if (m.type === 'cluster') {
+        // Generar SVG de cluster negro con count
+        const count = m.count || 0;
+        const baseSize = 50;
+        const size = Math.min(baseSize + Math.log10(count) * 15, 90);
+        
+        svg = `
+          <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" 
+              fill="#000000" 
+              stroke="white" 
+              stroke-width="3" 
+              opacity="0.95"/>
+            <text x="${size/2}" y="${size/2}" 
+              text-anchor="middle" 
+              dominant-baseline="central"
+              fill="white" 
+              font-size="${size/3}"
+              font-weight="700"
+              font-family="system-ui, -apple-system, sans-serif">
+              ${count}
+            </text>
+          </svg>
+        `;
+        iconSize = new google.maps.Size(size, size);
+        iconAnchor = new google.maps.Point(size / 2, size / 2);
+      } else {
+        // Formatear precio para property
+        const priceFormatted = new Intl.NumberFormat('es-MX', {
+          style: 'currency',
+          currency: m.currency || 'MXN',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(m.price || 0);
+        
+        // Crear pastilla de precio estilo Zillow
+        const priceLabel = priceFormatted.replace('MXN', '$').replace('USD', '$');
+        svg = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32">
+            <rect x="0" y="0" width="120" height="32" rx="16" 
+              fill="white" stroke="#000" stroke-width="2" opacity="0.95"/>
+            <text x="60" y="20" text-anchor="middle" 
+              font-family="system-ui, -apple-system, sans-serif" 
+              font-size="14" font-weight="700" fill="#000">
+              ${priceLabel}
+            </text>
+          </svg>
+        `;
+        iconSize = new google.maps.Size(120, 32);
+        iconAnchor = new google.maps.Point(60, 16);
+      }
       
       const marker = new google.maps.Marker({
         position,
         map,
         icon: {
           url: `data:image/svg+xml;base64,${btoa(svg)}`,
-          scaledSize: new google.maps.Size(120, 32),
-          anchor: new google.maps.Point(60, 16),
+          scaledSize: iconSize,
+          anchor: iconAnchor,
         },
-        title: m.title || `Propiedad ${m.id}`,
+        title: m.title || (m.type === 'cluster' ? `Cluster ${m.count}` : `Propiedad ${m.id}`),
         optimized: false,
       });
 
@@ -243,13 +280,14 @@ export function BasicGoogleMap({
       validMarkersCount++;
     }
 
-    console.log('✅ [BasicGoogleMap] Pastillas de precios creadas:', { 
+    console.log('✅ [BasicGoogleMap] Marcadores creados:', { 
       total: markers.length,
-      valid: validMarkersCount 
+      valid: validMarkersCount,
+      hasBackendClusters 
     });
 
-    // Aplicar clustering si está habilitado
-    if (enableClustering && newMarkers.length > 0) {
+    // Aplicar clustering solo si NO hay clusters del backend
+    if (enableClustering && !hasBackendClusters && newMarkers.length > 0) {
       try {
         // Renderer personalizado para clusters con color negro (marca Kentra)
         const customRenderer = {
