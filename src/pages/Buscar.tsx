@@ -143,6 +143,20 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     orden: (searchParams.get('orden') as any) || 'price_desc',
   });
   
+  // Estado para guardar coordenadas de la ubicación buscada (desde URL)
+  const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(() => {
+    const lat = searchParams.get('lat');
+    const lng = searchParams.get('lng');
+    if (lat && lng) {
+      const latNum = parseFloat(lat);
+      const lngNum = parseFloat(lng);
+      if (!isNaN(latNum) && !isNaN(lngNum)) {
+        return { lat: latNum, lng: lngNum };
+      }
+    }
+    return null;
+  });
+  
   // ✅ DEBUG: Logs temporales para rastrear cambios de listingType
   useEffect(() => {
     console.log('[Buscar Debug] filters.listingType changed to:', filters.listingType);
@@ -172,7 +186,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     fetchNextPage,
     hasTooManyResults,
     actualTotal,
-  } = usePropertySearch(propertyFilters);
+  } = usePropertySearch(propertyFilters, searchCoordinates);
 
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
@@ -216,9 +230,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   }, [properties, filters.orden]);
 
   const filteredProperties = sortedProperties;
-  
-  // Estado para guardar coordenadas de la ubicación buscada
-  const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   
   // Sincronizar Sheet desde URL
   useEffect(() => {

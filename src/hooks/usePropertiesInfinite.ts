@@ -9,9 +9,12 @@ interface QueryResult {
   count: number | null;
 }
 
-export const usePropertiesInfinite = (filters: PropertyFilters) => {
+export const usePropertiesInfinite = (
+  filters: PropertyFilters,
+  searchCoordinates: { lat: number; lng: number } | null = null
+) => {
   const query = useInfiniteQuery({
-    queryKey: ['properties-infinite', filters],
+    queryKey: ['properties-infinite', filters, searchCoordinates],
     initialPageParam: 0 as number,
     getNextPageParam: (lastPage: QueryResult, allPages: QueryResult[]) => {
       if (!lastPage.properties || lastPage.properties.length < ITEMS_PER_PAGE) return undefined;
@@ -40,6 +43,46 @@ export const usePropertiesInfinite = (filters: PropertyFilters) => {
       if (filters.colonia && filters.colonia.trim() !== '') {
         // Buscar en la columna 'colonia' O en 'address' como fallback
         query = query.or(`colonia.ilike.%${filters.colonia.trim()}%,address.ilike.%${filters.colonia.trim()}%`);
+      }
+
+      // ✅ FILTRO GEOGRÁFICO (Bounding Box ~5km)
+      // Solo se aplica si el usuario seleccionó un punto específico de búsqueda
+      if (searchCoordinates) {
+        // Aproximación: 1 grado ≈ 111km, entonces 0.009° ≈ 1km
+        const ROUGH_KM_DEGREE = 0.009;
+        
+        // Ajustar radio según nivel de especificidad
+        let RADIUS_KM = 5; // Default
+        
+        if (filters.colonia) {
+          RADIUS_KM = 3; // Búsqueda muy específica
+        } else if (filters.municipio) {
+          RADIUS_KM = 10; // Búsqueda por alcaldía
+        } else if (filters.estado && !filters.municipio) {
+          // Si solo hay estado, NO aplicar filtro geográfico
+          RADIUS_KM = 0;
+        }
+        
+        if (RADIUS_KM > 0) {
+          const delta = ROUGH_KM_DEGREE * RADIUS_KM;
+          
+          query = query
+            .gte('lat', searchCoordinates.lat - delta)
+            .lte('lat', searchCoordinates.lat + delta)
+            .gte('lng', searchCoordinates.lng - delta)
+            .lte('lng', searchCoordinates.lng + delta);
+            
+          console.log('🌍 [List] Aplicando filtro geográfico:', {
+            center: searchCoordinates,
+            radiusKm: RADIUS_KM,
+            bounds: {
+              latMin: searchCoordinates.lat - delta,
+              latMax: searchCoordinates.lat + delta,
+              lngMin: searchCoordinates.lng - delta,
+              lngMax: searchCoordinates.lng + delta,
+            }
+          });
+        }
       }
 
       // 3. TIPO Y LISTING (Validar que no sea 'undefined')

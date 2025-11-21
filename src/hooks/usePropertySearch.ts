@@ -23,7 +23,10 @@ export interface UsePropertySearchResult {
   actualTotal: number; // ✅ Total real antes del límite
 }
 
-export const usePropertySearch = (filters: PropertyFilters): UsePropertySearchResult => {
+export const usePropertySearch = (
+  filters: PropertyFilters,
+  searchCoordinates: { lat: number; lng: number } | null = null
+): UsePropertySearchResult => {
   const {
     data: infiniteData,
     isLoading,
@@ -32,7 +35,7 @@ export const usePropertySearch = (filters: PropertyFilters): UsePropertySearchRe
     hasNextPage,
     error,
     totalCount: realTotalCount,
-  } = usePropertiesInfinite(filters);
+  } = usePropertiesInfinite(filters, searchCoordinates);
 
   // Construir arreglo plano de propiedades desde las páginas
   const allProperties = useMemo(
