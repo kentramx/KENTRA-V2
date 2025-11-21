@@ -241,6 +241,7 @@ export interface MapBounds {
 export interface PropertyFilters {
   estado?: string;
   municipio?: string;
+  colonia?: string; // ✅ Agregado para búsqueda por colonia
   tipo?: string; // Acepta string para compatibilidad con filtros existentes
   listingType?: string; // Acepta string para compatibilidad
   precioMin?: number;

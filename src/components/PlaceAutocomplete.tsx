@@ -147,7 +147,13 @@ export const PlaceAutocomplete = ({
               }
               if (component.types.includes('administrative_area_level_2')) {
                 municipality = component.long_name;
-              } else if (!municipality && component.types.includes('locality')) {
+              }
+              // ✅ Soporte para Alcaldías de CDMX (sublocality_level_1)
+              if (!municipality && component.types.includes('sublocality_level_1')) {
+                municipality = component.long_name;
+              }
+              // Fallback a locality
+              if (!municipality && component.types.includes('locality')) {
                 municipality = component.long_name;
               }
             });
@@ -266,7 +272,13 @@ export const PlaceAutocomplete = ({
         }
         if (component.types.includes('administrative_area_level_2')) {
           municipality = component.long_name;
-        } else if (!municipality && component.types.includes('locality')) {
+        }
+        // ✅ Soporte para Alcaldías de CDMX (sublocality_level_1)
+        if (!municipality && component.types.includes('sublocality_level_1')) {
+          municipality = component.long_name;
+        }
+        // Fallback a locality
+        if (!municipality && component.types.includes('locality')) {
           municipality = component.long_name;
         }
       });
@@ -359,7 +371,13 @@ export const PlaceAutocomplete = ({
           }
           if (component.types.includes('administrative_area_level_2')) {
             municipality = component.longText;
-          } else if (!municipality && component.types.includes('locality')) {
+          }
+          // ✅ Soporte para Alcaldías de CDMX (sublocality_level_1)
+          if (!municipality && component.types.includes('sublocality_level_1')) {
+            municipality = component.longText;
+          }
+          // Fallback a locality
+          if (!municipality && component.types.includes('locality')) {
             municipality = component.longText;
           }
         });
