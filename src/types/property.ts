@@ -238,6 +238,14 @@ export interface MapBounds {
   zoom: number;
 }
 
+// ✅ Bounding box para filtrar propiedades por vista del mapa
+export interface SearchBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
 export interface PropertyFilters {
   estado?: string;
   municipio?: string;

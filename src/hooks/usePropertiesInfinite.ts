@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { PropertyFilters, PropertySummary } from '@/types/property';
+import type { PropertyFilters, PropertySummary, SearchBounds } from '@/types/property';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -11,10 +11,11 @@ interface QueryResult {
 
 export const usePropertiesInfinite = (
   filters: PropertyFilters,
-  searchCoordinates: { lat: number; lng: number } | null = null
+  searchCoordinates: { lat: number; lng: number } | null = null,
+  searchBounds: SearchBounds | null = null
 ) => {
   const query = useInfiniteQuery({
-    queryKey: ['properties-infinite', filters, searchCoordinates],
+    queryKey: ['properties-infinite', filters, searchCoordinates, searchBounds],
     initialPageParam: 0 as number,
     getNextPageParam: (lastPage: QueryResult, allPages: QueryResult[]) => {
       if (!lastPage.properties || lastPage.properties.length < ITEMS_PER_PAGE) return undefined;
@@ -45,8 +46,17 @@ export const usePropertiesInfinite = (
         query = query.or(`colonia.ilike.%${filters.colonia.trim()}%,address.ilike.%${filters.colonia.trim()}%`);
       }
 
-      // ✅ FILTRO DE PROXIMIDAD (Radio Dinámico)
-      if (searchCoordinates && searchCoordinates.lat && searchCoordinates.lng) {
+      // ✅ FILTRO GEOGRÁFICO: Priorizar bounds del mapa sobre radio fijo
+      if (searchBounds) {
+        // Si hay bounds del mapa, usamos esto (más preciso)
+        console.log('🗺️ Filtrando por vista del mapa:', searchBounds);
+        query = query
+          .lte('lat', searchBounds.north)
+          .gte('lat', searchBounds.south)
+          .lte('lng', searchBounds.east)
+          .gte('lng', searchBounds.west);
+      } else if (searchCoordinates && searchCoordinates.lat && searchCoordinates.lng) {
+        // Fallback: Radio dinámico basado en especificidad de búsqueda
         const ROUGH_KM_DEGREE = 0.009; // ~1km
         let radiusKm = 10; // Default: Municipio/Ciudad
         

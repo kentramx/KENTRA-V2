@@ -25,6 +25,7 @@ interface SearchMapProps {
   height?: string;
   onMapError?: (error: string) => void;
   onVisibleCountChange?: (count: number) => void;
+  onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }) => void;
 }
 
 export const SearchMap: React.FC<SearchMapProps> = ({
@@ -37,6 +38,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   height = '100%',
   onMapError,
   onVisibleCountChange,
+  onBoundsChange,
 }) => {
   const navigate = useNavigate();
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
@@ -167,7 +169,17 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   // ✅ Callback memoizado para bounds change
   const handleBoundsChange = useCallback((bounds: ViewportBounds) => {
     setViewportBounds(bounds);
-  }, []);
+    
+    // Comunicar bounds al padre para sincronizar la lista
+    if (onBoundsChange) {
+      onBoundsChange({
+        north: bounds.maxLat,
+        south: bounds.minLat,
+        east: bounds.maxLng,
+        west: bounds.minLng,
+      });
+    }
+  }, [onBoundsChange]);
 
   // ✅ Callback memoizado para marker click (no navegar si es cluster)
   const handleMarkerClickInternal = useCallback(

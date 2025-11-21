@@ -39,7 +39,7 @@ import { generatePropertyListStructuredData } from '@/utils/structuredData';
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
-import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/property';
+import type { MapProperty, PropertyFilters, HoveredProperty, SearchBounds } from '@/types/property';
 
 interface Filters {
   estado: string;
@@ -157,6 +157,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     return null;
   });
   
+  // ✅ Estado para capturar límites del mapa y sincronizar con lista
+  const [mapBounds, setMapBounds] = useState<SearchBounds | null>(null);
+  
   // ✅ DEBUG: Logs temporales para rastrear cambios de listingType
   useEffect(() => {
     console.log('[Buscar Debug] filters.listingType changed to:', filters.listingType);
@@ -175,7 +178,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     [filters]
   );
 
-  // ✅ Búsqueda de propiedades con filtros
+  // ✅ Búsqueda de propiedades con filtros y bounds del mapa
   const {
     properties,
     isLoading: loading,
@@ -186,7 +189,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     fetchNextPage,
     hasTooManyResults,
     actualTotal,
-  } = usePropertySearch(propertyFilters, searchCoordinates);
+  } = usePropertySearch(propertyFilters, searchCoordinates, mapBounds);
 
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
@@ -1530,6 +1533,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 height="100%"
                 onMapError={setMapError}
                 onVisibleCountChange={setMapVisibleCount}
+                onBoundsChange={setMapBounds}
               />
             )}
           </div>
