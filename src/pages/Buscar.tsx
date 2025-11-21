@@ -297,6 +297,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const hoverFromMap = useRef(false);
   const [mobileView, setMobileView] = useState<'map' | 'list'>('list');
   const [mapError, setMapError] = useState<string | null>(null);
+  const [mapVisibleCount, setMapVisibleCount] = useState<number>(0);
 
   // Normalizar rango de precios para evitar valores fuera de rango al alternar Venta/Renta
   const [minRangeForType, maxRangeForType] = getPriceRangeForListingType(filters.listingType);
@@ -1458,9 +1459,11 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
             {/* Contador de resultados */}
             <div className="absolute top-4 left-4 z-10 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-lg">{totalCount}</span>
+                <span className="font-bold text-lg">
+                  {mobileView === 'map' || window.innerWidth >= 1024 ? mapVisibleCount : totalCount}
+                </span>
                 <span className="text-muted-foreground text-sm">
-                  {totalCount === 1 ? 'propiedad' : 'propiedades'}
+                  {(mobileView === 'map' || window.innerWidth >= 1024 ? mapVisibleCount : totalCount) === 1 ? 'propiedad' : 'propiedades'}
                 </span>
                 {isFetching && properties.length > 0 && (
                   <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
@@ -1495,6 +1498,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 }
                 height="100%"
                 onMapError={setMapError}
+                onVisibleCountChange={setMapVisibleCount}
               />
             )}
           </div>

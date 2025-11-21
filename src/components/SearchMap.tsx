@@ -5,7 +5,7 @@
  * - Manejo de errores con monitoring
  */
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BasicGoogleMap } from '@/components/BasicGoogleMap';
 import { useTiledMap, ViewportBounds, MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE } from '@/hooks/useTiledMap';
@@ -24,6 +24,7 @@ interface SearchMapProps {
   hoveredPropertyCoords?: { lat: number; lng: number } | null;
   height?: string;
   onMapError?: (error: string) => void;
+  onVisibleCountChange?: (count: number) => void;
 }
 
 export const SearchMap: React.FC<SearchMapProps> = ({
@@ -35,6 +36,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   hoveredPropertyCoords,
   height = '100%',
   onMapError,
+  onVisibleCountChange,
 }) => {
   const navigate = useNavigate();
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
@@ -63,6 +65,16 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   }
 
   const { properties = [], clusters = [] } = viewportData || {};
+
+  // ✅ Calcular y reportar el total de propiedades visibles en el mapa
+  useEffect(() => {
+    if (!onVisibleCountChange) return;
+    
+    const totalVisible = (properties?.length || 0) + 
+      (clusters?.reduce((acc, c) => acc + c.property_count, 0) || 0);
+    
+    onVisibleCountChange(totalVisible);
+  }, [properties, clusters, onVisibleCountChange]);
 
   // ✅ Handler para errores críticos del mapa (Google Maps no carga)
   const handleMapError = useCallback((error: Error) => {
