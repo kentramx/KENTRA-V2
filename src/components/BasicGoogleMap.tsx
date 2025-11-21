@@ -14,6 +14,11 @@ const getClusterSVG = (count: number): string => {
     return svgCache.get(cacheKey)!;
   }
   
+  // ✅ Limpieza automática de caché si supera 500 entradas
+  if (svgCache.size > 500) {
+    svgCache.clear();
+  }
+  
   const baseSize = 50;
   const size = Math.min(baseSize + Math.log10(count) * 15, 90);
   
@@ -45,6 +50,11 @@ const getPriceSVG = (price: number, currency: string): string => {
   const cacheKey = `price-${price}-${currency}`;
   if (svgCache.has(cacheKey)) {
     return svgCache.get(cacheKey)!;
+  }
+  
+  // ✅ Limpieza automática de caché si supera 500 entradas
+  if (svgCache.size > 500) {
+    svgCache.clear();
   }
   
   const priceFormatted = new Intl.NumberFormat('es-MX', {
