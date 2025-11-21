@@ -44,6 +44,7 @@ import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/prop
 interface Filters {
   estado: string;
   municipio: string;
+  colonia: string; // ✅ Agregado para búsqueda por colonia
   precioMin: string;
   precioMax: string;
   tipo: string;
@@ -119,6 +120,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const DEFAULT_FILTERS: Filters = {
     estado: '',
     municipio: '',
+    colonia: '', // ✅ Agregado
     precioMin: '',
     precioMax: '',
     tipo: '',
@@ -131,6 +133,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [filters, setFilters] = useState<Filters>({
     estado: searchParams.get('estado') || '',
     municipio: searchParams.get('municipio') || '',
+    colonia: searchParams.get('colonia') || '', // ✅ Agregado
     precioMin: searchParams.get('precioMin') || '',
     precioMax: searchParams.get('precioMax') || '',
     tipo: searchParams.get('tipo') || '',
@@ -266,6 +269,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     const newFilters = {
       estado: searchParams.get('estado') || '',
       municipio: searchParams.get('municipio') || '',
+      colonia: searchParams.get('colonia') || '', // ✅ Agregado
       precioMin: searchParams.get('precioMin') || '',
       precioMax: searchParams.get('precioMax') || '',
       tipo: searchParams.get('tipo') || '',
@@ -549,6 +553,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     
     if (filters.estado) params.set('estado', filters.estado);
     if (filters.municipio) params.set('municipio', filters.municipio);
+    if (filters.colonia) params.set('colonia', filters.colonia); // ✅ Agregado
     if (filters.precioMin) params.set('precioMin', filters.precioMin);
     if (filters.precioMax) params.set('precioMax', filters.precioMax);
     if (filters.tipo) params.set('tipo', filters.tipo);
@@ -620,6 +625,15 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
         key: 'municipio',
         label: `Municipio: ${filters.municipio}`,
         removeFilter: () => removeFilter('municipio')
+      });
+    }
+
+    // ✅ Chip para colonia
+    if (filters.colonia) {
+      chips.push({
+        key: 'colonia',
+        label: `Colonia: ${filters.colonia}`,
+        removeFilter: () => removeFilter('colonia')
       });
     }
 
@@ -831,11 +845,12 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     }
   };
 
-  const handlePlaceSelect = (location: { address: string; municipality: string; state: string; lat?: number; lng?: number; }) => {
+  const handlePlaceSelect = (location: { address: string; municipality: string; state: string; colonia?: string; lat?: number; lng?: number; }) => {
     setFilters(prev => ({
       ...prev,
       estado: location.state || prev.estado,
       municipio: location.municipality || prev.municipio,
+      colonia: location.colonia || '', // ✅ Guardar colonia y limpiar si no hay
     }));
 
     // Guardar coordenadas de la búsqueda
@@ -843,9 +858,14 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       setSearchCoordinates({ lat: location.lat, lng: location.lng });
     }
 
+    // ✅ Mostrar colonia en el toast si está disponible
+    const description = location.colonia 
+      ? `${location.colonia}, ${location.municipality}, ${location.state}`
+      : `${location.municipality}, ${location.state}`;
+
     toast({
       title: 'Ubicación seleccionada',
-      description: `${location.municipality}, ${location.state}`,
+      description,
     });
   };
 

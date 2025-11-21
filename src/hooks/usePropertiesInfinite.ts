@@ -36,6 +36,12 @@ export const usePropertiesInfinite = (filters: PropertyFilters) => {
         query = query.ilike('municipality', `%${filters.municipio}%`);
       }
 
+      // ✅ Filtro por Colonia (buscar en colonia o address)
+      if (filters.colonia && filters.colonia.trim() !== '') {
+        // Buscar en la columna 'colonia' O en 'address' como fallback
+        query = query.or(`colonia.ilike.%${filters.colonia.trim()}%,address.ilike.%${filters.colonia.trim()}%`);
+      }
+
       // 3. TIPO Y LISTING (Validar que no sea 'undefined')
       if (filters.tipo && filters.tipo !== '' && filters.tipo !== 'todos') {
         query = query.eq('type', filters.tipo as any);
