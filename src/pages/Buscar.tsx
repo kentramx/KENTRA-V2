@@ -1522,8 +1522,13 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 onMapError={setMapError}
                 onVisibleCountChange={setMapVisibleCount}
                 onBoundsChange={(bounds) => {
-                  console.log("📍 Mapa movido:", bounds);
-                  setMapBounds(bounds);
+                  // Solo actualizar si los bounds realmente cambiaron (evita re-renders)
+                  setMapBounds((prevBounds) => {
+                    if (JSON.stringify(prevBounds) !== JSON.stringify(bounds)) {
+                      return bounds;
+                    }
+                    return prevBounds;
+                  });
                 }}
               />
             )}
