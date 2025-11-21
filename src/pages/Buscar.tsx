@@ -536,11 +536,12 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     }
   };
 
-  // ✅ Sincronización filters → URL (mejorado y consolidado)
+  // ✅ Sincronización filters → URL (optimizado para evitar loops infinitos)
   useEffect(() => {
-    // Si estamos sincronizando desde URL, no sobrescribir
+    // 🚫 Si estamos sincronizando desde URL, no sobrescribir
     if (syncingFromUrl.current) {
-      return; // ❌ No resetear el flag aquí
+      console.log('[Buscar] Sincronización bloqueada: syncingFromUrl activo');
+      return;
     }
     
     const params = new URLSearchParams();
@@ -570,12 +571,17 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       params.set('propiedad', propiedad);
     }
 
+    // ✅ Solo actualizar si el string de parámetros cambió realmente
     const next = params.toString();
     const current = searchParams.toString();
+    
     if (next !== current) {
+      console.log('[Buscar] Actualizando URL:', { next, current });
       setSearchParams(params, { replace: true });
+    } else {
+      console.log('[Buscar] URL sin cambios, skip update');
     }
-  }, [filters, searchCoordinates, searchParams, setSearchParams]);
+  }, [filters, searchCoordinates]); // ✅ Removidas dependencias circulares searchParams y setSearchParams
 
   useEffect(() => {
     if (filters.estado) {
