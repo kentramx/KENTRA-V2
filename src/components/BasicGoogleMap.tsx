@@ -292,22 +292,27 @@ export function BasicGoogleMap({
     if (!map || !center) return;
 
     // Detectar si REALMENTE es una nueva ubicación enviada desde el buscador
-    const isNewCenter = 
-      center.lat !== prevCenterRef.current?.lat || 
-      center.lng !== prevCenterRef.current?.lng;
-    const isNewZoom = zoom !== prevZoomRef.current;
+    // Usamos umbral de tolerancia para evitar movimientos por precisión de flotantes
+    const centerChanged = 
+      Math.abs(center.lat - prevCenterRef.current.lat) > 0.0001 || 
+      Math.abs(center.lng - prevCenterRef.current.lng) > 0.0001;
+    
+    const currentZoom = map.getZoom() || zoom;
+    const zoomChanged = zoom && Math.abs(currentZoom - zoom) > 1;
 
-    // Actualizar referencias para la próxima
-    prevCenterRef.current = center;
-    prevZoomRef.current = zoom;
-
-    // Solo intervenir si las props cambiaron.
-    // Si el usuario movió el mapa o clicó un cluster, 'center' y 'prevCenterRef' serán iguales
+    // Solo intervenir si las props cambiaron significativamente.
+    // Si el usuario movió el mapa o clicó un cluster, las coordenadas serán prácticamente iguales
     // así que NO entraremos aquí, evitando el reset.
-    if (isNewCenter || isNewZoom) {
+    if (centerChanged || zoomChanged) {
       console.log('🗺️ [BasicGoogleMap] Nueva búsqueda detectada, moviendo mapa a:', center);
       map.panTo(center);
-      if (zoom) map.setZoom(zoom);
+      if (zoomChanged && zoom) {
+        map.setZoom(zoom);
+      }
+      
+      // Actualizar referencias DESPUÉS de aplicar el cambio
+      prevCenterRef.current = center;
+      prevZoomRef.current = zoom;
     }
   }, [center.lat, center.lng, zoom]);
 
