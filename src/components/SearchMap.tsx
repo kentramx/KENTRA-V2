@@ -52,7 +52,27 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   const previousMarkersRef = useRef<any[]>([]);
   
   // ✅ Debounce adaptativo de viewport según FPS del dispositivo
-  const debouncedBounds = useAdaptiveDebounce(viewportBounds, 300);
+  const debouncedBounds = useAdaptiveDebounce(viewportBounds, 150);
+  
+  // ✅ Calcular bounds iniciales cuando cambian las coordenadas de búsqueda
+  useEffect(() => {
+    if (searchCoordinates) {
+      // Calcular bounds aproximados para zoom 12 (vista de ciudad)
+      const latOffset = 0.05; // ~5.5 km
+      const lngOffset = 0.08; // ~5.5 km (ajustado por latitud)
+      
+      const initialBounds: ViewportBounds = {
+        minLat: searchCoordinates.lat - latOffset,
+        maxLat: searchCoordinates.lat + latOffset,
+        minLng: searchCoordinates.lng - lngOffset,
+        maxLng: searchCoordinates.lng + lngOffset,
+        zoom: 12,
+      };
+      
+      console.log('🗺️ [SearchMap] Inicializando bounds para nueva búsqueda:', initialBounds);
+      setViewportBounds(initialBounds);
+    }
+  }, [searchCoordinates?.lat, searchCoordinates?.lng]);
 
   // 🚀 TILE-BASED ARCHITECTURE: fetch con escalabilidad infinita
   const { data: viewportData, isLoading, error } = useTiledMap(
