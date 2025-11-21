@@ -105,27 +105,23 @@ const GpuMap = () => {
       id: 'scatterplot-layer',
       data: pointsRef.current,
       pickable: true,
-      opacity: 0.8,
+      opacity: 0.9,
       stroked: true,
       filled: true,
-      radiusScale: 50,
-      radiusMinPixels: 3,
-      radiusMaxPixels: 10,
+      radiusScale: 1,
+      radiusMinPixels: 8,
+      radiusMaxPixels: 30,
       lineWidthMinPixels: 1,
       getPosition: (d: any) => d.position,
-      getRadius: (d: any) => (hoveredPoint === d.id ? 8 : 5),
+      getRadius: (d: any) => (hoveredPoint === d.id ? 1000 : 500),
       getFillColor: (d: any) => {
-        // Color basado en precio (azul -> verde -> amarillo -> rojo)
-        const priceRatio = d.price / 10000000;
+        // Rojo brillante para máxima visibilidad
         if (hoveredPoint === d.id) {
           return [255, 255, 0, 255]; // Amarillo al hover
         }
-        if (priceRatio < 0.25) return [59, 130, 246, 200]; // Azul (barato)
-        if (priceRatio < 0.5) return [34, 197, 94, 200]; // Verde
-        if (priceRatio < 0.75) return [251, 191, 36, 200]; // Amarillo
-        return [239, 68, 68, 200]; // Rojo (caro)
+        return [255, 0, 0, 255]; // Rojo brillante
       },
-      getLineColor: [255, 255, 255, 100],
+      getLineColor: [255, 255, 255, 150],
       onHover: (info: any) => {
         if (info.object) {
           setHoveredPoint(info.object.id);
@@ -158,8 +154,8 @@ const GpuMap = () => {
   }
 
   return (
-    <div className="relative w-full h-screen">
-      <div ref={mapRef} className="w-full h-full" />
+    <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+      <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
       
       {/* Stats overlay */}
       <div className="absolute top-4 left-4 bg-background/95 backdrop-blur-sm border rounded-lg p-4 shadow-lg">
