@@ -41,8 +41,45 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   onBoundsChange,
 }) => {
   const navigate = useNavigate();
-  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
+  
+  // ✅ Centro y zoom del mapa (necesarios para calcular bounds iniciales)
+  const mapCenter = useMemo(() => {
+    if (searchCoordinates) {
+      return searchCoordinates;
+    }
+    // Centro de México por defecto
+    return { lat: 23.6345, lng: -102.5528 };
+  }, [searchCoordinates]);
+
+  const mapZoom = searchCoordinates ? 12 : 5;
+  
+  // ✅ Calcular bounds iniciales basados en searchCoordinates para que el mapa cargue datos inmediatamente
+  const initialBounds = useMemo(() => {
+    if (!searchCoordinates) return null;
+    
+    const zoom = mapZoom;
+    // Calcular radio aproximado basado en zoom (más zoom = área más pequeña)
+    const radiusLat = 0.5 / Math.pow(2, zoom - 10); // Ajuste dinámico
+    const radiusLng = 0.5 / Math.pow(2, zoom - 10);
+    
+    return {
+      minLat: searchCoordinates.lat - radiusLat,
+      maxLat: searchCoordinates.lat + radiusLat,
+      minLng: searchCoordinates.lng - radiusLng,
+      maxLng: searchCoordinates.lng + radiusLng,
+      zoom: zoom,
+    };
+  }, [searchCoordinates, mapZoom]);
+  
+  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(initialBounds);
   const [mapError, setMapError] = useState<string | null>(null);
+  
+  // ✅ Actualizar viewportBounds cuando cambian las searchCoordinates
+  useEffect(() => {
+    if (initialBounds) {
+      setViewportBounds(initialBounds);
+    }
+  }, [initialBounds]);
   
   // ✅ Mantener datos previos para evitar parpadeos
   const previousMarkersRef = useRef<any[]>([]);
@@ -155,21 +192,10 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     return markers;
   }, [properties.length, clusters.length, isLoading, properties, clusters]);
 
-  // ✅ Centro del mapa
-  const mapCenter = useMemo(() => {
-    if (searchCoordinates) {
-      return searchCoordinates;
-    }
-    // Centro de México por defecto
-    return { lat: 23.6345, lng: -102.5528 };
-  }, [searchCoordinates]);
-
-  const mapZoom = searchCoordinates ? 12 : 5;
-
   // ✅ Callback memoizado para bounds change
   const handleBoundsChange = useCallback((bounds: ViewportBounds) => {
     setViewportBounds(bounds);
-    onBoundsChange?.(bounds); // ✅ Avisar al padre
+    onBoundsChange?.(bounds); // ✅ Avisar al padre para sincronizar lista
   }, [onBoundsChange]);
 
   // ✅ Callback memoizado para marker click (no navegar si es cluster)
