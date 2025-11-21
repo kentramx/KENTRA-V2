@@ -286,34 +286,49 @@ export function BasicGoogleMap({
     return () => { mounted = false; };
   }, []); // 👈 Array vacío: solo montar una vez
 
-  // ✅ Efecto inteligente: Solo mover si la búsqueda cambió externamente (Input del usuario)
+  // ✅ Inicializar refs correctamente (solo en primer render)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      prevCenterRef.current = center;
+      prevZoomRef.current = zoom || 5;
+      isFirstRender.current = false;
+    }
+  }, []);
+
+  // 2️⃣ Efecto INTELIGENTE: Solo mover si los VALORES numéricos cambiaron
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !center) return;
+    if (!map || !center || !mapReady) return;
 
-    // Detectar si REALMENTE es una nueva ubicación enviada desde el buscador
-    // Usamos umbral de tolerancia para evitar movimientos por precisión de flotantes
-    const centerChanged = 
-      Math.abs(center.lat - prevCenterRef.current.lat) > 0.0001 || 
-      Math.abs(center.lng - prevCenterRef.current.lng) > 0.0001;
-    
-    const zoomChanged = zoom !== prevZoomRef.current;
+    // Comparar VALORES numéricos para detectar cambios reales desde el padre
+    const centerLatChanged = Math.abs(center.lat - prevCenterRef.current.lat) > 0.001;
+    const centerLngChanged = Math.abs(center.lng - prevCenterRef.current.lng) > 0.001;
+    const zoomValue = zoom || 5;
+    const prevZoomValue = prevZoomRef.current || 5;
+    const zoomChanged = Math.abs(zoomValue - prevZoomValue) > 0;
 
-    // Solo intervenir si las props cambiaron significativamente.
-    // Si el usuario movió el mapa o clicó un cluster, las coordenadas serán prácticamente iguales
-    // así que NO entraremos aquí, evitando el reset.
-    if (centerChanged || zoomChanged) {
-      console.log('🗺️ [BasicGoogleMap] Nueva búsqueda detectada, moviendo mapa a:', center);
-      map.panTo(center);
-      if (zoomChanged && zoom) {
-        map.setZoom(zoom);
+    // ✅ SOLO intervenir si hay cambio numérico significativo
+    if (centerLatChanged || centerLngChanged || zoomChanged) {
+      console.log('🔄 [BasicGoogleMap] Valores de props cambiaron, actualizando mapa:', { 
+        centerLatChanged, 
+        centerLngChanged,
+        zoomChanged,
+        anterior: { lat: prevCenterRef.current.lat, lng: prevCenterRef.current.lng, zoom: prevZoomValue },
+        nuevo: { lat: center.lat, lng: center.lng, zoom: zoomValue }
+      });
+      
+      if (centerLatChanged || centerLngChanged) {
+        map.panTo(center);
+        prevCenterRef.current = center;
       }
       
-      // Actualizar referencias DESPUÉS de aplicar el cambio
-      prevCenterRef.current = center;
-      prevZoomRef.current = zoom;
+      if (zoomChanged) {
+        map.setZoom(zoomValue);
+        prevZoomRef.current = zoomValue;
+      }
     }
-  }, [center.lat, center.lng, zoom]);
+  }, [center.lat, center.lng, zoom, mapReady]);
 
   // ✅ Renderizar pastillas de precios estilo Zillow (OPTIMIZADO con diffing)
   useEffect(() => {

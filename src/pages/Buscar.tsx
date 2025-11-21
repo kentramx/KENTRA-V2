@@ -949,17 +949,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     return items;
   };
 
-  if (loading && !properties.length) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="flex flex-col items-center justify-center h-screen gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Cargando propiedades...</p>
-        </div>
-      </div>
-    );
-  }
+  // ❌ Eliminado: No mostrar pantalla de carga completa, mejor dejar que el contenido se muestre inmediatamente
 
   // Generar metadatos SEO dinámicos
   const seoTitle = generateSearchTitle({
