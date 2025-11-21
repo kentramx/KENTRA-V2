@@ -1,8 +1,75 @@
 /// <reference types="google.maps" />
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
 import { MarkerClusterer, GridAlgorithm } from '@googlemaps/markerclusterer';
 import { monitoring } from '@/lib/monitoring';
+
+// 🚀 Caché global de SVGs para evitar regenerar el mismo ícono muchas veces
+const svgCache = new Map<string, string>();
+
+// Generar SVG de cluster memoizado
+const getClusterSVG = (count: number): string => {
+  const cacheKey = `cluster-${count}`;
+  if (svgCache.has(cacheKey)) {
+    return svgCache.get(cacheKey)!;
+  }
+  
+  const baseSize = 50;
+  const size = Math.min(baseSize + Math.log10(count) * 15, 90);
+  
+  const svg = `
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" 
+        fill="#000000" 
+        stroke="white" 
+        stroke-width="3" 
+        opacity="0.95"/>
+      <text x="${size/2}" y="${size/2}" 
+        text-anchor="middle" 
+        dominant-baseline="central"
+        fill="white" 
+        font-size="${size/3}"
+        font-weight="700"
+        font-family="system-ui, -apple-system, sans-serif">
+        ${count}
+      </text>
+    </svg>
+  `;
+  
+  svgCache.set(cacheKey, svg);
+  return svg;
+};
+
+// Generar SVG de precio memoizado
+const getPriceSVG = (price: number, currency: string): string => {
+  const cacheKey = `price-${price}-${currency}`;
+  if (svgCache.has(cacheKey)) {
+    return svgCache.get(cacheKey)!;
+  }
+  
+  const priceFormatted = new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: currency || 'MXN',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(price);
+  
+  const priceLabel = priceFormatted.replace('MXN', '$').replace('USD', '$');
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32">
+      <rect x="0" y="0" width="120" height="32" rx="16" 
+        fill="white" stroke="#000" stroke-width="2" opacity="0.95"/>
+      <text x="60" y="20" text-anchor="middle" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="14" font-weight="700" fill="#000">
+        ${priceLabel}
+      </text>
+    </svg>
+  `;
+  
+  svgCache.set(cacheKey, svg);
+  return svg;
+};
 
 export interface MapMarker {
   id: string;
@@ -61,6 +128,9 @@ export function BasicGoogleMap({
   const [error, setError] = useState<string | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  
+  // 🎯 Estado anterior de markers para diffing
+  const previousMarkersRef = useRef<Map<string, MapMarker>>(new Map());
 
   // Mantener callbacks estables sin re-crear marcadores
   const onMarkerClickRef = useRef<((id: string) => void) | undefined>(onMarkerClick);
@@ -162,36 +232,109 @@ export function BasicGoogleMap({
     return () => { mounted = false; };
   }, [center.lat, center.lng, zoom, onReady, onBoundsChanged, onMapError]);
 
-  // ✅ Renderizar pastillas de precios estilo Zillow
+  // ✅ Renderizar pastillas de precios estilo Zillow (OPTIMIZADO con diffing)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !window.google || !mapReady) return;
 
     const renderStartTime = performance.now();
-    console.log('🎯 [BasicGoogleMap] Renderizando pastillas de precios:', { count: markers.length });
+    
+    // 🔍 Construir mapa de marcadores actuales para diffing
+    const currentMarkersMap = new Map<string, MapMarker>();
+    markers.forEach(m => currentMarkersMap.set(m.id, m));
+    
+    // 🎯 Detectar cambios: qué marcadores añadir, actualizar o eliminar
+    const toAdd = new Set<string>();
+    const toUpdate = new Set<string>();
+    const toRemove = new Set<string>();
+    
+    // Detectar nuevos marcadores o actualizados
+    currentMarkersMap.forEach((marker, id) => {
+      const previous = previousMarkersRef.current.get(id);
+      if (!previous) {
+        toAdd.add(id);
+      } else {
+        // Comparar si cambió algo relevante
+        const changed = 
+          previous.lat !== marker.lat ||
+          previous.lng !== marker.lng ||
+          previous.price !== marker.price ||
+          previous.count !== marker.count ||
+          previous.type !== marker.type;
+        
+        if (changed) {
+          toUpdate.add(id);
+        }
+      }
+    });
+    
+    // Detectar marcadores eliminados
+    previousMarkersRef.current.forEach((_, id) => {
+      if (!currentMarkersMap.has(id)) {
+        toRemove.add(id);
+      }
+    });
+    
+    const changesDetected = toAdd.size + toUpdate.size + toRemove.size;
+    
+    // ✅ Si no hay cambios, skip completo
+    if (changesDetected === 0) {
+      console.log('⚡ [BasicGoogleMap] Sin cambios detectados, skip renderizado');
+      return;
+    }
+    
+    console.log('🎯 [BasicGoogleMap] Diffing:', { 
+      total: markers.length,
+      toAdd: toAdd.size,
+      toUpdate: toUpdate.size, 
+      toRemove: toRemove.size 
+    });
 
-    // Limpiar marcadores existentes
-    markerRefs.current.forEach(marker => marker.setMap(null));
-    markerRefs.current.clear();
+    // 🗑️ Eliminar marcadores obsoletos
+    toRemove.forEach(id => {
+      const marker = markerRefs.current.get(id);
+      if (marker) {
+        marker.setMap(null);
+        markerRefs.current.delete(id);
+      }
+    });
+    
+    // 🔄 Actualizar marcadores cambiados (eliminar y recrear)
+    toUpdate.forEach(id => {
+      const marker = markerRefs.current.get(id);
+      if (marker) {
+        marker.setMap(null);
+        markerRefs.current.delete(id);
+      }
+      toAdd.add(id); // Recrear como nuevo
+    });
 
-    if (clustererRef.current) {
+    // Limpiar clusterer solo si hay cambios estructurales
+    if (clustererRef.current && (toAdd.size > 0 || toRemove.size > 0 || toUpdate.size > 0)) {
       clustererRef.current.clearMarkers();
       clustererRef.current = null;
-    }
-
-    if (infoWindowRef.current) {
-      infoWindowRef.current.close();
     }
 
     // Crear bounds para auto-fit
     const bounds = new google.maps.LatLngBounds();
     let validMarkersCount = 0;
-
-    // Crear marcadores con pastillas de precios o clusters del backend
     const newMarkers: google.maps.Marker[] = [];
     const hasBackendClusters = markers.some(m => m.type === 'cluster');
     
+    // ➕ Crear solo marcadores nuevos o actualizados
     for (const m of markers) {
+      // Si ya existe y no necesita actualización, skip
+      if (markerRefs.current.has(m.id) && !toAdd.has(m.id)) {
+        const existingMarker = markerRefs.current.get(m.id)!;
+        newMarkers.push(existingMarker);
+        bounds.extend(existingMarker.getPosition()!);
+        validMarkersCount++;
+        continue;
+      }
+      
+      // Solo crear si está en la lista de añadir
+      if (!toAdd.has(m.id)) continue;
+      
       const lat = Number(m.lat);
       const lng = Number(m.lng);
       const position = new google.maps.LatLng(lat, lng);
@@ -204,53 +347,16 @@ export function BasicGoogleMap({
       let iconAnchor: google.maps.Point;
       
       if (m.type === 'cluster') {
-        // Generar SVG de cluster negro con count
+        // 🚀 Usar SVG memoizado de cluster
         const count = m.count || 0;
+        svg = getClusterSVG(count);
         const baseSize = 50;
         const size = Math.min(baseSize + Math.log10(count) * 15, 90);
-        
-        svg = `
-          <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" 
-              fill="#000000" 
-              stroke="white" 
-              stroke-width="3" 
-              opacity="0.95"/>
-            <text x="${size/2}" y="${size/2}" 
-              text-anchor="middle" 
-              dominant-baseline="central"
-              fill="white" 
-              font-size="${size/3}"
-              font-weight="700"
-              font-family="system-ui, -apple-system, sans-serif">
-              ${count}
-            </text>
-          </svg>
-        `;
         iconSize = new google.maps.Size(size, size);
         iconAnchor = new google.maps.Point(size / 2, size / 2);
       } else {
-        // Formatear precio para property
-        const priceFormatted = new Intl.NumberFormat('es-MX', {
-          style: 'currency',
-          currency: m.currency || 'MXN',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(m.price || 0);
-        
-        // Crear pastilla de precio estilo Zillow
-        const priceLabel = priceFormatted.replace('MXN', '$').replace('USD', '$');
-        svg = `
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32">
-            <rect x="0" y="0" width="120" height="32" rx="16" 
-              fill="white" stroke="#000" stroke-width="2" opacity="0.95"/>
-            <text x="60" y="20" text-anchor="middle" 
-              font-family="system-ui, -apple-system, sans-serif" 
-              font-size="14" font-weight="700" fill="#000">
-              ${priceLabel}
-            </text>
-          </svg>
-        `;
+        // 🚀 Usar SVG memoizado de precio
+        svg = getPriceSVG(m.price || 0, m.currency || 'MXN');
         iconSize = new google.maps.Size(120, 32);
         iconAnchor = new google.maps.Point(60, 16);
       }
@@ -279,41 +385,29 @@ export function BasicGoogleMap({
       bounds.extend(position);
       validMarkersCount++;
     }
+    
+    // 💾 Actualizar estado anterior para próximo diffing
+    previousMarkersRef.current = currentMarkersMap;
 
-    console.log('✅ [BasicGoogleMap] Marcadores creados:', { 
+    console.log('✅ [BasicGoogleMap] Marcadores actualizados:', { 
       total: markers.length,
       valid: validMarkersCount,
-      hasBackendClusters 
+      hasBackendClusters,
+      added: toAdd.size,
+      updated: toUpdate.size,
+      removed: toRemove.size
     });
 
     // Aplicar clustering solo si NO hay clusters del backend
     if (enableClustering && !hasBackendClusters && newMarkers.length > 0) {
       try {
-        // Renderer personalizado para clusters con color negro (marca Kentra)
+        // Renderer personalizado usando SVGs memoizados
         const customRenderer = {
           render: ({ count, position }: { count: number; position: google.maps.LatLng }) => {
-            // Tamaño dinámico basado en count del backend
+            // 🚀 Usar SVG memoizado
+            const svg = getClusterSVG(count);
             const baseSize = 50;
             const size = Math.min(baseSize + Math.log10(count) * 15, 90);
-            
-            const svg = `
-              <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" 
-                  fill="#000000" 
-                  stroke="white" 
-                  stroke-width="3" 
-                  opacity="0.95"/>
-                <text x="${size/2}" y="${size/2}" 
-                  text-anchor="middle" 
-                  dominant-baseline="central"
-                  fill="white" 
-                  font-size="${size/3}"
-                  font-weight="700"
-                  font-family="system-ui, -apple-system, sans-serif">
-                  ${count}
-                </text>
-              </svg>
-            `;
 
             return new google.maps.Marker({
               position,
