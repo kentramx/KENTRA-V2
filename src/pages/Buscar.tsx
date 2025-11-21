@@ -40,7 +40,6 @@ import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
 import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/property';
-import type { ViewportBounds } from '@/hooks/useTiledMap';
 
 interface Filters {
   estado: string;
@@ -86,10 +85,6 @@ const Buscar = () => {
   
   // ✅ Estado para sincronizar clic en mapa con tarjeta de lista
   const [selectedPropertyFromMap, setSelectedPropertyFromMap] = useState<string | null>(null);
-  
-  // ✅ Estado para guardar coordenadas de la ubicación buscada y bounds del mapa
-  const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
-  const [mapBounds, setMapBounds] = useState<ViewportBounds | null>(null);
   
 // Rangos para VENTA (en millones)
 const SALE_MIN_PRICE = 0;
@@ -166,7 +161,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     [filters]
   );
 
-  // ✅ Búsqueda de propiedades con filtros y bounds del mapa
+  // ✅ Búsqueda de propiedades con filtros
   const {
     properties,
     isLoading: loading,
@@ -177,7 +172,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     fetchNextPage,
     hasTooManyResults,
     actualTotal,
-  } = usePropertySearch(propertyFilters, mapBounds);
+  } = usePropertySearch(propertyFilters);
 
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
@@ -221,6 +216,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   }, [properties, filters.orden]);
 
   const filteredProperties = sortedProperties;
+  
+  // Estado para guardar coordenadas de la ubicación buscada
+  const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   
   // Sincronizar Sheet desde URL
   useEffect(() => {
@@ -1521,15 +1519,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 height="100%"
                 onMapError={setMapError}
                 onVisibleCountChange={setMapVisibleCount}
-                onBoundsChange={(bounds) => {
-                  // Solo actualizar si los bounds realmente cambiaron (evita re-renders)
-                  setMapBounds((prevBounds) => {
-                    if (JSON.stringify(prevBounds) !== JSON.stringify(bounds)) {
-                      return bounds;
-                    }
-                    return prevBounds;
-                  });
-                }}
               />
             )}
           </div>

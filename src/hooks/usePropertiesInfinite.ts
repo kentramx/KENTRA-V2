@@ -1,7 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { PropertyFilters, PropertySummary } from '@/types/property';
-import type { ViewportBounds } from './useTiledMap';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -10,12 +9,9 @@ interface QueryResult {
   count: number | null;
 }
 
-export const usePropertiesInfinite = (
-  filters: PropertyFilters,
-  bounds?: ViewportBounds | null
-) => {
+export const usePropertiesInfinite = (filters: PropertyFilters) => {
   const query = useInfiniteQuery({
-    queryKey: ['properties-infinite', filters, bounds],
+    queryKey: ['properties-infinite', filters],
     initialPageParam: 0 as number,
     getNextPageParam: (lastPage: QueryResult, allPages: QueryResult[]) => {
       if (!lastPage.properties || lastPage.properties.length < ITEMS_PER_PAGE) return undefined;
@@ -31,31 +27,19 @@ export const usePropertiesInfinite = (
       // 1. STATUS: Filtrar solo propiedades activas
       query = query.eq('status', 'activa');
 
-      // 2. LÓGICA DE PRIORIDAD: Geoespacial vs Texto
-      if (bounds) {
-        // ✅ PRIORIDAD 1: Si hay bounds (navegación por mapa), SOLO filtro geográfico
-        query = query
-          .gte('lat', bounds.minLat)
-          .lte('lat', bounds.maxLat)
-          .gte('lng', bounds.minLng)
-          .lte('lng', bounds.maxLng);
-        
-        console.log('🗺️ [List] Filtrando por bounds del mapa (ignorando filtros de texto)');
-      } else {
-        // ✅ PRIORIDAD 2: Filtros de Texto (Solo si NO se está moviendo el mapa)
-        if (filters.estado && filters.estado.trim() !== '') {
-          query = query.ilike('state', `%${filters.estado}%`);
-        }
-        
-        if (filters.municipio && filters.municipio.trim() !== '') {
-          query = query.ilike('municipality', `%${filters.municipio}%`);
-        }
+      // 2. UBICACIÓN (Flexible con ilike)
+      if (filters.estado && filters.estado.trim() !== '') {
+        query = query.ilike('state', `%${filters.estado}%`);
+      }
+      
+      if (filters.municipio && filters.municipio.trim() !== '') {
+        query = query.ilike('municipality', `%${filters.municipio}%`);
+      }
 
-        if (filters.colonia && filters.colonia.trim() !== '') {
-          query = query.or(`colonia.ilike.%${filters.colonia.trim()}%,address.ilike.%${filters.colonia.trim()}%`);
-        }
-        
-        console.log('📍 [List] Filtrando por ubicación de texto', { estado: filters.estado, municipio: filters.municipio });
+      // ✅ Filtro por Colonia (buscar en colonia o address)
+      if (filters.colonia && filters.colonia.trim() !== '') {
+        // Buscar en la columna 'colonia' O en 'address' como fallback
+        query = query.or(`colonia.ilike.%${filters.colonia.trim()}%,address.ilike.%${filters.colonia.trim()}%`);
       }
 
       // 3. TIPO Y LISTING (Validar que no sea 'undefined')

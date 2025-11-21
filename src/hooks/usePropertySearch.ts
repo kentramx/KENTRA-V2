@@ -6,7 +6,6 @@
 import { useMemo } from 'react';
 import { usePropertiesInfinite } from './usePropertiesInfinite';
 import type { PropertyFilters, PropertySummary } from '@/types/property';
-import type { ViewportBounds } from './useTiledMap';
 
 // Límite de resultados cargados en memoria para la lista y el mapa.
 // 1000 es suficiente para navegación normal sin saturar el cliente.
@@ -24,10 +23,7 @@ export interface UsePropertySearchResult {
   actualTotal: number; // ✅ Total real antes del límite
 }
 
-export const usePropertySearch = (
-  filters: PropertyFilters,
-  bounds?: ViewportBounds | null
-): UsePropertySearchResult => {
+export const usePropertySearch = (filters: PropertyFilters): UsePropertySearchResult => {
   const {
     data: infiniteData,
     isLoading,
@@ -36,7 +32,7 @@ export const usePropertySearch = (
     hasNextPage,
     error,
     totalCount: realTotalCount,
-  } = usePropertiesInfinite(filters, bounds);
+  } = usePropertiesInfinite(filters);
 
   // Construir arreglo plano de propiedades desde las páginas
   const allProperties = useMemo(
