@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { PropertyFilters, PropertySummary } from '@/types/property';
+import type { ViewportBounds } from './useTiledMap';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -9,9 +10,12 @@ interface QueryResult {
   count: number | null;
 }
 
-export const usePropertiesInfinite = (filters: PropertyFilters) => {
+export const usePropertiesInfinite = (
+  filters: PropertyFilters,
+  bounds?: ViewportBounds | null
+) => {
   const query = useInfiniteQuery({
-    queryKey: ['properties-infinite', filters],
+    queryKey: ['properties-infinite', filters, bounds],
     initialPageParam: 0 as number,
     getNextPageParam: (lastPage: QueryResult, allPages: QueryResult[]) => {
       if (!lastPage.properties || lastPage.properties.length < ITEMS_PER_PAGE) return undefined;
@@ -27,7 +31,16 @@ export const usePropertiesInfinite = (filters: PropertyFilters) => {
       // 1. STATUS: Filtrar solo propiedades activas
       query = query.eq('status', 'activa');
 
-      // 2. UBICACIÓN (Flexible con ilike)
+      // 2. FILTRO GEOESPACIAL (PRIORIDAD: Bounds del mapa)
+      if (bounds) {
+        query = query
+          .gte('lat', bounds.minLat)
+          .lte('lat', bounds.maxLat)
+          .gte('lng', bounds.minLng)
+          .lte('lng', bounds.maxLng);
+      }
+
+      // 3. UBICACIÓN (Flexible con ilike)
       if (filters.estado && filters.estado.trim() !== '') {
         query = query.ilike('state', `%${filters.estado}%`);
       }
