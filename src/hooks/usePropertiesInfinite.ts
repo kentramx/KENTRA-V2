@@ -76,7 +76,27 @@ export const usePropertiesInfinite = (filters: PropertyFilters) => {
       }
 
       // 6. ORDENAMIENTO
-      query = query.order('price', { ascending: false }); // Default: precio descendente
+      switch (filters.orden) {
+        case 'price_asc':
+          query = query.order('price', { ascending: true });
+          break;
+        case 'newest':
+          query = query.order('created_at', { ascending: false });
+          break;
+        case 'oldest':
+          query = query.order('created_at', { ascending: true });
+          break;
+        case 'bedrooms_desc':
+          query = query.order('bedrooms', { ascending: false });
+          break;
+        case 'sqft_desc':
+          query = query.order('sqft', { ascending: false });
+          break;
+        case 'price_desc':
+        default:
+          query = query.order('price', { ascending: false });
+          break;
+      }
 
       // PAGINACIÓN
       const from = pageParam * ITEMS_PER_PAGE;

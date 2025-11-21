@@ -848,9 +848,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const handlePlaceSelect = (location: { address: string; municipality: string; state: string; colonia?: string; lat?: number; lng?: number; }) => {
     setFilters(prev => ({
       ...prev,
-      estado: location.state || prev.estado,
-      municipio: location.municipality || prev.municipio,
-      colonia: location.colonia || '', // ✅ Guardar colonia y limpiar si no hay
+      estado: location.state || '',
+      municipio: location.municipality || '',
+      colonia: location.colonia || '',
     }));
 
     // Guardar coordenadas de la búsqueda

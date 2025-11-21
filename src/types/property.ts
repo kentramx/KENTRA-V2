@@ -249,5 +249,6 @@ export interface PropertyFilters {
   recamaras?: string;
   banos?: string;
   status?: string[];
+  orden?: string; // ✅ Agregado para ordenamiento
   mapBounds?: MapBounds | null; // ✅ Nuevo: búsqueda por viewport del mapa
 }
