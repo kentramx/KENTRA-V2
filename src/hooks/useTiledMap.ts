@@ -31,68 +31,51 @@ export const useTiledMap = (
 ) => {
   const queryClient = useQueryClient();
 
-  // 🔥 Prefetch de tiles vecinos en background
-  useEffect(() => {
-    if (!bounds) return;
-    if (bounds.zoom < MIN_ZOOM_FOR_TILES) {
-      // Muy lejos, no vale la pena prefetchear nada
-      return;
-    }
-
-    const prefetchAdjacentTiles = async () => {
-      const { minLng, minLat, maxLng, maxLat, zoom } = bounds;
-      const lngSpan = maxLng - minLng;
-      const latSpan = maxLat - minLat;
-
-      // Definir 8 tiles vecinos (arriba, abajo, izq, der, y diagonales)
-      const adjacentBounds = [
-        { minLng, minLat: maxLat, maxLng, maxLat: maxLat + latSpan }, // Arriba
-        { minLng, minLat: minLat - latSpan, maxLng, maxLat: minLat }, // Abajo
-        { minLng: minLng - lngSpan, minLat, maxLng: minLng, maxLat }, // Izquierda
-        { minLng: maxLng, minLat, maxLng: maxLng + lngSpan, maxLat }, // Derecha
-        { minLng: minLng - lngSpan, minLat: maxLat, maxLng: minLng, maxLat: maxLat + latSpan }, // Arriba-izq
-        { minLng: maxLng, minLat: maxLat, maxLng: maxLng + lngSpan, maxLat: maxLat + latSpan }, // Arriba-der
-        { minLng: minLng - lngSpan, minLat: minLat - latSpan, maxLng: minLng, maxLat: minLat }, // Abajo-izq
-        { minLng: maxLng, minLat: minLat - latSpan, maxLng: maxLng + lngSpan, maxLat: minLat }, // Abajo-der
-      ];
-
-      // Prefetch cada tile vecino en background (sin bloquear)
-      adjacentBounds.forEach((adjBounds) => {
-        // 🔥 Construir filtersJson sin incluir campos null/undefined
-        const filtersJson: Record<string, any> = {};
-        if (filters?.estado) filtersJson.state = filters.estado;
-        if (filters?.municipio) filtersJson.municipality = filters.municipio;
-        if (filters?.listingType) filtersJson.listingType = filters.listingType;
-        if (filters?.tipo && typeof filters.tipo === 'string') {
-          filtersJson.propertyType = filters.tipo;
-        }
-        if (filters?.precioMin) filtersJson.minPrice = filters.precioMin;
-        if (filters?.precioMax) filtersJson.maxPrice = filters.precioMax;
-        if (filters?.recamaras) filtersJson.minBedrooms = parseInt(filters.recamaras);
-        if (filters?.banos) filtersJson.minBathrooms = parseInt(filters.banos);
-
-        queryClient.prefetchQuery({
-          queryKey: ['map-tiles', adjBounds, filters],
-          queryFn: async () => {
-            const { data } = await supabase.rpc('get_map_tiles', {
-              p_min_lng: adjBounds.minLng,
-              p_min_lat: adjBounds.minLat,
-              p_max_lng: adjBounds.maxLng,
-              p_max_lat: adjBounds.maxLat,
-              p_zoom: zoom,
-              p_filters: filtersJson,
-            });
-            return data;
-          },
-          staleTime: 5 * 60 * 1000,
-        });
-      });
-    };
-
-    // Ejecutar prefetch después de 500ms para no interferir con carga principal
-    const timer = setTimeout(prefetchAdjacentTiles, 500);
-    return () => clearTimeout(timer);
-  }, [bounds, filters, queryClient]);
+  // 🚫 Prefetch DESACTIVADO temporalmente para optimizar red (causaba 9 requests simultáneos)
+  // useEffect(() => {
+  //   if (!bounds) return;
+  //   if (bounds.zoom < MIN_ZOOM_FOR_TILES) return;
+  //   const prefetchAdjacentTiles = async () => {
+  //     const { minLng, minLat, maxLng, maxLat, zoom } = bounds;
+  //     const lngSpan = maxLng - minLng;
+  //     const latSpan = maxLat - minLat;
+  //     const adjacentBounds = [
+  //       { minLng, minLat: maxLat, maxLng, maxLat: maxLat + latSpan },
+  //       { minLng, minLat: minLat - latSpan, maxLng, maxLat: minLat },
+  //       { minLng: minLng - lngSpan, minLat, maxLng: minLng, maxLat },
+  //       { minLng: maxLng, minLat, maxLng: maxLng + lngSpan, maxLat },
+  //       { minLng: minLng - lngSpan, minLat: maxLat, maxLng: minLng, maxLat: maxLat + latSpan },
+  //       { minLng: maxLng, minLat: maxLat, maxLng: maxLng + lngSpan, maxLat: maxLat + latSpan },
+  //       { minLng: minLng - lngSpan, minLat: minLat - latSpan, maxLng: minLng, maxLat: minLat },
+  //       { minLng: maxLng, minLat: minLat - latSpan, maxLng: maxLng + lngSpan, maxLat: minLat },
+  //     ];
+  //     adjacentBounds.forEach((adjBounds) => {
+  //       const filtersJson: Record<string, any> = {};
+  //       if (filters?.estado) filtersJson.state = filters.estado;
+  //       if (filters?.municipio) filtersJson.municipality = filters.municipio;
+  //       if (filters?.listingType) filtersJson.listingType = filters.listingType;
+  //       if (filters?.tipo && typeof filters.tipo === 'string') filtersJson.propertyType = filters.tipo;
+  //       if (filters?.precioMin) filtersJson.minPrice = filters.precioMin;
+  //       if (filters?.precioMax) filtersJson.maxPrice = filters.precioMax;
+  //       if (filters?.recamaras) filtersJson.minBedrooms = parseInt(filters.recamaras);
+  //       if (filters?.banos) filtersJson.minBathrooms = parseInt(filters.banos);
+  //       queryClient.prefetchQuery({
+  //         queryKey: ['map-tiles', adjBounds, filters],
+  //         queryFn: async () => {
+  //           const { data } = await supabase.rpc('get_map_tiles', {
+  //             p_min_lng: adjBounds.minLng, p_min_lat: adjBounds.minLat,
+  //             p_max_lng: adjBounds.maxLng, p_max_lat: adjBounds.maxLat,
+  //             p_zoom: zoom, p_filters: filtersJson,
+  //           });
+  //           return data;
+  //         },
+  //         staleTime: 5 * 60 * 1000,
+  //       });
+  //     });
+  //   };
+  //   const timer = setTimeout(prefetchAdjacentTiles, 500);
+  //   return () => clearTimeout(timer);
+  // }, [bounds, filters, queryClient]);
 
   return useQuery({
     queryKey: ['map-tiles', bounds, filters],
