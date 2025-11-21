@@ -55,11 +55,20 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   
   // ✅ Calcular bounds iniciales basados en searchCoordinates para que el mapa cargue datos inmediatamente
   const initialBounds = useMemo(() => {
-    if (!searchCoordinates) return null;
+    if (!searchCoordinates) {
+      // ✅ SOLUCIÓN: Proporcionar bounds por defecto (México completo)
+      return {
+        minLat: 14.5388, // Chiapas (sur)
+        maxLat: 32.7186, // Tijuana (norte)
+        minLng: -118.4662, // Baja California (oeste)
+        maxLng: -86.7104, // Quintana Roo (este)
+        zoom: 5, // Zoom nacional
+      };
+    }
     
     const zoom = mapZoom;
     // Calcular radio aproximado basado en zoom (más zoom = área más pequeña)
-    const radiusLat = 0.5 / Math.pow(2, zoom - 10); // Ajuste dinámico
+    const radiusLat = 0.5 / Math.pow(2, zoom - 10);
     const radiusLng = 0.5 / Math.pow(2, zoom - 10);
     
     return {
