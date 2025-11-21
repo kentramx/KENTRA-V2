@@ -85,7 +85,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     });
   }
 
-  // ✅ Memoizar markers - Mostrar propiedades o clusters según zoom
+  // ✅ Memoizar markers - Combinar propiedades y clusters simultáneamente
   const mapMarkers = useMemo(() => {
     console.log('🔍 [SearchMap] Auditando datos para marcadores:', {
       propertiesLength: properties?.length || 0,
@@ -94,9 +94,11 @@ export const SearchMap: React.FC<SearchMapProps> = ({
       clustersSample: clusters?.[0],
     });
 
-    // 1) Si hay propiedades del sistema tileado, úsalas primero
+    const markers: any[] = [];
+
+    // 1) Agregar propiedades individuales con type: 'property'
     if (properties && properties.length > 0) {
-      const markers = properties
+      const propertyMarkers = properties
         .filter((p) => p.lat != null && p.lng != null)
         .map((p) => ({
           id: p.id,
@@ -105,6 +107,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
           title: p.title,
           price: p.price,
           currency: (p.currency ?? 'MXN') as 'MXN' | 'USD',
+          type: 'property' as const,
           bedrooms: p.bedrooms,
           bathrooms: p.bathrooms,
           images: p.images,
@@ -112,40 +115,29 @@ export const SearchMap: React.FC<SearchMapProps> = ({
           address: p.address,
         }));
       
-      console.log('✅ [SearchMap] Usando propiedades del tile:', {
-        total: markers.length,
-        sample: markers[0]
-      });
-      
-      return markers;
+      markers.push(...propertyMarkers);
+      console.log('✅ [SearchMap] Agregadas propiedades:', propertyMarkers.length);
     }
 
-    // 2) Si hay clusters (zoom bajo), úsalos
+    // 2) Agregar clusters con type: 'cluster' y count
     if (clusters && clusters.length > 0) {
-      const markers = clusters.map((c) => ({
-        id: c.cluster_id,
+      const clusterMarkers = clusters.map((c) => ({
+        id: `cluster-${c.cluster_id}`,
         lat: c.lat,
         lng: c.lng,
         title: `${c.property_count} propiedades`,
         price: c.avg_price,
         currency: 'MXN' as const,
-        bedrooms: 0,
-        bathrooms: 0,
-        images: [],
-        listing_type: 'venta' as const,
-        address: '',
+        type: 'cluster' as const,
+        count: c.property_count,
       }));
       
-      console.log('✅ [SearchMap] Usando clusters:', {
-        total: markers.length,
-        sample: markers[0]
-      });
-      
-      return markers;
+      markers.push(...clusterMarkers);
+      console.log('✅ [SearchMap] Agregados clusters:', clusterMarkers.length);
     }
 
-    console.warn('⚠️ [SearchMap] No hay datos disponibles para marcadores');
-    return [];
+    console.log('🎯 [SearchMap] Total de marcadores combinados:', markers.length);
+    return markers;
   }, [properties, clusters]);
 
   // ✅ Centro del mapa
