@@ -160,6 +160,12 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   // ✅ Estado para capturar límites del mapa y sincronizar con lista
   const [mapBounds, setMapBounds] = useState<SearchBounds | null>(null);
   
+  // ✅ Resetear mapBounds cuando cambia la búsqueda (nueva ubicación)
+  useEffect(() => {
+    console.log('🔄 Nueva búsqueda detectada, reseteando mapBounds');
+    setMapBounds(null);
+  }, [searchCoordinates?.lat, searchCoordinates?.lng, filters.estado, filters.municipio]);
+  
   // ✅ DEBUG: Logs temporales para rastrear cambios de listingType
   useEffect(() => {
     console.log('[Buscar Debug] filters.listingType changed to:', filters.listingType);
@@ -861,6 +867,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   };
 
   const handlePlaceSelect = (location: { address: string; municipality: string; state: string; colonia?: string; lat?: number; lng?: number; }) => {
+    // ✅ Limpiar bounds del mapa anterior al seleccionar nueva ubicación
+    setMapBounds(null);
+    
     setFilters(prev => ({
       ...prev,
       estado: location.state || '',
