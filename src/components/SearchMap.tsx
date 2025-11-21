@@ -5,7 +5,7 @@
  * - Manejo de errores con monitoring
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BasicGoogleMap } from '@/components/BasicGoogleMap';
 import { useTiledMap, ViewportBounds, MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE } from '@/hooks/useTiledMap';
@@ -40,6 +40,9 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   
+  // ✅ Mantener datos previos para evitar parpadeos
+  const previousMarkersRef = useRef<any[]>([]);
+  
   // ✅ Debounce adaptativo de viewport según FPS del dispositivo
   const debouncedBounds = useAdaptiveDebounce(viewportBounds, 300);
 
@@ -60,9 +63,6 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   }
 
   const { properties = [], clusters = [] } = viewportData || {};
-  
-  // 🔴 LOG CRÍTICO: Verificar cuántos datos llegaron del backend
-  console.log('🔴 COUNT CHECK:', { properties: properties.length, clusters: clusters.length });
 
   // ✅ Handler para errores críticos del mapa (Google Maps no carga)
   const handleMapError = useCallback((error: Error) => {
@@ -86,13 +86,12 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   }
 
   // ✅ Memoizar markers - Combinar propiedades y clusters simultáneamente
+  // Usa comparación primitiva para evitar recálculos innecesarios
   const mapMarkers = useMemo(() => {
-    console.log('🔍 [SearchMap] Auditando datos para marcadores:', {
-      propertiesLength: properties?.length || 0,
-      clustersLength: clusters?.length || 0,
-      propertiesSample: properties?.[0],
-      clustersSample: clusters?.[0],
-    });
+    // Si está cargando y no hay datos nuevos, mantener datos previos para evitar parpadeos
+    if (isLoading && properties.length === 0 && clusters.length === 0 && previousMarkersRef.current.length > 0) {
+      return previousMarkersRef.current;
+    }
 
     const markers: any[] = [];
 
@@ -116,7 +115,6 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         }));
       
       markers.push(...propertyMarkers);
-      console.log('✅ [SearchMap] Agregadas propiedades:', propertyMarkers.length);
     }
 
     // 2) Agregar clusters con type: 'cluster' y count
@@ -133,12 +131,15 @@ export const SearchMap: React.FC<SearchMapProps> = ({
       }));
       
       markers.push(...clusterMarkers);
-      console.log('✅ [SearchMap] Agregados clusters:', clusterMarkers.length);
     }
 
-    console.log('🎯 [SearchMap] Total de marcadores combinados:', markers.length);
+    // Actualizar ref con nuevos markers
+    if (markers.length > 0) {
+      previousMarkersRef.current = markers;
+    }
+
     return markers;
-  }, [properties, clusters]);
+  }, [properties.length, clusters.length, isLoading, properties, clusters]);
 
   // ✅ Centro del mapa
   const mapCenter = useMemo(() => {
