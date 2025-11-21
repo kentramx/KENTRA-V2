@@ -1,6 +1,6 @@
 /**
- * Hook OPTIMIZADO con cursor-based pagination
- * Elimina offset-based y agrega batch loading
+ * Hook OPTIMIZADO con validación explícita de filtros
+ * Evita aplicar filtros vacíos que causan "No encontramos propiedades"
  */
 
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
@@ -8,36 +8,65 @@ import { supabase } from '@/integrations/supabase/client';
 import type { PropertyFilters, PropertySummary } from '@/types/property';
 import { monitoring } from '@/lib/monitoring';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 // Hook separado para obtener el total count (se ejecuta una sola vez)
 const useTotalCount = (filters?: PropertyFilters) => {
   return useQuery({
     queryKey: ['properties-total-count', filters],
     queryFn: async () => {
-      // ✅ Sanitizar filtros: solo enviar valores válidos
-      const sanitizedState = filters?.estado?.trim() || null;
-      const sanitizedMunicipality = filters?.municipio?.trim() || null;
-      const sanitizedType = filters?.tipo?.trim() || null;
-      const sanitizedListingType = filters?.listingType?.trim() || null;
-      const sanitizedPriceMin = (filters?.precioMin && filters.precioMin > 0) ? filters.precioMin : null;
-      const sanitizedPriceMax = (filters?.precioMax && filters.precioMax > 0) ? filters.precioMax : null;
+      let query = supabase
+        .from('properties')
+        .select('*', { count: 'exact', head: true });
 
-      const { data, error } = await supabase.rpc('get_properties_total_count', {
-        p_state: sanitizedState,
-        p_municipality: sanitizedMunicipality,
-        p_type: sanitizedType,
-        p_listing_type: sanitizedListingType,
-        p_price_min: sanitizedPriceMin,
-        p_price_max: sanitizedPriceMax,
-      });
+      // ✅ SIEMPRE filtrar por activas
+      query = query.eq('status', 'activa');
+
+      // ✅ Solo aplicar filtros si tienen valor real
+      if (filters?.estado && filters.estado.trim() !== '') {
+        query = query.eq('state', filters.estado);
+      }
+
+      if (filters?.municipio && filters.municipio.trim() !== '') {
+        query = query.eq('municipality', filters.municipio);
+      }
+
+      if (filters?.tipo && filters.tipo.trim() !== '') {
+        query = query.eq('type', filters.tipo as any);
+      }
+
+      if (filters?.listingType && filters.listingType.trim() !== '') {
+        query = query.eq('listing_type', filters.listingType);
+      }
+
+      const minPrice = Number(filters?.precioMin);
+      if (!isNaN(minPrice) && minPrice > 0) {
+        query = query.gte('price', minPrice);
+      }
+
+      const maxPrice = Number(filters?.precioMax);
+      if (!isNaN(maxPrice) && maxPrice > 0) {
+        query = query.lte('price', maxPrice);
+      }
+
+      const beds = Number(filters?.recamaras);
+      if (!isNaN(beds) && beds > 0) {
+        query = query.gte('bedrooms', beds);
+      }
+
+      const baths = Number(filters?.banos);
+      if (!isNaN(baths) && baths > 0) {
+        query = query.gte('bathrooms', baths);
+      }
+
+      const { count, error } = await query;
       
       if (error) {
         monitoring.error('[useTotalCount] Error', { error });
         return 0;
       }
       
-      return data || 0;
+      return count || 0;
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -48,26 +77,62 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
   
   const infiniteQuery = useInfiniteQuery({
     queryKey: ['properties-infinite', filters],
-    queryFn: async ({ pageParam }) => {
-      // ✅ Sanitizar filtros: solo enviar valores válidos
-      const sanitizedState = filters?.estado?.trim() || null;
-      const sanitizedMunicipality = filters?.municipio?.trim() || null;
-      const sanitizedType = filters?.tipo?.trim() || null;
-      const sanitizedListingType = filters?.listingType?.trim() || null;
-      const sanitizedPriceMin = (filters?.precioMin && filters.precioMin > 0) ? filters.precioMin : null;
-      const sanitizedPriceMax = (filters?.precioMax && filters.precioMax > 0) ? filters.precioMax : null;
+    queryFn: async ({ pageParam = 0 }) => {
+      console.log('🔍 [List] Fetching properties with filters:', filters);
 
-      // ✅ OPTIMIZACIÓN: Cursor-based en lugar de offset
-      const { data: properties, error } = await supabase.rpc('get_properties_cursor', {
-        p_cursor: pageParam || null,
-        p_limit: PAGE_SIZE,
-        p_state: sanitizedState,
-        p_municipality: sanitizedMunicipality,
-        p_type: sanitizedType,
-        p_listing_type: sanitizedListingType,
-        p_price_min: sanitizedPriceMin,
-        p_price_max: sanitizedPriceMax,
-      });
+      let query = supabase
+        .from('properties')
+        .select('*');
+
+      // ✅ SIEMPRE filtrar por activas
+      query = query.eq('status', 'activa');
+
+      // ✅ Solo aplicar filtros si tienen valor real
+      if (filters?.estado && filters.estado.trim() !== '') {
+        query = query.eq('state', filters.estado);
+      }
+
+      if (filters?.municipio && filters.municipio.trim() !== '') {
+        query = query.eq('municipality', filters.municipio);
+      }
+
+      if (filters?.tipo && filters.tipo.trim() !== '') {
+        query = query.eq('type', filters.tipo as any);
+      }
+
+      if (filters?.listingType && filters.listingType.trim() !== '') {
+        query = query.eq('listing_type', filters.listingType);
+      }
+
+      const minPrice = Number(filters?.precioMin);
+      if (!isNaN(minPrice) && minPrice > 0) {
+        query = query.gte('price', minPrice);
+      }
+
+      const maxPrice = Number(filters?.precioMax);
+      if (!isNaN(maxPrice) && maxPrice > 0) {
+        query = query.lte('price', maxPrice);
+      }
+
+      const beds = Number(filters?.recamaras);
+      if (!isNaN(beds) && beds > 0) {
+        query = query.gte('bedrooms', beds);
+      }
+
+      const baths = Number(filters?.banos);
+      if (!isNaN(baths) && baths > 0) {
+        query = query.gte('bathrooms', baths);
+      }
+
+      // Ordenamiento
+      query = query.order('created_at', { ascending: false });
+
+      // Paginación offset-based
+      const from = pageParam * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      query = query.range(from, to);
+      
+      const { data: properties, error } = await query;
       
       if (error) {
         monitoring.error('[usePropertiesInfinite] Error', { hook: 'usePropertiesInfinite', error });
@@ -75,23 +140,29 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
       }
 
       if (!properties || properties.length === 0) {
-        return { properties: [], nextPage: null, totalCount: 0 };
+        return { properties: [], nextPage: null };
       }
 
-      // ✅ OPTIMIZACIÓN: Batch load de imágenes (elimina N+1)
-      const propertyIds = (properties as any[]).map((p) => p.id);
-      const { data: imagesData } = await supabase.rpc('get_images_batch', {
-        property_ids: propertyIds,
-      });
+      // ✅ Batch load de imágenes
+      const propertyIds = properties.map((p) => p.id);
+      const { data: imagesData } = await supabase
+        .from('images')
+        .select('property_id, url, position')
+        .in('property_id', propertyIds)
+        .order('position');
 
-      interface ImageBatch {
+      interface ImageRow {
         property_id: string;
-        images: Array<{ url: string; position: number }>;
+        url: string;
+        position: number;
       }
 
       const imagesMap = new Map<string, Array<{ url: string; position: number }>>();
-      (imagesData as ImageBatch[] || []).forEach((item) => {
-        imagesMap.set(item.property_id, item.images || []);
+      (imagesData as ImageRow[] || []).forEach((img) => {
+        if (!imagesMap.has(img.property_id)) {
+          imagesMap.set(img.property_id, []);
+        }
+        imagesMap.get(img.property_id)!.push({ url: img.url, position: img.position });
       });
 
       // Cargar featured
@@ -107,13 +178,13 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
       );
 
       // Normalizar a PropertySummary
-      const enrichedProperties: PropertySummary[] = (properties as any[]).map((property) => ({
+      const enrichedProperties: PropertySummary[] = properties.map((property) => ({
         id: property.id,
         title: property.title,
         price: property.price,
         currency: property.currency || 'MXN',
         type: property.type === 'local_comercial' ? 'local' : property.type,
-        listing_type: property.listing_type,
+        listing_type: property.listing_type as 'venta' | 'renta',
         for_sale: property.for_sale ?? true,
         for_rent: property.for_rent ?? false,
         sale_price: property.sale_price,
@@ -134,17 +205,15 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
         is_featured: featuredSet.has(property.id),
       }));
 
-      const nextCursor = properties.length === PAGE_SIZE 
-        ? (properties[properties.length - 1] as any).next_cursor 
-        : null;
+      const hasMore = properties.length === PAGE_SIZE;
 
       return {
         properties: enrichedProperties,
-        nextPage: nextCursor,
+        nextPage: hasMore ? pageParam + 1 : null,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
-    initialPageParam: null,
+    initialPageParam: 0,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
