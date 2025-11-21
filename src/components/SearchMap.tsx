@@ -27,6 +27,7 @@ interface SearchMapProps {
   onVisibleCountChange?: (count: number) => void;
   onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }) => void;
   onLoadingChange?: (isLoading: boolean) => void;
+  onClusterClick?: (coordinates: { lat: number; lng: number }) => void;
 }
 
 export const SearchMap: React.FC<SearchMapProps> = ({
@@ -41,6 +42,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   onVisibleCountChange,
   onBoundsChange,
   onLoadingChange,
+  onClusterClick,
 }) => {
   const navigate = useNavigate();
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
@@ -188,16 +190,20 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     }
   }, [onBoundsChange]);
 
-  // ✅ Callback memoizado para marker click (no navegar si es cluster)
+  // ✅ Callback memoizado para marker click con zoom en clusters
   const handleMarkerClickInternal = useCallback(
     (id: string) => {
-      // No hacer nada si es un cluster (empieza con "cluster-")
+      // Si es un cluster, hacer zoom hacia él
       if (id.startsWith('cluster-')) {
+        const cluster = clusters.find((c) => `cluster-${c.cluster_id}` === id);
+        if (cluster && onClusterClick) {
+          onClusterClick({ lat: cluster.lat, lng: cluster.lng });
+        }
         return;
       }
       onMarkerClick(id);
     },
-    [onMarkerClick]
+    [onMarkerClick, onClusterClick, clusters]
   );
 
   // ✅ Callback para hover que convierte markerId a MapProperty

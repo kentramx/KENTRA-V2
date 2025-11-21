@@ -884,6 +884,12 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     });
   };
 
+  // ✅ Callback para manejar click en clusters del mapa
+  const handleClusterClick = useCallback((coordinates: { lat: number; lng: number }) => {
+    console.log('🎯 Cluster click, moviendo mapa a:', coordinates);
+    setSearchCoordinates(coordinates);
+  }, []);
+
   // Memoizar marcadores para evitar recreación innecesaria
   // Ya no se usa - SearchMap maneja su propia carga de propiedades
 
@@ -1526,6 +1532,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 onVisibleCountChange={setMapVisibleCount}
                 onBoundsChange={setMapBounds}
                 onLoadingChange={setMapLoading}
+                onClusterClick={handleClusterClick}
               />
             )}
           </div>

@@ -264,7 +264,7 @@ export function BasicGoogleMap({
                   },
                 });
               }
-            }, 300);
+            }, 500); // ✅ Incrementado de 300ms a 500ms para evitar updates durante zoom
           });
         }
 
