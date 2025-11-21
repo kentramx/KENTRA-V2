@@ -25,7 +25,6 @@ interface SearchMapProps {
   height?: string;
   onMapError?: (error: string) => void;
   onVisibleCountChange?: (count: number) => void;
-  onBoundsChange?: (bounds: ViewportBounds) => void;
 }
 
 export const SearchMap: React.FC<SearchMapProps> = ({
@@ -38,7 +37,6 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   height = '100%',
   onMapError,
   onVisibleCountChange,
-  onBoundsChange,
 }) => {
   const navigate = useNavigate();
   const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
@@ -155,36 +153,21 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     return markers;
   }, [properties.length, clusters.length, isLoading, properties, clusters]);
 
-  // ✅ ESTADO HÍBRIDO: El mapa tiene memoria de su posición
-  // 1. Estado local para controlar la vista y evitar rebotes por re-renders del padre
-  const [currentView, setCurrentView] = useState({
-    center: searchCoordinates || { lat: 23.6345, lng: -102.5528 },
-    zoom: searchCoordinates ? 12 : 5
-  });
-
-  // 2. Referencia para detectar si REALMENTE hubo una nueva búsqueda desde el input
-  const prevSearchCoords = useRef(searchCoordinates);
-
-  // 3. Efecto: Solo forzar la vista si CAMBIAN las coordenadas de búsqueda (Reset)
-  useEffect(() => {
-    if (searchCoordinates && searchCoordinates !== prevSearchCoords.current) {
-      console.log('📍 [SearchMap] Nueva búsqueda detectada, actualizando mapa');
-      setCurrentView({
-        center: searchCoordinates,
-        zoom: 12
-      });
-      prevSearchCoords.current = searchCoordinates;
+  // ✅ Centro del mapa
+  const mapCenter = useMemo(() => {
+    if (searchCoordinates) {
+      return searchCoordinates;
     }
+    // Centro de México por defecto
+    return { lat: 23.6345, lng: -102.5528 };
   }, [searchCoordinates]);
 
-  // ✅ Handler inteligente: Actualiza el estado local y notifica al padre
+  const mapZoom = searchCoordinates ? 12 : 5;
+
+  // ✅ Callback memoizado para bounds change
   const handleBoundsChange = useCallback((bounds: ViewportBounds) => {
     setViewportBounds(bounds);
-    onBoundsChange?.(bounds);
-    
-    // NOTA: No actualizamos 'currentView' aquí para evitar loops de renderizado.
-    // Dejamos que el mapa de Google gestione su propio movimiento fluido.
-  }, [onBoundsChange]);
+  }, []);
 
   // ✅ Callback memoizado para marker click (no navegar si es cluster)
   const handleMarkerClickInternal = useCallback(
@@ -218,8 +201,8 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   return (
     <div className="relative w-full" style={{ height }}>
       <BasicGoogleMap
-        center={currentView.center}
-        zoom={currentView.zoom}
+        center={mapCenter}
+        zoom={mapZoom}
         markers={mapMarkers as any}
         enableClustering={true}
         onBoundsChanged={handleBoundsChange}
