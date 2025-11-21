@@ -15,13 +15,21 @@ const useTotalCount = (filters?: PropertyFilters) => {
   return useQuery({
     queryKey: ['properties-total-count', filters],
     queryFn: async () => {
+      // ✅ Sanitizar filtros: solo enviar valores válidos
+      const sanitizedState = filters?.estado?.trim() || null;
+      const sanitizedMunicipality = filters?.municipio?.trim() || null;
+      const sanitizedType = filters?.tipo?.trim() || null;
+      const sanitizedListingType = filters?.listingType?.trim() || null;
+      const sanitizedPriceMin = (filters?.precioMin && filters.precioMin > 0) ? filters.precioMin : null;
+      const sanitizedPriceMax = (filters?.precioMax && filters.precioMax > 0) ? filters.precioMax : null;
+
       const { data, error } = await supabase.rpc('get_properties_total_count', {
-        p_state: filters?.estado || null,
-        p_municipality: filters?.municipio || null,
-        p_type: filters?.tipo || null,
-        p_listing_type: filters?.listingType || null,
-        p_price_min: filters?.precioMin || null,
-        p_price_max: filters?.precioMax || null,
+        p_state: sanitizedState,
+        p_municipality: sanitizedMunicipality,
+        p_type: sanitizedType,
+        p_listing_type: sanitizedListingType,
+        p_price_min: sanitizedPriceMin,
+        p_price_max: sanitizedPriceMax,
       });
       
       if (error) {
@@ -41,16 +49,24 @@ export const usePropertiesInfinite = (filters?: PropertyFilters) => {
   const infiniteQuery = useInfiniteQuery({
     queryKey: ['properties-infinite', filters],
     queryFn: async ({ pageParam }) => {
+      // ✅ Sanitizar filtros: solo enviar valores válidos
+      const sanitizedState = filters?.estado?.trim() || null;
+      const sanitizedMunicipality = filters?.municipio?.trim() || null;
+      const sanitizedType = filters?.tipo?.trim() || null;
+      const sanitizedListingType = filters?.listingType?.trim() || null;
+      const sanitizedPriceMin = (filters?.precioMin && filters.precioMin > 0) ? filters.precioMin : null;
+      const sanitizedPriceMax = (filters?.precioMax && filters.precioMax > 0) ? filters.precioMax : null;
+
       // ✅ OPTIMIZACIÓN: Cursor-based en lugar de offset
       const { data: properties, error } = await supabase.rpc('get_properties_cursor', {
         p_cursor: pageParam || null,
         p_limit: PAGE_SIZE,
-        p_state: filters?.estado || null,
-        p_municipality: filters?.municipio || null,
-        p_type: filters?.tipo || null,
-        p_listing_type: filters?.listingType || null,
-        p_price_min: filters?.precioMin || null,
-        p_price_max: filters?.precioMax || null,
+        p_state: sanitizedState,
+        p_municipality: sanitizedMunicipality,
+        p_type: sanitizedType,
+        p_listing_type: sanitizedListingType,
+        p_price_min: sanitizedPriceMin,
+        p_price_max: sanitizedPriceMax,
       });
       
       if (error) {
