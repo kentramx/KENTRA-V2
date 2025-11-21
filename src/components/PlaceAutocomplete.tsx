@@ -265,6 +265,7 @@ export const PlaceAutocomplete = ({
       
       let municipality = '';
       let state = '';
+      let locality = ''; // Variable temporal para guardar la localidad
       
       place.address_components.forEach((component) => {
         if (component.types.includes('administrative_area_level_1')) {
@@ -277,11 +278,18 @@ export const PlaceAutocomplete = ({
         if (!municipality && component.types.includes('sublocality_level_1')) {
           municipality = component.long_name;
         }
-        // Fallback a locality
-        if (!municipality && component.types.includes('locality')) {
-          municipality = component.long_name;
+        // Guardar locality pero NO asignarla todavía
+        if (component.types.includes('locality')) {
+          locality = component.long_name;
         }
       });
+      
+      // LÓGICA INTELIGENTE DE FALLBACK:
+      // Solo usar 'locality' como municipio si NO es igual al estado.
+      // Esto evita que "Ciudad de México" se duplique en estado y municipio.
+      if (!municipality && locality && locality !== state) {
+        municipality = locality;
+      }
       
       // Use enhanced colonia extraction
       const colonia = extractColoniaFromComponents(
@@ -364,6 +372,7 @@ export const PlaceAutocomplete = ({
 
         let municipality = '';
         let state = '';
+        let locality = ''; // Variable temporal para guardar la localidad
 
         place.addressComponents?.forEach((component: any) => {
           if (component.types.includes('administrative_area_level_1')) {
@@ -376,11 +385,18 @@ export const PlaceAutocomplete = ({
           if (!municipality && component.types.includes('sublocality_level_1')) {
             municipality = component.longText;
           }
-          // Fallback a locality
-          if (!municipality && component.types.includes('locality')) {
-            municipality = component.longText;
+          // Guardar locality pero NO asignarla todavía
+          if (component.types.includes('locality')) {
+            locality = component.longText;
           }
         });
+        
+        // LÓGICA INTELIGENTE DE FALLBACK:
+        // Solo usar 'locality' como municipio si NO es igual al estado.
+        // Esto evita que "Ciudad de México" se duplique en estado y municipio.
+        if (!municipality && locality && locality !== state) {
+          municipality = locality;
+        }
         
         // Use enhanced colonia extraction
         const colonia = extractColoniaFromComponents(
