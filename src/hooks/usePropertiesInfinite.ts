@@ -45,44 +45,30 @@ export const usePropertiesInfinite = (
         query = query.or(`colonia.ilike.%${filters.colonia.trim()}%,address.ilike.%${filters.colonia.trim()}%`);
       }
 
-      // ✅ FILTRO GEOGRÁFICO (Bounding Box ~5km)
-      // Solo se aplica si el usuario seleccionó un punto específico de búsqueda
-      if (searchCoordinates) {
-        // Aproximación: 1 grado ≈ 111km, entonces 0.009° ≈ 1km
-        const ROUGH_KM_DEGREE = 0.009;
+      // ✅ FILTRO DE PROXIMIDAD (Radio Dinámico)
+      if (searchCoordinates && searchCoordinates.lat && searchCoordinates.lng) {
+        const ROUGH_KM_DEGREE = 0.009; // ~1km
+        let radiusKm = 10; // Default: Municipio/Ciudad
         
-        // Ajustar radio según nivel de especificidad
-        let RADIUS_KM = 5; // Default
-        
-        if (filters.colonia) {
-          RADIUS_KM = 3; // Búsqueda muy específica
-        } else if (filters.municipio) {
-          RADIUS_KM = 10; // Búsqueda por alcaldía
-        } else if (filters.estado && !filters.municipio) {
-          // Si solo hay estado, NO aplicar filtro geográfico
-          RADIUS_KM = 0;
+        // Si hay colonia específica, cerrar el radio
+        if (filters.colonia && filters.colonia.trim() !== '') {
+          console.log('🎯 Búsqueda por Colonia detectada, reduciendo radio a 3km');
+          radiusKm = 3;
+        } 
+        // Si es búsqueda de Estado (sin municipio), ampliar radio
+        else if (filters.estado && (!filters.municipio || filters.municipio === '')) {
+          console.log('🌎 Búsqueda por Estado detectada, ampliando radio a 25km');
+          radiusKm = 25; 
         }
         
-        if (RADIUS_KM > 0) {
-          const delta = ROUGH_KM_DEGREE * RADIUS_KM;
-          
-          query = query
-            .gte('lat', searchCoordinates.lat - delta)
-            .lte('lat', searchCoordinates.lat + delta)
-            .gte('lng', searchCoordinates.lng - delta)
-            .lte('lng', searchCoordinates.lng + delta);
-            
-          console.log('🌍 [List] Aplicando filtro geográfico:', {
-            center: searchCoordinates,
-            radiusKm: RADIUS_KM,
-            bounds: {
-              latMin: searchCoordinates.lat - delta,
-              latMax: searchCoordinates.lat + delta,
-              lngMin: searchCoordinates.lng - delta,
-              lngMax: searchCoordinates.lng + delta,
-            }
-          });
-        }
+        console.log(`📍 Filtrando coordenadas: Radio ${radiusKm}km`);
+        const delta = ROUGH_KM_DEGREE * radiusKm;
+        
+        query = query
+          .gte('lat', searchCoordinates.lat - delta)
+          .lte('lat', searchCoordinates.lat + delta)
+          .gte('lng', searchCoordinates.lng - delta)
+          .lte('lng', searchCoordinates.lng + delta);
       }
 
       // 3. TIPO Y LISTING (Validar que no sea 'undefined')

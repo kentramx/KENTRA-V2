@@ -306,6 +306,11 @@ export const PlaceAutocomplete = ({
         lng: place.geometry?.location?.lng(),
       };
       
+      // 🚑 CORRECCIÓN CDMX: Evitar que la Alcaldía se use como Colonia
+      if (location.colonia && location.colonia === location.municipality) {
+        location.colonia = '';
+      }
+      
       handlePlaceSelection(location);
     });
 
@@ -412,6 +417,11 @@ export const PlaceAutocomplete = ({
           lat: place.location?.lat(),
           lng: place.location?.lng(),
         };
+
+        // 🚑 CORRECCIÓN CDMX: Evitar que la Alcaldía se use como Colonia
+        if (location.colonia && location.colonia === location.municipality) {
+          location.colonia = '';
+        }
 
         handlePlaceSelection(location);
       });
