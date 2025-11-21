@@ -40,6 +40,7 @@ import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
 import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/property';
+import type { ViewportBounds } from '@/hooks/useTiledMap';
 
 interface Filters {
   estado: string;
@@ -152,13 +153,20 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     console.log('[Buscar Debug] URL listingType changed to:', searchParams.get('listingType'));
   }, [searchParams]);
   
+  // Estado para guardar coordenadas de la ubicación buscada
+  const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapBounds, setMapBounds] = useState<ViewportBounds | null>(null);
+  
   // ✅ ELIMINADO: Efecto duplicado que causaba loops infinitos
   // Este efecto está ahora consolidado en las líneas 543-579
   
   // ✅ Construir filtros de manera unificada
   const propertyFilters = useMemo(
-    () => buildPropertyFilters(filters),
-    [filters]
+    () => ({
+      ...buildPropertyFilters(filters),
+      bounds: mapBounds,
+    }),
+    [filters, mapBounds]
   );
 
   // ✅ Búsqueda de propiedades con filtros
@@ -216,9 +224,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   }, [properties, filters.orden]);
 
   const filteredProperties = sortedProperties;
-  
-  // Estado para guardar coordenadas de la ubicación buscada
-  const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   
   // Sincronizar Sheet desde URL
   useEffect(() => {
@@ -857,6 +862,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     if (location.lat && location.lng) {
       setSearchCoordinates({ lat: location.lat, lng: location.lng });
     }
+
+    // ✅ Resetear bounds para volver a usar filtros de texto
+    setMapBounds(null);
 
     // ✅ Mostrar colonia en el toast si está disponible
     const description = location.colonia 
@@ -1518,6 +1526,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 }
                 height="100%"
                 onMapError={setMapError}
+                onBoundsChange={setMapBounds}
                 onVisibleCountChange={setMapVisibleCount}
               />
             )}
