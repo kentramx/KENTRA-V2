@@ -1,239 +1,128 @@
-/**
- * Hook OPTIMIZADO con validación explícita de filtros
- * Evita aplicar filtros vacíos que causan "No encontramos propiedades"
- */
-
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { PropertyFilters, PropertySummary } from '@/types/property';
-import { monitoring } from '@/lib/monitoring';
 
-const PAGE_SIZE = 20;
+const ITEMS_PER_PAGE = 12;
 
-// Hook separado para obtener el total count (se ejecuta una sola vez)
-const useTotalCount = (filters?: PropertyFilters) => {
-  return useQuery({
-    queryKey: ['properties-total-count', filters],
-    queryFn: async () => {
+interface QueryResult {
+  properties: PropertySummary[];
+  count: number | null;
+}
+
+export const usePropertiesInfinite = (filters: PropertyFilters) => {
+  const query = useInfiniteQuery({
+    queryKey: ['properties-infinite', filters],
+    initialPageParam: 0 as number,
+    getNextPageParam: (lastPage: QueryResult, allPages: QueryResult[]) => {
+      if (!lastPage.properties || lastPage.properties.length < ITEMS_PER_PAGE) return undefined;
+      return allPages.length;
+    },
+    queryFn: async ({ pageParam }: { pageParam: number }) => {
+      console.log('🚀 [List] Buscando con filtros:', filters);
+
       let query = supabase
         .from('properties')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact' });
 
-      // ✅ SIEMPRE filtrar por activas
+      // 1. STATUS: Filtrar solo propiedades activas
       query = query.eq('status', 'activa');
 
-      // ✅ Solo aplicar filtros si tienen valor real
-      if (filters?.estado && filters.estado.trim() !== '') {
-        query = query.eq('state', filters.estado);
+      // 2. UBICACIÓN (Flexible con ilike)
+      if (filters.estado && filters.estado.trim() !== '') {
+        query = query.ilike('state', `%${filters.estado}%`);
+      }
+      
+      if (filters.municipio && filters.municipio.trim() !== '') {
+        query = query.ilike('municipality', `%${filters.municipio}%`);
       }
 
-      if (filters?.municipio && filters.municipio.trim() !== '') {
-        query = query.eq('municipality', filters.municipio);
-      }
-
-      if (filters?.tipo && filters.tipo.trim() !== '') {
+      // 3. TIPO Y LISTING (Validar que no sea 'undefined')
+      if (filters.tipo && filters.tipo !== '' && filters.tipo !== 'todos') {
         query = query.eq('type', filters.tipo as any);
       }
 
-      if (filters?.listingType && filters.listingType.trim() !== '') {
+      // Asegurar que listingType tenga valor válido antes de filtrar
+      if (filters.listingType && filters.listingType !== '' && filters.listingType !== 'undefined') {
         query = query.eq('listing_type', filters.listingType);
       }
 
-      const minPrice = Number(filters?.precioMin);
+      // 4. PRECIO (Manejo seguro de 0 y rangos)
+      const minPrice = filters.precioMin ? Number(filters.precioMin) : 0;
       if (!isNaN(minPrice) && minPrice > 0) {
         query = query.gte('price', minPrice);
       }
 
-      const maxPrice = Number(filters?.precioMax);
-      if (!isNaN(maxPrice) && maxPrice > 0) {
+      const maxPrice = filters.precioMax ? Number(filters.precioMax) : 0;
+      // Solo filtrar máximo si es un valor razonable (no infinito)
+      if (!isNaN(maxPrice) && maxPrice > 0 && maxPrice < 1000000000) {
         query = query.lte('price', maxPrice);
       }
 
-      const beds = Number(filters?.recamaras);
-      if (!isNaN(beds) && beds > 0) {
-        query = query.gte('bedrooms', beds);
+      // 5. CARACTERÍSTICAS
+      const bedrooms = filters.recamaras ? Number(filters.recamaras) : 0;
+      if (bedrooms > 0) {
+        query = query.gte('bedrooms', bedrooms);
       }
 
-      const baths = Number(filters?.banos);
-      if (!isNaN(baths) && baths > 0) {
-        query = query.gte('bathrooms', baths);
+      const bathrooms = filters.banos ? Number(filters.banos) : 0;
+      if (bathrooms > 0) {
+        query = query.gte('bathrooms', bathrooms);
       }
 
-      const { count, error } = await query;
-      
-      if (error) {
-        monitoring.error('[useTotalCount] Error', { error });
-        return 0;
-      }
-      
-      return count || 0;
-    },
-    staleTime: 2 * 60 * 1000,
-  });
-};
+      // 6. ORDENAMIENTO
+      query = query.order('price', { ascending: false }); // Default: precio descendente
 
-export const usePropertiesInfinite = (filters?: PropertyFilters) => {
-  const { data: totalCount } = useTotalCount(filters);
-  
-  const infiniteQuery = useInfiniteQuery({
-    queryKey: ['properties-infinite', filters],
-    queryFn: async ({ pageParam = 0 }) => {
-      console.log('🔍 [List] Fetching properties with filters:', filters);
-
-      let query = supabase
-        .from('properties')
-        .select('*');
-
-      // ✅ SIEMPRE filtrar por activas
-      query = query.eq('status', 'activa');
-
-      // ✅ Solo aplicar filtros si tienen valor real (usando ilike para case-insensitivity)
-      if (filters?.estado && filters.estado.trim() !== '') {
-        query = query.ilike('state', filters.estado);
-      }
-
-      if (filters?.municipio && filters.municipio.trim() !== '') {
-        query = query.ilike('municipality', filters.municipio);
-      }
-
-      if (filters?.tipo && filters.tipo.trim() !== '') {
-        query = query.ilike('type', filters.tipo);
-      }
-
-      if (filters?.listingType && filters.listingType.trim() !== '') {
-        query = query.ilike('listing_type', filters.listingType);
-      }
-
-      const minPrice = Number(filters?.precioMin);
-      if (!isNaN(minPrice) && minPrice > 0) {
-        query = query.gte('price', minPrice);
-      }
-
-      const maxPrice = Number(filters?.precioMax);
-      if (!isNaN(maxPrice) && maxPrice > 0) {
-        query = query.lte('price', maxPrice);
-      }
-
-      const beds = Number(filters?.recamaras);
-      if (!isNaN(beds) && beds > 0) {
-        query = query.gte('bedrooms', beds);
-      }
-
-      const baths = Number(filters?.banos);
-      if (!isNaN(baths) && baths > 0) {
-        query = query.gte('bathrooms', baths);
-      }
-
-      // Ordenamiento
-      query = query.order('created_at', { ascending: false });
-
-      // Paginación offset-based
-      const from = pageParam * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
+      // PAGINACIÓN
+      const from = pageParam * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
       query = query.range(from, to);
-      
-      const { data, error } = await query;
+
+      const { data, error, count } = await query;
       
       if (error) {
-        console.error('❌ [List] Error fetching properties:', error);
-        monitoring.error('[usePropertiesInfinite] Error', { hook: 'usePropertiesInfinite', error });
+        console.error('❌ Error en lista:', error);
         throw error;
       }
 
-      if (!data || data.length === 0) {
-        return { properties: [], nextPage: null };
-      }
+      // ✅ MAPEO DE DATOS (DB snake_case -> Frontend camelCase/PropertySummary)
+      const mappedData: PropertySummary[] = (data || []).map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        price: Number(p.price),
+        currency: p.currency || 'MXN',
+        type: p.type,
+        listing_type: p.listing_type as 'venta' | 'renta',
+        for_sale: p.for_sale ?? (p.listing_type === 'venta'),
+        for_rent: p.for_rent ?? (p.listing_type === 'renta'),
+        sale_price: p.sale_price || (p.listing_type === 'venta' ? p.price : null),
+        rent_price: p.rent_price || (p.listing_type === 'renta' ? p.price : null),
+        address: p.address || `${p.municipality}, ${p.state}`,
+        colonia: p.colonia,
+        municipality: p.municipality,
+        state: p.state,
+        lat: p.lat ? Number(p.lat) : null,
+        lng: p.lng ? Number(p.lng) : null,
+        bedrooms: Number(p.bedrooms) || 0,
+        bathrooms: Number(p.bathrooms) || 0,
+        parking: Number(p.parking) || 0,
+        sqft: Number(p.sqft) || 0,
+        agent_id: p.agent_id,
+        created_at: p.created_at,
+        images: Array.isArray(p.images) ? p.images : [],
+        is_featured: p.is_featured || false
+      }));
 
-      // ✅ MAPEO CRÍTICO: DB (snake_case) -> Frontend (camelCase/PropertySummary)
-      const mappedProperties: PropertySummary[] = data.map((p: any) => {
-        // Extraer primera imagen si existe
-        const firstImage = p.images?.[0] || null;
-        
-        return {
-          id: p.id,
-          title: p.title,
-          price: p.price,
-          currency: p.currency || 'MXN',
-          type: p.type === 'local_comercial' ? 'local' : p.type,
-          listing_type: p.listing_type as 'venta' | 'renta',
-          for_sale: p.for_sale ?? true,
-          for_rent: p.for_rent ?? false,
-          sale_price: p.sale_price,
-          rent_price: p.rent_price,
-          address: p.address || `${p.municipality}, ${p.state}`,
-          colonia: p.colonia,
-          municipality: p.municipality,
-          state: p.state,
-          lat: p.lat ? Number(p.lat) : null,
-          lng: p.lng ? Number(p.lng) : null,
-          bedrooms: p.bedrooms,
-          bathrooms: p.bathrooms,
-          parking: p.parking,
-          sqft: p.sqft,
-          agent_id: p.agent_id,
-          created_at: p.created_at,
-          images: [],  // Se cargarán en batch después
-          is_featured: false,  // Se actualizará después
-        };
-      });
-
-      // ✅ Batch load de imágenes
-      const propertyIds = mappedProperties.map((p) => p.id);
-      const { data: imagesData } = await supabase
-        .from('images')
-        .select('property_id, url, position')
-        .in('property_id', propertyIds)
-        .order('position');
-
-      interface ImageRow {
-        property_id: string;
-        url: string;
-        position: number;
-      }
-
-      const imagesMap = new Map<string, Array<{ url: string; position: number }>>();
-      (imagesData as ImageRow[] || []).forEach((img) => {
-        if (!imagesMap.has(img.property_id)) {
-          imagesMap.set(img.property_id, []);
-        }
-        imagesMap.get(img.property_id)!.push({ url: img.url, position: img.position });
-      });
-
-      // Cargar featured
-      const { data: featuredData } = await supabase
-        .from('featured_properties')
-        .select('property_id, status, end_date')
-        .in('property_id', propertyIds)
-        .eq('status', 'active')
-        .gte('end_date', new Date().toISOString());
-
-      const featuredSet = new Set(
-        featuredData?.map((f) => f.property_id) || []
-      );
-
-      // Enriquecer con imágenes y featured
-      mappedProperties.forEach((property) => {
-        property.images = imagesMap.get(property.id) || [];
-        property.is_featured = featuredSet.has(property.id);
-      });
-
-      console.log(`✅ [List] Fetched ${mappedProperties.length} properties`);
-
-      const hasMore = data.length === PAGE_SIZE;
-
-      return {
-        properties: mappedProperties,
-        nextPage: hasMore ? pageParam + 1 : null,
-      };
+      return { properties: mappedData, count: count || 0 };
     },
-    getNextPageParam: (lastPage) => lastPage.nextPage,
-    initialPageParam: 0,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
   });
-  
+
+  // Extraer todas las propiedades de todas las páginas
+  const allProperties = query.data?.pages.flatMap(page => page.properties) ?? [];
+  const totalCount = query.data?.pages[0]?.count ?? 0;
+
   return {
-    ...infiniteQuery,
-    totalCount: totalCount || 0,
+    ...query,
+    properties: allProperties,
+    totalCount,
   };
 };
