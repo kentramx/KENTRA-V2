@@ -45,11 +45,29 @@ const getClusterSVG = (count: number): string => {
   return svg;
 };
 
-// Generar SVG de precio memoizado
-const getPriceSVG = (price: number, currency: string): string => {
-  const cacheKey = `price-${price}-${currency}`;
+// Formatear precio de forma compacta (1.5M, 850K, etc.)
+const formatPriceCompact = (price: number, currency: string): string => {
+  const symbol = currency === 'USD' ? '$' : '$';
+  
+  if (price >= 1_000_000) {
+    const millions = price / 1_000_000;
+    return `${symbol}${millions.toFixed(millions >= 10 ? 0 : 1)}M`;
+  } else if (price >= 1_000) {
+    const thousands = price / 1_000;
+    return `${symbol}${thousands.toFixed(0)}K`;
+  }
+  return `${symbol}${price.toFixed(0)}`;
+};
+
+// Generar SVG de píldora de precio memoizado (Zoom cercano)
+const getPricePillSVG = (price: number, currency: string): { svg: string; width: number; height: number } => {
+  const priceLabel = formatPriceCompact(price, currency);
+  const cacheKey = `pill-${priceLabel}`;
+  
   if (svgCache.has(cacheKey)) {
-    return svgCache.get(cacheKey)!;
+    const cached = svgCache.get(cacheKey)!;
+    const [svg, w, h] = cached.split('|');
+    return { svg, width: parseInt(w), height: parseInt(h) };
   }
   
   // ✅ Limpieza automática de caché si supera 500 entradas
@@ -57,28 +75,51 @@ const getPriceSVG = (price: number, currency: string): string => {
     svgCache.clear();
   }
   
-  const priceFormatted = new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: currency || 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price);
+  // Cálculo de ancho dinámico: ~8px por caracter + 24px de padding lateral
+  const width = Math.max(40, (priceLabel.length * 8) + 24);
+  const height = 28;
   
-  const priceLabel = priceFormatted.replace('MXN', '$').replace('USD', '$');
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32">
-      <rect x="0" y="0" width="120" height="32" rx="16" 
-        fill="white" stroke="#000" stroke-width="2" opacity="0.95"/>
-      <text x="60" y="20" text-anchor="middle" 
-        font-family="system-ui, -apple-system, sans-serif" 
-        font-size="14" font-weight="700" fill="#000">
-        ${priceLabel}
-      </text>
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <defs>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity="0.3"/>
+        </filter>
+      </defs>
+      <g filter="url(#shadow)">
+        <rect x="1" y="1" width="${width-2}" height="${height-2}" rx="${(height-2)/2}" fill="#000000" stroke="white" stroke-width="1"/>
+        <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" 
+          font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+          font-weight="bold" font-size="12" fill="#ffffff">
+          ${priceLabel}
+        </text>
+      </g>
     </svg>
   `;
   
-  svgCache.set(cacheKey, svg);
-  return svg;
+  svgCache.set(cacheKey, `${svg}|${width}|${height}`);
+  return { svg, width, height };
+};
+
+// Generar SVG de punto simple (Zoom lejano)
+const getPointSVG = (): { svg: string; size: number } => {
+  const cacheKey = 'point-simple';
+  
+  if (svgCache.has(cacheKey)) {
+    const cached = svgCache.get(cacheKey)!;
+    const [svg, s] = cached.split('|');
+    return { svg, size: parseInt(s) };
+  }
+  
+  const size = 10;
+  const svg = `
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="#000000" stroke="white" stroke-width="2"/>
+    </svg>
+  `;
+  
+  svgCache.set(cacheKey, `${svg}|${size}`);
+  return { svg, size };
 };
 
 export interface MapMarker {
@@ -352,23 +393,38 @@ export function BasicGoogleMap({
       // ✅ Solo filtrar por precio si es property
       if (m.type === 'property' && (!m.price || m.price <= 0)) continue;
       
+      // 🎯 Lógica de Zoom: obtener zoom actual del mapa
+      const currentMapZoom = map.getZoom() || zoom;
+      const showPrice = currentMapZoom >= 12;
+      
       let svg: string;
       let iconSize: google.maps.Size;
       let iconAnchor: google.maps.Point;
+      let zIndex = 1;
       
       if (m.type === 'cluster') {
-        // 🚀 Usar SVG memoizado de cluster
+        // 🚀 Cluster: Círculo negro con número
         const count = m.count || 0;
-        svg = getClusterSVG(count);
         const baseSize = 50;
         const size = Math.min(baseSize + Math.log10(count) * 15, 90);
+        svg = getClusterSVG(count);
         iconSize = new google.maps.Size(size, size);
         iconAnchor = new google.maps.Point(size / 2, size / 2);
+        zIndex = 100;
+      } else if (!showPrice) {
+        // 🚀 Punto simple (Zoom lejano < 12)
+        const { svg: pointSvg, size: pointSize } = getPointSVG();
+        svg = pointSvg;
+        iconSize = new google.maps.Size(pointSize, pointSize);
+        iconAnchor = new google.maps.Point(pointSize / 2, pointSize / 2);
+        zIndex = 10;
       } else {
-        // 🚀 Usar SVG memoizado de precio
-        svg = getPriceSVG(m.price || 0, m.currency || 'MXN');
-        iconSize = new google.maps.Size(120, 32);
-        iconAnchor = new google.maps.Point(60, 16);
+        // 🚀 Píldora de precio (Zoom cercano >= 12)
+        const { svg: pillSvg, width, height } = getPricePillSVG(m.price || 0, m.currency || 'MXN');
+        svg = pillSvg;
+        iconSize = new google.maps.Size(width, height);
+        iconAnchor = new google.maps.Point(width / 2, height / 2);
+        zIndex = 50;
       }
       
       const marker = new google.maps.Marker({
@@ -381,6 +437,7 @@ export function BasicGoogleMap({
         },
         title: m.title || (m.type === 'cluster' ? `Cluster ${m.count}` : `Propiedad ${m.id}`),
         optimized: false,
+        zIndex,
       });
 
       // Event listener para clic
@@ -476,7 +533,7 @@ export function BasicGoogleMap({
       clustering: enableClustering 
     });
 
-  }, [markers, enableClustering, disableAutoFit, mapReady]);
+  }, [markers, enableClustering, disableAutoFit, mapReady, currentZoom]);
 
   if (error) {
     return (
