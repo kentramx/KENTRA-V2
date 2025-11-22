@@ -15,6 +15,15 @@ import { monitoring } from '@/lib/monitoring';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+// ✅ CONSTANTE DE SEGURIDAD: Si todo falla, mostramos México
+const DEFAULT_CENTER = { lat: 23.6345, lng: -102.5528 };
+const DEFAULT_ZOOM = 5;
+const DEFAULT_BOUNDS: ViewportBounds = {
+  minLat: 14.5388, maxLat: 32.7186,
+  minLng: -118.4662, maxLng: -86.7104,
+  zoom: 5
+};
+
 interface SearchMapProps {
   filters: PropertyFilters;
   searchCoordinates: { lat: number; lng: number } | null;
@@ -41,11 +50,50 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   onBoundsChange,
 }) => {
   const navigate = useNavigate();
-  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
+  
+  // ✅ ESTADO HÍBRIDO: El mapa tiene su propia memoria.
+  // Esto evita que el mapa "rebote" cuando React se actualiza.
+  const [viewState, setViewState] = useState({
+    center: searchCoordinates || DEFAULT_CENTER,
+    zoom: searchCoordinates ? 12 : DEFAULT_ZOOM
+  });
+
+  // ✅ INICIALIZACIÓN ROBUSTA: Nunca dejar los bounds en null.
+  // Esto asegura que useTiledMap arranque inmediatamente.
+  const [viewportBounds, setViewportBounds] = useState<ViewportBounds>(DEFAULT_BOUNDS);
   const [mapError, setMapError] = useState<string | null>(null);
   
   // ✅ Mantener datos previos para evitar parpadeos
   const previousMarkersRef = useRef<any[]>([]);
+  
+  // Ref para detectar cambios reales en la búsqueda (input del usuario)
+  const prevSearchCoords = useRef(searchCoordinates);
+
+  // ✅ EFECTO DE RESETEO INTELIGENTE
+  // Solo forzamos al mapa a moverse si el usuario REALMENTE buscó una nueva ciudad.
+  useEffect(() => {
+    const coordsChanged = searchCoordinates && (
+      !prevSearchCoords.current || 
+      searchCoordinates.lat !== prevSearchCoords.current.lat || 
+      searchCoordinates.lng !== prevSearchCoords.current.lng
+    );
+
+    if (coordsChanged) {
+      console.log("📍 Nueva búsqueda detectada, moviendo mapa a:", searchCoordinates);
+      setViewState({
+        center: searchCoordinates!,
+        zoom: 12
+      });
+      // ✅ Calculamos bounds aproximados para activar la carga de datos inmediatamente
+      const r = 0.05;
+      setViewportBounds({
+        minLat: searchCoordinates!.lat - r, maxLat: searchCoordinates!.lat + r,
+        minLng: searchCoordinates!.lng - r, maxLng: searchCoordinates!.lng + r,
+        zoom: 12
+      });
+      prevSearchCoords.current = searchCoordinates;
+    }
+  }, [searchCoordinates]);
   
   // ✅ Debounce adaptativo de viewport según FPS del dispositivo
   const debouncedBounds = useAdaptiveDebounce(viewportBounds, 300);
@@ -89,18 +137,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     onMapError?.(errorMsg);
   }, [onMapError]);
 
-  // ✅ Log de errores de tiles (NO bloqueante, se mantienen datos anteriores)
-  if (error) {
-    monitoring.error('[SearchMap] Error cargando tiles (no crítico)', {
-      component: 'SearchMap',
-      error,
-      filters,
-      bounds: debouncedBounds,
-    });
-  }
-
-  // ✅ Memoizar markers - Combinar propiedades y clusters simultáneamente
-  // Usa comparación primitiva para evitar recálculos innecesarios
+  // ✅ Memoizar markers con VALIDACIÓN ROBUSTA - Combinar propiedades y clusters simultáneamente
   const mapMarkers = useMemo(() => {
     // Si está cargando y no hay datos nuevos, mantener datos previos para evitar parpadeos
     if (isLoading && properties.length === 0 && clusters.length === 0 && previousMarkersRef.current.length > 0) {
@@ -109,26 +146,27 @@ export const SearchMap: React.FC<SearchMapProps> = ({
 
     const markers: any[] = [];
 
-    // 1) Agregar propiedades individuales con type: 'property'
+    // 1) Agregar propiedades individuales con type: 'property' y VALIDACIÓN ROBUSTA
     if (properties && properties.length > 0) {
-      const propertyMarkers = properties
-        .filter((p) => p.lat != null && p.lng != null)
-        .map((p) => ({
-          id: p.id,
-          lat: Number(p.lat),
-          lng: Number(p.lng),
-          title: p.title,
-          price: p.price,
-          currency: (p.currency ?? 'MXN') as 'MXN' | 'USD',
-          type: 'property' as const,
-          bedrooms: p.bedrooms,
-          bathrooms: p.bathrooms,
-          images: p.images,
-          listing_type: p.listing_type as 'venta' | 'renta',
-          address: p.address,
-        }));
-      
-      markers.push(...propertyMarkers);
+      properties.forEach(p => {
+        // ✅ Validación de coordenadas para evitar crash
+        if (p.lat && p.lng && !isNaN(Number(p.lat)) && !isNaN(Number(p.lng))) {
+          markers.push({
+            id: p.id,
+            lat: Number(p.lat),
+            lng: Number(p.lng),
+            title: p.title,
+            price: p.price,
+            currency: (p.currency ?? 'MXN') as 'MXN' | 'USD',
+            type: 'property' as const,
+            bedrooms: p.bedrooms,
+            bathrooms: p.bathrooms,
+            images: p.images,
+            listing_type: p.listing_type as 'venta' | 'renta',
+            address: p.address,
+          });
+        }
+      });
     }
 
     // 2) Agregar clusters con type: 'cluster' y count
@@ -155,37 +193,14 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     return markers;
   }, [properties.length, clusters.length, isLoading, properties, clusters]);
 
-  // 1️⃣ Estado interno: El mapa se gobierna a sí mismo
-  const [currentView, setCurrentView] = useState({
-    center: searchCoordinates || { lat: 23.6345, lng: -102.5528 },
-    zoom: searchCoordinates ? 12 : 5
-  });
-
-  // 2️⃣ Referencia: Detectar cambios REALES en la búsqueda
-  const prevSearchCoords = useRef(searchCoordinates);
-
-  // 3️⃣ Efecto: Solo resetear si CAMBIAN las coordenadas de búsqueda
-  useEffect(() => {
-    // Solo actualizar si searchCoordinates cambió de verdad (nueva búsqueda del usuario)
-    if (searchCoordinates && (
-        !prevSearchCoords.current || 
-        searchCoordinates.lat !== prevSearchCoords.current.lat || 
-        searchCoordinates.lng !== prevSearchCoords.current.lng
-    )) {
-      console.log('📍 [SearchMap] Nueva búsqueda detectada, volando a:', searchCoordinates);
-      setCurrentView({
-        center: searchCoordinates,
-        zoom: 12
-      });
-      prevSearchCoords.current = searchCoordinates;
-    }
-  }, [searchCoordinates]);
-
-  // ✅ Callback memoizado para bounds change
+  // ✅ HANDLER ANTISALTO
+  // Cuando el usuario mueve el mapa, actualizamos nuestro estado local
+  // para que coincida con la realidad. Así, si React re-renderiza,
+  // le pasará al mapa la posición DONDE YA ESTÁ, evitando el rebote.
   const handleBoundsChange = useCallback((bounds: ViewportBounds) => {
     setViewportBounds(bounds);
     onBoundsChange?.(bounds); // 🗣️ Notificar a Buscar.tsx
-    // NO actualizamos 'currentView' aquí → el mapa sigue fluyendo suavemente
+    // NO actualizamos 'viewState' aquí → el mapa sigue fluyendo suavemente
   }, [onBoundsChange]);
 
   // ✅ Callback memoizado para marker click (no navegar si es cluster)
@@ -220,8 +235,8 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   return (
     <div className="relative w-full" style={{ height }}>
       <BasicGoogleMap
-        center={currentView.center}
-        zoom={currentView.zoom}
+        center={viewState.center}
+        zoom={viewState.zoom}
         markers={mapMarkers as any}
         enableClustering={true}
         onBoundsChanged={handleBoundsChange}
@@ -233,17 +248,11 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         onMapError={handleMapError}
       />
 
-      {/* Debug overlay eliminado para producción */}
-
-      {/* 🔄 Overlay de carga */}
-      {isLoading && viewportBounds && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[2px]">
-          <div className="rounded-lg bg-background/95 px-4 py-3 shadow-lg">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Cargando propiedades en el mapa...</span>
-            </div>
-          </div>
+      {/* ✅ LOADING BADGE DISCRETO */}
+      {isLoading && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 px-4 py-2 rounded-full shadow-md flex items-center gap-2 z-10">
+          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+          <span className="text-xs font-medium text-gray-600">Cargando zona...</span>
         </div>
       )}
 
