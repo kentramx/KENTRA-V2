@@ -24,6 +24,31 @@ const DEFAULT_BOUNDS: ViewportBounds = {
   zoom: 5
 };
 
+// Función auxiliar para calcular estado inicial completo
+const getInitialView = (coords: { lat: number; lng: number } | null) => {
+  if (coords) {
+    // Si hay coordenadas, iniciamos YA en la ciudad con zoom 12
+    const r = 0.05;
+    return {
+      center: coords,
+      zoom: 12,
+      bounds: {
+        minLat: coords.lat - r,
+        maxLat: coords.lat + r,
+        minLng: coords.lng - r,
+        maxLng: coords.lng + r,
+        zoom: 12
+      } as ViewportBounds
+    };
+  }
+  // Si no, México default
+  return {
+    center: DEFAULT_CENTER,
+    zoom: DEFAULT_ZOOM,
+    bounds: DEFAULT_BOUNDS
+  };
+};
+
 interface SearchMapProps {
   filters: PropertyFilters;
   searchCoordinates: { lat: number; lng: number } | null;
@@ -51,16 +76,15 @@ export const SearchMap: React.FC<SearchMapProps> = ({
 }) => {
   const navigate = useNavigate();
   
-  // ✅ ESTADO HÍBRIDO: El mapa tiene su propia memoria.
-  // Esto evita que el mapa "rebote" cuando React se actualiza.
+  // ✅ INICIALIZACIÓN SINCRÓNICA: Calculamos TODO el estado inicial de una sola vez
+  const [initialState] = useState(() => getInitialView(searchCoordinates));
+  
   const [viewState, setViewState] = useState({
-    center: searchCoordinates || DEFAULT_CENTER,
-    zoom: searchCoordinates ? 12 : DEFAULT_ZOOM
+    center: initialState.center,
+    zoom: initialState.zoom
   });
 
-  // ✅ INICIALIZACIÓN ROBUSTA: Nunca dejar los bounds en null.
-  // Esto asegura que useTiledMap arranque inmediatamente.
-  const [viewportBounds, setViewportBounds] = useState<ViewportBounds>(DEFAULT_BOUNDS);
+  const [viewportBounds, setViewportBounds] = useState<ViewportBounds>(initialState.bounds);
   const [mapError, setMapError] = useState<string | null>(null);
   
   // ✅ Mantener datos previos para evitar parpadeos
@@ -68,6 +92,12 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   
   // Ref para detectar cambios reales en la búsqueda (input del usuario)
   const prevSearchCoords = useRef(searchCoordinates);
+
+  // 🔔 NOTIFICACIÓN AL MONTAR: Avisar al padre inmediatamente
+  useEffect(() => {
+    console.log("🗺️ [SearchMap] Notificando bounds iniciales:", initialState.bounds);
+    onBoundsChange?.(initialState.bounds);
+  }, []); // Solo al montar, no agregar dependencias
 
   // ✅ EFECTO DE RESETEO INTELIGENTE
   // Solo forzamos al mapa a moverse si el usuario REALMENTE buscó una nueva ciudad.
@@ -84,16 +114,21 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         center: searchCoordinates!,
         zoom: 12
       });
-      // ✅ Calculamos bounds aproximados para activar la carga de datos inmediatamente
+      
       const r = 0.05;
-      setViewportBounds({
-        minLat: searchCoordinates!.lat - r, maxLat: searchCoordinates!.lat + r,
-        minLng: searchCoordinates!.lng - r, maxLng: searchCoordinates!.lng + r,
+      const newBounds = {
+        minLat: searchCoordinates!.lat - r,
+        maxLat: searchCoordinates!.lat + r,
+        minLng: searchCoordinates!.lng - r,
+        maxLng: searchCoordinates!.lng + r,
         zoom: 12
-      });
+      };
+      
+      setViewportBounds(newBounds);
+      onBoundsChange?.(newBounds); // ✅ NOTIFICAR AL PADRE
       prevSearchCoords.current = searchCoordinates;
     }
-  }, [searchCoordinates]);
+  }, [searchCoordinates, onBoundsChange]);
   
   // ✅ Debounce adaptativo de viewport según FPS del dispositivo
   const debouncedBounds = useAdaptiveDebounce(viewportBounds, 300);
