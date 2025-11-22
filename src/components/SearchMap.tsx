@@ -269,14 +269,9 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         center={viewState.center}
         zoom={viewState.zoom}
         markers={mapMarkers as any}
-        enableClustering={true}
         onBoundsChanged={handleBoundsChange}
         onMarkerClick={handleMarkerClickInternal}
-        onMarkerHover={handleMarkerHover}
-        hoveredMarkerId={hoveredPropertyId}
-        hoveredPropertyCoords={hoveredPropertyCoords}
-        disableAutoFit={true}
-        onMapError={handleMapError}
+        className="w-full h-full"
       />
 
       {/* ✅ LOADING BADGE DISCRETO */}
