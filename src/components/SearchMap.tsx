@@ -92,6 +92,7 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   
   // Ref para detectar cambios reales en la búsqueda (input del usuario)
   const prevSearchCoords = useRef(searchCoordinates);
+  const isFirstRender = useRef(true); // ✅ Flag para carga inicial sin debounce
 
   // 🔔 NOTIFICACIÓN AL MONTAR: Avisar al padre inmediatamente
   useEffect(() => {
@@ -130,8 +131,18 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     }
   }, [searchCoordinates, onBoundsChange]);
   
-  // ✅ Debounce adaptativo de viewport según FPS del dispositivo
-  const debouncedBounds = useAdaptiveDebounce(viewportBounds, 300);
+  // ✅ Debounce condicional: 0ms en primer render (carga instantánea), 300ms después (UX fluida)
+  const debouncedBounds = useAdaptiveDebounce(
+    viewportBounds,
+    isFirstRender.current ? 0 : 300
+  );
+
+  // Marcar que ya no es el primer render
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+    }
+  }, [viewportBounds]);
 
   // 🚀 TILE-BASED ARCHITECTURE: fetch con escalabilidad infinita
   const { data: viewportData, isLoading, error } = useTiledMap(
