@@ -117,10 +117,10 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     colonia: '',
     precioMin: '',
     precioMax: '',
-    tipo: '',
+    tipo: 'all',
     listingType: '',
-    recamaras: '',
-    banos: '',
+    recamaras: 'all',
+    banos: 'all',
     orden: 'price_desc',
   };
 
@@ -130,10 +130,10 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     colonia: searchParams.get('colonia') || '',
     precioMin: searchParams.get('precioMin') || '',
     precioMax: searchParams.get('precioMax') || '',
-    tipo: searchParams.get('tipo') || '',
+    tipo: searchParams.get('tipo') || 'all',
     listingType: searchParams.get('listingType') || 'venta',
-    recamaras: searchParams.get('recamaras') || '',
-    banos: searchParams.get('banos') || '',
+    recamaras: searchParams.get('recamaras') || 'all',
+    banos: searchParams.get('banos') || 'all',
     orden: (searchParams.get('orden') as any) || 'price_desc',
   });
   
@@ -250,10 +250,10 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       colonia: searchParams.get('colonia') || '',
       precioMin: searchParams.get('precioMin') || '',
       precioMax: searchParams.get('precioMax') || '',
-      tipo: searchParams.get('tipo') || '',
+      tipo: searchParams.get('tipo') || 'all',
       listingType: searchParams.get('listingType') || 'venta',
-      recamaras: searchParams.get('recamaras') || '',
-      banos: searchParams.get('banos') || '',
+      recamaras: searchParams.get('recamaras') || 'all',
+      banos: searchParams.get('banos') || 'all',
       orden: (searchParams.get('orden') as any) || 'price_desc',
     };
     
@@ -523,12 +523,12 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     if (filters.colonia) params.set('colonia', filters.colonia);
     if (filters.precioMin) params.set('precioMin', filters.precioMin);
     if (filters.precioMax) params.set('precioMax', filters.precioMax);
-    if (filters.tipo) params.set('tipo', filters.tipo);
+    if (filters.tipo && filters.tipo !== 'all') params.set('tipo', filters.tipo);
     
     params.set('listingType', filters.listingType || 'venta');
     
-    if (filters.recamaras) params.set('recamaras', filters.recamaras);
-    if (filters.banos) params.set('banos', filters.banos);
+    if (filters.recamaras && filters.recamaras !== 'all') params.set('recamaras', filters.recamaras);
+    if (filters.banos && filters.banos !== 'all') params.set('banos', filters.banos);
     if (filters.orden !== 'price_desc') params.set('orden', filters.orden);
     
     if (searchCoordinates) {
@@ -561,9 +561,13 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   }, [filters.estado]);
 
   const removeFilter = (filterKey: keyof Filters) => {
+    const resetValue = 
+      filterKey === 'orden' ? 'price_desc' :
+      filterKey === 'tipo' || filterKey === 'recamaras' || filterKey === 'banos' ? 'all' : '';
+    
     setFilters(prev => ({
       ...prev,
-      [filterKey]: filterKey === 'orden' ? 'price_desc' : ''
+      [filterKey]: resetValue
     }));
   };
 
@@ -614,7 +618,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       });
     }
 
-    if (filters.tipo) {
+    if (filters.tipo && filters.tipo !== 'all') {
       const tipoLabels: Record<string, string> = {
         casa: 'Casa',
         departamento: 'Departamento',
@@ -640,7 +644,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       });
     }
 
-    if (filters.recamaras) {
+    if (filters.recamaras && filters.recamaras !== 'all') {
       chips.push({
         key: 'recamaras',
         label: `${filters.recamaras}+ recámaras`,
@@ -648,7 +652,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       });
     }
 
-    if (filters.banos) {
+    if (filters.banos && filters.banos !== 'all') {
       chips.push({
         key: 'banos',
         label: `${filters.banos}+ baños`,
@@ -662,10 +666,10 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const activeFiltersCount = [
     filters.precioMin,
     filters.precioMax,
-    filters.tipo,
+    filters.tipo !== 'all' ? filters.tipo : null,
     filters.listingType,
-    filters.recamaras,
-    filters.banos,
+    filters.recamaras !== 'all' ? filters.recamaras : null,
+    filters.banos !== 'all' ? filters.banos : null,
   ].filter(Boolean).length;
 
   useEffect(() => {
@@ -820,22 +824,22 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const hasActiveFilters = !!(
     filters.estado || 
     filters.municipio || 
-    filters.tipo || 
+    (filters.tipo && filters.tipo !== 'all') || 
     filters.listingType || 
     filters.precioMin || 
     filters.precioMax || 
-    filters.recamaras || 
-    filters.banos
+    (filters.recamaras && filters.recamaras !== 'all') || 
+    (filters.banos && filters.banos !== 'all')
   );
 
   const hasLocationFilters = !!(
     filters.estado || 
     filters.municipio || 
-    filters.tipo || 
+    (filters.tipo && filters.tipo !== 'all') || 
     filters.precioMin || 
     filters.precioMax || 
-    filters.recamaras || 
-    filters.banos
+    (filters.recamaras && filters.recamaras !== 'all') || 
+    (filters.banos && filters.banos !== 'all')
   );
 
   const getBreadcrumbItems = (): BreadcrumbItem[] => {
@@ -1035,7 +1039,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                             <SelectValue placeholder="Selecciona un tipo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Todos</SelectItem>
+                            <SelectItem value="all">Todos</SelectItem>
                             <SelectItem value="casa">Casa</SelectItem>
                             <SelectItem value="departamento">Departamento</SelectItem>
                             <SelectItem value="terreno">Terreno</SelectItem>
@@ -1087,7 +1091,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                             <SelectValue placeholder="Cualquier cantidad" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Cualquier cantidad</SelectItem>
+                            <SelectItem value="all">Cualquier cantidad</SelectItem>
                             <SelectItem value="1">1+</SelectItem>
                             <SelectItem value="2">2+</SelectItem>
                             <SelectItem value="3">3+</SelectItem>
@@ -1107,7 +1111,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                             <SelectValue placeholder="Cualquier cantidad" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Cualquier cantidad</SelectItem>
+                            <SelectItem value="all">Cualquier cantidad</SelectItem>
                             <SelectItem value="1">1+</SelectItem>
                             <SelectItem value="2">2+</SelectItem>
                             <SelectItem value="3">3+</SelectItem>
@@ -1202,7 +1206,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                       <SelectValue placeholder="Selecciona un tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos</SelectItem>
+                      <SelectItem value="all">Todos</SelectItem>
                       <SelectItem value="casa">Casa</SelectItem>
                       <SelectItem value="departamento">Departamento</SelectItem>
                       <SelectItem value="terreno">Terreno</SelectItem>
@@ -1254,7 +1258,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                       <SelectValue placeholder="Cualquier cantidad" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Cualquier cantidad</SelectItem>
+                      <SelectItem value="all">Cualquier cantidad</SelectItem>
                       <SelectItem value="1">1+</SelectItem>
                       <SelectItem value="2">2+</SelectItem>
                       <SelectItem value="3">3+</SelectItem>
@@ -1274,7 +1278,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                       <SelectValue placeholder="Cualquier cantidad" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Cualquier cantidad</SelectItem>
+                      <SelectItem value="all">Cualquier cantidad</SelectItem>
                       <SelectItem value="1">1+</SelectItem>
                       <SelectItem value="2">2+</SelectItem>
                       <SelectItem value="3">3+</SelectItem>
