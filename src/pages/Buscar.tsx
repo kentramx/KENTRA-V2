@@ -199,13 +199,15 @@ const Buscar = () => {
 
   const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
-  // ✅ Handler para cuando el mapa se mueve
+  // ✅ Handler estabilizado: Solo loguea el movimiento, NO actualiza coordenadas
+  // Esto rompe el loop infinito que causaba el flash y bloqueo
   const handleMapPositionChange = useCallback((center: { lat: number; lng: number }) => {
     if (mapMoveTimerRef.current) {
       clearTimeout(mapMoveTimerRef.current);
     }
     mapMoveTimerRef.current = setTimeout(() => {
-      setSearchCoordinates(center);
+      console.log("🗺️ Mapa estabilizado en:", center);
+      // NOTA: No llamamos a setSearchCoordinates aquí para evitar re-renderizados cíclicos
     }, 500);
   }, []);
 
@@ -760,4 +762,4 @@ const Buscar = () => {
   );
 };
 
-export default Buscar; // ✅ Esta línea es crítica para que App.tsx pueda importarlo
+export default Buscar;
