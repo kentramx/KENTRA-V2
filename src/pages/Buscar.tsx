@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { SearchMap } from "@/components/SearchMap";
 import { SearchResultsList } from "@/components/SearchResultsList";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePropertySearch } from "@/hooks/usePropertySearch";
@@ -10,13 +10,40 @@ import { PlaceAutocomplete } from "@/components/PlaceAutocomplete";
 import { buildPropertyFilters } from "@/utils/buildPropertyFilters";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Star, X, ChevronDown, SlidersHorizontal, Loader2, Map as MapIcon, List as ListIcon } from "lucide-react";
+import {
+  AlertCircle,
+  Save,
+  Star,
+  Trash2,
+  X,
+  ChevronDown,
+  SlidersHorizontal,
+  Loader2,
+  Map as MapIcon,
+  List as ListIcon,
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { mexicoStates, mexicoMunicipalities } from "@/data/mexicoLocations";
 import { useTracking } from "@/hooks/useTracking";
 import { SEOHead } from "@/components/SEOHead";
 import { generateSearchTitle, generateSearchDescription } from "@/utils/seo";
@@ -25,7 +52,7 @@ import { PropertyDetailSheet } from "@/components/PropertyDetailSheet";
 import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
 import { monitoring } from "@/lib/monitoring";
 import type { MapProperty, HoveredProperty } from "@/types/property";
-import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface Filters {
   estado: string;
@@ -34,7 +61,7 @@ interface Filters {
   precioMin: string;
   precioMax: string;
   tipo: string;
-  listingType: "venta" | "renta";
+  listingType: string;
   recamaras: string;
   banos: string;
   orden: "price_desc" | "price_asc" | "newest" | "oldest" | "bedrooms_desc" | "sqft_desc";
@@ -51,19 +78,21 @@ const getTipoLabel = (tipo: string) => {
     edificio: "🏛️ Edificio",
     rancho: "🐎 Rancho",
   };
-  return labels[tipo] || tipo;
-};
 
-// helper para comparar bounds y evitar churn
-const sameBounds = (a: ViewportBounds | null, b: ViewportBounds | null) => {
-  if (!a || !b) return false;
-  return a.minLat === b.minLat && a.maxLat === b.maxLat && a.minLng === b.minLng && a.maxLng === b.maxLng;
+  // helper para comparar bounds y evitar churn/refetch infinito
+  const sameBounds = (a: ViewportBounds | null, b: ViewportBounds | null) => {
+    if (!a || !b) return false;
+    return a.minLat === b.minLat && a.maxLat === b.maxLat && a.minLng === b.minLng && a.maxLng === b.maxLng;
+  };
+
+  return labels[tipo] || tipo;
 };
 
 const Buscar = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isFiltering, setIsFiltering] = useState(false);
   const { trackGA4Event } = useTracking();
 
   const syncingFromUrl = useRef(false);
@@ -79,16 +108,26 @@ const Buscar = () => {
   const RENT_MIN_PRICE = 0;
   const RENT_MAX_PRICE = 200;
 
-  const getPriceRangeForListingType = (listingType: "venta" | "renta"): [number, number] => {
-    return listingType === "renta" ? [RENT_MIN_PRICE, RENT_MAX_PRICE] : [SALE_MIN_PRICE, SALE_MAX_PRICE];
+  const getPriceRangeForListingType = (listingType: string): [number, number] => {
+    if (listingType === "renta") {
+      return [RENT_MIN_PRICE, RENT_MAX_PRICE];
+    }
+    return [SALE_MIN_PRICE, SALE_MAX_PRICE];
   };
 
-  const convertSliderValueToPrice = (value: number, listingType: "venta" | "renta"): number => {
-    return listingType === "renta" ? value * 1000 : value * 1000000;
+  const convertSliderValueToPrice = (value: number, listingType: string): number => {
+    if (listingType === "renta") {
+      return value * 1000;
+    }
+    return value * 1000000;
   };
 
   const [priceRange, setPriceRange] = useState<[number, number]>([SALE_MIN_PRICE, SALE_MAX_PRICE]);
   const [savedSearches, setSavedSearches] = useState<any[]>([]);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [searchName, setSearchName] = useState("");
+  const [savedSearchQuery, setSavedSearchQuery] = useState("");
+  const [savedSearchSort, setSavedSearchSort] = useState<"date" | "name">("date");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const DEFAULT_FILTERS: Filters = {
@@ -98,32 +137,32 @@ const Buscar = () => {
     precioMin: "",
     precioMax: "",
     tipo: "",
-    listingType: "venta",
+    listingType: "",
     recamaras: "",
     banos: "",
     orden: "price_desc",
   };
 
   const [filters, setFilters] = useState<Filters>({
-    estado: (searchParams.get("estado") || "") as string,
-    municipio: (searchParams.get("municipio") || "") as string,
-    colonia: (searchParams.get("colonia") || "") as string,
-    precioMin: (searchParams.get("precioMin") || "") as string,
-    precioMax: (searchParams.get("precioMax") || "") as string,
-    tipo: (searchParams.get("tipo") || "") as string,
-    listingType: ((searchParams.get("listingType") as any) || "venta") as "venta" | "renta",
-    recamaras: (searchParams.get("recamaras") || "") as string,
-    banos: (searchParams.get("banos") || "") as string,
-    orden: ((searchParams.get("orden") as any) || "price_desc") as Filters["orden"],
+    estado: searchParams.get("estado") || "",
+    municipio: searchParams.get("municipio") || "",
+    colonia: searchParams.get("colonia") || "",
+    precioMin: searchParams.get("precioMin") || "",
+    precioMax: searchParams.get("precioMax") || "",
+    tipo: searchParams.get("tipo") || "",
+    listingType: searchParams.get("listingType") || "venta",
+    recamaras: searchParams.get("recamaras") || "",
+    banos: searchParams.get("banos") || "",
+    orden: (searchParams.get("orden") as any) || "price_desc",
   });
 
-  // 🗺️ Bounds para sincronizar la LISTA con el viewport del mapa
+  // 🗺️ Bounds actuales del mapa para sincronizar listado con viewport
   const [mapBounds, setMapBounds] = useState<ViewportBounds | null>(null);
 
-  // ✅ 1) Filtros del MAPA (SIN bounds)
+  // ✅ Filtros para el MAPA (sin bounds). El mapa usa su propio viewport interno/tiles
   const mapFilters = useMemo(() => buildPropertyFilters(filters), [filters]);
 
-  // ✅ 2) Filtros de la LISTA (con bounds cuando existan)
+  // ✅ Filtros para la LISTA (con bounds cuando existan)
   const listFilters = useMemo(() => {
     return mapBounds ? { ...mapFilters, bounds: mapBounds } : mapFilters;
   }, [mapFilters, mapBounds]);
@@ -138,7 +177,7 @@ const Buscar = () => {
     fetchNextPage,
     hasTooManyResults,
     actualTotal,
-  } = usePropertySearch(listFilters); // 👈 LISTA usa bounds
+  } = usePropertySearch(listFilters);
 
   const sortedProperties = useMemo(() => {
     const sorted = [...properties];
@@ -154,8 +193,8 @@ const Buscar = () => {
           return a.price - b.price;
         case "newest":
           return (
-            (b.created_at ? new Date(b.created_at).getTime() : 0) -
-            (a.created_at ? new Date(a.created_at).getTime() : 0)
+            (a.created_at ? new Date(a.created_at).getTime() : 0) -
+            (b.created_at ? new Date(b.created_at).getTime() : 0) * -1
           );
         case "oldest":
           return (
@@ -177,19 +216,20 @@ const Buscar = () => {
 
   const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
-  // ✅ Actualiza bounds SOLO si cambiaron (evita churn)
-  const handleMapPositionChange = useCallback(
-    (center: { lat: number; lng: number }, bounds: ViewportBounds) => {
-      if (mapMoveTimerRef.current) clearTimeout(mapMoveTimerRef.current);
-      mapMoveTimerRef.current = setTimeout(() => {
-        if (!sameBounds(mapBounds, bounds)) {
-          monitoring.debug("[Buscar] Bounds nuevos", { center, bounds });
-          setMapBounds(bounds);
-        }
-      }, 500);
-    },
-    [mapBounds],
-  );
+  // ✅ Handler estabilizado: Solo loguea el movimiento, NO actualiza coordenadas
+  // Esto rompe el loop infinito que causaba el flash y bloqueo
+  // ✅ Handler estabilizado: actualiza bounds visibles para sincronizar lista con mapa
+  // Debounce 500ms y evita re-render si no cambiaron bounds
+  const handleMapPositionChange = useCallback((center: { lat: number; lng: number }, bounds: ViewportBounds) => {
+    if (mapMoveTimerRef.current) {
+      clearTimeout(mapMoveTimerRef.current);
+    }
+    mapMoveTimerRef.current = setTimeout(() => {
+      console.log("🗺️ Mapa estabilizado en:", { center, bounds });
+      setMapBounds((prev) => (sameBounds(prev, bounds) ? prev : bounds));
+      // NOTA: No llamamos a setSearchCoordinates aquí para evitar re-renderizados cíclicos
+    }, 500);
+  }, []);
 
   useEffect(() => {
     const propertyId = searchParams.get("propiedad");
@@ -223,7 +263,6 @@ const Buscar = () => {
 
   useEffect(() => {
     syncingFromUrl.current = true;
-
     const lat = searchParams.get("lat");
     const lng = searchParams.get("lng");
     if (lat && lng) {
@@ -239,10 +278,10 @@ const Buscar = () => {
       precioMin: searchParams.get("precioMin") || "",
       precioMax: searchParams.get("precioMax") || "",
       tipo: searchParams.get("tipo") || "",
-      listingType: ((searchParams.get("listingType") as any) || "venta") as "venta" | "renta",
+      listingType: searchParams.get("listingType") || "venta",
       recamaras: searchParams.get("recamaras") || "",
       banos: searchParams.get("banos") || "",
-      orden: ((searchParams.get("orden") as any) || "price_desc") as Filters["orden"],
+      orden: (searchParams.get("orden") as any) || "price_desc",
     };
 
     if (JSON.stringify(newFilters) !== JSON.stringify(filters)) {
@@ -250,7 +289,7 @@ const Buscar = () => {
     }
 
     Promise.resolve().then(() => (syncingFromUrl.current = false));
-  }, [searchParams]); // intencional sin filters
+  }, [searchParams]);
 
   const locationDisplayValue =
     filters.municipio && filters.estado ? `${filters.municipio}, ${filters.estado}` : filters.estado || "";
@@ -267,10 +306,190 @@ const Buscar = () => {
     Math.max(minRangeForType, Math.min(priceRange[1], maxRangeForType)),
   ];
 
+  const filteredSavedSearches = savedSearches
+    .filter((search) => search.name.toLowerCase().includes(savedSearchQuery.toLowerCase()))
+    .sort((a, b) =>
+      savedSearchSort === "name"
+        ? a.name.localeCompare(b.name)
+        : new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+
   const handlePropertyHoverFromMap = useCallback((property: MapProperty | null) => {
     hoverFromMap.current = true;
     setHoveredProperty(property);
   }, []);
+
+  useEffect(() => {
+    const [minRange, maxRange] = getPriceRangeForListingType(filters.listingType);
+    const needsReset =
+      priceRange[0] < minRange || priceRange[0] > maxRange || priceRange[1] < minRange || priceRange[1] > maxRange;
+
+    if (needsReset) {
+      setPriceRange([minRange, maxRange]);
+      setFilters((prev) => ({ ...prev, precioMin: "", precioMax: "" }));
+    }
+  }, [filters.listingType, priceRange]);
+
+  useEffect(() => {
+    if (user) fetchSavedSearches();
+  }, [user]);
+
+  const fetchSavedSearches = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from("saved_searches")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setSavedSearches(data || []);
+    } catch (error) {
+      console.error("Error fetching saved searches:", error);
+    }
+  };
+
+  const handleSaveSearch = async () => {
+    if (!user) return toast({ title: "Inicia sesión", description: "Debes iniciar sesión", variant: "destructive" });
+    if (!searchName.trim()) return toast({ title: "Error", description: "Ingresa un nombre", variant: "destructive" });
+
+    try {
+      const { error } = await supabase
+        .from("saved_searches")
+        .insert([{ user_id: user.id, name: searchName, filters: filters as any }]);
+      if (error) throw error;
+      toast({ title: "Búsqueda guardada", description: `"${searchName}" guardada` });
+      setSearchName("");
+      setSaveDialogOpen(false);
+      fetchSavedSearches();
+    } catch (error: any) {
+      toast({ title: "Error", description: "No se pudo guardar", variant: "destructive" });
+    }
+  };
+
+  const handleLoadSearch = (savedFilters: any) => {
+    setFilters(savedFilters);
+    toast({ title: "Búsqueda cargada", description: "Filtros aplicados" });
+  };
+
+  const handleDeleteSearch = async (id: string, name: string) => {
+    try {
+      const { error } = await supabase.from("saved_searches").delete().eq("id", id);
+      if (error) throw error;
+      toast({ title: "Eliminada", description: `"${name}" eliminada` });
+      fetchSavedSearches();
+    } catch (error) {
+      console.error("Error deleting:", error);
+    }
+  };
+
+  useEffect(() => {
+    const currentListingType = filters.listingType;
+    const [minRange, maxRange] = getPriceRangeForListingType(currentListingType);
+    const minFromUrl = filters.precioMin
+      ? parseFloat(filters.precioMin) / (currentListingType === "renta" ? 1000 : 1000000)
+      : minRange;
+    const maxFromUrl = filters.precioMax
+      ? parseFloat(filters.precioMax) / (currentListingType === "renta" ? 1000 : 1000000)
+      : maxRange;
+    setPriceRange([minFromUrl, maxFromUrl]);
+  }, []);
+
+  const handlePriceRangeChange = (values: number[]) => {
+    setPriceRange(values as [number, number]);
+    const [minRange, maxRange] = getPriceRangeForListingType(filters.listingType);
+    setFilters((prev) => ({
+      ...prev,
+      precioMin: values[0] === minRange ? "" : convertSliderValueToPrice(values[0], prev.listingType).toString(),
+      precioMax: values[1] === maxRange ? "" : convertSliderValueToPrice(values[1], prev.listingType).toString(),
+    }));
+  };
+
+  const formatPriceDisplay = (value: number, listingType?: string) => {
+    const currentListingType = listingType || filters.listingType;
+    const [minRange, maxRange] = getPriceRangeForListingType(currentListingType);
+    if (value === 0 || value === minRange) return "$0";
+    if (value === maxRange) return "Sin límite";
+
+    if (currentListingType === "renta") {
+      return new Intl.NumberFormat("es-MX", {
+        style: "currency",
+        currency: "MXN",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(value * 1000);
+    } else {
+      return value >= 1
+        ? `$${value.toFixed(1)}M`
+        : new Intl.NumberFormat("es-MX", {
+            style: "currency",
+            currency: "MXN",
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(value * 1000000);
+    }
+  };
+
+  useEffect(() => {
+    if (syncingFromUrl.current) return;
+    const params = new URLSearchParams();
+    if (filters.estado) params.set("estado", filters.estado);
+    if (filters.municipio) params.set("municipio", filters.municipio);
+    if (filters.colonia) params.set("colonia", filters.colonia);
+    if (filters.precioMin) params.set("precioMin", filters.precioMin);
+    if (filters.precioMax) params.set("precioMax", filters.precioMax);
+    if (filters.tipo) params.set("tipo", filters.tipo);
+    params.set("listingType", filters.listingType || "venta");
+    if (filters.recamaras) params.set("recamaras", filters.recamaras);
+    if (filters.banos) params.set("banos", filters.banos);
+    if (filters.orden !== "price_desc") params.set("orden", filters.orden);
+
+    if (searchCoordinates) {
+      params.set("lat", searchCoordinates.lat.toString());
+      params.set("lng", searchCoordinates.lng.toString());
+    }
+
+    const propiedad = searchParams.get("propiedad");
+    if (propiedad) params.set("propiedad", propiedad);
+
+    const next = params.toString();
+    const current = searchParams.toString();
+    if (next !== current) setSearchParams(params, { replace: true });
+  }, [filters, searchCoordinates]);
+
+  const removeFilter = (filterKey: keyof Filters) => {
+    setFilters((prev) => ({ ...prev, [filterKey]: filterKey === "orden" ? "price_desc" : "" }));
+  };
+
+  const getActiveFilterChips = () => {
+    const chips: Array<{ key: string; label: string; removeFilter: () => void }> = [];
+    if (filters.estado)
+      chips.push({ key: "estado", label: `Estado: ${filters.estado}`, removeFilter: () => removeFilter("estado") });
+    if (filters.municipio)
+      chips.push({
+        key: "municipio",
+        label: `Municipio: ${filters.municipio}`,
+        removeFilter: () => removeFilter("municipio"),
+      });
+    if (filters.colonia)
+      chips.push({ key: "colonia", label: `Colonia: ${filters.colonia}`, removeFilter: () => removeFilter("colonia") });
+    if (filters.tipo)
+      chips.push({ key: "tipo", label: getTipoLabel(filters.tipo), removeFilter: () => removeFilter("tipo") });
+    return chips;
+  };
+
+  const activeFiltersCount = [
+    filters.precioMin,
+    filters.precioMax,
+    filters.tipo,
+    filters.listingType,
+    filters.recamaras,
+    filters.banos,
+  ].filter(Boolean).length;
+
+  useEffect(() => {
+    setIsFiltering(isFetching && properties.length === 0);
+  }, [isFetching, properties.length]);
 
   const handlePropertyHoverFromList = useCallback((property: HoveredProperty | null) => {
     hoverFromMap.current = false;
@@ -311,7 +530,6 @@ const Buscar = () => {
         return { ...prev, estado: "", municipio: "" };
       });
       setSearchCoordinates(null);
-      setMapBounds(null); // ✅ reset bounds
     }
   };
 
@@ -325,7 +543,6 @@ const Buscar = () => {
     if (location.lat && location.lng) {
       setSearchCoordinates({ lat: location.lat, lng: location.lng });
     }
-    setMapBounds(null); // ✅ reset bounds
     toast({ title: "Ubicación seleccionada", description: `${location.municipality}, ${location.state}` });
   };
 
@@ -341,6 +558,9 @@ const Buscar = () => {
     })),
     filters.municipio || filters.estado || "Propiedades en México",
   );
+
+  const handleOrdenChange = (value: string) => setFilters((prev) => ({ ...prev, orden: value as Filters["orden"] }));
+  const handleSavedSearchSortChange = (value: string) => setSavedSearchSort(value as "date" | "name");
 
   if (loading && !properties.length) {
     return (
@@ -381,16 +601,13 @@ const Buscar = () => {
                     onClick={() => {
                       setFilters(DEFAULT_FILTERS);
                       setSearchCoordinates(null);
-                      setMapBounds(null); // ✅ reset bounds
                     }}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 )}
               </div>
-
               <Separator orientation="vertical" className="h-8 hidden lg:block" />
-
               {/* Botón Filtros Móvil */}
               <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
                 <SheetTrigger asChild>
@@ -401,6 +618,7 @@ const Buscar = () => {
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[90vh]">
                   <SheetTitle>Filtros</SheetTitle>
+                  {/* Contenido Sheet (Simplificado) */}
                   <ScrollArea className="h-[calc(90vh-120px)] mt-4">
                     <div className="p-4">
                       <p>Opciones de filtro aquí...</p>
@@ -408,7 +626,6 @@ const Buscar = () => {
                   </ScrollArea>
                 </SheetContent>
               </Sheet>
-
               {/* Filtros Desktop */}
               <div className="hidden lg:flex items-center gap-2">
                 <Popover>
@@ -427,7 +644,7 @@ const Buscar = () => {
                     </div>
                   </PopoverContent>
                 </Popover>
-
+                {/* Más popovers de filtros... */}
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm">
@@ -436,27 +653,12 @@ const Buscar = () => {
                   </PopoverTrigger>
                   <PopoverContent className="w-80">
                     <div className="p-4">
-                      {/* ✅ slider dinámico */}
                       <Slider
-                        min={minRangeForType}
-                        max={maxRangeForType}
+                        min={0}
+                        max={100}
                         step={1}
                         value={safePriceRange}
-                        onValueChange={(values) => {
-                          setPriceRange(values as [number, number]);
-                          const [minR, maxR] = getPriceRangeForListingType(filters.listingType);
-                          setFilters((prev) => ({
-                            ...prev,
-                            precioMin:
-                              values[0] === minR
-                                ? ""
-                                : convertSliderValueToPrice(values[0], prev.listingType).toString(),
-                            precioMax:
-                              values[1] === maxR
-                                ? ""
-                                : convertSliderValueToPrice(values[1], prev.listingType).toString(),
-                          }));
-                        }}
+                        onValueChange={handlePriceRangeChange}
                       />
                     </div>
                   </PopoverContent>
@@ -510,7 +712,7 @@ const Buscar = () => {
               </div>
             ) : (
               <SearchMap
-                filters={mapFilters} // 👈 MAPA sin bounds externos
+                filters={mapFilters}
                 searchCoordinates={searchCoordinates}
                 onMarkerClick={handleMarkerClick}
                 onPropertyHover={handlePropertyHoverFromMap}
@@ -519,7 +721,8 @@ const Buscar = () => {
                 height="100%"
                 onMapError={setMapError}
                 onVisibleCountChange={setMapVisibleCount}
-                onMapPositionChange={handleMapPositionChange} // 👈 manda bounds a lista
+                // ✅ CONECTADO: Actualizar lista al mover mapa
+                onMapPositionChange={handleMapPositionChange}
               />
             )}
           </div>
@@ -551,7 +754,7 @@ const Buscar = () => {
                 />
               </InfiniteScrollContainer>
             )}
-
+            {/* Estado vacío */}
             {!searchError && !loading && filteredProperties.length === 0 && (
               <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center min-h-[400px]">
                 <div className="rounded-full bg-muted p-6">
@@ -562,7 +765,6 @@ const Buscar = () => {
                   onClick={() => {
                     setFilters(DEFAULT_FILTERS);
                     setSearchCoordinates(null);
-                    setMapBounds(null);
                   }}
                 >
                   Ver todas las zonas
