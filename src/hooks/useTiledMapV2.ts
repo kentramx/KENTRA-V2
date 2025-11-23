@@ -175,6 +175,16 @@ export const useTiledMapV2 = (
 
       const loadTime = performance.now() - startTime;
 
+      // 🔍 Exponer métricas de carga a window global (solo en DEV)
+      if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+        (window as any).__KENTRA_MAPBOX_DEBUG__ = {
+          ...(window as any).__KENTRA_MAPBOX_DEBUG__,
+          lastTilesLoadMs: Math.round(loadTime),
+          lastRpcError: error?.message ?? null,
+          lastQueryTime: new Date().toISOString(),
+        };
+      }
+
       if (!data) {
         return { clusters: [], properties: [], hasTooManyResults: false };
       }
