@@ -70,9 +70,9 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
     if (didInitRef.current || !mapContainer.current) return;
     didInitRef.current = true;
 
-    const token = import.meta.env.VITE_MAPBOX_TOKEN || '';
+    const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || '';
     if (!token) {
-      const errorMsg = 'Falta configurar VITE_MAPBOX_TOKEN en Lovable Cloud Secrets';
+      const errorMsg = 'Falta configurar VITE_MAPBOX_ACCESS_TOKEN en Lovable Cloud Secrets';
       setMapError(errorMsg);
       monitoring.error('[SearchMapMapboxV2] Token de Mapbox no configurado', {
         component: 'SearchMapMapboxV2',
@@ -321,7 +321,7 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
               <div>
                 <p className="font-medium text-foreground">No pudimos cargar el mapa</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Configura VITE_MAPBOX_TOKEN en Lovable Cloud Secrets.
+                  Configura VITE_MAPBOX_ACCESS_TOKEN en Lovable Cloud Secrets.
                 </p>
               </div>
               <Button
