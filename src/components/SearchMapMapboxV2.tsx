@@ -9,6 +9,11 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+
+// ✅ FIX CSP/Worker para Vite/Lovable (evita blob worker bloqueado)
+import MapboxWorker from 'mapbox-gl/dist/mapbox-gl-csp-worker?worker';
+mapboxgl.workerClass = MapboxWorker;
+
 import { useTiledMapV2, ViewportBounds, MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE } from '@/hooks/useTiledMapV2';
 import type { MapProperty, PropertyFilters } from '@/types/property';
 import { monitoring } from '@/lib/monitoring';
@@ -70,13 +75,25 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
     if (didInitRef.current || !mapContainer.current) return;
     didInitRef.current = true;
 
-    const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || '';
-    if (!token) {
-      const errorMsg = 'Falta configurar VITE_MAPBOX_ACCESS_TOKEN en Lovable Cloud Secrets';
-      setMapError(errorMsg);
-      monitoring.error('[SearchMapMapboxV2] Token de Mapbox no configurado', {
-        component: 'SearchMapMapboxV2',
+    // ✅ Acepta cualquiera de los dos nombres de env (retrocompatibilidad)
+    const token =
+      import.meta.env.VITE_MAPBOX_TOKEN ||
+      import.meta.env.VITE_MAPBOX_ACCESS_TOKEN ||
+      '';
+
+    if (import.meta.env.DEV) {
+      console.log('[Mapbox Token Check]', {
+        hasVITE_MAPBOX_TOKEN: !!import.meta.env.VITE_MAPBOX_TOKEN,
+        hasVITE_MAPBOX_ACCESS_TOKEN: !!import.meta.env.VITE_MAPBOX_ACCESS_TOKEN,
+        tokenLength: token.length,
       });
+    }
+
+    if (!token) {
+      const errorMsg =
+        'Falta token de Mapbox. Configura VITE_MAPBOX_TOKEN (o VITE_MAPBOX_ACCESS_TOKEN) en Lovable Cloud Secrets.';
+      setMapError(errorMsg);
+      monitoring.error('[SearchMapMapboxV2] Token no configurado');
       onMapError?.(errorMsg);
       return;
     }
@@ -96,6 +113,19 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
     });
 
     mapRef.current = map;
+
+    // ✅ Capturar errores de Mapbox (403 token, CSP, style fail, etc.)
+    map.on('error', (e: any) => {
+      const msg =
+        e?.error?.message ||
+        e?.message ||
+        'Error desconocido de Mapbox';
+
+      console.error('[Mapbox error event]', e);
+
+      setMapError(msg);
+      onMapError?.(msg);
+    });
 
     map.on('load', () => {
       // ✅ Crear source + layers SOLO en load
