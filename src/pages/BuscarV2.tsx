@@ -985,7 +985,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                         <Select
                           value={filters.estado}
                           onValueChange={(value) => setFilters(prev => ({ ...prev, estado: value, municipio: '', colonia: '' }))}
-                          id="estado-select"
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Selecciona un estado" />
@@ -1003,7 +1002,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                         <Select
                           value={filters.municipio}
                           onValueChange={(value) => setFilters(prev => ({ ...prev, municipio: value, colonia: '' }))}
-                          id="municipio-select"
                           disabled={!filters.estado}
                         >
                           <SelectTrigger>
@@ -1084,7 +1082,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                         <Select
                           value={filters.recamaras}
                           onValueChange={(value) => setFilters(prev => ({ ...prev, recamaras: value }))}
-                          id="recamaras-select"
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Cualquier cantidad" />
@@ -1105,7 +1102,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                         <Select
                           value={filters.banos}
                           onValueChange={(value) => setFilters(prev => ({ ...prev, banos: value }))}
-                          id="banos-select"
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Cualquier cantidad" />
@@ -1126,7 +1122,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                         <Select
                           value={filters.orden}
                           onValueChange={handleOrdenChange}
-                          id="orden-select"
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -1157,7 +1152,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                   <Select
                     value={filters.estado}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, estado: value, municipio: '', colonia: '' }))}
-                    id="estado-select-desktop"
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona un estado" />
@@ -1175,7 +1169,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                   <Select
                     value={filters.municipio}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, municipio: value, colonia: '' }))}
-                    id="municipio-select-desktop"
                     disabled={!filters.estado}
                   >
                     <SelectTrigger>
@@ -1256,7 +1249,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                   <Select
                     value={filters.recamaras}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, recamaras: value }))}
-                    id="recamaras-select-desktop"
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Cualquier cantidad" />
@@ -1277,7 +1269,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                   <Select
                     value={filters.banos}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, banos: value }))}
-                    id="banos-select-desktop"
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Cualquier cantidad" />
@@ -1298,7 +1289,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                   <Select
                     value={filters.orden}
                     onValueChange={handleOrdenChange}
-                    id="orden-select-desktop"
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -1568,7 +1558,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 <>
                   <div className="flex items-center justify-between mb-2">
                     <h2 className="text-lg font-semibold">Búsquedas guardadas</h2>
-                    <Select value={savedSearchSort} onValueChange={handleSavedSearchSortChange} className="w-40">
+                    <Select value={savedSearchSort} onValueChange={handleSavedSearchSortChange}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
