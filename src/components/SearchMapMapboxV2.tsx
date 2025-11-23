@@ -19,6 +19,7 @@ import type { MapProperty, PropertyFilters } from '@/types/property';
 import { monitoring } from '@/lib/monitoring';
 import { Loader2, AlertCircle, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { MapboxDebugPanel } from '@/components/MapboxDebugPanel';
 
 interface SearchMapMapboxV2Props {
   filters: PropertyFilters;
@@ -57,18 +58,40 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
     import.meta.env.DEV ||
     new URLSearchParams(window.location.search).get('debugMap') === '1';
 
-  // 🔍 Debug state para diagnóstico avanzado
-  const [debugInfo, setDebugInfo] = useState({
-    tokenNameUsed: '',
-    tokenLength: 0,
-    mapLoaded: false,
-    styleLoaded: false,
-    lastMapboxError: null as string | null,
-    lastViewportBounds: null as ViewportBounds | null,
-    propertiesCount: 0,
-    clustersCount: 0,
-    hasTooManyResults: false,
-    lastTilesLoadMs: 0,
+  // 🔍 Debug state avanzado para MapboxDebugPanel
+  const [debugData, setDebugData] = useState({
+    mapInitStatus: {
+      didInit: false,
+      mapExists: false,
+      styleLoaded: false,
+    },
+    tokenInfo: {
+      envKeyUsed: '',
+      tokenLength: 0,
+    },
+    workerFixEnabled: true, // CSP worker fix siempre activo
+    viewport: {
+      boundsKey: null as string | null,
+      zoom: 5,
+      bounds: null as {
+        minLat: number;
+        maxLat: number;
+        minLng: number;
+        maxLng: number;
+      } | null,
+    },
+    counts: {
+      properties: 0,
+      clusters: 0,
+      hasTooManyResults: false,
+    },
+    performance: {
+      lastTilesLoadMs: null as number | null,
+    },
+    errors: {
+      lastMapboxError: null as string | null,
+      lastTilesError: null as string | null,
+    },
   });
 
   // 🚀 TILE-BASED ARCHITECTURE V2
@@ -79,16 +102,16 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
 
   const { properties = [], clusters = [], hasTooManyResults = false } = viewportData || {};
 
-  // 🔍 Exponer debug info a window global (solo en DEV o con debugMap)
+  // 🔍 Exponer debug data a window global (solo en DEV o con debugMap)
   useEffect(() => {
     if (debugEnabled) {
       (window as any).__KENTRA_MAPBOX_DEBUG__ = {
-        ...debugInfo,
         timestamp: new Date().toISOString(),
         component: 'SearchMapMapboxV2',
+        ...debugData,
       };
     }
-  }, [debugInfo, debugEnabled]);
+  }, [debugData, debugEnabled]);
 
   // ✅ Calcular y reportar el total de propiedades visibles
   useEffect(() => {
@@ -115,11 +138,13 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
       ? 'VITE_MAPBOX_TOKEN' 
       : 'VITE_MAPBOX_ACCESS_TOKEN';
 
-    // 🔍 Actualizar debug info con token
-    setDebugInfo(prev => ({
+    // 🔍 Actualizar debug data con token
+    setDebugData(prev => ({
       ...prev,
-      tokenNameUsed,
-      tokenLength: token.length,
+      tokenInfo: {
+        envKeyUsed: tokenNameUsed,
+        tokenLength: token.length,
+      },
     }));
 
     if (import.meta.env.DEV) {
@@ -135,7 +160,10 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
       const errorMsg =
         'Falta token de Mapbox. Configura VITE_MAPBOX_TOKEN (o VITE_MAPBOX_ACCESS_TOKEN) en Lovable Cloud Secrets.';
       setMapError(errorMsg);
-      setDebugInfo(prev => ({ ...prev, lastMapboxError: errorMsg }));
+      setDebugData(prev => ({
+        ...prev,
+        errors: { ...prev.errors, lastMapboxError: errorMsg },
+      }));
       monitoring.error('[SearchMapMapboxV2] Token no configurado');
       onMapError?.(errorMsg);
       return;
@@ -167,15 +195,21 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
       console.error('[Mapbox error event]', e);
 
       setMapError(msg);
-      setDebugInfo(prev => ({ ...prev, lastMapboxError: msg }));
+      setDebugData(prev => ({
+        ...prev,
+        errors: { ...prev.errors, lastMapboxError: msg },
+      }));
       onMapError?.(msg);
     });
 
     map.on('load', () => {
-      setDebugInfo(prev => ({ 
-        ...prev, 
-        mapLoaded: true,
-        styleLoaded: map.isStyleLoaded(),
+      setDebugData(prev => ({
+        ...prev,
+        mapInitStatus: {
+          didInit: true,
+          mapExists: true,
+          styleLoaded: map.isStyleLoaded(),
+        },
       }));
       // ✅ Crear source + layers SOLO en load
       map.addSource('kentra-points-v2', {
@@ -257,7 +291,22 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
       };
 
       setViewportBounds(bounds);
-      setDebugInfo(prev => ({ ...prev, lastViewportBounds: bounds }));
+      
+      // 🔍 Actualizar debug data con viewport
+      const boundsKey = `${bounds.zoom}_${bounds.minLat.toFixed(3)}_${bounds.maxLat.toFixed(3)}`;
+      setDebugData(prev => ({
+        ...prev,
+        viewport: {
+          boundsKey,
+          zoom: bounds.zoom,
+          bounds: {
+            minLat: bounds.minLat,
+            maxLat: bounds.maxLat,
+            minLng: bounds.minLng,
+            maxLng: bounds.maxLng,
+          },
+        },
+      }));
 
       const center = map.getCenter();
       onMapPositionChange?.({ lat: center.lat, lng: center.lng }, bounds);
@@ -313,6 +362,16 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
       map.getCanvas().style.cursor = '';
     });
 
+    // 🔍 Actualizar debug data al inicializar
+    setDebugData(prev => ({
+      ...prev,
+      mapInitStatus: {
+        didInit: true,
+        mapExists: true,
+        styleLoaded: false,
+      },
+    }));
+
     return () => {
       map.remove();
       didInitRef.current = false;
@@ -326,12 +385,14 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
     const source = mapRef.current.getSource('kentra-points-v2') as mapboxgl.GeoJSONSource;
     if (!source) return; // Guard correcto
 
-    // 🔍 Actualizar debug info con contadores
-    setDebugInfo(prev => ({
+    // 🔍 Actualizar debug data con contadores
+    setDebugData(prev => ({
       ...prev,
-      propertiesCount: properties.length,
-      clustersCount: clusters.length,
-      hasTooManyResults,
+      counts: {
+        properties: properties.length,
+        clusters: clusters.length,
+        hasTooManyResults,
+      },
     }));
 
     const features: any[] = [];
@@ -374,8 +435,15 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
     }
   }, [properties, clusters, hasTooManyResults, hoveredPropertyId]);
 
-  // ✅ Log de errores
+  // ✅ Log de errores y actualizar debug data
   if (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    
+    setDebugData(prev => ({
+      ...prev,
+      errors: { ...prev.errors, lastTilesError: errorMsg },
+    }));
+    
     monitoring.error('[SearchMapMapboxV2] Error cargando tiles', {
       component: 'SearchMapMapboxV2',
       error,
@@ -447,54 +515,8 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
         </div>
       )}
 
-      {/* ✅ Debug overlay para diagnóstico avanzado */}
-      {debugEnabled && (
-        <div className="absolute bottom-2 left-2 z-50 bg-black/90 text-white text-xs p-4 rounded-lg max-w-md space-y-1 font-mono shadow-xl border border-white/20">
-          <div className="font-bold text-sm mb-2 text-cyan-400">🗺️ Mapbox Debug Panel</div>
-          
-          <div className="space-y-0.5">
-            <div className="text-yellow-300">Token:</div>
-            <div className="pl-2">• Name: {debugInfo.tokenNameUsed || 'none'}</div>
-            <div className="pl-2">• Length: {debugInfo.tokenLength}</div>
-          </div>
-
-          <div className="space-y-0.5 mt-2">
-            <div className="text-yellow-300">Map State:</div>
-            <div className="pl-2">• Loaded: {String(debugInfo.mapLoaded)}</div>
-            <div className="pl-2">• StyleLoaded: {String(mapRef.current?.isStyleLoaded?.() || false)}</div>
-          </div>
-
-          <div className="space-y-0.5 mt-2">
-            <div className="text-yellow-300">Data:</div>
-            <div className="pl-2">• Properties: {debugInfo.propertiesCount}</div>
-            <div className="pl-2">• Clusters: {debugInfo.clustersCount}</div>
-            <div className="pl-2">• Saturated: {String(debugInfo.hasTooManyResults)}</div>
-            {debugInfo.lastTilesLoadMs > 0 && (
-              <div className="pl-2 text-green-300">• Load: {debugInfo.lastTilesLoadMs}ms</div>
-            )}
-          </div>
-
-          {debugInfo.lastViewportBounds && (
-            <div className="space-y-0.5 mt-2">
-              <div className="text-yellow-300">Viewport:</div>
-              <div className="pl-2 text-xs break-all">
-                {JSON.stringify(debugInfo.lastViewportBounds, null, 0).substring(0, 100)}...
-              </div>
-            </div>
-          )}
-
-          {debugInfo.lastMapboxError && (
-            <div className="mt-2 text-red-400 break-words border-t border-red-500/30 pt-2">
-              <div className="font-bold">❌ Last Error:</div>
-              <div className="pl-2 text-xs">{debugInfo.lastMapboxError}</div>
-            </div>
-          )}
-
-          <div className="mt-2 text-xs text-gray-400 border-t border-white/10 pt-2">
-            Press F12 to see window.__KENTRA_MAPBOX_DEBUG__
-          </div>
-        </div>
-      )}
+      {/* ✅ Panel de diagnóstico visual profesional (DEV only) */}
+      {debugEnabled && <MapboxDebugPanel data={debugData} />}
     </div>
   );
 };

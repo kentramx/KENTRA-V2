@@ -164,6 +164,17 @@ export const useTiledMapV2 = (
       });
 
       if (error) {
+        // 🔍 Exponer error en debug (DEV only)
+        if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+          (window as any).__KENTRA_MAPBOX_DEBUG__ = {
+            ...(window as any).__KENTRA_MAPBOX_DEBUG__,
+            errors: {
+              ...(window as any).__KENTRA_MAPBOX_DEBUG__?.errors,
+              lastTilesError: error?.message ?? String(error),
+            },
+          };
+        }
+        
         monitoring.error('[useTiledMapV2] Error al cargar tiles', {
           hook: 'useTiledMapV2',
           error,
@@ -179,9 +190,13 @@ export const useTiledMapV2 = (
       if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
         (window as any).__KENTRA_MAPBOX_DEBUG__ = {
           ...(window as any).__KENTRA_MAPBOX_DEBUG__,
-          lastTilesLoadMs: Math.round(loadTime),
-          lastRpcError: error?.message ?? null,
-          lastQueryTime: new Date().toISOString(),
+          performance: {
+            lastTilesLoadMs: Math.round(loadTime),
+          },
+          errors: {
+            ...(window as any).__KENTRA_MAPBOX_DEBUG__?.errors,
+            lastTilesError: null,
+          },
         };
       }
 
