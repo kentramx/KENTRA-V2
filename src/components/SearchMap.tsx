@@ -51,8 +51,14 @@ export const SearchMap: React.FC<SearchMapProps> = ({
 
   const debouncedBounds = useAdaptiveDebounce(viewportBounds, 300);
 
+  // ✅ Filtros del mapa estabilizados (sin bounds externos) para evitar refetch infinito
+  const tiledFilters = useMemo(() => {
+    const { bounds, ...rest } = (filters as any) || {};
+    return { ...rest, status: ["activa"] };
+  }, [filters]);
+
   // Cargar datos del mapa (tiles)
-  const { data: viewportData, isLoading, error } = useTiledMap(debouncedBounds, { ...filters, status: ["activa"] });
+  const { data: viewportData, isLoading, error } = useTiledMap(debouncedBounds, tiledFilters);
 
   if (error) {
     monitoring.error("Error loading properties for map", {
