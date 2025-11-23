@@ -102,30 +102,28 @@ const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
 >(({ className, children, value, ...props }, ref) => {
-  // ✅ Guard: evita crash por value vacío en Radix Select
-  const safeValue =
-    value === '' || value == null ? '__empty__' : value;
-
-  if (import.meta.env.DEV && (value === '' || value == null)) {
-    console.warn('[SelectItem Guard] value vacío detectado. Se reemplazó por "__empty__". Label:', children);
-  }
+  // ✅ Radix NO permite value vacío. Normalizamos cualquier caso raro.
+  const adjustedValue = (() => {
+    if (value === undefined || value === null) return '__empty__';
+    const s = String(value);
+    return s.trim() === '' ? '__empty__' : s;
+  })();
 
   return (
     <SelectPrimitive.Item
       ref={ref}
-      value={safeValue}
+      value={adjustedValue}
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 focus:bg-accent focus:text-accent-foreground",
-        className,
+        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        className
       )}
       {...props}
     >
-      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
           <Check className="h-4 w-4" />
         </SelectPrimitive.ItemIndicator>
       </span>
-
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   );
