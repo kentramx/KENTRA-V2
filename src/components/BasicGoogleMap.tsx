@@ -496,11 +496,24 @@ export function BasicGoogleMap({
       validMarkersCount++;
     }
     
+    // ✅ Lista completa de markers vigentes para clustering
+    const markersToCluster: google.maps.Marker[] = [];
+
+    for (const [id, gMarker] of markerRefs.current.entries()) {
+      const meta = currentMarkersMap.get(id);
+      if (!meta) continue;
+
+      // Solo clusterizar propiedades individuales
+      if (meta.type === 'property') {
+        markersToCluster.push(gMarker);
+      }
+    }
+    
     // 💾 Actualizar estado anterior para próximo diffing
     previousMarkersRef.current = currentMarkersMap;
 
     // Aplicar clustering solo si NO hay clusters del backend
-    if (enableClustering && !hasBackendClusters && newMarkers.length > 0) {
+    if (enableClustering && !hasBackendClusters && markersToCluster.length > 0) {
       try {
         // Renderer personalizado usando SVGs memoizados
         const customRenderer = {
@@ -524,7 +537,7 @@ export function BasicGoogleMap({
 
         clustererRef.current = new MarkerClusterer({
           map,
-          markers: newMarkers,
+          markers: markersToCluster,
           algorithm: new GridAlgorithm({ 
             maxZoom: 15,
             gridSize: 60,
