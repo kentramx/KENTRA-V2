@@ -1,5 +1,8 @@
 project_id = "jazjzwhbagwllensnkaz"
 
+[functions.public-config]
+verify_jwt = false
+
 [functions.refresh-stats-views]
 verify_jwt = false
 

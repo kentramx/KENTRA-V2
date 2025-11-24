@@ -11,19 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization') ?? '' },
-        },
-      }
-    );
-
-    // Optional: ensure user session exists (not strictly required for public config)
-    const { data: { user } } = await supabaseClient.auth.getUser();
-
+    // Public endpoint - no authentication required
     const googleMapsApiKey = Deno.env.get('VITE_GOOGLE_MAPS_API_KEY') || '';
     const mapboxAccessToken = Deno.env.get('VITE_MAPBOX_ACCESS_TOKEN') || '';
 
@@ -45,7 +33,6 @@ Deno.serve(async (req) => {
         // Public, safe to expose to clients (estos son tokens públicos)
         googleMapsApiKey,
         mapboxAccessToken,
-        authenticated: !!user,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
