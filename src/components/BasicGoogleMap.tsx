@@ -1,3 +1,38 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════════════════╗
+ * ║                   KENTRA MAP STACK - COMPONENTE OFICIAL                      ║
+ * ║                       Componente Base de Google Maps                         ║
+ * ╚══════════════════════════════════════════════════════════════════════════════╝
+ * 
+ * 📍 PROPÓSITO:
+ * Este es el componente BASE OFICIAL para todos los mapas de Kentra.
+ * Proporciona la funcionalidad fundamental de Google Maps con marcadores
+ * personalizados, clustering, y manejo de eventos.
+ * 
+ * 🛠️ TECNOLOGÍA:
+ * - Google Maps JavaScript API
+ * - @googlemaps/markerclusterer para clustering automático
+ * - SVG markers personalizados (píldoras de precio, clusters, puntos)
+ * 
+ * 🎯 CARACTERÍSTICAS:
+ * - Renderizado eficiente con diffing de marcadores (evita recreaciones innecesarias)
+ * - Clustering adaptativo con algoritmo Grid
+ * - Marcadores dinámicos según zoom (píldoras de precio en zoom cercano, puntos en lejano)
+ * - Caché global de SVGs para rendimiento
+ * - Restricción geográfica a México
+ * - Debounce de eventos de bounds change
+ * 
+ * 🔧 USADO POR:
+ * - SearchMap (mapa de búsqueda)
+ * - Otros componentes que requieran un mapa base
+ * 
+ * 📦 DEPENDENCIAS OFICIALES:
+ * - loadGoogleMaps (loader de API)
+ * 
+ * ⚠️ IMPORTANTE:
+ * Este es el único componente base de mapas en el proyecto.
+ * Cualquier mejora al sistema de marcadores o rendering debe hacerse aquí.
+ */
 /// <reference types="google.maps" />
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { loadGoogleMaps } from '@/lib/loadGoogleMaps';

@@ -1,10 +1,45 @@
-/// <reference types="google.maps" />
 /**
- * Carga dinámicamente la API de Google Maps con la librería Places
- * - Evita cargas duplicadas reutilizando una única promesa
- * - Emite eventos de ventana para componentes que escuchan (compatibilidad)
- * - Propaga errores con mensajes útiles
+ * ╔══════════════════════════════════════════════════════════════════════════════╗
+ * ║                   KENTRA MAP STACK - LOADER OFICIAL                          ║
+ * ║                    Google Maps API Dynamic Loader                            ║
+ * ╚══════════════════════════════════════════════════════════════════════════════╝
+ * 
+ * 📍 PROPÓSITO:
+ * Esta es la función OFICIAL para cargar la API de Google Maps en Kentra.
+ * Cualquier componente que necesite Google Maps DEBE usar este loader.
+ * 
+ * 🛠️ TECNOLOGÍA:
+ * - Google Maps JavaScript API v3
+ * - Places Library para autocompletado de direcciones
+ * - Geocoding API para conversión dirección <-> coordenadas
+ * 
+ * 🎯 CARACTERÍSTICAS:
+ * - Carga única: reutiliza promesa para evitar múltiples cargas
+ * - Manejo de API key desde env variable o backend secrets
+ * - Callback global para inicialización (window.initGoogleMaps)
+ * - Eventos de ventana para compatibilidad con componentes legacy
+ * - Configuración regional: idioma español (es), región México (MX)
+ * - Carga async/defer para no bloquear renderizado
+ * - Propagación de errores con mensajes útiles
+ * 
+ * 🔧 USADO POR:
+ * - BasicGoogleMap (componente base)
+ * - SearchMap (mapa de búsqueda)
+ * - PropertyMap (mapa de detalle)
+ * - PlaceAutocomplete (búsqueda de direcciones)
+ * - MapPreloader (precarga oportunista)
+ * 
+ * 📦 CONFIGURACIÓN:
+ * - API Key: VITE_GOOGLE_MAPS_API_KEY (build-time) o backend secrets (runtime)
+ * - Libraries: places
+ * - Language: es
+ * - Region: MX
+ * 
+ * ⚠️ IMPORTANTE:
+ * Este es el único punto de carga de Google Maps API en el proyecto.
+ * No crear loaders alternativos o cargar el script manualmente en otros lugares.
  */
+/// <reference types="google.maps" />
 let googleMapsPromise: Promise<typeof google.maps> | null = null;
 
 export const loadGoogleMaps = (): Promise<typeof google.maps> => {

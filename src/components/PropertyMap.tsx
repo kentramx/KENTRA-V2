@@ -1,3 +1,33 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════════════════╗
+ * ║                   KENTRA MAP STACK - COMPONENTE OFICIAL                      ║
+ * ║                      Mapa de Detalle de Propiedad                            ║
+ * ╚══════════════════════════════════════════════════════════════════════════════╝
+ * 
+ * 📍 PROPÓSITO:
+ * Este es el componente OFICIAL para mostrar mapas de propiedades individuales
+ * en la página de detalle. Cualquier nueva funcionalidad relacionada con mapas
+ * de detalle de propiedad DEBE integrarse aquí.
+ * 
+ * 🛠️ TECNOLOGÍA:
+ * - Google Maps JavaScript API
+ * - Geocoding API (para direcciones sin coordenadas)
+ * - Marcador único por propiedad
+ * 
+ * 🎯 CARACTERÍSTICAS:
+ * - Geocodificación automática de direcciones
+ * - Validación robusta de coordenadas
+ * - Fallback a ubicación predeterminada si no hay datos
+ * - Manejo de errores con toasts informativos
+ * - Street View y controles de mapa completos
+ * 
+ * 📦 DEPENDENCIAS OFICIALES:
+ * - loadGoogleMaps (loader de API)
+ * 
+ * ⚠️ IMPORTANTE:
+ * Este componente es parte del stack de producción estable.
+ * No crear alternativas experimentales para mapas de detalle.
+ */
 /// <reference types="google.maps" />
 import { useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
