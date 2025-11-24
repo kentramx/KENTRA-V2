@@ -9,6 +9,15 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // ✅ Headers CSP para permitir WebGL, workers y Mapbox
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+  // ✅ Worker config para CSP
+  worker: {
+    format: 'es',
   },
   plugins: [
     react(), 

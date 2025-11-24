@@ -237,18 +237,36 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
 
       mapboxgl.accessToken = token;
 
-      // 🖥️ Verificar soporte WebGL ANTES de crear el mapa
+      // 🖥️ Verificar soporte WebGL ANTES de crear el mapa (intentar TODOS los contextos)
       const canvas = document.createElement('canvas');
-      const gl = canvas.getContext('webgl') as WebGLRenderingContext | null || 
-                 canvas.getContext('experimental-webgl') as WebGLRenderingContext | null;
+      
+      // ✅ Intentar WebGL2 primero, luego WebGL, luego experimental
+      let gl: WebGLRenderingContext | null = null;
+      const contextOptions = {
+        failIfMajorPerformanceCaveat: false, // ✅ NO fallar si hay advertencias de performance
+        preserveDrawingBuffer: true,         // ✅ Necesario para algunos iframes
+        antialias: true,
+        alpha: true,
+      };
+      
+      try {
+        gl = canvas.getContext('webgl2', contextOptions) as WebGLRenderingContext | null ||
+             canvas.getContext('webgl', contextOptions) as WebGLRenderingContext | null ||
+             canvas.getContext('experimental-webgl', contextOptions) as WebGLRenderingContext | null;
+      } catch (e) {
+        console.error('🚨 [WebGL] Error al obtener contexto:', e);
+      }
+      
       const webglSupported = !!gl;
       const webglVendor = gl ? (gl.getParameter(gl.VENDOR) as string) : 'N/A';
       const webglRenderer = gl ? (gl.getParameter(gl.RENDERER) as string) : 'N/A';
 
-      console.log('🖥️ [WebGL Check]', {
+      console.log('🖥️ [WebGL Check] EXHAUSTIVO', {
         supported: webglSupported,
         vendor: webglVendor,
         renderer: webglRenderer,
+        contextOptions,
+        triedContexts: ['webgl2', 'webgl', 'experimental-webgl'],
       });
 
       // 🔍 Actualizar debug data con WebGL info
@@ -286,9 +304,17 @@ export const SearchMapMapboxV2: React.FC<SearchMapMapboxV2Props> = ({
           style: 'mapbox://styles/mapbox/streets-v12',
           center,
           zoom,
+          // ✅ Opciones críticas para WebGL en iframes restrictivos
+          failIfMajorPerformanceCaveat: false, // Intentar incluso si hay advertencias
+          preserveDrawingBuffer: true,         // Crítico para algunos iframes
+          antialias: true,                     // Mejorar rendering
+          // ✅ Atributos adicionales para forzar WebGL
+          renderWorldCopies: false,            // Reducir overhead
+          trackResize: true,
+          refreshExpiredTiles: false,          // Reducir overhead
         });
         mapRef.current = map;
-        console.log('✅ [Mapbox] Mapa creado exitosamente');
+        console.log('✅ [Mapbox] Mapa creado exitosamente con opciones WebGL avanzadas');
       } catch (error: any) {
         const errorMsg = error?.message || 'Error al inicializar el mapa';
         console.error('🚨 [Mapbox] Error durante new mapboxgl.Map():', error);
