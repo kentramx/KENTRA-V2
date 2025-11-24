@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
 import { buildPropertyFilters } from '@/utils/buildPropertyFilters';
+import type { PropertySummary } from '@/types/property';
 import Navbar from '@/components/Navbar';
 import PropertyCard from '@/components/PropertyCard';
 import { PropertyImageGallery } from '@/components/PropertyImageGallery';
@@ -195,10 +196,25 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     console.log('[PARENT viewportProperties]', viewportProperties.length);
   }, [viewportProperties]);
 
+  // 1️⃣ Flag de viewport activo
+  const isViewportActive = !!viewportBounds;
+
+  // 2️⃣ Fuente activa única: viewport cuando hay bounds, si no properties del hook global
+  const activeProperties = isViewportActive
+    ? viewportProperties.map((p): PropertySummary => ({
+        ...p,
+        for_sale: p.listing_type === 'venta',
+        for_rent: p.listing_type === 'renta',
+        sale_price: p.listing_type === 'venta' ? p.price : null,
+        rent_price: p.listing_type === 'renta' ? p.price : null,
+        colonia: null, // MapProperty no incluye colonia
+      }))
+    : properties;
+
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
   const sortedProperties = useMemo(() => {
-    const sorted = [...properties];
+    const sorted = [...activeProperties];
     
     sorted.sort((a, b) => {
       // 1. Prioridad principal: Destacadas primero
@@ -234,9 +250,14 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     });
     
     return sorted;
-  }, [properties, filters.orden]);
+  }, [activeProperties, filters.orden]);
 
   const filteredProperties = sortedProperties;
+
+  // 📋 Lista final: limitar a 50 cuando viewport activo
+  const listProperties = isViewportActive
+    ? sortedProperties.slice(0, 50)
+    : sortedProperties;
   
   // Estado para guardar coordenadas de la ubicación buscada
   const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
@@ -1612,7 +1633,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
             {!searchError && filteredProperties.length > 0 && (
               <InfiniteScrollContainer
                 onLoadMore={() => {
-                  if (hasNextPage && !isFetching) {
+                  if (!isViewportActive && hasNextPage && !isFetching) {
                     fetchNextPage();
                   }
                 }}
@@ -1639,7 +1660,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 </div>
 
                 <SearchResultsList
-                  properties={filteredProperties}
+                  properties={listProperties}
                   isLoading={loading && properties.length === 0}
                   listingType={filters.listingType}
                   onPropertyClick={handlePropertyClick}
@@ -1654,7 +1675,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 />
 
                 {/* Botón fallback para cargar más si IntersectionObserver falla */}
-                {hasNextPage && !isFetching && (
+                {!isViewportActive && hasNextPage && !isFetching && (
                   <div className="flex justify-center py-4 px-4">
                     <Button 
                       onClick={() => fetchNextPage()} 
