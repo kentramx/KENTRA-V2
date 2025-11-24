@@ -542,6 +542,9 @@ export function BasicGoogleMap({
         }
       } catch (err) {
         monitoring.error('[BasicGoogleMap] Error al crear clusterer', { error: err });
+        if (MAP_DEBUG) {
+          console.error('[KENTRA MAP] Error al crear clusterer', err);
+        }
       }
     }
 
