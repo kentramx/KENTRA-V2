@@ -1,4 +1,4 @@
-// Rebuild trigger: 2025-11-23 16:42 - LOGS AGRESIVOS SIEMPRE VISIBLES
+// [REBUILD 2025-11-23 19:30] Logs agresivos + Rebuild para VITE_MAPBOX_ACCESS_TOKEN
 /**
  * ✅ Componente de mapa V2 con Mapbox GL JS (WebGL layers)
  * - Arquitectura ultra-escalable tipo Zillow
