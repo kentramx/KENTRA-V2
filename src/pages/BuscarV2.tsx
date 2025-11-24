@@ -68,7 +68,7 @@ const getTipoLabel = (tipo: string) => {
   return labels[tipo] || tipo;
 };
 
-// [REBUILD 2025-11-23 19:30] Forzar rebuild para inyectar VITE_MAPBOX_ACCESS_TOKEN
+// [REBUILD 2025-11-23 19:35] Esperando inyección de VITE_MAPBOX_ACCESS_TOKEN
 const BuscarV2 = () => {
   const { user } = useAuth();
   const { toast } = useToast();
