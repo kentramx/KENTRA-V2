@@ -1,8 +1,34 @@
 /**
- * ✅ Componente de mapa optimizado para la página de búsqueda
+ * ╔══════════════════════════════════════════════════════════════════════════════╗
+ * ║                   KENTRA MAP STACK - COMPONENTE OFICIAL                      ║
+ * ║                         Mapa de Búsqueda Principal                           ║
+ * ╚══════════════════════════════════════════════════════════════════════════════╝
+ * 
+ * 📍 PROPÓSITO:
+ * Este es el componente OFICIAL del mapa de búsqueda de Kentra.
+ * Cualquier nueva funcionalidad relacionada con mapas en la página de búsqueda
+ * DEBE integrarse aquí. No crear componentes alternativos o experimentales.
+ * 
+ * 🛠️ TECNOLOGÍA:
+ * - Google Maps JavaScript API
+ * - Arquitectura tile-based para escalabilidad (1M+ propiedades)
+ * - Clustering adaptativo según zoom level
  * - Viewport-based loading con debounce
- * - Clustering automático en zoom bajo
- * - Manejo de errores con monitoring
+ * 
+ * 🎯 CARACTERÍSTICAS:
+ * - Renderizado eficiente con diffing de marcadores
+ * - Manejo robusto de errores con monitoring
+ * - Sincronización con lista de propiedades
+ * - Preloading de tiles vecinos (desactivado temporalmente)
+ * 
+ * 📦 DEPENDENCIAS OFICIALES:
+ * - BasicGoogleMap (componente base)
+ * - useTiledMap (hook de tiles)
+ * - loadGoogleMaps (loader de API)
+ * 
+ * ⚠️ IMPORTANTE:
+ * Este componente es parte del stack de producción estable.
+ * Cualquier modificación debe ser cuidadosamente testeada.
  */
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
