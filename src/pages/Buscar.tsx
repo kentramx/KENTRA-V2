@@ -187,14 +187,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const viewportProperties = viewportData?.properties ?? [];
   const viewportClusters = viewportData?.clusters ?? [];
 
-  // 🔍 LOGS TEMPORALES - Verificar que bounds y properties se cargan
-  useEffect(() => {
-    console.log('[PARENT bounds]', viewportBounds);
-  }, [viewportBounds]);
-
-  useEffect(() => {
-    console.log('[PARENT viewportProperties]', viewportProperties.length);
-  }, [viewportProperties]);
 
   // 🔍 Diagnóstico derivado del estado del viewport (solo para debug)
   const viewportDebugReason = useMemo(() => {
@@ -217,10 +209,18 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     return null;
   }, [mapLoading, viewportBounds, viewportProperties, viewportClusters]);
 
-  // 1️⃣ Flag de viewport activo
+  // ============================================================================
+  // FUENTE DE DATOS UNIFICADA PARA LISTA DE PROPIEDADES
+  // ============================================================================
+  // El sistema decide automáticamente qué propiedades mostrar:
+  // - Si viewport está activo (usuario navegó el mapa) → usa viewportProperties
+  // - Si no hay viewport o está vacío → usa properties del hook global
+  // ============================================================================
+
+  // 1️⃣ Detectar si el viewport del mapa está activo
   const isViewportActive = !!viewportBounds;
 
-  // 2️⃣ Fuente activa única: viewport cuando hay bounds, si no properties del hook global
+  // 2️⃣ Seleccionar fuente de datos base (viewport o global)
   const activeProperties = isViewportActive
     ? viewportProperties.map((p): PropertySummary => ({
         ...p,
@@ -232,8 +232,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       }))
     : properties;
 
-  // Ordenar propiedades según criterio seleccionado
-  // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
+  // 3️⃣ Aplicar ordenamiento (destacadas primero, luego criterio seleccionado)
   const sortedProperties = useMemo(() => {
     const sorted = [...activeProperties];
     
@@ -273,9 +272,10 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     return sorted;
   }, [activeProperties, filters.orden]);
 
+  // ⚠️ MANTENER para compatibilidad (algunos componentes legacy podrían usarlo)
   const filteredProperties = sortedProperties;
 
-  // 📋 Lista final: limitar a 50 cuando viewport activo
+  // 4️⃣ LISTA FINAL para renderizado (limitar a 50 items cuando viewport activo)
   const listProperties = isViewportActive
     ? sortedProperties.slice(0, 50)
     : sortedProperties;
@@ -1687,7 +1687,12 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               >
                 {/* Contador de resultados */}
                 <div className="px-4 pt-2 pb-1 text-sm text-muted-foreground">
-                  {hasTooManyResults ? (
+                  {isViewportActive ? (
+                    <p>
+                      Mostrando <span className="font-medium text-foreground">{listProperties.length}</span>{' '}
+                      {listProperties.length >= 50 && 'de 50+'} propiedades en el mapa actual
+                    </p>
+                  ) : hasTooManyResults ? (
                     <p>
                       Mostrando <span className="font-medium text-foreground">{properties.length}</span> de{' '}
                       <span className="font-medium text-foreground">{actualTotal}+</span> resultados.{' '}
