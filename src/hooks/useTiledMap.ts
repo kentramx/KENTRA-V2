@@ -215,6 +215,7 @@ export const useTiledMap = (
       const clusters: PropertyCluster[] = [];
       const properties: MapProperty[] = [];
 
+      // ✅ Procesar properties si vienen (aunque estén vacías)
       if (result.properties && Array.isArray(result.properties)) {
         result.properties.forEach((prop: any) => {
           if (!prop.lat || !prop.lng) return;
@@ -231,7 +232,10 @@ export const useTiledMap = (
             is_featured: !!prop.is_featured, created_at: prop.created_at || '',
           });
         });
-      } else if (result.clusters && Array.isArray(result.clusters)) {
+      }
+
+      // ✅ Procesar clusters INDEPENDIENTE de properties
+      if (result.clusters && Array.isArray(result.clusters)) {
         result.clusters.forEach((c: any) => {
           clusters.push({
             cluster_id: `cluster-${bounds.zoom}-${c.lat}-${c.lng}`,
