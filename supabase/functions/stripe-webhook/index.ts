@@ -73,6 +73,81 @@ Deno.serve(async (req) => {
           break;
         }
 
+        // ✅ Detectar si el pago requiere confirmación (OXXO/SPEI)
+        const isPendingPayment = session.payment_status === 'unpaid';
+
+        if (isPendingPayment) {
+          console.log('🕐 Pago pendiente detectado (OXXO/SPEI)');
+          
+          const planId = session.metadata?.plan_id;
+          const billingCycle = session.metadata?.billing_cycle;
+
+          if (!planId) {
+            console.error('Missing plan_id for pending payment');
+            break;
+          }
+
+          // Registrar pago pendiente en tabla de tracking
+          const paymentMethod = session.payment_method_types?.[0] || 'unknown';
+          await supabaseClient
+            .from('pending_payments')
+            .insert({
+              user_id: userId,
+              checkout_session_id: session.id,
+              payment_method: paymentMethod,
+              plan_id: planId,
+              amount: (session.amount_total || 0) / 100,
+              currency: session.currency?.toUpperCase() || 'MXN',
+              status: 'pending',
+              expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+              metadata: {
+                billing_cycle: billingCycle,
+              },
+            });
+
+          // Crear registro de suscripción con status 'incomplete'
+          const { error: pendingSubError } = await supabaseClient
+            .from('user_subscriptions')
+            .upsert({
+              user_id: userId,
+              plan_id: planId,
+              stripe_customer_id: session.customer as string,
+              status: 'incomplete',
+              billing_cycle: billingCycle || 'monthly',
+              current_period_start: new Date().toISOString(),
+              current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              cancel_at_period_end: false,
+              metadata: {
+                checkout_session_id: session.id,
+                payment_method: paymentMethod,
+                pending_since: new Date().toISOString(),
+              },
+            }, {
+              onConflict: 'user_id',
+            });
+
+          if (pendingSubError) {
+            console.error('Error creating pending subscription:', pendingSubError);
+          } else {
+            console.log('✅ Suscripción pendiente registrada para user:', userId);
+            
+            // Enviar notificación al usuario con instrucciones de pago
+            await supabaseClient.functions.invoke('send-subscription-notification', {
+              body: {
+                userId,
+                type: 'payment_pending',
+                metadata: {
+                  paymentMethod: paymentMethod === 'oxxo' ? 'OXXO' : 'SPEI',
+                  checkoutSessionId: session.id,
+                  amount: ((session.amount_total || 0) / 100).toFixed(2),
+                },
+              },
+            });
+          }
+
+          break; // Salir temprano, la activación ocurrirá en invoice.payment_succeeded
+        }
+
         // Si es compra de upsell únicamente
         if (isUpsellOnly) {
           console.log('Processing upsell-only purchase');
@@ -258,9 +333,76 @@ Deno.serve(async (req) => {
           .from('user_subscriptions')
           .select('*, subscription_plans(*)')
           .eq('stripe_subscription_id', subscription.id)
-          .single();
+          .maybeSingle();
 
+        // ✅ Si no existe registro, buscar por user_id y status incomplete (primera activación OXXO/SPEI)
         if (!subRecord) {
+          const { data: pendingSub } = await supabaseClient
+            .from('user_subscriptions')
+            .select('*, subscription_plans(*)')
+            .eq('user_id', userId)
+            .eq('status', 'incomplete')
+            .maybeSingle();
+
+          if (pendingSub) {
+            console.log('🎉 Primera activación de pago pendiente (OXXO/SPEI)');
+            
+            // Actualizar registro pendiente a activo
+            await supabaseClient
+              .from('user_subscriptions')
+              .update({
+                stripe_subscription_id: subscription.id,
+                status: 'active',
+                current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+                current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              })
+              .eq('id', pendingSub.id);
+
+            // Actualizar pending_payment
+            const checkoutSessionId = pendingSub.metadata?.checkout_session_id;
+            if (checkoutSessionId) {
+              await supabaseClient
+                .from('pending_payments')
+                .update({
+                  status: 'completed',
+                  completed_at: new Date().toISOString(),
+                })
+                .eq('checkout_session_id', checkoutSessionId);
+            }
+
+            // Registrar pago
+            await supabaseClient
+              .from('payment_history')
+              .insert({
+                user_id: userId,
+                subscription_id: pendingSub.id,
+                stripe_payment_intent_id: invoice.payment_intent as string,
+                amount: invoice.amount_paid / 100,
+                currency: invoice.currency.toUpperCase(),
+                status: 'succeeded',
+                payment_type: 'subscription',
+                metadata: {
+                  invoice_id: invoice.id,
+                  billing_reason: invoice.billing_reason,
+                  payment_method: pendingSub.metadata?.payment_method || 'oxxo_or_spei',
+                },
+              });
+
+            // Enviar notificación de activación
+            await supabaseClient.functions.invoke('send-subscription-notification', {
+              body: {
+                userId: pendingSub.user_id,
+                type: 'first_payment_success',
+                metadata: {
+                  planName: pendingSub.subscription_plans.display_name,
+                  amount: (invoice.amount_paid / 100).toFixed(2),
+                },
+              },
+            });
+
+            break; // Salir, ya procesamos la primera activación
+          }
+
           console.error('Subscription record not found');
           break;
         }

@@ -963,6 +963,59 @@ export type Database = {
           },
         ]
       }
+      pending_payments: {
+        Row: {
+          amount: number
+          checkout_session_id: string
+          completed_at: string | null
+          created_at: string | null
+          currency: string
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          payment_method: string
+          plan_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          checkout_session_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_method: string
+          plan_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          checkout_session_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_method?: string
+          plan_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       phone_verifications: {
         Row: {
           attempts: number
@@ -1964,6 +2017,7 @@ export type Database = {
           featured_reset_date: string | null
           featured_used_this_month: number | null
           id: string
+          metadata: Json | null
           plan_id: string
           status: string
           stripe_customer_id: string | null
@@ -1980,6 +2034,7 @@ export type Database = {
           featured_reset_date?: string | null
           featured_used_this_month?: number | null
           id?: string
+          metadata?: Json | null
           plan_id: string
           status?: string
           stripe_customer_id?: string | null
@@ -1996,6 +2051,7 @@ export type Database = {
           featured_reset_date?: string | null
           featured_used_this_month?: number | null
           id?: string
+          metadata?: Json | null
           plan_id?: string
           status?: string
           stripe_customer_id?: string | null
