@@ -217,6 +217,20 @@ export function BasicGoogleMap({
   // 🎯 Estado anterior de markers para diffing
   const previousMarkersRef = useRef<Map<string, MapMarker>>(new Map());
 
+  // 🎯 Firma estable del set de IDs clusterizables (solo properties)
+  const clusterSignature = useMemo(() => {
+    const ids: string[] = [];
+    for (const m of markers) {
+      if (m.type === 'property') {
+        ids.push(m.id);
+      }
+    }
+    ids.sort();
+    return ids.join('|');
+  }, [markers]);
+
+  const lastClusterSignatureRef = useRef<string>('');
+
   // Mantener callbacks estables sin re-crear marcadores
   const onMarkerClickRef = useRef<((id: string) => void) | undefined>(onMarkerClick);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
@@ -403,11 +417,6 @@ export function BasicGoogleMap({
       toAdd.add(id); // Recrear como nuevo
     });
 
-    // Limpiar clusterer solo si hay cambios estructurales
-    if (clustererRef.current && (toAdd.size > 0 || toRemove.size > 0 || toUpdate.size > 0)) {
-      clustererRef.current.clearMarkers();
-      clustererRef.current = null;
-    }
 
     // Crear bounds para auto-fit
     const bounds = new google.maps.LatLngBounds();
@@ -496,70 +505,8 @@ export function BasicGoogleMap({
       validMarkersCount++;
     }
     
-    // ✅ Lista completa de markers vigentes para clustering
-    const markersToCluster: google.maps.Marker[] = [];
-
-    for (const [id, gMarker] of markerRefs.current.entries()) {
-      const meta = currentMarkersMap.get(id);
-      if (!meta) continue;
-
-      // Solo clusterizar propiedades individuales
-      if (meta.type === 'property') {
-        markersToCluster.push(gMarker);
-      }
-    }
-    
     // 💾 Actualizar estado anterior para próximo diffing
     previousMarkersRef.current = currentMarkersMap;
-
-    // Aplicar clustering solo si NO hay clusters del backend
-    if (enableClustering && !hasBackendClusters && markersToCluster.length > 0) {
-      try {
-        // Renderer personalizado usando SVGs memoizados
-        const customRenderer = {
-          render: ({ count, position }: { count: number; position: google.maps.LatLng }) => {
-            // 🚀 Usar SVG memoizado
-            const svg = getClusterSVG(count);
-            const baseSize = 50;
-            const size = Math.min(baseSize + Math.log10(count) * 15, 90);
-
-            return new google.maps.Marker({
-              position,
-              icon: {
-                url: `data:image/svg+xml;base64,${btoa(svg)}`,
-                scaledSize: new google.maps.Size(size, size),
-                anchor: new google.maps.Point(size / 2, size / 2),
-              },
-              zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
-            });
-          },
-        };
-
-        clustererRef.current = new MarkerClusterer({
-          map,
-          markers: markersToCluster,
-          algorithm: new GridAlgorithm({ 
-            maxZoom: 15,
-            gridSize: 60,
-            maxDistance: 30000,
-          }),
-          onClusterClick: (_, cluster, map) => {
-            map.setCenter(cluster.position);
-            map.setZoom(Math.min((map.getZoom() || 5) + 3, 15));
-          },
-          renderer: customRenderer,
-        });
-        
-        if (MAP_DEBUG) {
-          console.log('[KENTRA MAP] Clustering aplicado');
-        }
-      } catch (err) {
-        monitoring.error('[BasicGoogleMap] Error al crear clusterer', { error: err });
-        if (MAP_DEBUG) {
-          console.error('[KENTRA MAP] Error al crear clusterer', err);
-        }
-      }
-    }
 
     // Auto-fit al bounds si está habilitado
     if (!disableAutoFit && validMarkersCount > 0 && !bounds.isEmpty()) {
@@ -588,6 +535,117 @@ export function BasicGoogleMap({
     }
 
   }, [markers, enableClustering, disableAutoFit, mapReady, currentZoom]);
+
+  // ✅ Ciclo de vida INDEPENDIENTE del MarkerClusterer
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    const hasBackendClusters = markers.some(m => m.type === 'cluster');
+
+    // 🧹 Cleanup total: si clustering local está OFF o hay backend clusters
+    if (!enableClustering || hasBackendClusters) {
+      if (clustererRef.current) {
+        if (MAP_DEBUG) {
+          console.log('[KENTRA MAP] Deshabilitando clusterer local');
+        }
+        clustererRef.current.clearMarkers();
+        clustererRef.current.setMap(null);
+        clustererRef.current = null;
+      }
+      lastClusterSignatureRef.current = '';
+      return;
+    }
+
+    // ✅ Si el set real de IDs NO cambió, NO tocar el clusterer
+    if (lastClusterSignatureRef.current === clusterSignature) {
+      if (MAP_DEBUG) {
+        console.log('[KENTRA MAP] Clusterer: firma estable, skip reconstrucción');
+      }
+      return;
+    }
+
+    if (MAP_DEBUG) {
+      console.log('[KENTRA MAP] Clusterer: firma cambió, reconstruyendo', {
+        prev: lastClusterSignatureRef.current.substring(0, 50) + '...',
+        next: clusterSignature.substring(0, 50) + '...',
+      });
+    }
+
+    lastClusterSignatureRef.current = clusterSignature;
+
+    // 📋 Lista completa de markers vivas para clustering (O(n))
+    const markersToCluster: google.maps.Marker[] = [];
+    
+    for (const [id, gMarker] of markerRefs.current.entries()) {
+      // previousMarkersRef.current ya fue actualizado al final del diffing
+      const meta = previousMarkersRef.current.get(id);
+      if (meta?.type === 'property') {
+        markersToCluster.push(gMarker);
+      }
+    }
+
+    if (markersToCluster.length === 0) {
+      if (MAP_DEBUG) {
+        console.log('[KENTRA MAP] No hay markers clusterizables, skip');
+      }
+      return;
+    }
+
+    // 🗑️ Limpiar clusterer anterior si existe
+    if (clustererRef.current) {
+      clustererRef.current.clearMarkers();
+      clustererRef.current.setMap(null);
+    }
+
+    // 🚀 Crear nuevo clusterer con lista completa
+    try {
+      const customRenderer = {
+        render: ({ count, position }: { count: number; position: google.maps.LatLng }) => {
+          const svg = getClusterSVG(count);
+          const baseSize = 50;
+          const size = Math.min(baseSize + Math.log10(count) * 15, 90);
+
+          return new google.maps.Marker({
+            position,
+            icon: {
+              url: `data:image/svg+xml;base64,${btoa(svg)}`,
+              scaledSize: new google.maps.Size(size, size),
+              anchor: new google.maps.Point(size / 2, size / 2),
+            },
+            zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+          });
+        },
+      };
+
+      clustererRef.current = new MarkerClusterer({
+        map,
+        markers: markersToCluster,
+        algorithm: new GridAlgorithm({ 
+          maxZoom: 15,
+          gridSize: 60,
+          maxDistance: 30000,
+        }),
+        onClusterClick: (_, cluster, map) => {
+          map.setCenter(cluster.position);
+          map.setZoom(Math.min((map.getZoom() || 5) + 3, 15));
+        },
+        renderer: customRenderer,
+      });
+
+      if (MAP_DEBUG) {
+        console.log('[KENTRA MAP] Clusterer reconstruido', {
+          markersCount: markersToCluster.length
+        });
+      }
+    } catch (err) {
+      monitoring.error('[BasicGoogleMap] Error al crear clusterer', { error: err });
+      if (MAP_DEBUG) {
+        console.error('[KENTRA MAP] Error al crear clusterer', err);
+      }
+    }
+
+  }, [mapReady, enableClustering, markers, clusterSignature]);
 
   if (error) {
     return (
