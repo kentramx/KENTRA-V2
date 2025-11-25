@@ -157,16 +157,22 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     console.log('[Buscar Debug] URL listingType changed to:', searchParams.get('listingType'));
   }, [searchParams]);
   
-  // ✅ ELIMINADO: Efecto duplicado que causaba loops infinitos
-  // Este efecto está ahora consolidado en las líneas 543-579
-  
-  // ✅ Construir filtros de manera unificada
+  // ============================================================================
+  // PUNTO ÚNICO DE CONSTRUCCIÓN DE FILTROS
+  // ============================================================================
+  // Los filtros se construyen UNA SOLA VEZ y se comparten entre:
+  // 1. usePropertySearch (búsqueda global de propiedades)
+  // 2. useTiledMap (propiedades visibles en el viewport del mapa)
+  //
+  // ⚠️ IMPORTANTE: No duplicar lógica de filtrado. Ambos hooks reciben
+  // exactamente los mismos filtros para mantener sincronía total.
+  // ============================================================================
   const propertyFilters = useMemo(
     () => buildPropertyFilters(filters),
     [filters]
   );
 
-  // ✅ Búsqueda de propiedades con filtros
+  // 📊 Búsqueda global de propiedades (con filtros aplicados)
   const {
     properties,
     isLoading: loading,
@@ -179,7 +185,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     actualTotal,
   } = usePropertySearch(propertyFilters);
 
-  // 🗺️ Fetching de tiles del mapa (movido desde SearchMap)
+  // 🗺️ Propiedades visibles en el viewport del mapa (con mismos filtros)
   const { data: viewportData, isLoading: mapLoading, error: mapTilesError } =
     useTiledMap(viewportBounds, propertyFilters);
 
@@ -275,7 +281,21 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   // ⚠️ MANTENER para compatibilidad (algunos componentes legacy podrían usarlo)
   const filteredProperties = sortedProperties;
 
-  // 4️⃣ LISTA FINAL para renderizado (limitar a 50 items cuando viewport activo)
+  // ============================================================================
+  // 4️⃣ LISTA FINAL PARA RENDERIZADO
+  // ============================================================================
+  // REGLA DE NEGOCIO:
+  // 1. Si el mapa tiene propiedades visibles en el viewport → la lista muestra
+  //    esas propiedades (limitadas a 50 para rendimiento).
+  // 2. Si el mapa aún no devuelve propiedades (ej. primera carga, zoom muy 
+  //    lejano, área sin propiedades) → la lista muestra las propiedades 
+  //    filtradas globales (sin límite, con infinite scroll).
+  //
+  // Esta lógica asegura que:
+  // - La lista siempre muestra algo relevante (no pantalla vacía)
+  // - Cuando el usuario navega el mapa, la lista se sincroniza automáticamente
+  // - Los filtros se aplican consistentemente en ambos modos (global/viewport)
+  // ============================================================================
   const listProperties = isViewportActive
     ? sortedProperties.slice(0, 50)
     : sortedProperties;
