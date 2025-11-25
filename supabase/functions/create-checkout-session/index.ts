@@ -398,7 +398,15 @@ Deno.serve(async (req) => {
     // Create checkout session
     const sessionParams: any = {
       mode,
-      payment_method_types: ['card'],
+      payment_method_types: ['card', 'oxxo', 'customer_balance'],
+      payment_method_options: {
+        customer_balance: {
+          funding_type: 'bank_transfer',
+          bank_transfer: {
+            type: 'mx_bank_transfer',
+          },
+        },
+      },
       customer: customerId,
       line_items: lineItems,
       success_url: successUrl,

@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface NotificationRequest {
   userId: string;
-  type: 'renewal_success' | 'payment_failed' | 'payment_failed_day_3' | 'payment_failed_day_5' | 'payment_failed_day_7' | 'subscription_canceled' | 'subscription_expiring' | 'downgrade_confirmed' | 'trial_expired' | 'trial_started' | 'subscription_suspended';
+  type: 'renewal_success' | 'payment_failed' | 'payment_failed_day_3' | 'payment_failed_day_5' | 'payment_failed_day_7' | 'subscription_canceled' | 'subscription_expiring' | 'downgrade_confirmed' | 'trial_expired' | 'trial_started' | 'subscription_suspended' | 'payment_pending' | 'first_payment_success';
   metadata?: Record<string, any>;
 }
 
@@ -234,6 +234,62 @@ Deno.serve(async (req) => {
           <p><a href="https://kentra.com.mx/pricing-agente" style="background-color: #7C3AED; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 16px;">Ver Planes y Precios</a></p>
           <p>Si tienes alguna pregunta, estamos aquí para ayudarte.</p>
           <p>Saludos,<br>Equipo Kentra</p>
+        `;
+        break;
+
+      case 'payment_pending':
+        subject = '⏳ Completa tu pago para activar tu suscripción - Kentra';
+        const paymentMethod = metadata.paymentMethod || 'OXXO/SPEI';
+        const instructions = paymentMethod === 'OXXO' 
+          ? 'Descarga el voucher de pago de OXXO desde tu correo y acude a cualquier tienda OXXO para realizar el pago en efectivo. El voucher incluye un código de barras que el cajero escaneará.'
+          : 'Realiza una transferencia bancaria SPEI usando la CLABE y referencia que te enviamos. La transferencia se procesará en minutos y tu suscripción se activará automáticamente.';
+        
+        htmlContent = `
+          <h1>¡Tu suscripción está casi lista! ⏳</h1>
+          <p>Hola ${userName},</p>
+          <p>Recibimos tu solicitud de suscripción. Para activarla, completa el pago de <strong>$${metadata.amount} MXN</strong> usando <strong>${paymentMethod}</strong>.</p>
+          
+          <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-left: 4px solid #7C3AED;">
+            <h2 style="margin-top: 0;">📌 Instrucciones de pago:</h2>
+            <p>${instructions}</p>
+          </div>
+          
+          <p>⏰ <strong>Importante:</strong> Tienes <strong>48 horas</strong> para completar el pago. Después de ese tiempo, el voucher expirará y deberás generar uno nuevo.</p>
+          
+          <p>Una vez confirmado el pago, tu suscripción se activará automáticamente y recibirás un correo de confirmación.</p>
+          
+          <p>Si tienes alguna pregunta, estamos aquí para ayudarte.</p>
+          
+          <p>Saludos,<br>El equipo de Kentra</p>
+        `;
+        break;
+
+      case 'first_payment_success':
+        subject = '🎉 ¡Pago confirmado! Tu suscripción está activa - Kentra';
+        htmlContent = `
+          <h1>¡Tu pago ha sido confirmado! 🎉</h1>
+          <p>Hola ${userName},</p>
+          <p>Recibimos tu pago y tu suscripción al plan <strong>${metadata.planName}</strong> está ahora completamente activa.</p>
+          
+          <div style="background: #f0fdf4; padding: 20px; margin: 20px 0; border-left: 4px solid #22c55e;">
+            <h2 style="margin-top: 0; color: #166534;">✅ Detalles del pago</h2>
+            <p><strong>Monto pagado:</strong> $${metadata.amount} MXN</p>
+            <p><strong>Plan:</strong> ${metadata.planName}</p>
+            <p><strong>Estado:</strong> Activo</p>
+          </div>
+          
+          <p><strong>🚀 ¿Qué sigue?</strong></p>
+          <ul>
+            <li>Puedes empezar a publicar tus propiedades inmediatamente</li>
+            <li>Accede a todas las funciones de tu plan</li>
+            <li>Gestiona tu perfil y suscripción desde tu panel</li>
+          </ul>
+          
+          <p><a href="https://kentra.com.mx/panel-agente?tab=form" style="background-color: #7C3AED; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 16px;">Publicar mi primera propiedad</a></p>
+          
+          <p>¡Gracias por confiar en Kentra! 🏡</p>
+          
+          <p>Saludos,<br>El equipo de Kentra</p>
         `;
         break;
 

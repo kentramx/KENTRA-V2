@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Calendar, CreditCard, TrendingUp, AlertCircle, CheckCircle2, Loader2, RefreshCcw } from 'lucide-react';
+import { Calendar, CreditCard, TrendingUp, AlertCircle, CheckCircle2, Loader2, RefreshCcw, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -50,6 +50,11 @@ interface SubscriptionDetails {
   current_period_end: string;
   cancel_at_period_end: boolean;
   features: SubscriptionFeatures;
+  metadata?: {
+    payment_method?: string;
+    pending_since?: string;
+    checkout_session_id?: string;
+  };
 }
 
 interface PaymentRecord {
@@ -78,7 +83,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
   const fetchSubscriptionData = async () => {
     try {
-      // Obtener suscripción activa únicamente
+      // Obtener suscripción activa o pendiente
       const { data: subData, error: subError } = await supabase
         .from('user_subscriptions')
         .select(`
@@ -88,6 +93,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           current_period_start,
           current_period_end,
           cancel_at_period_end,
+          metadata,
           subscription_plans (
             name,
             display_name,
@@ -97,7 +103,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           )
         `)
         .eq('user_id', userId)
-        .in('status', ['active', 'trialing'])
+        .in('status', ['active', 'trialing', 'incomplete'])
         .order('current_period_end', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -124,6 +130,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           current_period_end: subData.current_period_end,
           cancel_at_period_end: subData.cancel_at_period_end,
           features: subData.subscription_plans.features as SubscriptionFeatures,
+          metadata: subData.metadata as any,
         });
       }
 
@@ -269,10 +276,11 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
     );
   }
 
-  // Determinar si la suscripción está activa
+  // Determinar si la suscripción está activa o pendiente
   const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+  const isPending = subscription?.status === 'incomplete';
 
-  if (!subscription || !isActive) {
+  if (!subscription || (!isActive && !isPending)) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -326,6 +334,32 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* ✅ Banner para pago pendiente */}
+          {isPending && (
+            <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+              <div className="flex items-start gap-3">
+                <Clock className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-semibold text-amber-800 dark:text-amber-500 mb-1">
+                    Pago Pendiente
+                  </h4>
+                  <p className="text-sm text-amber-700 dark:text-amber-600 mb-2">
+                    Tu suscripción está esperando confirmación de pago.
+                    {subscription.metadata?.payment_method === 'oxxo' && (
+                      <span> Revisa tu correo para las instrucciones de pago en <strong>OXXO</strong>. El voucher expira en 48 horas.</span>
+                    )}
+                    {subscription.metadata?.payment_method === 'customer_balance' && (
+                      <span> Realiza la transferencia <strong>SPEI</strong> usando los datos enviados a tu correo. Disponible por 48 horas.</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-500">
+                    Una vez confirmado el pago, tu suscripción se activará automáticamente.
+                  </p>
+                </div>
+              </div>
+            </Alert>
+          )}
+
           {/* Banner informativo para cancelación programada o expirada */}
           {subscription.cancel_at_period_end && (
             isExpired ? (
