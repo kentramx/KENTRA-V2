@@ -148,15 +148,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     orden: (searchParams.get('orden') as any) || 'price_desc',
   });
   
-  // ✅ DEBUG: Logs temporales para rastrear cambios de listingType
-  useEffect(() => {
-    console.log('[Buscar Debug] filters.listingType changed to:', filters.listingType);
-  }, [filters.listingType]);
-
-  useEffect(() => {
-    console.log('[Buscar Debug] URL listingType changed to:', searchParams.get('listingType'));
-  }, [searchParams]);
-  
   // ============================================================================
   // PUNTO ÚNICO DE CONSTRUCCIÓN DE FILTROS
   // ============================================================================
@@ -628,7 +619,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   useEffect(() => {
     // 🚫 Si estamos sincronizando desde URL, no sobrescribir
     if (syncingFromUrl.current) {
-      console.log('[Buscar] Sincronización bloqueada: syncingFromUrl activo');
       return;
     }
     
@@ -636,7 +626,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     
     if (filters.estado) params.set('estado', filters.estado);
     if (filters.municipio) params.set('municipio', filters.municipio);
-    if (filters.colonia) params.set('colonia', filters.colonia); // ✅ Agregado
+    if (filters.colonia) params.set('colonia', filters.colonia);
     if (filters.precioMin) params.set('precioMin', filters.precioMin);
     if (filters.precioMax) params.set('precioMax', filters.precioMax);
     if (filters.tipo) params.set('tipo', filters.tipo);
@@ -665,12 +655,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     const current = searchParams.toString();
     
     if (next !== current) {
-      console.log('[Buscar] Actualizando URL:', { next, current });
       setSearchParams(params, { replace: true });
-    } else {
-      console.log('[Buscar] URL sin cambios, skip update');
     }
-  }, [filters, searchCoordinates]); // ✅ Removidas dependencias circulares searchParams y setSearchParams
+  }, [filters, searchCoordinates]);
 
   useEffect(() => {
     if (filters.estado) {
