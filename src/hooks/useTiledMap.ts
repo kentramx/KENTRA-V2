@@ -39,14 +39,12 @@
  * No crear hooks alternativos para carga de propiedades en mapa.
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { MapProperty, PropertyCluster, PropertyFilters, PropertyStatus } from '@/types/property';
 import { monitoring } from '@/lib/monitoring';
 import { useEffect } from 'react';
 
-// 🔧 Debug flag controlado para logs de diagnóstico
-const MAP_DEBUG = typeof window !== 'undefined' && (window as any).__KENTRA_MAP_DEBUG__ === true;
 
 export interface ViewportBounds {
   minLng: number;
@@ -65,6 +63,11 @@ export const useTiledMap = (
   filters?: PropertyFilters
 ) => {
   const queryClient = useQueryClient();
+
+  // 🔍 Flag debug dinámico para habilitar queries en zoom bajo SOLO en debug
+  const isDebugEnabled =
+    typeof window !== 'undefined' &&
+    (window as any).__KENTRA_MAP_DEBUG__ === true;
 
   // 🚫 Prefetch DESACTIVADO temporalmente para optimizar red (causaba 9 requests simultáneos)
   // useEffect(() => {
@@ -114,15 +117,30 @@ export const useTiledMap = (
 
   return useQuery({
     queryKey: ['map-tiles', bounds, filters],
-    enabled: !!bounds && bounds.zoom >= MIN_ZOOM_FOR_TILES,
+    enabled: !!bounds && (bounds.zoom >= MIN_ZOOM_FOR_TILES || isDebugEnabled),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: 1,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (previousData) => previousData, // ✅ Mantener datos anteriores en caso de error
+    placeholderData: keepPreviousData,
     queryFn: async () => {
+      // 🔍 Flag dinámico de debug (se evalúa en cada query)
+      const isDebug =
+        typeof window !== 'undefined' &&
+        (window as any).__KENTRA_MAP_DEBUG__ === true;
+
       if (!bounds || bounds.zoom < MIN_ZOOM_FOR_TILES) {
+        if (isDebug) {
+          if (!bounds) {
+            console.log('[useTiledMap] ⏸️ Skip: sin bounds todavía');
+          } else {
+            console.log('[useTiledMap] ⏸️ Skip: zoom demasiado bajo', {
+              currentZoom: bounds.zoom,
+              minRequired: MIN_ZOOM_FOR_TILES,
+            });
+          }
+        }
         return { clusters: [], properties: [] };
       }
 
@@ -141,7 +159,7 @@ export const useTiledMap = (
       if (filters?.recamaras) filtersJson.minBedrooms = parseInt(filters.recamaras);
       if (filters?.banos) filtersJson.minBathrooms = parseInt(filters.banos);
 
-      if (MAP_DEBUG) {
+      if (isDebug) {
         console.log('[KENTRA MAP] Cargando tiles', {
           bounds: {
             minLng: bounds.minLng.toFixed(4),
@@ -177,6 +195,18 @@ export const useTiledMap = (
       const loadTime = performance.now() - startTime;
 
       if (!data) {
+        if (isDebug) {
+          console.log('[useTiledMap] 🔍 0 resultados para tile (data null)', {
+            bounds: {
+              minLat: bounds.minLat.toFixed(4),
+              minLng: bounds.minLng.toFixed(4),
+              maxLat: bounds.maxLat.toFixed(4),
+              maxLng: bounds.maxLng.toFixed(4),
+            },
+            zoom: bounds.zoom,
+            filtersJson,
+          });
+        }
         return { clusters: [], properties: [] };
       }
 
@@ -212,6 +242,21 @@ export const useTiledMap = (
         });
       }
 
+      // 🔍 Diagnóstico: RPC devolvió data pero sin resultados procesables
+      if (isDebug && properties.length === 0 && clusters.length === 0) {
+        console.log('[useTiledMap] 🔍 RPC devolvió data pero sin properties ni clusters', {
+          bounds: {
+            minLat: bounds.minLat.toFixed(4),
+            minLng: bounds.minLng.toFixed(4),
+            maxLat: bounds.maxLat.toFixed(4),
+            maxLng: bounds.maxLng.toFixed(4),
+          },
+          zoom: bounds.zoom,
+          filtersJson,
+          rawData: result,
+        });
+      }
+
       // 🔒 Hard cap de seguridad: evitar saturar el frontend
       if (properties.length > MAX_PROPERTIES_PER_TILE) {
         monitoring.warn('[useTiledMap] Demasiadas propiedades en un solo tile, recortando resultados', {
@@ -222,7 +267,7 @@ export const useTiledMap = (
         properties.length = MAX_PROPERTIES_PER_TILE;
       }
 
-      if (MAP_DEBUG) {
+      if (isDebug) {
         console.log('[KENTRA MAP] Tiles procesados', {
           zoom: bounds.zoom,
           clusters: clusters.length,

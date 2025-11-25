@@ -41,7 +41,7 @@ import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
 import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/property';
-import { ViewportBounds, useTiledMap } from '@/hooks/useTiledMap';
+import { ViewportBounds, useTiledMap, MIN_ZOOM_FOR_TILES } from '@/hooks/useTiledMap';
 
 interface Filters {
   estado: string;
@@ -195,6 +195,27 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   useEffect(() => {
     console.log('[PARENT viewportProperties]', viewportProperties.length);
   }, [viewportProperties]);
+
+  // 🔍 Diagnóstico derivado del estado del viewport (solo para debug)
+  const viewportDebugReason = useMemo(() => {
+    if (mapLoading) {
+      return 'Cargando tiles del viewport...';
+    }
+
+    if (!viewportBounds) {
+      return 'Sin bounds (mapa no inicializado o movimiento en proceso)';
+    }
+
+    if (viewportBounds.zoom < MIN_ZOOM_FOR_TILES) {
+      return `Zoom muy lejano (${viewportBounds.zoom} < ${MIN_ZOOM_FOR_TILES})`;
+    }
+
+    if (viewportProperties.length === 0 && viewportClusters.length === 0) {
+      return '0 propiedades para los filtros actuales en este cuadro de mapa';
+    }
+
+    return null;
+  }, [mapLoading, viewportBounds, viewportProperties, viewportClusters]);
 
   // 1️⃣ Flag de viewport activo
   const isViewportActive = !!viewportBounds;
@@ -1597,7 +1618,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
             )}
 
             {/* Estado vacío - sin resultados */}
-            {!searchError && !loading && filteredProperties.length === 0 && (
+            {!searchError && !loading && listProperties.length === 0 && (
               <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center min-h-[400px]">
                 <div className="rounded-full bg-muted p-6">
                   <Search className="h-12 w-12 text-muted-foreground" />
@@ -1608,6 +1629,29 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                     No hay propiedades que coincidan con tus filtros actuales.
                   </p>
                 </div>
+                {/* 🔍 NUEVO: Panel de diagnóstico en modo debug */}
+                {typeof window !== 'undefined' && (window as any).__KENTRA_MAP_DEBUG__ === true && (
+                  <div className="mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-xs font-mono text-yellow-900 max-w-2xl">
+                    <div className="font-bold mb-1">🔍 DEBUG INFO:</div>
+                    <div>Razón: {viewportDebugReason || 'N/A'}</div>
+                    <div>Zoom: {viewportBounds?.zoom?.toFixed(2) || 'N/A'}</div>
+                    <div>Estado: {filters.estado || '(ninguno)'}</div>
+                    <div>Municipio: {filters.municipio || '(ninguno)'}</div>
+                    <div>Colonia: {filters.colonia || '(ninguno)'}</div>
+                    <div>Tipo: {filters.tipo || '(todos)'}</div>
+                    <div>Operación: {filters.listingType}</div>
+                    {viewportBounds && (
+                      <div>
+                        Bounds: {viewportBounds.minLat.toFixed(4)},{viewportBounds.minLng.toFixed(4)} →{' '}
+                        {viewportBounds.maxLat.toFixed(4)},{viewportBounds.maxLng.toFixed(4)}
+                      </div>
+                    )}
+                    <div>Properties viewport: {viewportProperties.length}</div>
+                    <div>Clusters viewport: {viewportClusters.length}</div>
+                    <div>isViewportActive: {isViewportActive ? 'true' : 'false'}</div>
+                    <div>listProperties.length: {listProperties.length}</div>
+                  </div>
+                )}
                 <div className="space-y-2 text-sm text-muted-foreground">
                   <p>Intenta:</p>
                   <ul className="space-y-1">
@@ -1616,7 +1660,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                     <li>• Ajustar los filtros de recámaras y baños</li>
                   </ul>
                 </div>
-                <Button 
+                <Button
                   onClick={() => {
                     setFilters(DEFAULT_FILTERS);
                     setSearchCoordinates(null);
@@ -1630,7 +1674,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
             )}
 
             {/* Lista de propiedades con resultados */}
-            {!searchError && filteredProperties.length > 0 && (
+            {!searchError && listProperties.length > 0 && (
               <InfiniteScrollContainer
                 onLoadMore={() => {
                   if (!isViewportActive && hasNextPage && !isFetching) {
