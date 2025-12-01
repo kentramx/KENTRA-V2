@@ -227,7 +227,38 @@ export const SearchMap: React.FC<SearchMapProps> = ({
         onMapError={handleMapError}
       />
 
-      {/* Debug overlay eliminado para producción */}
+      {/* 🔍 Debug overlay - controlled by window.__KENTRA_MAP_DEBUG__ */}
+      {MAP_DEBUG && (
+        <div className="pointer-events-none absolute left-2 top-2 z-20">
+          <div className="pointer-events-auto max-w-xs rounded-md bg-black/80 px-3 py-2 text-[11px] text-white space-y-1">
+            <div className="font-semibold">MAP DEBUG</div>
+            <div>propsViewport: {properties.length}</div>
+            <div>clustersViewport: {clusters.length}</div>
+            <div>isLoading: {isLoading ? 'true' : 'false'}</div>
+            <div>MIN_ZOOM_FOR_TILES: {MIN_ZOOM_FOR_TILES}</div>
+            <div>MAX_PROPERTIES_PER_TILE: {MAX_PROPERTIES_PER_TILE}</div>
+            {debugViewportBounds && (
+              <>
+                <div>zoom: {debugViewportBounds.zoom.toFixed(2)}</div>
+                <div>
+                  bounds: {debugViewportBounds.minLat.toFixed(3)},
+                  {debugViewportBounds.minLng.toFixed(3)} →{' '}
+                  {debugViewportBounds.maxLat.toFixed(3)},
+                  {debugViewportBounds.maxLng.toFixed(3)}
+                </div>
+              </>
+            )}
+            {typeof debugViewportReason !== 'undefined' && (
+              <div>
+                reason:{' '}
+                {debugViewportReason && debugViewportReason.length > 0
+                  ? debugViewportReason
+                  : 'N/A'}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 🔄 Overlay de carga */}
       {isLoading && (
