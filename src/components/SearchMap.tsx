@@ -54,6 +54,10 @@ interface SearchMapProps {
   height?: string;
   onMapError?: (error: string) => void;
   onVisibleCountChange?: (count: number) => void;
+  
+  // 🔍 Props de debug para diagnóstico de viewport
+  debugViewportReason?: string | null;
+  debugViewportBounds?: ViewportBounds | null;
 }
 
 export const SearchMap: React.FC<SearchMapProps> = ({
@@ -67,6 +71,8 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   height = '100%',
   onMapError,
   onVisibleCountChange,
+  debugViewportReason,
+  debugViewportBounds,
 }) => {
   const navigate = useNavigate();
   const [mapError, setMapError] = useState<string | null>(null);
