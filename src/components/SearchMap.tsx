@@ -166,9 +166,18 @@ export const SearchMap: React.FC<SearchMapProps> = ({
     return { lat: 23.6345, lng: -102.5528 };
   }, [searchCoordinates]);
 
-  
 
-  // ✅ Callback memoizado para bounds change
+// ✅ Zoom del mapa - más cercano cuando hay búsqueda específica
+const mapZoom = useMemo(() => {
+  // Cuando hay coordenadas de búsqueda (ciudad/zona), usar zoom más cercano
+  if (searchCoordinates) {
+    return 12;
+  }
+  // Vista nivel país por defecto
+  return 5;
+}, [searchCoordinates]);
+
+// ✅ Callback memoizado para bounds change
   const handleBoundsChange = useCallback((bounds: ViewportBounds) => {
     onBoundsChanged(bounds);
   }, [onBoundsChanged]);
