@@ -23,7 +23,7 @@
  * 
  * 📦 DEPENDENCIAS OFICIALES:
  * - BasicGoogleMap (componente base)
- * - useTiledMap (hook de tiles)
+ * - useMapSearch (hook unificado de datos)
  * - loadGoogleMaps (loader de API)
  * 
  * ⚠️ IMPORTANTE:
@@ -34,7 +34,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BasicGoogleMap } from '@/components/BasicGoogleMap';
-import { ViewportBounds, MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE } from '@/hooks/useTiledMap';
+import { ViewportBounds, MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE } from '@/hooks/useMapSearch';
 import type { MapProperty, PropertyFilters, PropertySummary } from '@/types/property';
 import { monitoring } from '@/lib/monitoring';
 import { Loader2, AlertCircle } from 'lucide-react';
