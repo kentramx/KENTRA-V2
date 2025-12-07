@@ -4,7 +4,7 @@ import { SearchResultsList } from '@/components/SearchResultsList';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePropertySearch } from '@/hooks/usePropertySearch';
+import { useMapSearch, MIN_ZOOM_FOR_TILES } from '@/hooks/useMapSearch';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
 import { buildPropertyFilters } from '@/utils/buildPropertyFilters';
 import type { PropertySummary } from '@/types/property';
@@ -41,7 +41,7 @@ import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
 import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/property';
-import { ViewportBounds, useTiledMap, MIN_ZOOM_FOR_TILES } from '@/hooks/useTiledMap';
+import type { ViewportBounds } from '@/hooks/useMapSearch';
 
 interface Filters {
   estado: string;
@@ -163,48 +163,36 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     [filters]
   );
 
-  // 📊 Búsqueda global de propiedades (con filtros aplicados)
+  // ============================================================================
+  // FUENTE ÚNICA DE VERDAD - useMapSearch
+  // ============================================================================
+  // Este hook unifica toda la lógica de datos. Internamente usa useTiledMap.
+  // ============================================================================
   const {
-    properties,
-    isLoading: loading,
-    isFetching,
-    error: searchError,
-    totalCount,
-    hasNextPage,
-    fetchNextPage,
-    hasTooManyResults,
-    actualTotal,
-  } = usePropertySearch(propertyFilters);
+    properties,          // PropertySummary[] - para la lista
+    mapProperties,       // MapProperty[] - para marcadores del mapa
+    clusters,            // PropertyCluster[] - para clusters
+    totalCount,          // Total estimado de propiedades
+    isLoading: loading,  // Estado de carga
+    isFetching,          // Refetching
+    error: searchError,  // Error si existe
+    hasTooManyResults,   // Demasiados resultados
+    debugReason,         // Razón de debug cuando no hay datos
+  } = useMapSearch({
+    filters: propertyFilters,
+    viewportBounds,
+  });
 
-  // 🗺️ Propiedades visibles en el viewport del mapa (con mismos filtros)
-  const { data: viewportData, isLoading: mapLoading, error: mapTilesError } =
-    useTiledMap(viewportBounds, propertyFilters);
+  // Aliases para compatibilidad con código existente
+  const viewportProperties = mapProperties;
+  const viewportClusters = clusters;
+  const mapLoading = loading;
+  const viewportDebugReason = debugReason;
 
-  // Extraer properties y clusters del viewport
-  const viewportProperties = viewportData?.properties ?? [];
-  const viewportClusters = viewportData?.clusters ?? [];
-
-
-  // 🔍 Diagnóstico derivado del estado del viewport (solo para debug)
-  const viewportDebugReason = useMemo(() => {
-    if (mapLoading) {
-      return 'Cargando tiles del viewport...';
-    }
-
-    if (!viewportBounds) {
-      return 'Sin bounds (mapa no inicializado o movimiento en proceso)';
-    }
-
-    if (viewportBounds.zoom < MIN_ZOOM_FOR_TILES) {
-      return `Zoom muy lejano (${viewportBounds.zoom} < ${MIN_ZOOM_FOR_TILES})`;
-    }
-
-    if (viewportProperties.length === 0 && viewportClusters.length === 0) {
-      return '0 propiedades para los filtros actuales en este cuadro de mapa';
-    }
-
-    return null;
-  }, [mapLoading, viewportBounds, viewportProperties, viewportClusters]);
+  // Variables de paginación (useMapSearch no tiene infinite scroll)
+  const hasNextPage = false;
+  const fetchNextPage = () => {};
+  const actualTotal = totalCount;
 
   // ============================================================================
   // FUENTE DE DATOS UNIFICADA PARA LISTA DE PROPIEDADES
@@ -214,20 +202,11 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   // - Si no hay viewport o está vacío → usa properties del hook global
   // ============================================================================
 
-  // 1️⃣ Detectar si el viewport del mapa está activo
+  // Detectar si el viewport del mapa está activo
   const isViewportActive = !!viewportBounds;
 
-  // 2️⃣ Seleccionar fuente de datos base (viewport o global)
-  const activeProperties = isViewportActive
-    ? viewportProperties.map((p): PropertySummary => ({
-        ...p,
-        for_sale: p.listing_type === 'venta',
-        for_rent: p.listing_type === 'renta',
-        sale_price: p.listing_type === 'venta' ? p.price : null,
-        rent_price: p.listing_type === 'renta' ? p.price : null,
-        colonia: null, // MapProperty no incluye colonia
-      }))
-    : properties;
+  // ✅ useMapSearch ya devuelve PropertySummary[] - no necesita mapeo ni condicional
+  const activeProperties = properties;
 
   // 3️⃣ Aplicar ordenamiento (destacadas primero, luego criterio seleccionado)
   const sortedProperties = useMemo(() => {
