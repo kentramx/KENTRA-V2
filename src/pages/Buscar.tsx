@@ -1556,19 +1556,25 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 
           {/* Mapa a la izquierda - 50% width en desktop, condicional en móvil */}
           <div className={`relative ${mobileView === 'map' ? 'block' : 'hidden'} lg:block lg:w-1/2 lg:h-full`} style={{ height: 'calc(100vh - 200px)' }}>
-            {/* Contador de resultados */}
+            {/* Contador de resultados en el mapa */}
             <div className="absolute top-4 left-4 z-10 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-lg">
-                  {mobileView === 'map' || window.innerWidth >= 1024 ? mapVisibleCount : totalCount}
+                  {mapVisibleCount}
                 </span>
                 <span className="text-muted-foreground text-sm">
-                  {(mobileView === 'map' || window.innerWidth >= 1024 ? mapVisibleCount : totalCount) === 1 ? 'propiedad' : 'propiedades'}
+                  {mapVisibleCount === 1 ? 'propiedad' : 'propiedades'} en el mapa actual
                 </span>
-                {isFetching && properties.length > 0 && (
+                {isFetching && (
                   <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                 )}
               </div>
+              {/* Mensaje cuando hay clusters */}
+              {viewportClusters.length > 0 && mapVisibleCount > viewportProperties.length && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Haz clic en los grupos para ver más detalles
+                </p>
+              )}
             </div>
 
             {/* ✅ Mapa con filtros unificados y manejo de errores */}

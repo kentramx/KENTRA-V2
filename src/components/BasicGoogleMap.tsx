@@ -505,17 +505,26 @@ export function BasicGoogleMap({
           scaledSize: iconSize,
           anchor: iconAnchor,
         },
-        title: m.title || (m.type === 'cluster' ? `Cluster ${m.count}` : `Propiedad ${m.id}`),
+        title: m.type === 'cluster'
+          ? `${m.count} propiedades - Clic para acercar`
+          : (m.title || `Propiedad ${m.id}`),
+        cursor: 'pointer',
         optimized: false,
         zIndex,
       });
 
       // Event listener para clic
-      if (onMarkerClickRef.current) {
-        marker.addListener('click', () => {
-          onMarkerClickRef.current?.(m.id);
-        });
-      }
+      marker.addListener('click', () => {
+        // ✅ Si es un cluster del backend, hacer zoom al área
+        if (m.type === 'cluster') {
+          const currentZoom = map.getZoom() || 5;
+          map.setCenter(position);
+          map.setZoom(Math.min(currentZoom + 3, 15));
+          return;
+        }
+        // Para propiedades individuales, llamar al callback
+        onMarkerClickRef.current?.(m.id);
+      });
 
       markerRefs.current.set(m.id, marker);
       newMarkers.push(marker);

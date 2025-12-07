@@ -147,17 +147,19 @@ export const useTiledMap = (
       const startTime = performance.now();
 
       // 🔥 Construir objeto de filtros en formato JSONB sin incluir campos null/undefined
+      // ⚠️ IMPORTANTE: Los nombres deben coincidir EXACTAMENTE con los que espera get_map_tiles SQL
       const filtersJson: Record<string, any> = {};
-      if (filters?.estado) filtersJson.state = filters.estado;
-      if (filters?.municipio) filtersJson.municipality = filters.municipio;
+      if (filters?.estado) filtersJson.estado = filters.estado;
+      if (filters?.municipio) filtersJson.municipio = filters.municipio;
       if (filters?.listingType) filtersJson.listingType = filters.listingType;
+      // SQL espera propertyType como array JSONB
       if (filters?.tipo && typeof filters.tipo === 'string') {
-        filtersJson.propertyType = filters.tipo;
+        filtersJson.propertyType = [filters.tipo];
       }
       if (filters?.precioMin) filtersJson.minPrice = filters.precioMin;
       if (filters?.precioMax) filtersJson.maxPrice = filters.precioMax;
-      if (filters?.recamaras) filtersJson.minBedrooms = parseInt(filters.recamaras);
-      if (filters?.banos) filtersJson.minBathrooms = parseInt(filters.banos);
+      if (filters?.recamaras) filtersJson.bedrooms = parseInt(filters.recamaras);
+      if (filters?.banos) filtersJson.bathrooms = parseInt(filters.banos);
 
       if (isDebug) {
         console.log('[KENTRA MAP] Cargando tiles', {
