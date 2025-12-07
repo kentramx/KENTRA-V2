@@ -5,6 +5,7 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMapSearch, MIN_ZOOM_FOR_TILES } from '@/hooks/useMapSearch';
+import { usePropertiesInfinite } from '@/hooks/usePropertiesInfinite';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
 import { buildPropertyFilters } from '@/utils/buildPropertyFilters';
 import type { PropertySummary } from '@/types/property';
@@ -38,6 +39,7 @@ import { SEOHead } from '@/components/SEOHead';
 import { generateSearchTitle, generateSearchDescription } from '@/utils/seo';
 import { generatePropertyListStructuredData } from '@/utils/structuredData';
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
+import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
 import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/property';
 import type { ViewportBounds } from '@/hooks/useMapSearch';
@@ -197,6 +199,17 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     viewportBounds,
   });
 
+  // ============================================================================
+  // PAGINACIÓN INFINITA PARA LA LISTA
+  // ============================================================================
+  const {
+    properties: listPropertiesRaw,
+    totalCount: listTotalCount,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: listLoading,
+  } = usePropertiesInfinite(propertyFilters);
 
   // Aliases para compatibilidad con código existente
   const viewportProperties = mapProperties;
@@ -204,8 +217,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const mapLoading = loading;
   const viewportDebugReason = debugReason;
 
-  // Total de propiedades para mostrar en UI
-  const actualTotal = totalCount;
+  // Total de propiedades viene de usePropertiesInfinite
+  const actualTotal = listTotalCount;
 
   // ============================================================================
   // FUENTE DE DATOS UNIFICADA PARA LISTA DE PROPIEDADES
@@ -267,11 +280,18 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   // ============================================================================
   // 4️⃣ LISTA FINAL PARA RENDERIZADO
   // ============================================================================
-  // La lista muestra TODAS las propiedades del viewport actual.
-  // El límite de propiedades se controla en el backend (MAX_PROPERTIES_PER_TILE = 1000)
-  // Si hay demasiadas, el usuario puede hacer zoom para filtrar geográficamente.
+  // REGLA DE NEGOCIO:
+  // - Si viewport activo (usuario navega el mapa) → usa propiedades del viewport (sin límite artificial)
+  // - Si NO hay viewport activo → usa propiedades de infinite scroll
   // ============================================================================
-  const listProperties = sortedProperties;
+  const listProperties = useMemo(() => {
+    if (isViewportActive && properties.length > 0) {
+      // Modo mapa: mostrar TODAS las propiedades del viewport (límite controlado en backend)
+      return sortedProperties;
+    }
+    // Modo lista: usar infinite scroll
+    return listPropertiesRaw;
+  }, [isViewportActive, properties.length, sortedProperties, listPropertiesRaw]);
   
   // Estado para guardar coordenadas de la ubicación buscada
   const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
@@ -1676,7 +1696,16 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 
             {/* Lista de propiedades con resultados */}
             {!searchError && listProperties.length > 0 && (
-              <div className="space-y-4">
+              <InfiniteScrollContainer
+                onLoadMore={() => {
+                  if (!isViewportActive && hasNextPage && !isFetching) {
+                    fetchNextPage();
+                  }
+                }}
+                hasMore={!!hasNextPage}
+                isLoading={isFetchingNextPage}
+                className="space-y-4"
+              >
                 {/* Contador de resultados */}
                 <div className="px-4 pt-2 pb-1 text-sm text-muted-foreground">
                   {hasTooManyResults ? (
@@ -1697,7 +1726,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 
                 <SearchResultsList
                   properties={listProperties}
-                  isLoading={loading && properties.length === 0}
+                  isLoading={(loading || listLoading) && listProperties.length === 0}
                   listingType={filters.listingType}
                   onPropertyClick={handlePropertyClick}
                   onPropertyHover={handlePropertyHoverFromList}
@@ -1709,7 +1738,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                   highlightedPropertyId={selectedPropertyFromMap}
                   scrollToPropertyId={selectedPropertyFromMap}
                 />
-              </div>
+              </InfiniteScrollContainer>
             )}
 
             {/* Búsquedas guardadas expandido */}

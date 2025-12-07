@@ -223,6 +223,11 @@ export function BasicGoogleMap({
   // 🎯 Estado anterior de markers para diffing
   const previousMarkersRef = useRef<Map<string, MapMarker>>(new Map());
 
+  // 🔒 Refs para evitar re-inicialización del mapa al cambiar props
+  const initialZoomRef = useRef(zoom);
+  const initialCenterRef = useRef(center);
+  const mapInitializedRef = useRef(false);
+
   // 🎯 Firma estable del set de IDs clusterizables (solo properties)
   const clusterSignature = useMemo(() => {
     const ids: string[] = [];
@@ -246,6 +251,11 @@ export function BasicGoogleMap({
     let mounted = true;
     
     const init = async () => {
+      // 🔒 Si el mapa ya fue inicializado, NO re-inicializar
+      if (mapInitializedRef.current && mapRef.current) {
+        return;
+      }
+      
       if (!containerRef.current) return;
       
       try {
@@ -261,8 +271,8 @@ export function BasicGoogleMap({
         }
 
         mapRef.current = new google.maps.Map(containerRef.current, {
-          center,
-          zoom,
+          center: initialCenterRef.current,  // usar ref en lugar de prop
+          zoom: initialZoomRef.current,      // usar ref en lugar de prop
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
@@ -276,6 +286,8 @@ export function BasicGoogleMap({
             strictBounds: false,
           },
         });
+        
+        mapInitializedRef.current = true;
 
         // Setup bounds changed listener with debounce
         if (onBoundsChanged && mapRef.current) {
@@ -340,7 +352,7 @@ export function BasicGoogleMap({
     
     init();
     return () => { mounted = false; };
-  }, [center.lat, center.lng, zoom, onReady, onBoundsChanged, onMapError]);
+  }, [onReady, onBoundsChanged, onMapError]);
 
   // ✅ Renderizar pastillas de precios estilo Zillow (OPTIMIZADO con diffing)
   useEffect(() => {
