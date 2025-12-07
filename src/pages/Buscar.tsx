@@ -38,7 +38,6 @@ import { SEOHead } from '@/components/SEOHead';
 import { generateSearchTitle, generateSearchDescription } from '@/utils/seo';
 import { generatePropertyListStructuredData } from '@/utils/structuredData';
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
-import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
 import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/property';
 import type { ViewportBounds } from '@/hooks/useMapSearch';
@@ -87,9 +86,24 @@ const Buscar = () => {
   
   // ✅ Estado para sincronizar clic en mapa con tarjeta de lista
   const [selectedPropertyFromMap, setSelectedPropertyFromMap] = useState<string | null>(null);
-  
+
+  // ✅ Estado para centrar el mapa cuando se hace clic en lista
+  const [centerMapOnCoords, setCenterMapOnCoords] = useState<{ lat: number; lng: number } | null>(null);
+
   // 🗺️ Estado para los límites del viewport del mapa
-  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
+  // ✅ Inicializar con bounds de México para evitar mapa vacío al inicio
+  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(() => {
+    // Bounds iniciales: Vista general de México
+    // Se actualizarán cuando el mapa dispare onBoundsChanged
+    return {
+      minLat: 14.53,
+      maxLat: 32.72,
+      minLng: -118.40,
+      maxLng: -86.70,
+      zoom: 5,
+      center: { lat: 23.6345, lng: -102.5528 }
+    };
+  });
   
 // Rangos para VENTA (en millones)
 const SALE_MIN_PRICE = 0;
@@ -183,15 +197,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     viewportBounds,
   });
 
-  // 🔍 DEBUG: Log temporal para diagnóstico
-  console.log('DEBUG useMapSearch:', {
-    viewportBounds,
-    propertiesCount: properties.length,
-    clustersCount: clusters.length,
-    isLoading: loading,
-    debugReason,
-    error: searchError
-  });
 
   // Aliases para compatibilidad con código existente
   const viewportProperties = mapProperties;
@@ -199,9 +204,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const mapLoading = loading;
   const viewportDebugReason = debugReason;
 
-  // Variables de paginación (useMapSearch no tiene infinite scroll)
-  const hasNextPage = false;
-  const fetchNextPage = () => {};
+  // Total de propiedades para mostrar en UI
   const actualTotal = totalCount;
 
   // ============================================================================
@@ -264,21 +267,11 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   // ============================================================================
   // 4️⃣ LISTA FINAL PARA RENDERIZADO
   // ============================================================================
-  // REGLA DE NEGOCIO:
-  // 1. Si el mapa tiene propiedades visibles en el viewport → la lista muestra
-  //    esas propiedades (limitadas a 50 para rendimiento).
-  // 2. Si el mapa aún no devuelve propiedades (ej. primera carga, zoom muy 
-  //    lejano, área sin propiedades) → la lista muestra las propiedades 
-  //    filtradas globales (sin límite, con infinite scroll).
-  //
-  // Esta lógica asegura que:
-  // - La lista siempre muestra algo relevante (no pantalla vacía)
-  // - Cuando el usuario navega el mapa, la lista se sincroniza automáticamente
-  // - Los filtros se aplican consistentemente en ambos modos (global/viewport)
+  // La lista muestra TODAS las propiedades del viewport actual.
+  // El límite de propiedades se controla en el backend (MAX_PROPERTIES_PER_TILE = 1000)
+  // Si hay demasiadas, el usuario puede hacer zoom para filtrar geográficamente.
   // ============================================================================
-  const listProperties = isViewportActive
-    ? sortedProperties.slice(0, 50)
-    : sortedProperties;
+  const listProperties = sortedProperties;
   
   // Estado para guardar coordenadas de la ubicación buscada
   const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
@@ -295,14 +288,22 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     }
   }, [searchParams]);
   
-  // Función para abrir Sheet
+  // Función para abrir Sheet y centrar mapa
   const handlePropertyClick = useCallback((id: string) => {
     setSelectedPropertyId(id);
     setSheetOpen(true);
     const newParams = new URLSearchParams(searchParams);
     newParams.set('propiedad', id);
     setSearchParams(newParams, { replace: true });
-  }, [searchParams, setSearchParams]);
+
+    // ✅ Buscar coordenadas de la propiedad y centrar mapa
+    const property = properties.find(p => p.id === id);
+    if (property?.lat && property?.lng) {
+      setCenterMapOnCoords({ lat: property.lat, lng: property.lng });
+      // Limpiar después de un tiempo para permitir futuras centraciones
+      setTimeout(() => setCenterMapOnCoords(null), 1000);
+    }
+  }, [searchParams, setSearchParams, properties]);
   
   // Función para cerrar Sheet
   const handleCloseSheet = () => {
@@ -1575,6 +1576,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 height="100%"
                 onMapError={setMapError}
                 onVisibleCountChange={setMapVisibleCount}
+                hoveredPropertyId={hoveredProperty?.id}
+                centerOnCoordinates={centerMapOnCoords}
                 debugViewportReason={viewportDebugReason}
                 debugViewportBounds={viewportBounds}
               />
@@ -1673,35 +1676,21 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 
             {/* Lista de propiedades con resultados */}
             {!searchError && listProperties.length > 0 && (
-              <InfiniteScrollContainer
-                onLoadMore={() => {
-                  if (!isViewportActive && hasNextPage && !isFetching) {
-                    fetchNextPage();
-                  }
-                }}
-                hasMore={!!hasNextPage}
-                isLoading={isFetching}
-                className="space-y-4"
-              >
+              <div className="space-y-4">
                 {/* Contador de resultados */}
                 <div className="px-4 pt-2 pb-1 text-sm text-muted-foreground">
-                  {isViewportActive ? (
+                  {hasTooManyResults ? (
                     <p>
-                      Mostrando <span className="font-medium text-foreground">{listProperties.length}</span>{' '}
-                      {listProperties.length >= 50 && 'de 50+'} propiedades en el mapa actual
-                    </p>
-                  ) : hasTooManyResults ? (
-                    <p>
-                      Mostrando <span className="font-medium text-foreground">{properties.length}</span> de{' '}
-                      <span className="font-medium text-foreground">{actualTotal}+</span> resultados.{' '}
+                      Mostrando <span className="font-medium text-foreground">{listProperties.length}</span> de{' '}
+                      <span className="font-medium text-foreground">{actualTotal}+</span> propiedades.{' '}
                       <span className="text-amber-600 dark:text-amber-500">
-                        Refina tus filtros para ver todos.
+                        Acerca el mapa o usa filtros para ver menos resultados.
                       </span>
                     </p>
                   ) : (
                     <p>
-                      Mostrando <span className="font-medium text-foreground">{properties.length}</span> de{' '}
-                      <span className="font-medium text-foreground">{actualTotal}</span> resultados
+                      <span className="font-medium text-foreground">{listProperties.length}</span>{' '}
+                      {listProperties.length === 1 ? 'propiedad encontrada' : 'propiedades encontradas'}
                     </p>
                   )}
                 </div>
@@ -1720,20 +1709,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                   highlightedPropertyId={selectedPropertyFromMap}
                   scrollToPropertyId={selectedPropertyFromMap}
                 />
-
-                {/* Botón fallback para cargar más si IntersectionObserver falla */}
-                {!isViewportActive && hasNextPage && !isFetching && (
-                  <div className="flex justify-center py-4 px-4">
-                    <Button 
-                      onClick={() => fetchNextPage()} 
-                      variant="outline"
-                      size="lg"
-                    >
-                      Cargar más propiedades
-                    </Button>
-                  </div>
-                )}
-              </InfiniteScrollContainer>
+              </div>
             )}
 
             {/* Búsquedas guardadas expandido */}

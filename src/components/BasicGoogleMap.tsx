@@ -190,6 +190,10 @@ interface BasicGoogleMapProps {
     center: { lat: number; lng: number };
   }) => void;
   onMapError?: (error: Error) => void;
+  // ✅ Hover sync: ID del marker a resaltar
+  hoveredMarkerId?: string | null;
+  // ✅ Click sync: centrar mapa en estas coordenadas
+  centerOnCoordinates?: { lat: number; lng: number } | null;
 }
 
 export function BasicGoogleMap({
@@ -204,6 +208,8 @@ export function BasicGoogleMap({
   disableAutoFit = false,
   onBoundsChanged,
   onMapError,
+  hoveredMarkerId,
+  centerOnCoordinates,
 }: BasicGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -646,6 +652,49 @@ export function BasicGoogleMap({
     }
 
   }, [mapReady, enableClustering, markers, clusterSignature]);
+
+  // ✅ Hover sync: resaltar marker cuando hoveredMarkerId cambia
+  useEffect(() => {
+    if (!mapReady || !hoveredMarkerId) return;
+
+    const marker = markerRefs.current.get(hoveredMarkerId);
+    if (!marker) return;
+
+    // Guardar zIndex original y aumentarlo
+    const originalZIndex = marker.getZIndex() || 1;
+    marker.setZIndex(1000);
+
+    // Agregar animación de bounce
+    marker.setAnimation(google.maps.Animation.BOUNCE);
+
+    // Detener bounce después de 700ms (1 bounce completo)
+    const bounceTimeout = setTimeout(() => {
+      marker.setAnimation(null);
+    }, 700);
+
+    // Cleanup: restaurar estado original
+    return () => {
+      clearTimeout(bounceTimeout);
+      marker.setAnimation(null);
+      marker.setZIndex(originalZIndex);
+    };
+  }, [hoveredMarkerId, mapReady]);
+
+  // ✅ Click sync: centrar mapa cuando centerOnCoordinates cambia
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !centerOnCoordinates) return;
+
+    const { lat, lng } = centerOnCoordinates;
+
+    // Centrar mapa con animación suave
+    mapRef.current.panTo({ lat, lng });
+
+    // Hacer zoom si está muy lejos
+    const currentZoom = mapRef.current.getZoom() || 5;
+    if (currentZoom < 14) {
+      mapRef.current.setZoom(14);
+    }
+  }, [centerOnCoordinates, mapReady]);
 
   if (error) {
     return (

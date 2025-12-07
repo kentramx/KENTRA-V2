@@ -54,7 +54,13 @@ interface SearchMapProps {
   height?: string;
   onMapError?: (error: string) => void;
   onVisibleCountChange?: (count: number) => void;
-  
+
+  // ✅ Hover sync: resaltar marker cuando usuario pasa mouse sobre lista
+  hoveredPropertyId?: string | null;
+
+  // ✅ Click sync: centrar mapa cuando usuario hace clic en lista
+  centerOnCoordinates?: { lat: number; lng: number } | null;
+
   // 🔍 Props de debug para diagnóstico de viewport
   debugViewportReason?: string | null;
   debugViewportBounds?: ViewportBounds | null;
@@ -71,6 +77,8 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   height = '100%',
   onMapError,
   onVisibleCountChange,
+  hoveredPropertyId,
+  centerOnCoordinates,
   debugViewportReason,
   debugViewportBounds,
 }) => {
@@ -233,6 +241,8 @@ const mapZoom = useMemo(() => {
         onMarkerClick={handleMarkerClickInternal}
         disableAutoFit={true}
         onMapError={handleMapError}
+        hoveredMarkerId={hoveredPropertyId}
+        centerOnCoordinates={centerOnCoordinates}
       />
 
       {/* 🔍 Debug overlay - controlled by window.__KENTRA_MAP_DEBUG__ */}
