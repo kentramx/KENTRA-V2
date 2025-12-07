@@ -183,6 +183,16 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     viewportBounds,
   });
 
+  // 🔍 DEBUG: Log temporal para diagnóstico
+  console.log('DEBUG useMapSearch:', {
+    viewportBounds,
+    propertiesCount: properties.length,
+    clustersCount: clusters.length,
+    isLoading: loading,
+    debugReason,
+    error: searchError
+  });
+
   // Aliases para compatibilidad con código existente
   const viewportProperties = mapProperties;
   const viewportClusters = clusters;
