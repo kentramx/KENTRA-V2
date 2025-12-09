@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DynamicBreadcrumbs } from "@/components/DynamicBreadcrumbs";
 import { PropertyImageGallery } from "@/components/PropertyImageGallery";
-import { PropertyMap } from "@/components/PropertyMap";
+// PropertyMap eliminado - Google Maps removido
 import PropertyCard from "@/components/PropertyCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SEOHead } from "@/components/SEOHead";
@@ -898,18 +898,21 @@ const PropertyDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Location Map */}
+            {/* Ubicación - Mapa desactivado temporalmente */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Ubicación</CardTitle>
               </CardHeader>
               <CardContent>
-                <PropertyMap
-                  lat={property.lat}
-                  lng={property.lng}
-                  address={`${property.address}, ${property.municipality}, ${property.state}`}
-                  height="400px"
-                />
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="h-5 w-5" />
+                  <span>{property.address}, {property.municipality}, {property.state}</span>
+                </div>
+                {property.lat && property.lng && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Coordenadas: {property.lat.toFixed(6)}, {property.lng.toFixed(6)}
+                  </p>
+                )}
               </CardContent>
             </Card>
 

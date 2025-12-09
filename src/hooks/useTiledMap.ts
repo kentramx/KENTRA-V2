@@ -163,7 +163,12 @@ export const useTiledMap = (
             });
           }
         }
-        return { clusters: [], properties: [] };
+        return {
+          clusters: [],
+          properties: [],
+          totalCount: 0,
+          hasMore: false,
+        } as TileDataResult;
       }
 
       const startTime = performance.now();
