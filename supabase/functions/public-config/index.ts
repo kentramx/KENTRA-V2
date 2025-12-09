@@ -24,12 +24,9 @@ Deno.serve(async (req) => {
     // Optional: ensure user session exists (not strictly required for public config)
     const { data: { user } } = await supabaseClient.auth.getUser();
 
-    // Mapbox token will be added in FASE 2 if needed from backend
-
     return new Response(
       JSON.stringify({
         authenticated: !!user,
-        // Future: add mapboxToken here if needed from backend secrets
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
