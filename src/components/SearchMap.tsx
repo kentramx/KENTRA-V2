@@ -34,10 +34,10 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BasicGoogleMap } from '@/components/BasicGoogleMap';
-import { ViewportBounds, MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE } from '@/hooks/useMapSearch';
+import { ViewportBounds, MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE, CLUSTER_ZOOM_THRESHOLD } from '@/hooks/useMapSearch';
 import type { MapProperty, PropertyFilters, PropertySummary } from '@/types/property';
 import { monitoring } from '@/lib/monitoring';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, ZoomIn, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // 🔧 Debug flag controlado para logs de diagnóstico
@@ -64,6 +64,10 @@ interface SearchMapProps {
   // 🔍 Props de debug para diagnóstico de viewport
   debugViewportReason?: string | null;
   debugViewportBounds?: ViewportBounds | null;
+
+  // ✅ Nuevas props para UX mejorada
+  totalCount?: number;
+  hasTooManyResults?: boolean;
 }
 
 export const SearchMap: React.FC<SearchMapProps> = ({
@@ -81,6 +85,8 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   centerOnCoordinates,
   debugViewportReason,
   debugViewportBounds,
+  totalCount,
+  hasTooManyResults,
 }) => {
   const navigate = useNavigate();
   const [mapError, setMapError] = useState<string | null>(null);
@@ -175,11 +181,12 @@ export const SearchMap: React.FC<SearchMapProps> = ({
   }, [searchCoordinates]);
 
 
-// ✅ Zoom del mapa - más cercano cuando hay búsqueda específica
+// ✅ Zoom del mapa estilo Zillow - más cercano cuando hay búsqueda específica
 const mapZoom = useMemo(() => {
-  // Cuando hay coordenadas de búsqueda (ciudad/zona), usar zoom más cercano
+  // Cuando hay coordenadas de búsqueda (ciudad/zona), usar zoom que muestre propiedades individuales
+  // Zoom 14 = muestra píldoras de precio directamente (threshold es 13)
   if (searchCoordinates) {
-    return 12;
+    return 14;
   }
   // Vista nivel país por defecto
   return 5;
@@ -287,6 +294,29 @@ const mapZoom = useMemo(() => {
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Cargando propiedades en el mapa...</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 📍 Indicador de zoom bajo - sugerir acercar el mapa */}
+      {!isLoading && debugViewportBounds && debugViewportBounds.zoom < CLUSTER_ZOOM_THRESHOLD && clusters.length > 0 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+          <div className="flex items-center gap-2 bg-black/80 text-white px-4 py-2 rounded-full shadow-lg text-sm">
+            <ZoomIn className="h-4 w-4" />
+            <span>Acerca el mapa para ver propiedades individuales</span>
+          </div>
+        </div>
+      )}
+
+      {/* ⚠️ Indicador de muchos resultados */}
+      {!isLoading && hasTooManyResults && properties.length > 0 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+          <div className="flex items-center gap-2 bg-amber-500/90 text-white px-4 py-2 rounded-full shadow-lg text-sm">
+            <Info className="h-4 w-4" />
+            <span>
+              Mostrando {properties.length} de {totalCount || 'muchas'} propiedades
+              {totalCount && totalCount > properties.length && ' - Acerca el mapa o usa filtros'}
+            </span>
           </div>
         </div>
       )}

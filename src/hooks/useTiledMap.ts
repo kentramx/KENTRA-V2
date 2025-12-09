@@ -43,7 +43,7 @@ import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-quer
 import { supabase } from '@/integrations/supabase/client';
 import type { MapProperty, PropertyCluster, PropertyFilters, PropertyStatus } from '@/types/property';
 import { monitoring } from '@/lib/monitoring';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 
 export interface ViewportBounds {
@@ -56,64 +56,86 @@ export interface ViewportBounds {
 
 // 🔒 Límites de seguridad para escalabilidad (optimizado estilo Zillow)
 export const MIN_ZOOM_FOR_TILES = 3;          // No hacer queries cuando el zoom está demasiado lejos (país, mundo completo)
-export const MAX_PROPERTIES_PER_TILE = 1000;  // ✅ Límite optimizado: 1000 marcadores para rendimiento fluido (-80% DOM)
+export const MAX_PROPERTIES_PER_TILE = 500;   // ✅ Límite estilo Zillow: 500 marcadores máximo
+export const CLUSTER_ZOOM_THRESHOLD = 13;     // ✅ Zoom >= 13 muestra propiedades, < 13 muestra clusters
+
+// Resultado extendido con metadatos
+export interface TileDataResult {
+  properties: MapProperty[];
+  clusters: PropertyCluster[];
+  totalCount: number;
+  hasMore: boolean;
+}
 
 export const useTiledMap = (
   bounds: ViewportBounds | null,
   filters?: PropertyFilters
 ) => {
   const queryClient = useQueryClient();
+  const lastPrefetchRef = useRef<string>('');
 
   // 🔍 Flag debug dinámico para habilitar queries en zoom bajo SOLO en debug
   const isDebugEnabled =
     typeof window !== 'undefined' &&
     (window as any).__KENTRA_MAP_DEBUG__ === true;
 
-  // 🚫 Prefetch DESACTIVADO temporalmente para optimizar red (causaba 9 requests simultáneos)
-  // useEffect(() => {
-  //   if (!bounds) return;
-  //   if (bounds.zoom < MIN_ZOOM_FOR_TILES) return;
-  //   const prefetchAdjacentTiles = async () => {
-  //     const { minLng, minLat, maxLng, maxLat, zoom } = bounds;
-  //     const lngSpan = maxLng - minLng;
-  //     const latSpan = maxLat - minLat;
-  //     const adjacentBounds = [
-  //       { minLng, minLat: maxLat, maxLng, maxLat: maxLat + latSpan },
-  //       { minLng, minLat: minLat - latSpan, maxLng, maxLat: minLat },
-  //       { minLng: minLng - lngSpan, minLat, maxLng: minLng, maxLat },
-  //       { minLng: maxLng, minLat, maxLng: maxLng + lngSpan, maxLat },
-  //       { minLng: minLng - lngSpan, minLat: maxLat, maxLng: minLng, maxLat: maxLat + latSpan },
-  //       { minLng: maxLng, minLat: maxLat, maxLng: maxLng + lngSpan, maxLat: maxLat + latSpan },
-  //       { minLng: minLng - lngSpan, minLat: minLat - latSpan, maxLng: minLng, maxLat: minLat },
-  //       { minLng: maxLng, minLat: minLat - latSpan, maxLng: maxLng + lngSpan, maxLat: minLat },
-  //     ];
-  //     adjacentBounds.forEach((adjBounds) => {
-  //       const filtersJson: Record<string, any> = {};
-  //       if (filters?.estado) filtersJson.state = filters.estado;
-  //       if (filters?.municipio) filtersJson.municipality = filters.municipio;
-  //       if (filters?.listingType) filtersJson.listingType = filters.listingType;
-  //       if (filters?.tipo && typeof filters.tipo === 'string') filtersJson.propertyType = filters.tipo;
-  //       if (filters?.precioMin) filtersJson.minPrice = filters.precioMin;
-  //       if (filters?.precioMax) filtersJson.maxPrice = filters.precioMax;
-  //       if (filters?.recamaras) filtersJson.minBedrooms = parseInt(filters.recamaras);
-  //       if (filters?.banos) filtersJson.minBathrooms = parseInt(filters.banos);
-  //       queryClient.prefetchQuery({
-  //         queryKey: ['map-tiles', adjBounds, filters],
-  //         queryFn: async () => {
-  //           const { data } = await supabase.rpc('get_map_tiles', {
-  //             p_min_lng: adjBounds.minLng, p_min_lat: adjBounds.minLat,
-  //             p_max_lng: adjBounds.maxLng, p_max_lat: adjBounds.maxLat,
-  //             p_zoom: zoom, p_filters: filtersJson,
-  //           });
-  //           return data;
-  //         },
-  //         staleTime: 5 * 60 * 1000,
-  //       });
-  //     });
-  //   };
-  //   const timer = setTimeout(prefetchAdjacentTiles, 500);
-  //   return () => clearTimeout(timer);
-  // }, [bounds, filters, queryClient]);
+  // ✅ Prefetch INTELIGENTE: Solo 2 tiles adyacentes (arriba y abajo)
+  // Optimizado para navegación típica del usuario (scroll vertical)
+  useEffect(() => {
+    if (!bounds) return;
+    if (bounds.zoom < MIN_ZOOM_FOR_TILES) return;
+
+    const boundsKey = `${bounds.minLat.toFixed(3)}-${bounds.maxLat.toFixed(3)}-${bounds.zoom}`;
+    if (lastPrefetchRef.current === boundsKey) return; // Evitar prefetch duplicado
+
+    const prefetchAdjacentTiles = async () => {
+      const { minLng, minLat, maxLng, maxLat, zoom } = bounds;
+      const latSpan = maxLat - minLat;
+
+      // Solo prefetch arriba y abajo (navegación más común)
+      const adjacentBounds = [
+        { minLng, minLat: maxLat, maxLng, maxLat: maxLat + latSpan, zoom }, // Arriba
+        { minLng, minLat: minLat - latSpan, maxLng, maxLat: minLat, zoom }, // Abajo
+      ];
+
+      const filtersJson: Record<string, any> = {};
+      if (filters?.estado) filtersJson.estado = filters.estado;
+      if (filters?.municipio) filtersJson.municipio = filters.municipio;
+      if (filters?.colonia) filtersJson.colonia = filters.colonia;
+      if (filters?.listingType) filtersJson.listingType = filters.listingType;
+      if (filters?.tipo && typeof filters.tipo === 'string') {
+        filtersJson.propertyType = [filters.tipo];
+      }
+      if (filters?.precioMin) filtersJson.minPrice = filters.precioMin;
+      if (filters?.precioMax) filtersJson.maxPrice = filters.precioMax;
+      if (filters?.recamaras) filtersJson.bedrooms = parseInt(filters.recamaras);
+      if (filters?.banos) filtersJson.bathrooms = parseInt(filters.banos);
+
+      adjacentBounds.forEach((adjBounds) => {
+        queryClient.prefetchQuery({
+          queryKey: ['map-tiles', adjBounds, filters],
+          queryFn: async () => {
+            const { data } = await supabase.rpc('get_map_tiles', {
+              p_min_lng: adjBounds.minLng,
+              p_min_lat: adjBounds.minLat,
+              p_max_lng: adjBounds.maxLng,
+              p_max_lat: adjBounds.maxLat,
+              p_zoom: zoom,
+              p_filters: filtersJson,
+            });
+            return data;
+          },
+          staleTime: 5 * 60 * 1000,
+        });
+      });
+
+      lastPrefetchRef.current = boundsKey;
+    };
+
+    // Delay de 800ms para evitar prefetch durante navegación rápida
+    const timer = setTimeout(prefetchAdjacentTiles, 800);
+    return () => clearTimeout(timer);
+  }, [bounds, filters, queryClient]);
 
   return useQuery({
     queryKey: ['map-tiles', bounds, filters],
@@ -210,7 +232,7 @@ export const useTiledMap = (
             filtersJson,
           });
         }
-        return { clusters: [], properties: [] };
+        return { clusters: [], properties: [], totalCount: 0, hasMore: false };
       }
 
       // 🔄 Procesar respuesta: data tiene clusters o properties directamente
@@ -218,14 +240,18 @@ export const useTiledMap = (
       const clusters: PropertyCluster[] = [];
       const properties: MapProperty[] = [];
 
+      // ✅ Extraer metadatos del backend (nuevos campos)
+      const totalCount = result.total_count ?? 0;
+      const hasMore = result.has_more ?? false;
+
       // ✅ Procesar properties si vienen (aunque estén vacías)
       if (result.properties && Array.isArray(result.properties)) {
         result.properties.forEach((prop: any) => {
           if (!prop.lat || !prop.lng) return;
           properties.push({
-            id: prop.id, title: prop.title, price: prop.price, currency: 'MXN',
+            id: prop.id, title: prop.title, price: prop.price, currency: prop.currency || 'MXN',
             lat: Number(prop.lat), lng: Number(prop.lng),
-            type: prop.property_type, listing_type: prop.listing_type,
+            type: prop.type, listing_type: prop.listing_type,
             bedrooms: prop.bedrooms, bathrooms: prop.bathrooms,
             parking: prop.parking, sqft: prop.sqft,
             municipality: prop.municipality, state: prop.state,
@@ -264,26 +290,18 @@ export const useTiledMap = (
         });
       }
 
-      // 🔒 Hard cap de seguridad: evitar saturar el frontend
-      if (properties.length > MAX_PROPERTIES_PER_TILE) {
-        monitoring.warn('[useTiledMap] Demasiadas propiedades en un solo tile, recortando resultados', {
-          zoom: bounds.zoom,
-          total: properties.length,
-          limit: MAX_PROPERTIES_PER_TILE,
-        });
-        properties.length = MAX_PROPERTIES_PER_TILE;
-      }
-
       if (isDebug) {
         console.log('[KENTRA MAP] Tiles procesados', {
           zoom: bounds.zoom,
           clusters: clusters.length,
           properties: properties.length,
+          totalCount,
+          hasMore,
           loadTimeMs: Math.round(loadTime)
         });
       }
 
-      return { clusters, properties };
+      return { clusters, properties, totalCount, hasMore } as TileDataResult;
     },
   });
 };

@@ -463,9 +463,11 @@ export function BasicGoogleMap({
       // ✅ Solo filtrar por precio si es property
       if (m.type === 'property' && (!m.price || m.price <= 0)) continue;
       
-      // 🎯 Lógica de Zoom: obtener zoom actual del mapa
+      // 🎯 Lógica de Zoom estilo Zillow:
+      // - Zoom >= 14: Píldoras de precio (detalle)
+      // - Zoom < 14: Puntos simples (mejor rendimiento)
       const currentMapZoom = map.getZoom() || zoom;
-      const showPrice = currentMapZoom >= 12;
+      const showPrice = currentMapZoom >= 14;
       
       let svg: string;
       let iconSize: google.maps.Size;
@@ -648,14 +650,16 @@ export function BasicGoogleMap({
       clustererRef.current = new MarkerClusterer({
         map,
         markers: markersToCluster,
-        algorithm: new GridAlgorithm({ 
-          maxZoom: 15,
-          gridSize: 60,
-          maxDistance: 30000,
+        algorithm: new GridAlgorithm({
+          // ✅ Estilo Zillow: maxZoom más alto para evitar clustering innecesario
+          maxZoom: 16,
+          gridSize: 80,
+          maxDistance: 40000,
         }),
         onClusterClick: (_, cluster, map) => {
+          // ✅ Zoom más agresivo al hacer clic en cluster
           map.setCenter(cluster.position);
-          map.setZoom(Math.min((map.getZoom() || 5) + 3, 15));
+          map.setZoom(Math.min((map.getZoom() || 5) + 4, 17));
         },
         renderer: customRenderer,
       });

@@ -1606,6 +1606,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 centerOnCoordinates={centerMapOnCoords}
                 debugViewportReason={viewportDebugReason}
                 debugViewportBounds={viewportBounds}
+                totalCount={totalCount}
+                hasTooManyResults={hasTooManyResults}
               />
             )}
           </div>

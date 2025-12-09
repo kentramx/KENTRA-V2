@@ -12,17 +12,19 @@
  */
 
 import { useMemo } from 'react';
-import { 
-  useTiledMap, 
-  MIN_ZOOM_FOR_TILES, 
-  MAX_PROPERTIES_PER_TILE 
+import {
+  useTiledMap,
+  MIN_ZOOM_FOR_TILES,
+  MAX_PROPERTIES_PER_TILE,
+  CLUSTER_ZOOM_THRESHOLD,
+  type TileDataResult,
 } from './useTiledMap';
 import type { ViewportBounds } from './useTiledMap';
 import type { PropertyFilters, PropertySummary, MapProperty, PropertyCluster, PropertyImage } from '@/types/property';
 
 // Re-exportar tipos y constantes para consumidores
 export type { ViewportBounds };
-export { MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE };
+export { MIN_ZOOM_FOR_TILES, MAX_PROPERTIES_PER_TILE, CLUSTER_ZOOM_THRESHOLD };
 
 export interface UseMapSearchParams {
   filters: PropertyFilters;
@@ -84,11 +86,11 @@ function mapPropertyToSummary(mp: MapProperty): PropertySummary {
 /**
  * Hook principal - fuente única de verdad para búsqueda
  */
-export function useMapSearch({ 
-  filters, 
-  viewportBounds 
+export function useMapSearch({
+  filters,
+  viewportBounds
 }: UseMapSearchParams): UseMapSearchResult {
-  
+
   // ✅ Usar useTiledMap como única fuente de datos
   const {
     data: tileData,
@@ -111,17 +113,25 @@ export function useMapSearch({
     return mapProperties.map(mapPropertyToSummary);
   }, [mapProperties]);
 
-  // ✅ Calcular total (propiedades individuales + propiedades en clusters)
+  // ✅ Usar totalCount del backend (más preciso que calcular en frontend)
   const totalCount = useMemo(() => {
+    // Si tenemos el total del backend, usarlo
+    if (tileData?.totalCount !== undefined) {
+      return tileData.totalCount;
+    }
+    // Fallback: calcular en frontend
     const propertiesCount = properties.length;
     const clusteredCount = clusters.reduce((acc, c) => acc + (c.property_count || 0), 0);
     return propertiesCount + clusteredCount;
-  }, [properties.length, clusters]);
+  }, [tileData?.totalCount, properties.length, clusters]);
 
-  // ✅ Detectar si hay demasiados resultados
+  // ✅ Detectar si hay demasiados resultados (del backend o heurística)
   const hasTooManyResults = useMemo(() => {
+    // Si el backend nos dice que hay más, confiar en él
+    if (tileData?.hasMore) return true;
+    // Fallback: si llegamos al límite de propiedades
     return mapProperties.length >= MAX_PROPERTIES_PER_TILE;
-  }, [mapProperties.length]);
+  }, [tileData?.hasMore, mapProperties.length]);
 
   // ✅ Razón de debug cuando no hay datos
   const debugReason = useMemo((): string | null => {
