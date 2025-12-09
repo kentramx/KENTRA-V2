@@ -2460,6 +2460,24 @@ export type Database = {
           property_id: string
         }[]
       }
+      get_map_data: {
+        Args: {
+          p_bathrooms_min?: number
+          p_bedrooms_min?: number
+          p_east: number
+          p_listing_type?: string
+          p_municipality?: string
+          p_north: number
+          p_price_max?: number
+          p_price_min?: number
+          p_property_type?: string
+          p_south: number
+          p_state?: string
+          p_west: number
+          p_zoom?: number
+        }
+        Returns: Json
+      }
       get_marketing_metrics: {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
