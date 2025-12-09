@@ -7,8 +7,7 @@ import { MapPin, Loader2, Navigation } from 'lucide-react';
 /**
  * PlaceAutocomplete - Input simple de ubicación
  * 
- * Este componente es un input controlado simple.
- * En FASE 2 se integrará con Mapbox Geocoding API.
+ * Este componente es un input controlado simple para búsqueda de ubicaciones.
  */
 
 export interface PlaceAutocompleteProps {

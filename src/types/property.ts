@@ -113,43 +113,7 @@ export interface PropertySummary {
   created_at: string;
 }
 
-/**
- * Versión para mapas (solo coordenadas y datos básicos)
- */
-export interface MapProperty {
-  id: string;
-  title: string;
-  price: number;
-  currency: string;
-  lat: number;
-  lng: number;
-  type: PropertyType;
-  listing_type: ListingType;
-  bedrooms: number | null;
-  bathrooms: number | null;
-  parking: number | null;
-  sqft: number | null;
-  address: string;
-  state: string;
-  municipality: string;
-  images: PropertyImage[];
-  agent_id: string;
-  status: PropertyStatus;
-  is_featured: boolean;
-  created_at: string;
-}
-
-/**
- * Versión para clusters en el mapa
- */
-export interface PropertyCluster {
-  cluster_id: string;
-  lat: number;
-  lng: number;
-  property_count: number;
-  avg_price: number;
-  property_ids: string[];
-}
+// Reservado para uso futuro
 
 /**
  * Versión ligera para hover (sin coordenadas)
