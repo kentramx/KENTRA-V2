@@ -6,7 +6,7 @@
  * 
  * IMPORTANTE: Todos los componentes que usen Mapbox deben importar desde aquí.
  * 
- * Build trigger: 2024-12-09 - Force rebuild to pick up VITE_MAPBOX_ACCESS_TOKEN
+ * Build trigger: 2024-12-09T00:55 - Force rebuild with updated VITE_MAPBOX_ACCESS_TOKEN
  */
 
 import mapboxgl from "mapbox-gl";
