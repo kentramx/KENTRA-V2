@@ -1,4 +1,4 @@
-import type { ViewportBounds } from '@/hooks/useTiledMap';
+import type { MapBounds } from '@/types/map';
 
 /**
  * Tipo central unificado para Property
@@ -232,25 +232,29 @@ export type AIModerationStatus =
 
 // ============= FILTROS =============
 
-export interface MapBounds {
-  north: number;
-  south: number;
-  east: number;
-  west: number;
+// Re-exportar MapBounds desde map.ts para compatibilidad
+export type { MapBounds };
+
+// ViewportBounds es ahora MapViewport de map.ts
+export interface ViewportBounds {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
   zoom: number;
 }
 
 export interface PropertyFilters {
   estado?: string;
   municipio?: string;
-  colonia?: string; // ✅ Agregado para búsqueda por colonia
-  tipo?: string; // Acepta string para compatibilidad con filtros existentes
-  listingType?: string; // Acepta string para compatibilidad
+  colonia?: string;
+  tipo?: string;
+  listingType?: string;
   precioMin?: number;
   precioMax?: number;
   recamaras?: string;
   banos?: string;
   status?: string[];
-  orden?: string; // ✅ Agregado para ordenamiento
-  bounds?: ViewportBounds; // ✅ Unificado con el sistema de tiles
+  orden?: string;
+  bounds?: ViewportBounds;
 }
