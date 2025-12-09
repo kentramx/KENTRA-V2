@@ -963,6 +963,59 @@ export type Database = {
           },
         ]
       }
+      pending_payments: {
+        Row: {
+          amount: number
+          checkout_session_id: string
+          completed_at: string | null
+          created_at: string | null
+          currency: string
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          payment_method: string
+          plan_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          checkout_session_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_method: string
+          plan_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          checkout_session_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_method?: string
+          plan_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       phone_verifications: {
         Row: {
           attempts: number
@@ -1482,90 +1535,6 @@ export type Database = {
           },
         ]
       }
-      property_tiles: {
-        Row: {
-          avg_price: number | null
-          bounds: unknown
-          cluster_data: Json | null
-          last_updated: string | null
-          property_count: number | null
-          property_ids: string[] | null
-          tile_key: string
-          x_tile: number
-          y_tile: number
-          zoom: number
-        }
-        Insert: {
-          avg_price?: number | null
-          bounds?: unknown
-          cluster_data?: Json | null
-          last_updated?: string | null
-          property_count?: number | null
-          property_ids?: string[] | null
-          tile_key: string
-          x_tile: number
-          y_tile: number
-          zoom: number
-        }
-        Update: {
-          avg_price?: number | null
-          bounds?: unknown
-          cluster_data?: Json | null
-          last_updated?: string | null
-          property_count?: number | null
-          property_ids?: string[] | null
-          tile_key?: string
-          x_tile?: number
-          y_tile?: number
-          zoom?: number
-        }
-        Relationships: []
-      }
-      property_tiles_cache: {
-        Row: {
-          access_count: number
-          bounds: unknown
-          clusters: Json | null
-          created_at: string
-          expires_at: string
-          filters_hash: string
-          id: string
-          last_accessed_at: string
-          properties: Json | null
-          property_count: number
-          tile_key: string
-          zoom: number
-        }
-        Insert: {
-          access_count?: number
-          bounds: unknown
-          clusters?: Json | null
-          created_at?: string
-          expires_at?: string
-          filters_hash: string
-          id?: string
-          last_accessed_at?: string
-          properties?: Json | null
-          property_count?: number
-          tile_key: string
-          zoom: number
-        }
-        Update: {
-          access_count?: number
-          bounds?: unknown
-          clusters?: Json | null
-          created_at?: string
-          expires_at?: string
-          filters_hash?: string
-          id?: string
-          last_accessed_at?: string
-          properties?: Json | null
-          property_count?: number
-          tile_key?: string
-          zoom?: number
-        }
-        Relationships: []
-      }
       property_views: {
         Row: {
           id: string
@@ -1964,6 +1933,7 @@ export type Database = {
           featured_reset_date: string | null
           featured_used_this_month: number | null
           id: string
+          metadata: Json | null
           plan_id: string
           status: string
           stripe_customer_id: string | null
@@ -1980,6 +1950,7 @@ export type Database = {
           featured_reset_date?: string | null
           featured_used_this_month?: number | null
           id?: string
+          metadata?: Json | null
           plan_id: string
           status?: string
           stripe_customer_id?: string | null
@@ -1996,6 +1967,7 @@ export type Database = {
           featured_reset_date?: string | null
           featured_used_this_month?: number | null
           id?: string
+          metadata?: Json | null
           plan_id?: string
           status?: string
           stripe_customer_id?: string | null
@@ -2319,9 +2291,7 @@ export type Database = {
         Args: { new_role: Database["public"]["Enums"]["app_role"] }
         Returns: Json
       }
-      cleanup_expired_tiles: { Args: never; Returns: number }
       cleanup_old_data: { Args: never; Returns: undefined }
-      cleanup_old_tiles: { Args: { p_days_old?: number }; Returns: number }
       database_health_check: {
         Args: never
         Returns: {
@@ -2490,33 +2460,23 @@ export type Database = {
           property_id: string
         }[]
       }
-      get_map_tiles: {
+      get_map_data: {
         Args: {
-          p_filters?: Json
-          p_max_lat: number
-          p_max_lng: number
-          p_min_lat: number
-          p_min_lng: number
-          p_zoom: number
+          p_bathrooms_min?: number
+          p_bedrooms_min?: number
+          p_east: number
+          p_listing_type?: string
+          p_municipality?: string
+          p_north: number
+          p_price_max?: number
+          p_price_min?: number
+          p_property_type?: string
+          p_south: number
+          p_state?: string
+          p_west: number
+          p_zoom?: number
         }
         Returns: Json
-      }
-      get_map_tiles_cached: {
-        Args: {
-          p_filters?: Json
-          p_max_lat: number
-          p_max_lng: number
-          p_min_lat: number
-          p_min_lng: number
-          p_zoom: number
-        }
-        Returns: {
-          clusters: Json
-          from_cache: boolean
-          properties: Json
-          tile_key: string
-          zoom: number
-        }[]
       }
       get_marketing_metrics: {
         Args: { end_date?: string; start_date?: string }
@@ -2574,83 +2534,6 @@ export type Database = {
           type: Database["public"]["Enums"]["property_type"]
         }[]
       }
-      get_properties_in_viewport:
-        | {
-            Args: {
-              max_lat: number
-              max_lng: number
-              min_lat: number
-              min_lng: number
-              p_bathrooms?: number
-              p_bedrooms?: number
-              p_limit?: number
-              p_listing_type?: string
-              p_municipality?: string
-              p_price_max?: number
-              p_price_min?: number
-              p_state?: string
-              p_status?: string
-              p_type?: Database["public"]["Enums"]["property_type"]
-            }
-            Returns: {
-              address: string
-              agent_id: string
-              bathrooms: number
-              bedrooms: number
-              created_at: string
-              currency: string
-              id: string
-              lat: number
-              listing_type: string
-              lng: number
-              municipality: string
-              parking: number
-              price: number
-              sqft: number
-              state: string
-              status: Database["public"]["Enums"]["property_status"]
-              title: string
-              type: Database["public"]["Enums"]["property_type"]
-            }[]
-          }
-        | {
-            Args: {
-              max_lat: number
-              max_lng: number
-              min_lat: number
-              min_lng: number
-              p_bathrooms?: number
-              p_bedrooms?: number
-              p_listing_type?: string
-              p_municipality?: string
-              p_price_max?: number
-              p_price_min?: number
-              p_state?: string
-              p_status?: string
-              p_type?: string
-            }
-            Returns: {
-              address: string
-              agent_id: string
-              bathrooms: number
-              bedrooms: number
-              created_at: string
-              id: string
-              images: Json
-              is_featured: boolean
-              lat: number
-              listing_type: string
-              lng: number
-              municipality: string
-              parking: number
-              price: number
-              sqft: number
-              state: string
-              status: string
-              title: string
-              type: string
-            }[]
-          }
       get_properties_total_count: {
         Args: {
           p_listing_type?: string
@@ -2661,32 +2544,6 @@ export type Database = {
           p_type?: string
         }
         Returns: number
-      }
-      get_property_clusters: {
-        Args: {
-          max_lat: number
-          max_lng: number
-          min_lat: number
-          min_lng: number
-          p_bathrooms?: number
-          p_bedrooms?: number
-          p_listing_type?: string
-          p_municipality?: string
-          p_price_max?: number
-          p_price_min?: number
-          p_state?: string
-          p_status?: string
-          p_type?: string
-          zoom_level: number
-        }
-        Returns: {
-          avg_price: number
-          cluster_id: string
-          lat: number
-          lng: number
-          property_count: number
-          property_ids: string[]
-        }[]
       }
       get_state_stats: {
         Args: { p_state: string }
@@ -2731,13 +2588,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      invalidate_affected_tiles: {
-        Args: { p_property_id: string }
-        Returns: undefined
-      }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
-      lat_to_tile_y: { Args: { lat: number; zoom: number }; Returns: number }
-      lng_to_tile_x: { Args: { lng: number; zoom: number }; Returns: number }
       longtransactionsenabled: { Args: never; Returns: boolean }
       mark_messages_as_read: {
         Args: { p_conversation_id: string; p_user_id: string }

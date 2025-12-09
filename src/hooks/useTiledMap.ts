@@ -172,14 +172,21 @@ export const useTiledMap = (
         });
       }
 
-      // 🎯 Llamar a función RPC simple
-      const { data, error } = await supabase.rpc('get_map_tiles', {
-        p_min_lng: bounds.minLng,
-        p_min_lat: bounds.minLat,
-        p_max_lng: bounds.maxLng,
-        p_max_lat: bounds.maxLat,
-        p_zoom: bounds.zoom,
-        p_filters: filtersJson,
+      // 🎯 Llamar a función RPC get_map_data
+      const { data, error } = await supabase.rpc('get_map_data', {
+        p_north: bounds.maxLat,
+        p_south: bounds.minLat,
+        p_east: bounds.maxLng,
+        p_west: bounds.minLng,
+        p_zoom: Math.floor(bounds.zoom),
+        p_listing_type: filters?.listingType || null,
+        p_property_type: filters?.tipo || null,
+        p_price_min: filters?.precioMin || null,
+        p_price_max: filters?.precioMax || null,
+        p_bedrooms_min: filters?.recamaras ? parseInt(filters.recamaras) : null,
+        p_bathrooms_min: filters?.banos ? parseInt(filters.banos) : null,
+        p_state: filters?.estado || null,
+        p_municipality: filters?.municipio || null,
       });
 
       if (error) {
