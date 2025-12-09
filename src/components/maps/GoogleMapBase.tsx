@@ -112,15 +112,9 @@ function GoogleMapBaseComponent({
           styles: GOOGLE_MAPS_CONFIG.styles,
           disableDefaultUI: false,
           zoomControl: true,
-          zoomControlOptions: {
-            position: google.maps.ControlPosition.RIGHT_CENTER,
-          },
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: true,
-          fullscreenControlOptions: {
-            position: google.maps.ControlPosition.RIGHT_TOP,
-          },
           gestureHandling: 'greedy',
         }}
       >

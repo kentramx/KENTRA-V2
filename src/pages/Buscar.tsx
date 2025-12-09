@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import { SearchResultsList } from '@/components/SearchResultsList';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,8 +19,10 @@ import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2, Map, List } from 'lucide-react';
-import { SearchMap } from '@/components/maps';
 import type { MapFilters, ViewMode } from '@/types/map';
+
+// Lazy load SearchMap para evitar bloqueo en compilación
+const SearchMap = lazy(() => import('@/components/maps/SearchMap').then(mod => ({ default: mod.SearchMap })));
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -1528,23 +1530,29 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
             viewMode === 'map' && 'w-full lg:w-1/2',
             viewMode === 'split' && 'hidden lg:block lg:w-1/2'
           )}>
-            <SearchMap
-              filters={{
-                listing_type: filters.listingType as 'venta' | 'renta' | null,
-                property_type: filters.tipo || null,
-                price_min: filters.precioMin ? Number(filters.precioMin) : null,
-                price_max: filters.precioMax ? Number(filters.precioMax) : null,
-                bedrooms_min: filters.recamaras ? Number(filters.recamaras) : null,
-                bathrooms_min: filters.banos ? Number(filters.banos) : null,
-                state: filters.estado || null,
-                municipality: filters.municipio || null,
-              }}
-              selectedPropertyId={selectedPropertyId}
-              hoveredPropertyId={hoveredPropertyId}
-              onPropertyClick={handlePropertyClick}
-              onPropertyHover={setHoveredPropertyId}
-              className="h-full"
-            />
+            <Suspense fallback={
+              <div className="h-full flex items-center justify-center bg-muted">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            }>
+              <SearchMap
+                filters={{
+                  listing_type: filters.listingType as 'venta' | 'renta' | null,
+                  property_type: filters.tipo || null,
+                  price_min: filters.precioMin ? Number(filters.precioMin) : null,
+                  price_max: filters.precioMax ? Number(filters.precioMax) : null,
+                  bedrooms_min: filters.recamaras ? Number(filters.recamaras) : null,
+                  bathrooms_min: filters.banos ? Number(filters.banos) : null,
+                  state: filters.estado || null,
+                  municipality: filters.municipio || null,
+                }}
+                selectedPropertyId={selectedPropertyId}
+                hoveredPropertyId={hoveredPropertyId}
+                onPropertyClick={handlePropertyClick}
+                onPropertyHover={setHoveredPropertyId}
+                className="h-full"
+              />
+            </Suspense>
           </div>
         </div>
       </div>
