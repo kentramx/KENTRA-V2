@@ -101,43 +101,10 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
       return;
     }
 
-    // 3. Geocodificar automáticamente si no hay coordenadas
-    let finalLat = formData.lat;
-    let finalLng = formData.lng;
-
-    if (!finalLat || !finalLng) {
-      console.log('[PROPERTY FORM] Geocoding property automatically...');
-      
-      try {
-        const { data: geocodeData, error: geocodeError } = await supabase.functions.invoke(
-          'geocode-property',
-          {
-            body: {
-              propertyId: 'temp', // Temporal, se actualizará después
-              colonia: formData.colonia,
-              municipality: formData.municipality,
-              state: formData.state,
-            },
-          }
-        );
-
-        if (geocodeError || !geocodeData?.success) {
-          console.warn('[PROPERTY FORM] Geocoding failed:', geocodeError);
-          toast({
-            title: '⚠️ No se pudo geocodificar la ubicación',
-            description: 'La propiedad se guardará sin coordenadas. Puedes editarla después para agregar la ubicación en el mapa.',
-            variant: 'default',
-          });
-        } else {
-          finalLat = geocodeData.lat;
-          finalLng = geocodeData.lng;
-          console.log('[PROPERTY FORM] Geocoded successfully:', { finalLat, finalLng });
-        }
-      } catch (error) {
-        console.error('[PROPERTY FORM] Geocoding error:', error);
-        // Continuar sin coordenadas
-      }
-    }
+    // 3. Coordenadas - por ahora se guardan sin geocodificación automática
+    // TODO: Implementar geocodificación con Mapbox en fase futura
+    const finalLat = formData.lat;
+    const finalLng = formData.lng;
 
     // 4. Validar imágenes
     if (imageFiles.length + existingImages.length < 3) {

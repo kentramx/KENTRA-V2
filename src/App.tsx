@@ -48,7 +48,6 @@ import AdminUpsells from "./pages/AdminUpsells";
 import AdminKYC from "./pages/AdminKYC";
 import AdminSubscriptions from "./pages/AdminSubscriptions";
 import AdminChurn from "./pages/AdminChurn";
-import AdminGeocoding from "./pages/AdminGeocoding";
 import AdminCoupons from "./pages/AdminCoupons";
 import UnirseEquipo from "./pages/UnirseEquipo";
 import { Footer } from "@/components/Footer";
@@ -113,7 +112,6 @@ const AppContent = () => {
               <Route path="/admin/kyc" element={<AdminKYC />} />
               <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
               <Route path="/admin/churn" element={<AdminChurn />} />
-              <Route path="/admin/geocoding" element={<AdminGeocoding />} />
               <Route path="/admin/coupons" element={<AdminCoupons />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
