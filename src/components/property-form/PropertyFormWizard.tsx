@@ -101,8 +101,7 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
       return;
     }
 
-    // 3. Coordenadas - por ahora se guardan sin geocodificación automática
-    // TODO: Implementar geocodificación con Mapbox en fase futura
+    // 3. Coordenadas - se guardan del formulario
     const finalLat = formData.lat;
     const finalLng = formData.lng;
 
