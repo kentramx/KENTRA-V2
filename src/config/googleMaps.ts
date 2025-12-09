@@ -35,7 +35,7 @@ export const GOOGLE_MAPS_CONFIG = {
   styles: [
     { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
     { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-  ],
-} as const;
+  ] as google.maps.MapTypeStyle[],
+};
 
 export type GoogleMapsConfig = typeof GOOGLE_MAPS_CONFIG;
