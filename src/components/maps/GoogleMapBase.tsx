@@ -158,7 +158,7 @@ export function GoogleMapBase({
         zoomControlOptions: {
           position: google.maps.ControlPosition.RIGHT_TOP,
         },
-        styles: GOOGLE_MAPS_CONFIG.styles,
+        styles: GOOGLE_MAPS_CONFIG.styles as google.maps.MapTypeStyle[],
       }}
     >
       {children}

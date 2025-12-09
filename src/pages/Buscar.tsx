@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { SearchMap } from '@/components/SearchMap';
+import { SearchMap } from '@/components/maps/SearchMap';
 import { SearchResultsList } from '@/components/SearchResultsList';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,8 +40,12 @@ import { generatePropertyListStructuredData } from '@/utils/structuredData';
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
-import type { MapProperty, PropertyFilters, HoveredProperty } from '@/types/property';
-import { ViewportBounds, useTiledMap, MIN_ZOOM_FOR_TILES } from '@/hooks/useTiledMap';
+import type { MapProperty, PropertyFilters, HoveredProperty, ViewportBounds } from '@/types/property';
+import { useMapData } from '@/hooks/useMapData';
+import type { MapViewport, MapFilters, PropertyMarker } from '@/types/map';
+import { GOOGLE_MAPS_CONFIG } from '@/config/googleMaps';
+
+const MIN_ZOOM_FOR_TILES = GOOGLE_MAPS_CONFIG.zoom.showPropertiesAt;
 
 interface Filters {
   estado: string;
@@ -88,8 +92,8 @@ const Buscar = () => {
   // ✅ Estado para sincronizar clic en mapa con tarjeta de lista
   const [selectedPropertyFromMap, setSelectedPropertyFromMap] = useState<string | null>(null);
   
-  // 🗺️ Estado para los límites del viewport del mapa
-  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
+  // 🗺️ Estados del mapa movidos al nuevo SearchMap
+  // (viewportBounds ahora se deriva de mapViewport)
   
 // Rangos para VENTA (en millones)
 const SALE_MIN_PRICE = 0;
@@ -179,58 +183,41 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     actualTotal,
   } = usePropertySearch(propertyFilters);
 
-  // 🗺️ Fetching de tiles del mapa (movido desde SearchMap)
-  const { data: viewportData, isLoading: mapLoading, error: mapTilesError } =
-    useTiledMap(viewportBounds, propertyFilters);
+  // 🗺️ Convertir filtros a formato MapFilters para el nuevo SearchMap
+  const mapFilters: MapFilters = useMemo(() => ({
+    listing_type: filters.listingType as 'venta' | 'renta' | undefined,
+    property_type: filters.tipo || undefined,
+    min_price: filters.precioMin ? Number(filters.precioMin) : undefined,
+    max_price: filters.precioMax ? Number(filters.precioMax) : undefined,
+    min_bedrooms: filters.recamaras ? Number(filters.recamaras) : undefined,
+    min_bathrooms: filters.banos ? Number(filters.banos) : undefined,
+    state: filters.estado || undefined,
+    municipality: filters.municipio || undefined,
+  }), [filters]);
 
-  // Extraer properties y clusters del viewport
-  const viewportProperties = viewportData?.properties ?? [];
-  const viewportClusters = viewportData?.clusters ?? [];
+  // 🗺️ Estado del mapa controlado por el nuevo SearchMap
+  const [mapViewport, setMapViewport] = useState<MapViewport | null>(null);
+  const [hoveredPropertyIdMap, setHoveredPropertyIdMap] = useState<string | null>(null);
 
-  // 🔍 LOGS TEMPORALES - Verificar que bounds y properties se cargan
-  useEffect(() => {
-    console.log('[PARENT bounds]', viewportBounds);
-  }, [viewportBounds]);
+  // Variables de compatibilidad con código antiguo
+  const viewportBounds = mapViewport ? {
+    minLat: mapViewport.bounds.south,
+    maxLat: mapViewport.bounds.north,
+    minLng: mapViewport.bounds.west,
+    maxLng: mapViewport.bounds.east,
+    zoom: mapViewport.zoom,
+  } : null;
+  const mapLoading = false; // El nuevo SearchMap maneja su propio loading
+  const viewportProperties: PropertyMarker[] = [];
+  const viewportClusters: any[] = [];
+  const viewportDebugReason = null; // Debug se maneja en el nuevo SearchMap
 
-  useEffect(() => {
-    console.log('[PARENT viewportProperties]', viewportProperties.length);
-  }, [viewportProperties]);
+  // Flag de viewport activo (ahora derivado del nuevo mapViewport)
+  const isViewportActive = !!mapViewport;
 
-  // 🔍 Diagnóstico derivado del estado del viewport (solo para debug)
-  const viewportDebugReason = useMemo(() => {
-    if (mapLoading) {
-      return 'Cargando tiles del viewport...';
-    }
-
-    if (!viewportBounds) {
-      return 'Sin bounds (mapa no inicializado o movimiento en proceso)';
-    }
-
-    if (viewportBounds.zoom < MIN_ZOOM_FOR_TILES) {
-      return `Zoom muy lejano (${viewportBounds.zoom} < ${MIN_ZOOM_FOR_TILES})`;
-    }
-
-    if (viewportProperties.length === 0 && viewportClusters.length === 0) {
-      return '0 propiedades para los filtros actuales en este cuadro de mapa';
-    }
-
-    return null;
-  }, [mapLoading, viewportBounds, viewportProperties, viewportClusters]);
-
-  // 1️⃣ Flag de viewport activo
-  const isViewportActive = !!viewportBounds;
-
-  // 2️⃣ Fuente activa única: viewport cuando hay bounds, si no properties del hook global
-  const activeProperties = isViewportActive
-    ? viewportProperties.map((p): PropertySummary => ({
-        ...p,
-        for_sale: p.listing_type === 'venta',
-        for_rent: p.listing_type === 'renta',
-        sale_price: p.listing_type === 'venta' ? p.price : null,
-        rent_price: p.listing_type === 'renta' ? p.price : null,
-        colonia: null, // MapProperty no incluye colonia
-      }))
-    : properties;
+  // Fuente activa única: en la nueva arquitectura usamos properties directamente
+  // porque SearchMap maneja su propio data fetching internamente
+  const activeProperties = properties;
 
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
@@ -1569,16 +1556,16 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               </div>
             ) : (
               <SearchMap
-                properties={viewportProperties}
-                clusters={viewportClusters}
-                isLoading={mapLoading}
-                filters={propertyFilters}
-                searchCoordinates={searchCoordinates}
-                onMarkerClick={handleMarkerClick}
-                onBoundsChanged={setViewportBounds}
+                filters={mapFilters}
+                initialCenter={searchCoordinates || undefined}
+                initialZoom={searchCoordinates ? 12 : 5}
                 height="100%"
-                onMapError={setMapError}
-                onVisibleCountChange={setMapVisibleCount}
+                selectedPropertyId={selectedPropertyFromMap}
+                hoveredPropertyId={hoveredPropertyIdMap}
+                onPropertyClick={handleMarkerClick}
+                onPropertyHover={(property) => setHoveredPropertyIdMap(property?.id || null)}
+                onViewportChange={setMapViewport}
+                onTotalCountChange={setMapVisibleCount}
               />
             )}
           </div>

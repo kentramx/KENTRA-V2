@@ -130,7 +130,6 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <MapPreloader />
         <BrowserRouter>
           <AuthProvider>
             <AppContent />
