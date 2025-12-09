@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     // Optional: ensure user session exists (not strictly required for public config)
     const { data: { user } } = await supabaseClient.auth.getUser();
 
-    const googleMapsApiKey = Deno.env.get('VITE_GOOGLE_MAPS_API_KEY') || '';
+    const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY') || Deno.env.get('VITE_GOOGLE_MAPS_API_KEY') || '';
 
     if (!googleMapsApiKey) {
       return new Response(
