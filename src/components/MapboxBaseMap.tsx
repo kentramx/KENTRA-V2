@@ -39,7 +39,20 @@ export const MapboxBaseMap: React.FC<MapboxBaseMapProps> = ({
   const moveTimeoutRef = useRef<number | undefined>(undefined);
   const [mapReady, setMapReady] = useState(false);
 
+  // Debug: log del token en cada render
+  console.log('[MapboxBaseMap] Render check:', {
+    hasToken: !!MAPBOX_TOKEN,
+    tokenLength: MAPBOX_TOKEN?.length || 0,
+    tokenPrefix: MAPBOX_TOKEN?.substring(0, 10) || 'N/A',
+  });
+
   useEffect(() => {
+    console.log('[MapboxBaseMap] useEffect check:', {
+      hasContainer: !!containerRef.current,
+      hasExistingMap: !!mapRef.current,
+      hasToken: !!MAPBOX_TOKEN,
+    });
+    
     // No crear mapa si ya existe, no hay contenedor, o no hay token
     if (mapRef.current || !containerRef.current || !MAPBOX_TOKEN) return;
 
