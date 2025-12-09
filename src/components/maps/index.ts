@@ -6,3 +6,4 @@
 export { GoogleMapBase } from './GoogleMapBase';
 export { PriceMarker } from './PriceMarker';
 export { ClusterMarker } from './ClusterMarker';
+export { SearchMap } from './SearchMap';
