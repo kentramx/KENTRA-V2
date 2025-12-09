@@ -19,7 +19,8 @@ import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2, Map, List } from 'lucide-react';
-import type { ViewMode } from '@/types/map';
+import type { ViewMode, MapFilters } from '@/types/map';
+import { SearchMap } from '@/components/maps/SearchMap';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -113,7 +114,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [savedSearchQuery, setSavedSearchQuery] = useState('');
   const [savedSearchSort, setSavedSearchSort] = useState<'date' | 'name'>('date');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('list'); // Default to list for now
+  const [viewMode, setViewMode] = useState<ViewMode>('split');
   
   
   // Valores por defecto para filtros
@@ -1519,20 +1520,28 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
             </div>
           </div>
 
-          {/* Mapa - Próximamente */}
+          {/* Mapa */}
           <div className={cn(
             "border-l bg-muted/30",
             viewMode === 'list' && 'hidden lg:hidden',
             viewMode === 'map' && 'w-full lg:w-1/2',
             viewMode === 'split' && 'hidden lg:block lg:w-1/2'
           )}>
-            <div className="h-full flex items-center justify-center bg-muted">
-              <div className="text-center p-8">
-                <Map className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <p className="text-lg font-medium text-foreground">Mapa en construcción</p>
-                <p className="text-sm text-muted-foreground">Próximamente disponible</p>
-              </div>
-            </div>
+            <SearchMap
+              filters={{
+                listing_type: filters.listingType as 'venta' | 'renta' | null,
+                property_type: filters.tipo || null,
+                price_min: filters.precioMin ? Number(filters.precioMin) : null,
+                price_max: filters.precioMax ? Number(filters.precioMax) : null,
+                bedrooms_min: filters.recamaras ? Number(filters.recamaras) : null,
+                bathrooms_min: filters.banos ? Number(filters.banos) : null,
+                state: filters.estado || null,
+                municipality: filters.municipio || null,
+              }}
+              selectedPropertyId={selectedPropertyId}
+              onPropertyClick={handlePropertyClick}
+              className="h-full"
+            />
           </div>
         </div>
       </div>
