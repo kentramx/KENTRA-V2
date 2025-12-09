@@ -5,7 +5,7 @@ import { MapPin, AlertCircle, Navigation, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useJsApiLoader } from '@react-google-maps/api';
-import { GOOGLE_MAPS_CONFIG } from '@/config/googleMaps';
+import { GOOGLE_MAPS_CONFIG, GOOGLE_MAPS_LIBRARIES } from '@/config/googleMaps';
 import { toast } from '@/hooks/use-toast';
 import { monitoring } from '@/lib/monitoring';
 
@@ -104,7 +104,7 @@ const PlaceAutocomplete = ({
   // Usar el loader de @react-google-maps/api
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_CONFIG.apiKey,
-    libraries: GOOGLE_MAPS_CONFIG.libraries as any,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   useEffect(() => {
