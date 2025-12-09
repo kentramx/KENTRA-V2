@@ -4,12 +4,14 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePropertiesInfinite } from '@/hooks/usePropertiesInfinite';
+import { useMapSearch, type ViewportBounds } from '@/hooks/useMapSearch';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
 import { buildPropertyFilters } from '@/utils/buildPropertyFilters';
 import type { PropertySummary } from '@/types/property';
 import Navbar from '@/components/Navbar';
 import PropertyCard from '@/components/PropertyCard';
 import { PropertyImageGallery } from '@/components/PropertyImageGallery';
+import { SearchMap } from '@/components/SearchMap';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,7 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2 } from 'lucide-react';
+import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2, Map as MapIcon, List as ListIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -39,6 +41,7 @@ import { generatePropertyListStructuredData } from '@/utils/structuredData';
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
+import { cn } from '@/lib/utils';
 
 interface Filters {
   estado: string;
@@ -112,6 +115,15 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [savedSearchSort, setSavedSearchSort] = useState<'date' | 'name'>('date');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   
+  // Estado para toggle de vista móvil (mapa/lista)
+  const [mobileView, setMobileView] = useState<'map' | 'list'>('list');
+  
+  // Estado para viewport bounds del mapa
+  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
+  
+  // Estado para propiedad hovereada (sincronía mapa ↔ lista)
+  const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
+  
   // Valores por defecto para filtros
   const DEFAULT_FILTERS: Filters = {
     estado: '',
@@ -156,6 +168,18 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     isFetching,
     error: searchError,
   } = usePropertiesInfinite(propertyFilters);
+
+  // Hook de mapa para clusters y propiedades en viewport
+  const {
+    mapProperties,
+    clusters,
+    isLoading: mapLoading,
+    debugReason: mapDebugReason,
+    totalCount: mapTotalCount,
+  } = useMapSearch({
+    filters: propertyFilters,
+    viewportBounds,
+  });
 
   // Aplicar ordenamiento (destacadas primero, luego criterio seleccionado)
   const sortedProperties = useMemo(() => {
@@ -1311,177 +1335,225 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
           </div>
         </div>
 
-        {/* Lista de propiedades - ancho completo */}
-        <div className="container mx-auto px-4 py-6">
-          {/* Estado de error */}
-          {searchError && (
-            <div className="flex flex-col items-center justify-center p-8 space-y-4 min-h-[400px]">
-              <AlertCircle className="h-12 w-12 text-destructive" />
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-semibold">Error al cargar propiedades</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  Ocurrió un problema al buscar las propiedades. Por favor, intenta de nuevo.
-                </p>
-              </div>
-              <Button 
-                onClick={() => window.location.reload()}
-                variant="outline"
-              >
-                Reintentar
-              </Button>
-            </div>
-          )}
+        {/* Contenedor principal: Lista + Mapa */}
+        <div className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 140px)' }}>
+          {/* Panel izquierdo: Lista de propiedades */}
+          <div className={cn(
+            "w-full lg:w-1/2 overflow-y-auto",
+            mobileView === 'map' && "hidden lg:block"
+          )}>
+            <div className="p-4 space-y-4">
+              {/* Estado de error */}
+              {searchError && (
+                <div className="flex flex-col items-center justify-center p-8 space-y-4 min-h-[400px]">
+                  <AlertCircle className="h-12 w-12 text-destructive" />
+                  <div className="text-center space-y-2">
+                    <h3 className="text-lg font-semibold">Error al cargar propiedades</h3>
+                    <p className="text-sm text-muted-foreground max-w-md">
+                      Ocurrió un problema al buscar las propiedades. Por favor, intenta de nuevo.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => window.location.reload()}
+                    variant="outline"
+                  >
+                    Reintentar
+                  </Button>
+                </div>
+              )}
 
-          {/* Estado de carga inicial */}
-          {!searchError && loading && properties.length === 0 && (
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground">Buscando propiedades...</span>
-              </div>
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-48 w-full" />
-              ))}
-            </div>
-          )}
+              {/* Estado de carga inicial */}
+              {!searchError && loading && properties.length === 0 && (
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <span className="text-sm text-muted-foreground">Buscando propiedades...</span>
+                  </div>
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-48 w-full" />
+                  ))}
+                </div>
+              )}
 
-          {/* Estado vacío - sin resultados */}
-          {!searchError && !loading && listProperties.length === 0 && (
-            <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center min-h-[400px]">
-              <div className="rounded-full bg-muted p-6">
-                <Search className="h-12 w-12 text-muted-foreground" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-semibold">No encontramos propiedades</h3>
-                <p className="text-muted-foreground max-w-md">
-                  No hay propiedades que coincidan con tus filtros actuales.
-                </p>
-              </div>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p>Intenta:</p>
-                <ul className="space-y-1">
-                  <li>• Ampliar el rango de precio</li>
-                  <li>• Cambiar la ubicación</li>
-                  <li>• Ajustar los filtros de recámaras y baños</li>
-                </ul>
-              </div>
-              <Button
-                onClick={() => {
-                  setFilters(DEFAULT_FILTERS);
-                  setSearchCoordinates(null);
-                  setPriceRange([SALE_MIN_PRICE, SALE_MAX_PRICE]);
-                }}
-                variant="outline"
-              >
-                Limpiar todos los filtros
-              </Button>
-            </div>
-          )}
+              {/* Estado vacío - sin resultados */}
+              {!searchError && !loading && listProperties.length === 0 && (
+                <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center min-h-[400px]">
+                  <div className="rounded-full bg-muted p-6">
+                    <Search className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-semibold">No encontramos propiedades</h3>
+                    <p className="text-muted-foreground max-w-md">
+                      No hay propiedades que coincidan con tus filtros actuales.
+                    </p>
+                  </div>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>Intenta:</p>
+                    <ul className="space-y-1">
+                      <li>• Ampliar el rango de precio</li>
+                      <li>• Cambiar la ubicación</li>
+                      <li>• Ajustar los filtros de recámaras y baños</li>
+                    </ul>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setFilters(DEFAULT_FILTERS);
+                      setSearchCoordinates(null);
+                      setPriceRange([SALE_MIN_PRICE, SALE_MAX_PRICE]);
+                    }}
+                    variant="outline"
+                  >
+                    Limpiar todos los filtros
+                  </Button>
+                </div>
+              )}
 
-          {/* Lista de propiedades con resultados */}
-          {!searchError && listProperties.length > 0 && (
-            <InfiniteScrollContainer
-              onLoadMore={() => {
-                if (hasNextPage && !isFetching) {
-                  fetchNextPage();
-                }
-              }}
-              hasMore={!!hasNextPage}
-              isLoading={isFetchingNextPage}
-              className="space-y-4"
-            >
-              {/* Contador de resultados */}
-              <div className="pb-2 text-sm text-muted-foreground">
-                <p>
-                  <span className="font-medium text-foreground">{totalCount}</span>{' '}
-                  {totalCount === 1 ? 'propiedad encontrada' : 'propiedades encontradas'}
-                </p>
-              </div>
-
-              <SearchResultsList
-                properties={listProperties}
-                isLoading={loading && listProperties.length === 0}
-                listingType={filters.listingType}
-                onPropertyClick={handlePropertyClick}
-                savedSearchesCount={user ? savedSearches.length : 0}
-                onScrollToSavedSearches={() => {
-                  const element = document.getElementById('saved-searches');
-                  element?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              />
-            </InfiniteScrollContainer>
-          )}
-
-          {/* Búsquedas guardadas */}
-          {user && savedSearches.length > 0 && (
-            <div id="saved-searches" className="pt-8">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Star className="h-4 w-4" />
-                      <Label className="font-semibold">Búsquedas guardadas</Label>
-                    </div>
+              {/* Lista de propiedades con resultados */}
+              {!searchError && listProperties.length > 0 && (
+                <InfiniteScrollContainer
+                  onLoadMore={() => {
+                    if (hasNextPage && !isFetching) {
+                      fetchNextPage();
+                    }
+                  }}
+                  hasMore={!!hasNextPage}
+                  isLoading={isFetchingNextPage}
+                  className="space-y-4"
+                >
+                  {/* Contador de resultados */}
+                  <div className="pb-2 text-sm text-muted-foreground">
+                    <p>
+                      <span className="font-medium text-foreground">{totalCount}</span>{' '}
+                      {totalCount === 1 ? 'propiedad encontrada' : 'propiedades encontradas'}
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-2 mb-3">
-                    <Input
-                      placeholder="Buscar..."
-                      value={savedSearchQuery}
-                      onChange={(e) => setSavedSearchQuery(e.target.value)}
-                    />
-                    <Select value={savedSearchSort} onValueChange={handleSavedSearchSortChange}>
-                      <SelectTrigger className="w-auto">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="date">Fecha</SelectItem>
-                        <SelectItem value="name">Nombre</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <SearchResultsList
+                    properties={listProperties}
+                    isLoading={loading && listProperties.length === 0}
+                    listingType={filters.listingType}
+                    onPropertyClick={handlePropertyClick}
+                    savedSearchesCount={user ? savedSearches.length : 0}
+                    onScrollToSavedSearches={() => {
+                      const element = document.getElementById('saved-searches');
+                      element?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  />
+                </InfiniteScrollContainer>
+              )}
 
-                  {filteredSavedSearches.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                      <p className="text-sm">No se encontraron búsquedas</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {filteredSavedSearches.map((search) => (
-                        <div
-                          key={search.id}
-                          className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors"
-                        >
-                          <button
-                            onClick={() => handleLoadSearch(search.filters)}
-                            className="flex-1 text-left"
-                          >
-                            <p className="font-medium text-sm">{search.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(search.created_at).toLocaleDateString('es-MX', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })}
-                            </p>
-                          </button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteSearch(search.id, search.name)}
-                            className="hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+              {/* Búsquedas guardadas */}
+              {user && savedSearches.length > 0 && (
+                <div id="saved-searches" className="pt-8">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Star className="h-4 w-4" />
+                          <Label className="font-semibold">Búsquedas guardadas</Label>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-3">
+                        <Input
+                          placeholder="Buscar..."
+                          value={savedSearchQuery}
+                          onChange={(e) => setSavedSearchQuery(e.target.value)}
+                        />
+                        <Select value={savedSearchSort} onValueChange={handleSavedSearchSortChange}>
+                          <SelectTrigger className="w-auto">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="date">Fecha</SelectItem>
+                            <SelectItem value="name">Nombre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {filteredSavedSearches.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                          <p className="text-sm">No se encontraron búsquedas</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {filteredSavedSearches.map((search) => (
+                            <div
+                              key={search.id}
+                              className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                            >
+                              <button
+                                onClick={() => handleLoadSearch(search.filters)}
+                                className="flex-1 text-left"
+                              >
+                                <p className="font-medium text-sm">{search.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(search.created_at).toLocaleDateString('es-MX', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </p>
+                              </button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteSearch(search.id, search.name)}
+                                className="hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Panel derecho: Mapa */}
+          <div className={cn(
+            "w-full lg:w-1/2 h-[50vh] lg:h-full",
+            mobileView === 'list' && "hidden lg:block"
+          )}>
+            <SearchMap
+              properties={mapProperties}
+              clusters={clusters}
+              viewportBounds={viewportBounds}
+              isLoading={mapLoading}
+              centerOnCoordinates={searchCoordinates}
+              onBoundsChange={setViewportBounds}
+              onPropertyClick={handlePropertyClick}
+              onPropertyHover={setHoveredPropertyId}
+              hoveredPropertyId={hoveredPropertyId}
+              className="h-full w-full"
+            />
+          </div>
+        </div>
+
+        {/* Toggle mobile para mapa/lista */}
+        <div className="fixed bottom-4 right-4 lg:hidden z-50">
+          <Button
+            onClick={() => setMobileView(v => v === 'map' ? 'list' : 'map')}
+            size="lg"
+            className="rounded-full shadow-lg"
+          >
+            {mobileView === 'map' ? (
+              <>
+                <ListIcon className="h-5 w-5 mr-2" />
+                Ver Lista
+              </>
+            ) : (
+              <>
+                <MapIcon className="h-5 w-5 mr-2" />
+                Ver Mapa
+              </>
+            )}
+          </Button>
         </div>
       </div>
       
