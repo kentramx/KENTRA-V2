@@ -27,24 +27,13 @@ export const usePropertiesInfinite = (filters: PropertyFilters) => {
       // 1. STATUS: Filtrar solo propiedades activas
       query = query.eq('status', 'activa');
 
-      // 2. LÓGICA DE PRIORIDAD: Mapa > Texto (Estilo Zillow)
-      if (filters.bounds) {
-        // ✅ MODO MAPA: Si hay bounds, filtramos por coordenadas y IGNORAMOS ubicación de texto
-        console.log('🗺️ [List] Filtrando por bounds del mapa:', filters.bounds);
-        query = query
-          .gte('lat', filters.bounds.minLat)
-          .lte('lat', filters.bounds.maxLat)
-          .gte('lng', filters.bounds.minLng)
-          .lte('lng', filters.bounds.maxLng);
-      } else {
-        // ✅ MODO TEXTO: Solo si NO hay bounds, usamos los filtros de texto
-        console.log('📝 [List] Filtrando por texto:', { estado: filters.estado, municipio: filters.municipio });
-        
-        if (filters.estado?.trim()) query = query.ilike('state', `%${filters.estado}%`);
-        if (filters.municipio?.trim()) query = query.ilike('municipality', `%${filters.municipio}%`);
-        if (filters.colonia?.trim()) {
-          query = query.or(`colonia.ilike.%${filters.colonia}%,address.ilike.%${filters.colonia}%`);
-        }
+      // 2. FILTROS DE UBICACIÓN (texto)
+      console.log('📝 [List] Filtrando por texto:', { estado: filters.estado, municipio: filters.municipio });
+      
+      if (filters.estado?.trim()) query = query.ilike('state', `%${filters.estado}%`);
+      if (filters.municipio?.trim()) query = query.ilike('municipality', `%${filters.municipio}%`);
+      if (filters.colonia?.trim()) {
+        query = query.or(`colonia.ilike.%${filters.colonia}%,address.ilike.%${filters.colonia}%`);
       }
 
       // 3. TIPO Y LISTING (Validar que no sea 'undefined')

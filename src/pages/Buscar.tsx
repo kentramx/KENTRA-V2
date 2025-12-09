@@ -4,14 +4,12 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePropertiesInfinite } from '@/hooks/usePropertiesInfinite';
-import { useMapSearch, type ViewportBounds } from '@/hooks/useMapSearch';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
 import { buildPropertyFilters } from '@/utils/buildPropertyFilters';
 import type { PropertySummary } from '@/types/property';
 import Navbar from '@/components/Navbar';
 import PropertyCard from '@/components/PropertyCard';
 import { PropertyImageGallery } from '@/components/PropertyImageGallery';
-import { SearchMap } from '@/components/SearchMap';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2, Map as MapIcon, List as ListIcon } from 'lucide-react';
+import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -115,14 +113,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [savedSearchSort, setSavedSearchSort] = useState<'date' | 'name'>('date');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   
-  // Estado para toggle de vista móvil (mapa/lista)
-  const [mobileView, setMobileView] = useState<'map' | 'list'>('list');
   
-  // Estado para viewport bounds del mapa
-  const [viewportBounds, setViewportBounds] = useState<ViewportBounds | null>(null);
-  
-  // Estado para propiedad hovereada (sincronía mapa ↔ lista)
-  const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
+  // Valores por defecto para filtros
   
   // Valores por defecto para filtros
   const DEFAULT_FILTERS: Filters = {
@@ -168,18 +160,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     isFetching,
     error: searchError,
   } = usePropertiesInfinite(propertyFilters);
-
-  // Hook de mapa para clusters y propiedades en viewport
-  const {
-    mapProperties,
-    clusters,
-    isLoading: mapLoading,
-    debugReason: mapDebugReason,
-    totalCount: mapTotalCount,
-  } = useMapSearch({
-    filters: propertyFilters,
-    viewportBounds,
-  });
 
   // Aplicar ordenamiento (destacadas primero, luego criterio seleccionado)
   const sortedProperties = useMemo(() => {
@@ -1335,14 +1315,10 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
           </div>
         </div>
 
-        {/* Contenedor principal: Lista + Mapa */}
-        <div className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 140px)' }}>
-          {/* Panel izquierdo: Lista de propiedades */}
-          <div className={cn(
-            "w-full lg:w-1/2 overflow-y-auto",
-            mobileView === 'map' && "hidden lg:block"
-          )}>
-            <div className="p-4 space-y-4">
+        {/* Contenedor principal: Lista de propiedades */}
+        <div className="container mx-auto px-4 py-4">
+          <div className="w-full">
+            <div className="space-y-4">
               {/* Estado de error */}
               {searchError && (
                 <div className="flex flex-col items-center justify-center p-8 space-y-4 min-h-[400px]">
@@ -1514,46 +1490,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               )}
             </div>
           </div>
-
-          {/* Panel derecho: Mapa */}
-          <div className={cn(
-            "w-full lg:w-1/2 h-[50vh] lg:h-full",
-            mobileView === 'list' && "hidden lg:block"
-          )}>
-            <SearchMap
-              properties={mapProperties}
-              clusters={clusters}
-              viewportBounds={viewportBounds}
-              isLoading={mapLoading}
-              centerOnCoordinates={searchCoordinates}
-              onBoundsChange={setViewportBounds}
-              onPropertyClick={handlePropertyClick}
-              onPropertyHover={setHoveredPropertyId}
-              hoveredPropertyId={hoveredPropertyId}
-              className="h-full w-full"
-            />
-          </div>
-        </div>
-
-        {/* Toggle mobile para mapa/lista */}
-        <div className="fixed bottom-4 right-4 lg:hidden z-50">
-          <Button
-            onClick={() => setMobileView(v => v === 'map' ? 'list' : 'map')}
-            size="lg"
-            className="rounded-full shadow-lg"
-          >
-            {mobileView === 'map' ? (
-              <>
-                <ListIcon className="h-5 w-5 mr-2" />
-                Ver Lista
-              </>
-            ) : (
-              <>
-                <MapIcon className="h-5 w-5 mr-2" />
-                Ver Mapa
-              </>
-            )}
-          </Button>
         </div>
       </div>
       

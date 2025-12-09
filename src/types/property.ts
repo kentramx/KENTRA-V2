@@ -1,5 +1,3 @@
-import type { ViewportBounds } from '@/hooks/useMapSearch';
-
 /**
  * Tipo central unificado para Property
  * ✅ Fuente única de verdad para todas las propiedades del sistema
@@ -232,25 +230,16 @@ export type AIModerationStatus =
 
 // ============= FILTROS =============
 
-export interface MapBounds {
-  north: number;
-  south: number;
-  east: number;
-  west: number;
-  zoom: number;
-}
-
 export interface PropertyFilters {
   estado?: string;
   municipio?: string;
-  colonia?: string; // ✅ Agregado para búsqueda por colonia
-  tipo?: string; // Acepta string para compatibilidad con filtros existentes
-  listingType?: string; // Acepta string para compatibilidad
+  colonia?: string;
+  tipo?: string;
+  listingType?: string;
   precioMin?: number;
   precioMax?: number;
   recamaras?: string;
   banos?: string;
   status?: string[];
-  orden?: string; // ✅ Agregado para ordenamiento
-  bounds?: ViewportBounds; // ✅ Unificado con el sistema de tiles
+  orden?: string;
 }
