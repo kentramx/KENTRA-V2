@@ -57,7 +57,8 @@ export const loadGoogleMaps = (): Promise<typeof google.maps> => {
 
   googleMapsPromise = new Promise((resolve, reject) => {
     const tryLoad = async () => {
-      let apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined; // v2 rebuild
+      // Force rebuild v3 - env variables are injected at build time
+      let apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
 
       // If not available at build-time, fetch from backend secrets
       if (!apiKey) {
