@@ -18,7 +18,9 @@ import { Label } from '@/components/ui/label';
 import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2 } from 'lucide-react';
+import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2, Map, List } from 'lucide-react';
+import { SearchMap } from '@/components/maps';
+import type { MapFilters, ViewMode } from '@/types/map';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -112,6 +114,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [savedSearchQuery, setSavedSearchQuery] = useState('');
   const [savedSearchSort, setSavedSearchSort] = useState<'date' | 'name'>('date');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('split');
+  const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   
   
   // Valores por defecto para filtros
@@ -1315,10 +1319,36 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
           </div>
         </div>
 
-        {/* Contenedor principal: Lista de propiedades */}
-        <div className="container mx-auto px-4 py-4">
-          <div className="w-full">
-            <div className="space-y-4">
+        {/* Botones de vista (móvil) */}
+        <div className="lg:hidden flex justify-center gap-2 py-2 border-b bg-background">
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="h-4 w-4 mr-1" />
+            Lista
+          </Button>
+          <Button
+            variant={viewMode === 'map' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('map')}
+          >
+            <Map className="h-4 w-4 mr-1" />
+            Mapa
+          </Button>
+        </div>
+
+        {/* Contenedor principal: Split View */}
+        <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 180px)' }}>
+          {/* Lista de propiedades */}
+          <div className={cn(
+            "flex-1 overflow-y-auto",
+            viewMode === 'map' && 'hidden lg:block',
+            viewMode === 'split' && 'lg:w-1/2',
+            viewMode === 'list' && 'w-full'
+          )}>
+            <div className="p-4 space-y-4">
               {/* Estado de error */}
               {searchError && (
                 <div className="flex flex-col items-center justify-center p-8 space-y-4 min-h-[400px]">
@@ -1489,6 +1519,32 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Mapa */}
+          <div className={cn(
+            "border-l bg-muted/30",
+            viewMode === 'list' && 'hidden lg:hidden',
+            viewMode === 'map' && 'w-full lg:w-1/2',
+            viewMode === 'split' && 'hidden lg:block lg:w-1/2'
+          )}>
+            <SearchMap
+              filters={{
+                listing_type: filters.listingType as 'venta' | 'renta' | null,
+                property_type: filters.tipo || null,
+                price_min: filters.precioMin ? Number(filters.precioMin) : null,
+                price_max: filters.precioMax ? Number(filters.precioMax) : null,
+                bedrooms_min: filters.recamaras ? Number(filters.recamaras) : null,
+                bathrooms_min: filters.banos ? Number(filters.banos) : null,
+                state: filters.estado || null,
+                municipality: filters.municipio || null,
+              }}
+              selectedPropertyId={selectedPropertyId}
+              hoveredPropertyId={hoveredPropertyId}
+              onPropertyClick={handlePropertyClick}
+              onPropertyHover={setHoveredPropertyId}
+              className="h-full"
+            />
           </div>
         </div>
       </div>
