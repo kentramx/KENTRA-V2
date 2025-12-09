@@ -40,8 +40,6 @@ import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
 import { cn } from '@/lib/utils';
-// TEMPORAL: Test de Mapbox
-import { MapTest } from '@/components/maps/MapTest';
 
 interface Filters {
   estado: string;
@@ -862,15 +860,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       />
       <Navbar />
       
-      {/* TEMPORAL: Test de Mapbox - ELIMINAR después de verificar */}
-      <div className="container mx-auto px-4 pt-20 pb-4">
-        <div className="bg-yellow-100 p-2 rounded mb-2 text-sm">
-          ⚠️ TEST TEMPORAL: Verifica que el mapa carga y en consola aparece "✅ Mapa Mapbox cargado correctamente"
-        </div>
-        <MapTest />
-      </div>
-      
-      <div className="pt-4">
+      <div className="pt-20">
         {/* Barra de búsqueda y filtros compacta */}
         <div className="border-b bg-background sticky top-16 z-30">
           <div className="container mx-auto px-4 py-3">
