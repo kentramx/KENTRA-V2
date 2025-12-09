@@ -5,12 +5,12 @@
  * configuración de mapas en toda la aplicación.
  */
 
+// Librerías requeridas - definidas fuera del objeto para evitar problemas de tipo
+export const GOOGLE_MAPS_LIBRARIES: ("places" | "geometry")[] = ['places', 'geometry'];
+
 export const GOOGLE_MAPS_CONFIG = {
   // API Key desde variables de entorno
   apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-  
-  // Librerías requeridas
-  libraries: ['places', 'geometry'] as const,
   
   // Restricción geográfica a México
   bounds: {
@@ -28,16 +28,12 @@ export const GOOGLE_MAPS_CONFIG = {
     default: 5,
     min: 4,
     max: 18,
-    // Zoom mínimo para mostrar propiedades individuales
-    // Por debajo de esto, SOLO clusters
     showPropertiesAt: 12,
-    // Zoom mínimo para hacer queries
     minForQueries: 5,
   },
   
   // Configuración de clustering SERVER-SIDE
   clustering: {
-    // Tamaño de grid según zoom (en grados)
     gridSizeByZoom: {
       5: 3.0,
       6: 2.0,
@@ -46,17 +42,16 @@ export const GOOGLE_MAPS_CONFIG = {
       9: 0.25,
       10: 0.1,
       11: 0.05,
-      12: 0, // Sin clustering
+      12: 0,
     } as Record<number, number>,
-    // Máximo de elementos por viewport
     maxMarkersPerViewport: 200,
     maxClustersPerViewport: 100,
   },
   
   // Debounce para eventos de mapa
   debounce: {
-    boundsChange: 300, // ms
-    search: 500, // ms
+    boundsChange: 300,
+    search: 500,
   },
   
   // Estilos del mapa (minimalista)
@@ -70,7 +65,7 @@ export const GOOGLE_MAPS_CONFIG = {
       featureType: 'transit',
       stylers: [{ visibility: 'off' }],
     },
-  ] as google.maps.MapTypeStyle[],
+  ],
 };
 
 // Validación en desarrollo

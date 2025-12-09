@@ -10,7 +10,7 @@
 
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
-import { GOOGLE_MAPS_CONFIG } from '@/config/googleMaps';
+import { GOOGLE_MAPS_CONFIG, GOOGLE_MAPS_LIBRARIES } from '@/config/googleMaps';
 import type { MapViewport } from '@/types/map';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export function GoogleMapBase({
   // Cargar API de Google Maps
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_CONFIG.apiKey,
-    libraries: GOOGLE_MAPS_CONFIG.libraries as any,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   // Manejar error de carga
@@ -136,6 +136,24 @@ export function GoogleMapBase({
     );
   }
 
+  // Opciones del mapa - solo se crean cuando isLoaded es true
+  const mapOptions: google.maps.MapOptions = {
+    minZoom: GOOGLE_MAPS_CONFIG.zoom.min,
+    maxZoom: GOOGLE_MAPS_CONFIG.zoom.max,
+    restriction: {
+      latLngBounds: GOOGLE_MAPS_CONFIG.bounds,
+      strictBounds: false,
+    },
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    zoomControl: true,
+    zoomControlOptions: {
+      position: window.google?.maps?.ControlPosition?.RIGHT_TOP ?? 3,
+    },
+    styles: GOOGLE_MAPS_CONFIG.styles as google.maps.MapTypeStyle[],
+  };
+
   return (
     <GoogleMap
       mapContainerStyle={{ width: '100%', height }}
@@ -144,22 +162,7 @@ export function GoogleMapBase({
       zoom={initialZoom}
       onLoad={handleMapLoad}
       onIdle={handleIdle}
-      options={{
-        minZoom: GOOGLE_MAPS_CONFIG.zoom.min,
-        maxZoom: GOOGLE_MAPS_CONFIG.zoom.max,
-        restriction: {
-          latLngBounds: GOOGLE_MAPS_CONFIG.bounds,
-          strictBounds: false,
-        },
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        zoomControl: true,
-        zoomControlOptions: {
-          position: google.maps.ControlPosition.RIGHT_TOP,
-        },
-        styles: GOOGLE_MAPS_CONFIG.styles as google.maps.MapTypeStyle[],
-      }}
+      options={mapOptions}
     >
       {children}
     </GoogleMap>
