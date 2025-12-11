@@ -3,14 +3,20 @@
  * 
  * IMPORTANTE: Este archivo es la ÚNICA fuente de verdad para
  * configuración de mapas en toda la aplicación.
+ * 
+ * [BUILD TRIGGER v2 - 2025-12-11]
  */
 
 // Librerías requeridas - definidas fuera del objeto para evitar problemas de tipo
 export const GOOGLE_MAPS_LIBRARIES: ("places" | "geometry")[] = ['places', 'geometry'];
 
+// Diagnóstico de API Key (siempre activo para debugging)
+const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+console.log('[GoogleMaps] API Key status:', apiKey ? `Loaded (${apiKey.length} chars)` : 'NOT FOUND');
+
 export const GOOGLE_MAPS_CONFIG = {
   // API Key desde variables de entorno
-  apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+  apiKey,
   
   // Restricción geográfica a México
   bounds: {
