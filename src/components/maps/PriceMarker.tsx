@@ -13,6 +13,7 @@ interface PriceMarkerProps {
   isSelected?: boolean;
   isHovered?: boolean;
   isVisited?: boolean;
+  hidden?: boolean; // Para pool de markers - ocultar sin desmontar
   onClick?: (id: string) => void;
   onHover?: (property: PropertyMarker | null) => void;
 }
@@ -77,6 +78,7 @@ export const PriceMarker = memo(function PriceMarker({
   isSelected = false,
   isHovered = false,
   isVisited = false,
+  hidden = false,
   onClick,
   onHover,
 }: PriceMarkerProps) {
@@ -108,9 +110,13 @@ export const PriceMarker = memo(function PriceMarker({
       <div
         className="absolute"
         style={{ 
-          zIndex: styles.zIndex,
+          zIndex: hidden ? -1 : styles.zIndex,
           transform: 'translate(-50%, -100%)',
           paddingBottom: '8px',
+          opacity: hidden ? 0 : 1,
+          pointerEvents: hidden ? 'none' : 'auto',
+          visibility: hidden ? 'hidden' : 'visible',
+          transition: 'opacity 150ms ease-out',
         }}
       >
         <button

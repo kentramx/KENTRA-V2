@@ -71,16 +71,15 @@ export function SearchMap({
   const [map, setMap] = useState<google.maps.Map | null>(null);
   
   // ═══════════════════════════════════════════════════════════
-  // CACHE DE MARKERS - Evita flickering durante navegación
-  // NO limpiar cache al cambiar modo - dejar que datos nuevos lo reemplacen
+  // POOL DE MARKERS - Evita flickering manteniendo markers montados
+  // Solo cambia visibilidad con CSS, nunca desmonta
   // ═══════════════════════════════════════════════════════════
   const [cachedProperties, setCachedProperties] = useState<PropertyMarker[]>([]);
   const [cachedClusters, setCachedClusters] = useState<PropertyCluster[]>([]);
   const hasLoadedOnce = useRef(false);
   
-  // Actualizar cache solo cuando hay datos válidos (sin limpiar agresivamente)
+  // Actualizar cache cuando hay datos válidos
   useEffect(() => {
-    // Solo actualizar cache cuando tenemos datos nuevos Y terminó de cargar
     if (!isFetching) {
       if (properties.length > 0) {
         setCachedProperties(properties);
@@ -108,7 +107,6 @@ export function SearchMap({
     if (onClusterClick) {
       onClusterClick(cluster);
     } else if (map) {
-      // Primero pan, luego zoom para animación suave
       map.panTo({ lat: cluster.lat, lng: cluster.lng });
       setTimeout(() => {
         map.setZoom(cluster.expansion_zoom);
@@ -116,18 +114,37 @@ export function SearchMap({
     }
   }, [map, onClusterClick]);
 
-  // SIEMPRE preferir props si tienen datos, sino usar cache
-  const visibleProperties = useMemo(() => {
-    if (isClustered) return [];
+  // ═══════════════════════════════════════════════════════════
+  // SETS DE IDs VISIBLES - O(1) lookup para determinar visibilidad
+  // ═══════════════════════════════════════════════════════════
+  const visiblePropertyIds = useMemo(() => {
+    if (isClustered) return new Set<string>();
     const source = properties.length > 0 ? properties : cachedProperties;
-    return source.slice(0, MAX_VISIBLE_MARKERS);
+    return new Set(source.slice(0, MAX_VISIBLE_MARKERS).map(p => p.id));
   }, [properties, cachedProperties, isClustered]);
 
-  // SIEMPRE preferir props si tienen datos, sino usar cache  
-  const visibleClusters = useMemo(() => {
-    if (!isClustered) return [];
-    return clusters.length > 0 ? clusters : cachedClusters;
+  const visibleClusterIds = useMemo(() => {
+    if (!isClustered) return new Set<string>();
+    const source = clusters.length > 0 ? clusters : cachedClusters;
+    return new Set(source.map(c => c.id));
   }, [clusters, cachedClusters, isClustered]);
+
+  // ═══════════════════════════════════════════════════════════
+  // POOL COMBINADO - Mantiene todos los markers montados
+  // ═══════════════════════════════════════════════════════════
+  const allProperties = useMemo(() => {
+    const combined = new Map<string, PropertyMarker>();
+    cachedProperties.forEach(p => combined.set(p.id, p));
+    properties.forEach(p => combined.set(p.id, p));
+    return Array.from(combined.values()).slice(0, MAX_VISIBLE_MARKERS * 2);
+  }, [properties, cachedProperties]);
+
+  const allClusters = useMemo(() => {
+    const combined = new Map<string, PropertyCluster>();
+    cachedClusters.forEach(c => combined.set(c.id, c));
+    clusters.forEach(c => combined.set(c.id, c));
+    return Array.from(combined.values());
+  }, [clusters, cachedClusters]);
 
   // Formatear contador elegante
   const countDisplay = useMemo(() => {
@@ -151,20 +168,21 @@ export function SearchMap({
         height="100%"
       >
         {/* ═══════════════════════════════════════════════════════════
-            CLUSTERS - Solo cuando isClustered es TRUE
+            POOL DE CLUSTERS - Siempre montados, visibilidad por CSS
             ═══════════════════════════════════════════════════════════ */}
-        {visibleClusters.map((cluster) => (
+        {allClusters.map((cluster) => (
           <ClusterMarker
             key={cluster.id}
             cluster={cluster}
             onClick={handleClusterClick}
+            hidden={!visibleClusterIds.has(cluster.id)}
           />
         ))}
 
         {/* ═══════════════════════════════════════════════════════════
-            PRICE MARKERS - Solo cuando isClustered es FALSE
+            POOL DE PRICE MARKERS - Siempre montados, visibilidad por CSS
             ═══════════════════════════════════════════════════════════ */}
-        {visibleProperties.map((property) => (
+        {allProperties.map((property) => (
           <PriceMarker
             key={property.id}
             property={property}
@@ -173,6 +191,7 @@ export function SearchMap({
             isVisited={visitedPropertyIds.has(property.id)}
             onClick={onPropertyClick}
             onHover={onPropertyHover}
+            hidden={!visiblePropertyIds.has(property.id)}
           />
         ))}
       </GoogleMapBase>

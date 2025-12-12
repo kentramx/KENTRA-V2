@@ -172,11 +172,15 @@ Deno.serve(async (req) => {
 
     for (const feature of clustersRaw) {
       if (feature.properties.cluster) {
-        // Es un cluster
+        // Es un cluster - ID estable basado en coordenadas redondeadas
+        const clusterLat = feature.geometry.coordinates[1];
+        const clusterLng = feature.geometry.coordinates[0];
+        const stableId = `c-${Math.round(clusterLat * 1000)}-${Math.round(clusterLng * 1000)}-z${zoom}`;
+        
         clusters.push({
-          id: `cluster-${feature.properties.cluster_id}`,
-          lat: feature.geometry.coordinates[1],
-          lng: feature.geometry.coordinates[0],
+          id: stableId,
+          lat: clusterLat,
+          lng: clusterLng,
           count: feature.properties.point_count,
           avg_price: Math.round(
             (feature.properties.price || 0) / (feature.properties.count || 1)

@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 interface ClusterMarkerProps {
   cluster: PropertyCluster;
+  hidden?: boolean; // Para pool de markers - ocultar sin desmontar
   onClick?: (cluster: PropertyCluster) => void;
 }
 
@@ -72,6 +73,7 @@ function getClusterStyle(count: number): {
 
 export const ClusterMarker = memo(function ClusterMarker({
   cluster,
+  hidden = false,
   onClick,
 }: ClusterMarkerProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -112,7 +114,12 @@ export const ClusterMarker = memo(function ClusterMarker({
           border: '3px solid white',
           boxShadow: isHovered ? style.shadowHover : style.shadowNormal,
           transform: isHovered ? 'translate(-50%, -50%) scale(1.12)' : 'translate(-50%, -50%) scale(1)',
+          opacity: hidden ? 0 : 1,
+          pointerEvents: hidden ? 'none' : 'auto',
+          visibility: hidden ? 'hidden' : 'visible',
+          transition: 'opacity 200ms ease-out, transform 200ms ease-out',
         }}
+        aria-hidden={hidden}
         aria-label={`Grupo de ${cluster.count} propiedades. Click para acercar.`}
       >
         {countLabel}
