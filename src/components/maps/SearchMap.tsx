@@ -114,15 +114,16 @@ export function SearchMap({
 
   // ═══════════════════════════════════════════════════════════
   // AUTO-ZOOM TO RESULTS (Fit to Bounds)
-  // Ejecuta fitBounds cuando hay datos y fitToBounds es true
+  // Ejecuta fitBounds cuando hay datos FILTRADOS y no está cargando
   // ═══════════════════════════════════════════════════════════
   useEffect(() => {
     // Condiciones para ejecutar fitBounds:
     // 1. Hay mapa disponible
     // 2. fitToBounds está activo
-    // 3. No se ha ejecutado ya para este ciclo
-    // 4. Hay propiedades o clusters para ajustar
-    if (!map || !fitToBounds || fitBoundsExecutedRef.current) return;
+    // 3. NO está cargando (datos frescos ya llegaron)
+    // 4. No se ha ejecutado ya para este ciclo
+    // 5. Hay propiedades o clusters para ajustar
+    if (!map || !fitToBounds || isFetching || fitBoundsExecutedRef.current) return;
     
     const hasData = properties.length > 0 || clusters.length > 0;
     if (!hasData) return;
@@ -169,7 +170,7 @@ export function SearchMap({
       }, 500); // Esperar animación de Google Maps (~400ms)
     }, 100);
 
-  }, [map, fitToBounds, properties, clusters, onFitComplete]);
+  }, [map, fitToBounds, isFetching, properties, clusters, onFitComplete]);
 
   // Reset del flag cuando fitToBounds cambia a false
   useEffect(() => {

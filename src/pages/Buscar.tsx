@@ -890,12 +890,29 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       colonia: location.colonia || '',
     }));
 
-    // Guardar coordenadas de la búsqueda
+    // Guardar coordenadas de la búsqueda y forzar nuevo viewport
     if (location.lat && location.lng) {
       setSearchCoordinates({ lat: location.lat, lng: location.lng });
+      
+      // 🎯 Forzar viewport centrado en la ubicación buscada
+      // Esto asegura que useMapData fetchee datos de la zona correcta
+      // antes de ejecutar fitBounds
+      const DELTA_LAT = 0.15; // ~16km norte-sur
+      const DELTA_LNG = 0.2;  // ~18km este-oeste
+      setMapViewport({
+        center: { lat: location.lat, lng: location.lng },
+        zoom: 12,
+        bounds: {
+          north: location.lat + DELTA_LAT,
+          south: location.lat - DELTA_LAT,
+          east: location.lng + DELTA_LNG,
+          west: location.lng - DELTA_LNG,
+        }
+      });
     }
 
     // 🎯 Activar Auto-zoom para ajustar vista a los resultados
+    // Se ejecutará DESPUÉS de que lleguen los datos filtrados
     setPendingAutoZoom(true);
 
     // ✅ Mostrar colonia en el toast si está disponible
