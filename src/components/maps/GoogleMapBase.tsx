@@ -10,7 +10,7 @@
  * - Soportar Dark Mode automático
  */
 
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 import { GOOGLE_MAPS_CONFIG, GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_DARK_STYLES } from '@/config/googleMaps';
 import { useIsDarkMode } from '@/hooks/useIsDarkMode';
@@ -47,6 +47,16 @@ export function GoogleMapBase({
     libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
+  // ═══════════════════════════════════════════════════════════
+  // ESTILOS DINÁMICOS - Calculados con useMemo (ANTES de returns)
+  // ═══════════════════════════════════════════════════════════
+  const mapStyles = useMemo(() => 
+    isDarkMode 
+      ? GOOGLE_MAPS_DARK_STYLES 
+      : (GOOGLE_MAPS_CONFIG.styles as google.maps.MapTypeStyle[]),
+    [isDarkMode]
+  );
+
   // Manejar error de carga
   useEffect(() => {
     if (loadError) {
@@ -55,12 +65,17 @@ export function GoogleMapBase({
     }
   }, [loadError]);
 
+  // Actualizar estilos cuando cambia el tema (ANTES de returns)
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.setOptions({ styles: mapStyles });
+    }
+  }, [isDarkMode, mapStyles]);
+
   // Callback cuando el mapa está listo
   const handleMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     onMapReady?.(map);
-    
-    // Emitir viewport inicial
     emitViewport(map);
   }, [onMapReady]);
 
@@ -139,20 +154,6 @@ export function GoogleMapBase({
       </div>
     );
   }
-
-  // ═══════════════════════════════════════════════════════════
-  // ESTILOS DINÁMICOS - Responde al modo oscuro del sistema
-  // ═══════════════════════════════════════════════════════════
-  const mapStyles = isDarkMode 
-    ? GOOGLE_MAPS_DARK_STYLES 
-    : (GOOGLE_MAPS_CONFIG.styles as google.maps.MapTypeStyle[]);
-
-  // Actualizar estilos cuando cambia el tema
-  useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.setOptions({ styles: mapStyles });
-    }
-  }, [isDarkMode, mapStyles]);
 
   // Opciones del mapa - solo se crean cuando isLoaded es true
   const mapOptions: google.maps.MapOptions = {
