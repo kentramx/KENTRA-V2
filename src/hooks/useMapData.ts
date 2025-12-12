@@ -115,7 +115,9 @@ export function useMapData({
         for_rent: p.for_rent ?? false,
         sale_price: p.sale_price ?? null,
         rent_price: p.rent_price ?? null,
-        images: p.images || [],
+        images: Array.isArray(p.images) 
+          ? p.images.map((img: any) => typeof img === 'string' ? { url: img } : img)
+          : [],
         agent_id: p.agent_id || '',
         is_featured: p.is_featured ?? false,
         created_at: p.created_at || '',
