@@ -41,18 +41,18 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
   }) => {
     const propertyCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-    // ✅ Efecto para hacer scroll a una propiedad cuando se hace hover desde el mapa
+    // ✅ Efecto para hacer scroll a una propiedad específica (solo en CLIC, no hover)
     React.useEffect(() => {
-      if (highlightedPropertyId) {
-        const element = propertyCardRefs.current.get(highlightedPropertyId);
+      if (scrollToPropertyId) {
+        const element = propertyCardRefs.current.get(scrollToPropertyId);
         if (element) {
           element.scrollIntoView({
             behavior: 'smooth',
-            block: 'nearest', // 'nearest' evita scroll innecesario si ya está visible
+            block: 'center',
           });
         }
       }
-    }, [highlightedPropertyId]);
+    }, [scrollToPropertyId]);
 
     // ✅ Contar propiedades destacadas
     const featuredCount = useMemo(() => {

@@ -1700,7 +1700,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                     element?.scrollIntoView({ behavior: 'smooth' });
                   }}
                   highlightedPropertyId={hoveredPropertyId || selectedPropertyFromMap}
-                  scrollToPropertyId={hoveredPropertyId || selectedPropertyFromMap}
+                  scrollToPropertyId={selectedPropertyFromMap}
                 />
 
                 {/* Botón fallback para cargar más si IntersectionObserver falla */}
