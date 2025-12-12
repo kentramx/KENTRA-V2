@@ -18,6 +18,25 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Security: Verify internal service token to prevent unauthorized calls
+    const authHeader = req.headers.get('Authorization');
+    const internalToken = Deno.env.get('INTERNAL_SERVICE_TOKEN');
+    
+    // If internal token is configured, require it for non-authenticated calls
+    if (internalToken && authHeader !== `Bearer ${internalToken}`) {
+      // Fall back to checking if this is a legitimate Supabase service call
+      const apiKey = req.headers.get('apikey');
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      
+      if (apiKey !== serviceRoleKey) {
+        console.warn('Unauthorized notification attempt blocked');
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
     
     const supabaseClient = createClient(
@@ -26,6 +45,15 @@ Deno.serve(async (req) => {
     );
 
     const { userId, type, metadata = {} }: NotificationRequest = await req.json();
+
+    // Validate userId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!userId || !uuidRegex.test(userId)) {
+      return new Response(JSON.stringify({ error: 'Invalid userId format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Get user details
     const { data: profile, error: profileError } = await supabaseClient

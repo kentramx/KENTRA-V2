@@ -107,11 +107,9 @@ export const IdentityVerification = () => {
 
     if (uploadError) throw uploadError;
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('kyc-documents')
-      .getPublicUrl(fileName);
-
-    return publicUrl;
+    // Return just the file path - signed URLs will be generated on-demand by admins
+    // This is more secure than storing public URLs for sensitive KYC documents
+    return fileName;
   };
 
   const handleSubmit = async () => {
