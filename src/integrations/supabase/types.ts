@@ -2462,19 +2462,19 @@ export type Database = {
       }
       get_map_data: {
         Args: {
-          p_bathrooms_min?: number
-          p_bedrooms_min?: number
+          p_bathrooms?: number
+          p_bedrooms?: number
           p_east: number
           p_listing_type?: string
+          p_max_price?: number
+          p_min_price?: number
           p_municipality?: string
           p_north: number
-          p_price_max?: number
-          p_price_min?: number
           p_property_type?: string
           p_south: number
           p_state?: string
           p_west: number
-          p_zoom?: number
+          p_zoom: number
         }
         Returns: Json
       }
@@ -3258,6 +3258,7 @@ export type Database = {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
       }
+      unaccent: { Args: { "": string }; Returns: string }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {
         Args: {
