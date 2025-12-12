@@ -124,12 +124,12 @@ export function useMapData({
         image_url: p.image_url,
       }));
 
-      // Mapear clusters
-      const clusters: PropertyCluster[] = (response?.clusters || []).map((c: any) => ({
-        id: c.id,
+      // Mapear clusters (RPC devuelve property_count, no count)
+      const clusters: PropertyCluster[] = (response?.clusters || []).map((c: any, index: number) => ({
+        id: c.id || `cluster-${index}`,
         lat: c.lat,
         lng: c.lng,
-        count: c.count || 0,
+        count: c.property_count || c.count || 0, // ← Fix: RPC devuelve property_count
         avg_price: c.avg_price || 0,
         expansion_zoom: c.expansion_zoom || Math.min(zoom + 2, 14),
       }));
@@ -137,8 +137,8 @@ export function useMapData({
       return {
         properties,
         clusters,
-        total_in_viewport: response?.total_in_viewport || 0,
-        truncated: response?.truncated || false,
+        total_in_viewport: response?.total_count || response?.total_in_viewport || 0, // ← Fix: RPC devuelve total_count
+        truncated: response?.is_clustered || response?.truncated || false, // ← Fix: is_clustered indica que hay más
       };
     },
   });
