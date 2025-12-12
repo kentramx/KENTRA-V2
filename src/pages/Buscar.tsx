@@ -752,8 +752,10 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const handlePropertyHoverFromList = useCallback((property: HoveredProperty | null) => {
     hoverFromMap.current = false;
     
+    // ✅ SYNC BIDIRECCIONAL: Establecer hoveredPropertyId para que el mapa lo use
+    setHoveredPropertyId(property?.id || null);
+    
     if (property && property.lat && property.lng) {
-      // ✅ Ahora SÍ tenemos coordenadas, establecer hoveredProperty
       setHoveredProperty({
         id: property.id,
         title: property.title,
@@ -1697,8 +1699,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                     const element = document.getElementById('saved-searches');
                     element?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  highlightedPropertyId={selectedPropertyFromMap}
-                  scrollToPropertyId={selectedPropertyFromMap}
+                  highlightedPropertyId={hoveredPropertyId || selectedPropertyFromMap}
+                  scrollToPropertyId={hoveredPropertyId || selectedPropertyFromMap}
                 />
 
                 {/* Botón fallback para cargar más si IntersectionObserver falla */}
