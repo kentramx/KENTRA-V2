@@ -60,7 +60,7 @@ export const GOOGLE_MAPS_CONFIG = {
     search: 500,
   },
 
-  // Estilos del mapa (minimalista - modo claro)
+  // Estilos del mapa (minimalista)
   styles: [
     {
       featureType: "poi",
@@ -73,74 +73,6 @@ export const GOOGLE_MAPS_CONFIG = {
     },
   ],
 };
-
-// ═══════════════════════════════════════════════════════════
-// ESTILOS DARK MODE - Elegante y profesional
-// ═══════════════════════════════════════════════════════════
-export const GOOGLE_MAPS_DARK_STYLES: google.maps.MapTypeStyle[] = [
-  { elementType: "geometry", stylers: [{ color: "#1a1a2e" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a2e" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#8b8b8b" }] },
-  {
-    featureType: "administrative",
-    elementType: "geometry.stroke",
-    stylers: [{ color: "#3d3d5c" }],
-  },
-  {
-    featureType: "administrative.locality",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#b0b0b0" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry",
-    stylers: [{ color: "#2d2d44" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry.stroke",
-    stylers: [{ color: "#1a1a2e" }],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "geometry",
-    stylers: [{ color: "#3d3d5c" }],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "geometry.stroke",
-    stylers: [{ color: "#1a1a2e" }],
-  },
-  {
-    featureType: "water",
-    elementType: "geometry",
-    stylers: [{ color: "#0e1525" }],
-  },
-  {
-    featureType: "water",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#4a5568" }],
-  },
-  {
-    featureType: "poi",
-    elementType: "labels",
-    stylers: [{ visibility: "off" }],
-  },
-  {
-    featureType: "poi",
-    elementType: "geometry",
-    stylers: [{ color: "#1a1a2e" }],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "geometry",
-    stylers: [{ color: "#1a2e1a" }],
-  },
-  {
-    featureType: "transit",
-    stylers: [{ visibility: "off" }],
-  },
-];
 
 // Validación en desarrollo
 if (!GOOGLE_MAPS_CONFIG.apiKey && import.meta.env.DEV) {

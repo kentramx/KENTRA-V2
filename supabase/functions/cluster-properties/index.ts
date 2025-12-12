@@ -2,49 +2,12 @@
  * Edge Function: cluster-properties
  * Clustering profesional con Supercluster (Mapbox algorithm)
  * 
- * FEATURES:
- * - Server-side clustering con Supercluster
- * - Redis cache con Upstash (TTL dinámico por zoom)
- * - Soporte para propiedades destacadas (is_featured)
+ * FASE 1: Sin cache Redis (validación de concepto)
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Supercluster from "https://esm.sh/supercluster@8";
-import { Redis } from "https://esm.sh/@upstash/redis@1.28.0";
 import { corsHeaders } from "../_shared/cors.ts";
-
-// ═══════════════════════════════════════════════════════════
-// CONFIGURACIÓN DE REDIS CACHE
-// ═══════════════════════════════════════════════════════════
-const redis = new Redis({
-  url: Deno.env.get("UPSTASH_REDIS_REST_URL") || "",
-  token: Deno.env.get("UPSTASH_REDIS_REST_TOKEN") || "",
-});
-
-// Hash simple para filtros
-function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash).toString(36);
-}
-
-// Generar cache key única basada en bounds + zoom + filters
-function getCacheKey(bounds: any, zoom: number, filters: any): string {
-  const boundsKey = `${bounds.north.toFixed(3)}_${bounds.south.toFixed(3)}_${bounds.east.toFixed(3)}_${bounds.west.toFixed(3)}`;
-  const filtersHash = simpleHash(JSON.stringify(filters || {}));
-  return `clusters:z${zoom}:${boundsKey}:f${filtersHash}`;
-}
-
-// TTL dinámico por nivel de zoom
-function getTTL(zoom: number): number {
-  if (zoom <= 7) return 300;  // 5 min - Nacional
-  if (zoom <= 11) return 120; // 2 min - Regional
-  return 60;                   // 1 min - Local
-}
 
 // Tipos
 interface RequestBody {
@@ -100,33 +63,7 @@ Deno.serve(async (req) => {
     const body: RequestBody = await req.json();
     const { bounds, zoom, filters = {} } = body;
 
-    console.log(`[cluster-properties] Request: zoom=${zoom}, bounds=[${bounds.south.toFixed(3)},${bounds.north.toFixed(3)}]`);
-
-    // ═══════════════════════════════════════════════════════════
-    // REDIS CACHE - Intentar obtener datos cacheados
-    // ═══════════════════════════════════════════════════════════
-    const cacheKey = getCacheKey(bounds, zoom, filters);
-    let cacheHit = false;
-    
-    try {
-      const cached = await redis.get(cacheKey);
-      if (cached) {
-        console.log(`[cluster-properties] Cache HIT: ${cacheKey} (${Date.now() - startTime}ms)`);
-        return new Response(JSON.stringify(cached), {
-          headers: { 
-            ...corsHeaders, 
-            "Content-Type": "application/json",
-            "X-Cache": "HIT",
-            "X-Cache-Key": cacheKey,
-          },
-        });
-      }
-    } catch (cacheError) {
-      console.warn(`[cluster-properties] Cache read error:`, cacheError);
-      // Continuar sin cache si hay error
-    }
-
-    console.log(`[cluster-properties] Cache MISS: ${cacheKey}`);
+    console.log(`[cluster-properties] Request: zoom=${zoom}, bounds=[${bounds.south.toFixed(3)},${bounds.north.toFixed(3)}], limit=${zoom <= 7 ? 50000 : zoom <= 10 ? 20000 : 10000}`);
 
     // Cliente Supabase
     const supabase = createClient(
@@ -145,13 +82,12 @@ Deno.serve(async (req) => {
     let hasMore = true;
     let batchIndex = 0;
 
-    // ✨ Incluir is_featured en la consulta
     const selectFields = `
       id, lat, lng, price, currency, type, title,
       bedrooms, bathrooms, sqft, parking, listing_type,
       address, colonia, state, municipality,
       for_sale, for_rent, sale_price, rent_price,
-      agent_id, created_at, is_featured
+      agent_id, created_at
     `;
 
     while (hasMore && batchIndex < MAX_BATCHES) {
@@ -240,7 +176,6 @@ Deno.serve(async (req) => {
         rent_price: p.rent_price,
         agent_id: p.agent_id,
         created_at: p.created_at,
-        is_featured: p.is_featured ?? false,  // ✨ Incluir is_featured
       },
     }));
 
@@ -304,9 +239,9 @@ Deno.serve(async (req) => {
           for_rent: props.for_rent,
           sale_price: props.sale_price,
           rent_price: props.rent_price,
-          images: [],
+          images: [],  // FASE 2: cargar imágenes
           agent_id: props.agent_id,
-          is_featured: props.is_featured ?? false,  // ✨ Pasar is_featured
+          is_featured: false,  // FASE 2: verificar featured
           created_at: props.created_at,
         });
       }
@@ -349,7 +284,7 @@ Deno.serve(async (req) => {
                 rent_price: props.rent_price,
                 images: [],
                 agent_id: props.agent_id,
-                is_featured: props.is_featured ?? false,  // ✨ Pasar is_featured
+                is_featured: false,
                 created_at: props.created_at,
               });
             }
@@ -393,29 +328,11 @@ Deno.serve(async (req) => {
         individual_count: individualProperties.length,
         expanded_count: propertiesForList.length,
         zoom,
-        cache_key: cacheKey,
       },
     };
 
-    // ═══════════════════════════════════════════════════════════
-    // GUARDAR EN REDIS CACHE
-    // ═══════════════════════════════════════════════════════════
-    try {
-      const ttl = getTTL(zoom);
-      await redis.setex(cacheKey, ttl, response);
-      console.log(`[cluster-properties] Cached: ${cacheKey} TTL=${ttl}s`);
-    } catch (cacheError) {
-      console.warn(`[cluster-properties] Cache write error:`, cacheError);
-      // Continuar sin cache si hay error
-    }
-
     return new Response(JSON.stringify(response), {
-      headers: { 
-        ...corsHeaders, 
-        "Content-Type": "application/json",
-        "X-Cache": "MISS",
-        "X-Cache-Key": cacheKey,
-      },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Internal error";

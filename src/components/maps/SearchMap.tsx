@@ -284,7 +284,6 @@ export function SearchMap({
             isSelected={property.id === selectedPropertyId}
             isHovered={property.id === hoveredPropertyId}
             isVisited={visitedPropertyIds.has(property.id)}
-            isFeatured={property.is_featured}
             onClick={onPropertyClick}
             onHover={onPropertyHover}
             hidden={!visiblePropertyIds.has(property.id)}

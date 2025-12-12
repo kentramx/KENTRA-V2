@@ -1,19 +1,16 @@
 /**
  * Componente base de Google Maps para Kentra
- * KENTRA MAP STACK - OFICIAL
  * 
  * RESPONSABILIDADES:
  * - Cargar API de Google Maps
  * - Renderizar mapa con configuración estándar
  * - Emitir eventos de viewport change
  * - Manejar estados de carga y error
- * - Soportar Dark Mode automático
  */
 
-import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
-import { GOOGLE_MAPS_CONFIG, GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_DARK_STYLES } from '@/config/googleMaps';
-import { useIsDarkMode } from '@/hooks/useIsDarkMode';
+import { GOOGLE_MAPS_CONFIG, GOOGLE_MAPS_LIBRARIES } from '@/config/googleMaps';
 import type { MapViewport } from '@/types/map';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,23 +36,12 @@ export function GoogleMapBase({
 }: GoogleMapBaseProps) {
   const mapRef = useRef<google.maps.Map | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
-  const isDarkMode = useIsDarkMode();
 
   // Cargar API de Google Maps
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_CONFIG.apiKey,
     libraries: GOOGLE_MAPS_LIBRARIES,
   });
-
-  // ═══════════════════════════════════════════════════════════
-  // ESTILOS DINÁMICOS - Calculados con useMemo (ANTES de returns)
-  // ═══════════════════════════════════════════════════════════
-  const mapStyles = useMemo(() => 
-    isDarkMode 
-      ? GOOGLE_MAPS_DARK_STYLES 
-      : (GOOGLE_MAPS_CONFIG.styles as google.maps.MapTypeStyle[]),
-    [isDarkMode]
-  );
 
   // Manejar error de carga
   useEffect(() => {
@@ -65,17 +51,12 @@ export function GoogleMapBase({
     }
   }, [loadError]);
 
-  // Actualizar estilos cuando cambia el tema (ANTES de returns)
-  useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.setOptions({ styles: mapStyles });
-    }
-  }, [isDarkMode, mapStyles]);
-
   // Callback cuando el mapa está listo
   const handleMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     onMapReady?.(map);
+    
+    // Emitir viewport inicial
     emitViewport(map);
   }, [onMapReady]);
 
@@ -170,7 +151,7 @@ export function GoogleMapBase({
     zoomControlOptions: {
       position: window.google?.maps?.ControlPosition?.RIGHT_TOP ?? 3,
     },
-    styles: mapStyles,
+    styles: GOOGLE_MAPS_CONFIG.styles as google.maps.MapTypeStyle[],
   };
 
   return (

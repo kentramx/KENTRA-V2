@@ -1246,7 +1246,6 @@ export type Database = {
           id: string
           images_analyzed_count: number | null
           images_quality_avg: number | null
-          is_featured: boolean | null
           last_renewed_at: string | null
           lat: number | null
           listing_type: string
@@ -1299,7 +1298,6 @@ export type Database = {
           id?: string
           images_analyzed_count?: number | null
           images_quality_avg?: number | null
-          is_featured?: boolean | null
           last_renewed_at?: string | null
           lat?: number | null
           listing_type?: string
@@ -1352,7 +1350,6 @@ export type Database = {
           id?: string
           images_analyzed_count?: number | null
           images_quality_avg?: number | null
-          is_featured?: boolean | null
           last_renewed_at?: string | null
           lat?: number | null
           listing_type?: string
