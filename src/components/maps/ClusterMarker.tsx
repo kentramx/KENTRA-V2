@@ -1,10 +1,10 @@
 /**
- * Marcador de cluster
- * Círculo negro con número de propiedades
+ * Marcador de cluster premium estilo Zillow
+ * KENTRA MAP STACK - OFICIAL
  */
 
 import { OverlayView } from '@react-google-maps/api';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import type { PropertyCluster } from '@/types/map';
 import { cn } from '@/lib/utils';
 
@@ -13,31 +13,75 @@ interface ClusterMarkerProps {
   onClick?: (cluster: PropertyCluster) => void;
 }
 
-// Formatear conteo
+// Formatear conteo compacto
 function formatCount(count: number): string {
+  if (count >= 10000) {
+    return `${(count / 1000).toFixed(0)}K`;
+  }
   if (count >= 1000) {
     return `${(count / 1000).toFixed(1)}K`;
   }
   return count.toString();
 }
 
-// Calcular tamaño basado en cantidad
-function getSize(count: number): number {
-  const minSize = 36;
-  const maxSize = 60;
-  const scale = Math.min(Math.log10(count + 1) / 3, 1);
-  return minSize + (maxSize - minSize) * scale;
+// Calcular tamaño basado en cantidad (escala logarítmica)
+function getClusterSize(count: number): { size: number; fontSize: number } {
+  const minSize = 40;
+  const maxSize = 70;
+  
+  const scale = Math.min(Math.log10(count + 1) / 4, 1);
+  const size = Math.round(minSize + (maxSize - minSize) * scale);
+  const fontSize = Math.round(size * 0.32);
+  
+  return { size, fontSize };
+}
+
+// Obtener estilo según densidad
+function getClusterStyle(count: number): { 
+  gradient: string; 
+  shadowNormal: string;
+  shadowHover: string;
+} {
+  if (count >= 500) {
+    return { 
+      gradient: 'linear-gradient(145deg, #1a1a1a 0%, #000000 100%)',
+      shadowNormal: '0 4px 14px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.3)',
+      shadowHover: '0 8px 28px rgba(0,0,0,0.6), 0 4px 10px rgba(0,0,0,0.4)',
+    };
+  }
+  if (count >= 100) {
+    return { 
+      gradient: 'linear-gradient(145deg, #2d2d2d 0%, #1a1a1a 100%)',
+      shadowNormal: '0 4px 12px rgba(0,0,0,0.45), 0 2px 5px rgba(0,0,0,0.25)',
+      shadowHover: '0 8px 24px rgba(0,0,0,0.55), 0 4px 8px rgba(0,0,0,0.35)',
+    };
+  }
+  if (count >= 20) {
+    return { 
+      gradient: 'linear-gradient(145deg, #404040 0%, #2d2d2d 100%)',
+      shadowNormal: '0 4px 10px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2)',
+      shadowHover: '0 8px 20px rgba(0,0,0,0.5), 0 4px 6px rgba(0,0,0,0.3)',
+    };
+  }
+  return { 
+    gradient: 'linear-gradient(145deg, #525252 0%, #404040 100%)',
+    shadowNormal: '0 3px 8px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.15)',
+    shadowHover: '0 6px 16px rgba(0,0,0,0.45), 0 3px 5px rgba(0,0,0,0.25)',
+  };
 }
 
 export const ClusterMarker = memo(function ClusterMarker({
   cluster,
   onClick,
 }: ClusterMarkerProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  
   const handleClick = useCallback(() => {
     onClick?.(cluster);
   }, [onClick, cluster]);
 
-  const size = getSize(cluster.count);
+  const { size, fontSize } = getClusterSize(cluster.count);
+  const style = getClusterStyle(cluster.count);
   const countLabel = formatCount(cluster.count);
 
   return (
@@ -47,21 +91,27 @@ export const ClusterMarker = memo(function ClusterMarker({
     >
       <button
         onClick={handleClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         className={cn(
-          'relative -translate-x-1/2 -translate-y-1/2',
-          'rounded-full bg-black text-white',
+          'absolute -translate-x-1/2 -translate-y-1/2',
+          'rounded-full',
           'flex items-center justify-center',
-          'font-bold shadow-lg border-[3px] border-white',
-          'transition-transform duration-150',
-          'cursor-pointer hover:scale-110',
-          'focus:outline-none focus:ring-2 focus:ring-primary'
+          'font-bold text-white tracking-tight',
+          'transition-all duration-200 ease-out',
+          'cursor-pointer select-none',
+          'focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent'
         )}
         style={{
           width: size,
           height: size,
-          fontSize: size * 0.35,
+          fontSize,
+          background: style.gradient,
+          border: '3px solid white',
+          boxShadow: isHovered ? style.shadowHover : style.shadowNormal,
+          transform: isHovered ? 'translate(-50%, -50%) scale(1.12)' : 'translate(-50%, -50%) scale(1)',
         }}
-        aria-label={`Cluster de ${cluster.count} propiedades`}
+        aria-label={`Grupo de ${cluster.count} propiedades. Click para acercar.`}
       >
         {countLabel}
       </button>
