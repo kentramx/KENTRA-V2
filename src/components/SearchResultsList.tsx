@@ -190,7 +190,7 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
                       bathrooms={property.bathrooms}
                       parking={property.parking}
                       sqft={property.sqft}
-                      images={property.images}
+                      images={property.images.map((img, idx) => ({ url: img.url, position: idx }))}
                       agentId={property.agent_id}
                       isFeatured={property.is_featured}
                       createdAt={property.created_at}
