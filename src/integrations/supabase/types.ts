@@ -2466,10 +2466,10 @@ export type Database = {
           p_bedrooms?: number
           p_east: number
           p_listing_type?: string
-          p_max_price?: number
-          p_min_price?: number
           p_municipality?: string
           p_north: number
+          p_price_max?: number
+          p_price_min?: number
           p_property_type?: string
           p_south: number
           p_state?: string
