@@ -90,6 +90,9 @@ const Buscar = () => {
   // ✅ Estado para sincronizar clic en mapa con tarjeta de lista
   const [selectedPropertyFromMap, setSelectedPropertyFromMap] = useState<string | null>(null);
   
+  // 🎯 AUTO-ZOOM TO RESULTS - Flag para activar fitBounds después de búsqueda
+  const [pendingAutoZoom, setPendingAutoZoom] = useState(false);
+  
   // 🗺️ Estados del mapa movidos al nuevo SearchMap
   // (viewportBounds ahora se deriva de mapViewport)
   
@@ -892,6 +895,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       setSearchCoordinates({ lat: location.lat, lng: location.lng });
     }
 
+    // 🎯 Activar Auto-zoom para ajustar vista a los resultados
+    setPendingAutoZoom(true);
+
     // ✅ Mostrar colonia en el toast si está disponible
     const description = location.colonia 
       ? `${location.colonia}, ${location.municipality}, ${location.state}`
@@ -1551,6 +1557,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 height="100%"
                 selectedPropertyId={selectedPropertyFromMap}
                 hoveredPropertyId={hoveredPropertyId}
+                fitToBounds={pendingAutoZoom && properties.length > 0}
+                onFitComplete={() => setPendingAutoZoom(false)}
                 onPropertyClick={handleMarkerClick}
                 onPropertyHover={(property) => setHoveredPropertyId(property?.id || null)}
                 onViewportChange={setMapViewport}
