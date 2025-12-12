@@ -615,7 +615,7 @@ const PropertyDetail = () => {
       />
       <Navbar />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 pb-24 lg:pb-8">
         {/* Breadcrumbs */}
         <DynamicBreadcrumbs 
           items={[
@@ -1095,6 +1095,45 @@ const PropertyDetail = () => {
           </div>
         )}
       </div>
+
+      {/* Mobile Fixed CTA - Solo visible en móvil */}
+      {agent && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t p-4 z-50">
+          <div className="flex gap-3">
+            {agent.whatsapp_enabled && agent.whatsapp_number && (
+              <Button 
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={async () => {
+                  const { trackWhatsAppInteraction } = await import('@/utils/whatsappTracking');
+                  await trackWhatsAppInteraction({
+                    agentId: agent.id,
+                    propertyId: property.id,
+                    interactionType: 'contact_agent',
+                  });
+                  const message = WhatsAppTemplates.property(
+                    property.title,
+                    `${property.municipality}, ${property.state}`
+                  );
+                  window.open(getWhatsAppUrl(agent.whatsapp_number, message), '_blank');
+                }}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                WhatsApp
+              </Button>
+            )}
+            {agent.phone && (
+              <Button 
+                variant="outline"
+                className="flex-1"
+                onClick={() => window.open(`tel:${agent.phone}`, '_self')}
+              >
+                <Phone className="mr-2 h-4 w-4" />
+                Llamar
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
