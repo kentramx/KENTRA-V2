@@ -4,9 +4,8 @@ import { SearchResultsList } from '@/components/SearchResultsList';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePropertySearch } from '@/hooks/usePropertySearch';
+import { useMapData } from '@/hooks/useMapData';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
-import { buildPropertyFilters } from '@/utils/buildPropertyFilters';
 import type { PropertySummary } from '@/types/property';
 import Navbar from '@/components/Navbar';
 import PropertyCard from '@/components/PropertyCard';
@@ -40,8 +39,7 @@ import { generatePropertyListStructuredData } from '@/utils/structuredData';
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import { InfiniteScrollContainer } from '@/components/InfiniteScrollContainer';
 import { monitoring } from '@/lib/monitoring';
-import type { MapProperty, PropertyFilters, HoveredProperty, ViewportBounds } from '@/types/property';
-import { useMapData } from '@/hooks/useMapData';
+import type { MapProperty, HoveredProperty } from '@/types/property';
 import type { MapViewport, MapFilters, PropertyMarker } from '@/types/map';
 import { GOOGLE_MAPS_CONFIG } from '@/config/googleMaps';
 
@@ -165,25 +163,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   // Este efecto está ahora consolidado en las líneas 543-579
   
   // ✅ Construir filtros de manera unificada
-  const propertyFilters = useMemo(
-    () => buildPropertyFilters(filters),
-    [filters]
-  );
-
-  // ✅ Búsqueda de propiedades con filtros
-  const {
-    properties,
-    isLoading: loading,
-    isFetching,
-    error: searchError,
-    totalCount,
-    hasNextPage,
-    fetchNextPage,
-    hasTooManyResults,
-    actualTotal,
-  } = usePropertySearch(propertyFilters);
-
-  // 🗺️ Convertir filtros a formato MapFilters para el nuevo SearchMap
+  // 🗺️ Convertir filtros a formato MapFilters (FUENTE ÚNICA)
   const mapFilters: MapFilters = useMemo(() => ({
     listing_type: filters.listingType as 'venta' | 'renta' | undefined,
     property_type: filters.tipo || undefined,
@@ -195,34 +175,39 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     municipality: filters.municipio || undefined,
   }), [filters]);
 
-  // 🗺️ Estado del mapa controlado por el nuevo SearchMap
+  // 🗺️ Estado del mapa
   const [mapViewport, setMapViewport] = useState<MapViewport | null>(null);
-  const [hoveredPropertyIdMap, setHoveredPropertyIdMap] = useState<string | null>(null);
+  const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
 
-  // Variables de compatibilidad con código antiguo
-  const viewportBounds = mapViewport ? {
-    minLat: mapViewport.bounds.south,
-    maxLat: mapViewport.bounds.north,
-    minLng: mapViewport.bounds.west,
-    maxLng: mapViewport.bounds.east,
-    zoom: mapViewport.zoom,
-  } : null;
-  const mapLoading = false; // El nuevo SearchMap maneja su propio loading
-  const viewportProperties: PropertyMarker[] = [];
-  const viewportClusters: any[] = [];
-  const viewportDebugReason = null; // Debug se maneja en el nuevo SearchMap
+  // ✅ FUENTE ÚNICA DE DATOS: useMapData alimenta MAPA y LISTA
+  const {
+    data: mapData,
+    isLoading: loading,
+    isFetching,
+    error: mapError,
+  } = useMapData({
+    viewport: mapViewport,
+    filters: mapFilters,
+    enabled: !!mapViewport,
+  });
 
-  // Flag de viewport activo (ahora derivado del nuevo mapViewport)
-  const isViewportActive = !!mapViewport;
+  // Extraer datos de la fuente única
+  const properties = mapData?.properties || [];
+  const clusters = mapData?.clusters || [];
+  const totalCount = mapData?.total_in_viewport || 0;
+  const isTruncated = mapData?.truncated || false;
+  const searchError = mapError;
 
-  // Fuente activa única: en la nueva arquitectura usamos properties directamente
-  // porque SearchMap maneja su propio data fetching internamente
-  const activeProperties = properties;
+  // Variables para compatibilidad con código existente
+  const hasNextPage = false; // Ya no hay paginación infinita - todo viene del viewport
+  const fetchNextPage = () => {}; // No-op
+  const hasTooManyResults = isTruncated;
+  const actualTotal = totalCount;
 
   // Ordenar propiedades según criterio seleccionado
   // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
   const sortedProperties = useMemo(() => {
-    const sorted = [...activeProperties];
+    const sorted = [...properties];
     
     sorted.sort((a, b) => {
       // 1. Prioridad principal: Destacadas primero
@@ -258,14 +243,10 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     });
     
     return sorted;
-  }, [activeProperties, filters.orden]);
+  }, [properties, filters.orden]);
 
   const filteredProperties = sortedProperties;
-
-  // 📋 Lista final: limitar a 50 cuando viewport activo
-  const listProperties = isViewportActive
-    ? sortedProperties.slice(0, 50)
-    : sortedProperties;
+  const listProperties = sortedProperties;
   
   // Estado para guardar coordenadas de la ubicación buscada
   const [searchCoordinates, setSearchCoordinates] = useState<{ lat: number; lng: number } | null>(null);
@@ -350,8 +331,11 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const [hoveredProperty, setHoveredProperty] = useState<MapProperty | null>(null);
   const hoverFromMap = useRef(false);
   const [mobileView, setMobileView] = useState<'map' | 'list'>('list');
-  const [mapError, setMapError] = useState<string | null>(null);
+  const [mapDisplayError, setMapDisplayError] = useState<string | null>(null);
   const [mapVisibleCount, setMapVisibleCount] = useState<number>(0);
+
+  // Flag de viewport activo
+  const isViewportActive = !!mapViewport;
 
   // Normalizar rango de precios para evitar valores fuera de rango al alternar Venta/Renta
   const [minRangeForType, maxRangeForType] = getPriceRangeForListingType(filters.listingType);
@@ -1556,16 +1540,19 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               </div>
             ) : (
               <SearchMap
-                filters={mapFilters}
+                properties={properties}
+                clusters={clusters}
+                totalCount={totalCount}
+                isLoading={loading || isFetching}
+                isTruncated={isTruncated}
                 initialCenter={searchCoordinates || undefined}
                 initialZoom={searchCoordinates ? 12 : 5}
                 height="100%"
                 selectedPropertyId={selectedPropertyFromMap}
-                hoveredPropertyId={hoveredPropertyIdMap}
+                hoveredPropertyId={hoveredPropertyId}
                 onPropertyClick={handleMarkerClick}
-                onPropertyHover={(property) => setHoveredPropertyIdMap(property?.id || null)}
+                onPropertyHover={(property) => setHoveredPropertyId(property?.id || null)}
                 onViewportChange={setMapViewport}
-                onTotalCountChange={setMapVisibleCount}
               />
             )}
           </div>
@@ -1616,25 +1603,24 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                     No hay propiedades que coincidan con tus filtros actuales.
                   </p>
                 </div>
-                {/* 🔍 NUEVO: Panel de diagnóstico en modo debug */}
+                {/* 🔍 Panel de diagnóstico en modo debug */}
                 {typeof window !== 'undefined' && (window as any).__KENTRA_MAP_DEBUG__ === true && (
                   <div className="mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-xs font-mono text-yellow-900 max-w-2xl">
                     <div className="font-bold mb-1">🔍 DEBUG INFO:</div>
-                    <div>Razón: {viewportDebugReason || 'N/A'}</div>
-                    <div>Zoom: {viewportBounds?.zoom?.toFixed(2) || 'N/A'}</div>
+                    <div>Zoom: {mapViewport?.zoom?.toFixed(2) || 'N/A'}</div>
                     <div>Estado: {filters.estado || '(ninguno)'}</div>
                     <div>Municipio: {filters.municipio || '(ninguno)'}</div>
                     <div>Colonia: {filters.colonia || '(ninguno)'}</div>
                     <div>Tipo: {filters.tipo || '(todos)'}</div>
                     <div>Operación: {filters.listingType}</div>
-                    {viewportBounds && (
+                    {mapViewport && (
                       <div>
-                        Bounds: {viewportBounds.minLat.toFixed(4)},{viewportBounds.minLng.toFixed(4)} →{' '}
-                        {viewportBounds.maxLat.toFixed(4)},{viewportBounds.maxLng.toFixed(4)}
+                        Bounds: {mapViewport.bounds.south.toFixed(4)},{mapViewport.bounds.west.toFixed(4)} →{' '}
+                        {mapViewport.bounds.north.toFixed(4)},{mapViewport.bounds.east.toFixed(4)}
                       </div>
                     )}
-                    <div>Properties viewport: {viewportProperties.length}</div>
-                    <div>Clusters viewport: {viewportClusters.length}</div>
+                    <div>Properties: {properties.length}</div>
+                    <div>Clusters: {clusters.length}</div>
                     <div>isViewportActive: {isViewportActive ? 'true' : 'false'}</div>
                     <div>listProperties.length: {listProperties.length}</div>
                   </div>

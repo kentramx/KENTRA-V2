@@ -1,5 +1,6 @@
 /**
  * Tipos centralizados para el sistema de mapas
+ * Extendidos para soportar datos completos de propiedades (lista + mapa unificados)
  */
 
 // Viewport del mapa
@@ -16,7 +17,7 @@ export interface MapBounds {
   west: number;   // minLng
 }
 
-// Marcador de propiedad individual
+// Marcador de propiedad individual - EXTENDIDO para soportar lista y mapa
 export interface PropertyMarker {
   id: string;
   lat: number;
@@ -26,9 +27,24 @@ export interface PropertyMarker {
   title: string;
   listing_type: 'venta' | 'renta';
   type: string; // casa, departamento, etc.
-  bedrooms?: number;
-  bathrooms?: number;
-  image_url?: string;
+  // Campos adicionales para la lista
+  address: string;
+  colonia: string | null;
+  municipality: string;
+  state: string;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  parking: number | null;
+  sqft: number | null;
+  for_sale: boolean;
+  for_rent: boolean;
+  sale_price: number | null;
+  rent_price: number | null;
+  images: { url: string }[];
+  agent_id: string;
+  is_featured: boolean;
+  created_at: string;
+  image_url?: string; // Primera imagen para marcador
 }
 
 // Cluster de propiedades (del servidor)

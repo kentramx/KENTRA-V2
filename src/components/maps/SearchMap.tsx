@@ -1,33 +1,48 @@
 /**
  * Mapa de búsqueda principal
- * Integra GoogleMapBase + marcadores + datos
+ * Recibe datos externamente desde el padre (arquitectura unificada)
+ * NO llama a useMapData internamente
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { GoogleMapBase } from './GoogleMapBase';
 import { PriceMarker } from './PriceMarker';
 import { ClusterMarker } from './ClusterMarker';
-import { useMapData } from '@/hooks/useMapData';
-import type { MapViewport, MapFilters, PropertyMarker, PropertyCluster } from '@/types/map';
+import type { MapViewport, PropertyMarker, PropertyCluster } from '@/types/map';
 import { Loader2, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface SearchMapProps {
-  filters?: MapFilters;
+  // Datos externos (del padre)
+  properties: PropertyMarker[];
+  clusters: PropertyCluster[];
+  totalCount: number;
+  isLoading: boolean;
+  isTruncated?: boolean;
+  
+  // Configuración
   initialCenter?: { lat: number; lng: number };
   initialZoom?: number;
   height?: string;
   className?: string;
+  
+  // Estados de interacción
   selectedPropertyId?: string | null;
   hoveredPropertyId?: string | null;
+  
+  // Callbacks
   onPropertyClick?: (id: string) => void;
   onPropertyHover?: (property: PropertyMarker | null) => void;
   onViewportChange?: (viewport: MapViewport) => void;
-  onTotalCountChange?: (count: number) => void;
+  onClusterClick?: (cluster: PropertyCluster) => void;
 }
 
 export function SearchMap({
-  filters = {},
+  properties,
+  clusters,
+  totalCount,
+  isLoading,
+  isTruncated = false,
   initialCenter,
   initialZoom,
   height = '100%',
@@ -37,28 +52,12 @@ export function SearchMap({
   onPropertyClick,
   onPropertyHover,
   onViewportChange,
-  onTotalCountChange,
+  onClusterClick,
 }: SearchMapProps) {
-  const [viewport, setViewport] = useState<MapViewport | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
-
-  // Obtener datos del mapa
-  const { data, isLoading, isFetching } = useMapData({
-    viewport,
-    filters,
-    enabled: true,
-  });
-
-  // Notificar cambios de conteo
-  useEffect(() => {
-    if (data?.total_in_viewport !== undefined) {
-      onTotalCountChange?.(data.total_in_viewport);
-    }
-  }, [data?.total_in_viewport, onTotalCountChange]);
 
   // Handler de viewport
   const handleViewportChange = useCallback((newViewport: MapViewport) => {
-    setViewport(newViewport);
     onViewportChange?.(newViewport);
   }, [onViewportChange]);
 
@@ -69,18 +68,14 @@ export function SearchMap({
 
   // Handler de click en cluster
   const handleClusterClick = useCallback((cluster: PropertyCluster) => {
-    if (!map) return;
-    
-    // Hacer zoom al cluster
-    map.panTo({ lat: cluster.lat, lng: cluster.lng });
-    map.setZoom(cluster.expansion_zoom);
-  }, [map]);
-
-  // Extraer propiedades y clusters
-  const properties = data?.properties || [];
-  const clusters = data?.clusters || [];
-  const totalCount = data?.total_in_viewport || 0;
-  const isTruncated = data?.truncated || false;
+    if (onClusterClick) {
+      onClusterClick(cluster);
+    } else if (map) {
+      // Comportamiento por defecto: hacer zoom al cluster
+      map.panTo({ lat: cluster.lat, lng: cluster.lng });
+      map.setZoom(cluster.expansion_zoom);
+    }
+  }, [map, onClusterClick]);
 
   return (
     <div className="relative w-full" style={{ height }}>
@@ -132,7 +127,7 @@ export function SearchMap({
       </div>
 
       {/* Overlay de carga */}
-      {(isLoading || isFetching) && (
+      {isLoading && (
         <div className="absolute top-4 right-4 z-10">
           <Badge variant="outline" className="bg-background/95 backdrop-blur-sm">
             <Loader2 className="h-3 w-3 animate-spin mr-1.5" />

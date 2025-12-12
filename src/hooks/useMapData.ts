@@ -1,5 +1,6 @@
 /**
  * Hook para obtener datos del mapa con server-side clustering
+ * FUENTE ÚNICA DE DATOS para mapa Y lista (arquitectura Zillow)
  * 
  * CARACTERÍSTICAS:
  * - Debounce de 300ms en cambios de viewport
@@ -91,7 +92,7 @@ export function useMapData({
       // Parsear respuesta - el data viene como JSONB
       const response = data as any;
       
-      // Mapear propiedades
+      // Mapear propiedades con todos los campos necesarios
       const properties: PropertyMarker[] = (response?.properties || []).map((p: any) => ({
         id: p.id,
         lat: p.lat,
@@ -101,8 +102,23 @@ export function useMapData({
         title: p.title || '',
         listing_type: p.listing_type || 'venta',
         type: p.type || 'casa',
-        bedrooms: p.bedrooms,
-        bathrooms: p.bathrooms,
+        // Campos adicionales para la lista
+        address: p.address || '',
+        colonia: p.colonia || null,
+        municipality: p.municipality || '',
+        state: p.state || '',
+        bedrooms: p.bedrooms ?? null,
+        bathrooms: p.bathrooms ?? null,
+        parking: p.parking ?? null,
+        sqft: p.sqft ?? null,
+        for_sale: p.for_sale ?? true,
+        for_rent: p.for_rent ?? false,
+        sale_price: p.sale_price ?? null,
+        rent_price: p.rent_price ?? null,
+        images: p.images || [],
+        agent_id: p.agent_id || '',
+        is_featured: p.is_featured ?? false,
+        created_at: p.created_at || '',
         image_url: p.image_url,
       }));
 

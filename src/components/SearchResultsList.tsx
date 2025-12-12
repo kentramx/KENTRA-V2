@@ -12,10 +12,11 @@ import { PropertyStats } from '@/components/PropertyStats';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { PropertySummary, HoveredProperty } from '@/types/property';
+import type { HoveredProperty } from '@/types/property';
+import type { PropertyMarker } from '@/types/map';
 
 interface SearchResultsListProps {
-  properties: PropertySummary[];
+  properties: PropertyMarker[];
   isLoading: boolean;
   listingType: string;
   onPropertyClick: (id: string) => void;
@@ -58,9 +59,9 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
       return properties.filter((p) => p.is_featured).length;
     }, [properties]);
 
-    // ✅ Callback memoizado para hover (solo datos esenciales, sin coordenadas)
+    // ✅ Callback memoizado para hover (solo datos esenciales)
     const handlePropertyHover = useCallback(
-      (property: PropertySummary | null) => {
+      (property: PropertyMarker | null) => {
         if (onPropertyHover && property) {
           onPropertyHover({
             id: property.id,
