@@ -126,7 +126,9 @@ export const PriceMarker = memo(function PriceMarker({
             styles.border,
             'transition-all duration-150 ease-out',
             'cursor-pointer select-none',
-            'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1'
+            'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1',
+            // Transición suave para evitar flickering
+            'animate-in fade-in-0 zoom-in-95 duration-150'
           )}
           style={{
             boxShadow: styles.shadow,

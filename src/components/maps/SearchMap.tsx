@@ -3,11 +3,12 @@
  * Mapa de búsqueda premium
  * - Renderiza clusters O markers según modo (nunca ambos)
  * - Optimizado para millones de propiedades
+ * - Cache de markers para evitar flickering
  * - Transiciones suaves
  * - Indicadores de estado
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { GoogleMapBase } from './GoogleMapBase';
 import { PriceMarker } from './PriceMarker';
 import { ClusterMarker } from './ClusterMarker';
@@ -68,6 +69,39 @@ export function SearchMap({
   onClusterClick,
 }: SearchMapProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  
+  // ═══════════════════════════════════════════════════════════
+  // CACHE DE MARKERS - Evita flickering durante navegación
+  // Solo actualizar cuando hay datos nuevos válidos
+  // ═══════════════════════════════════════════════════════════
+  const [cachedProperties, setCachedProperties] = useState<PropertyMarker[]>([]);
+  const [cachedClusters, setCachedClusters] = useState<PropertyCluster[]>([]);
+  const prevIsClustered = useRef(isClustered);
+  
+  // Actualizar cache solo cuando hay datos válidos
+  useEffect(() => {
+    // Si el modo cambia (cluster <-> markers), limpiar cache inmediatamente
+    if (prevIsClustered.current !== isClustered) {
+      prevIsClustered.current = isClustered;
+      setCachedProperties([]);
+      setCachedClusters([]);
+    }
+    
+    // Solo actualizar cache cuando tenemos datos nuevos O ya terminó de cargar
+    if (!isFetching) {
+      if (!isClustered && properties.length > 0) {
+        setCachedProperties(properties);
+      } else if (!isClustered && properties.length === 0) {
+        setCachedProperties([]);
+      }
+      
+      if (isClustered && clusters.length > 0) {
+        setCachedClusters(clusters);
+      } else if (isClustered && clusters.length === 0) {
+        setCachedClusters([]);
+      }
+    }
+  }, [properties, clusters, isFetching, isClustered]);
 
   // Handler de viewport
   const handleViewportChange = useCallback((newViewport: MapViewport) => {
@@ -92,17 +126,20 @@ export function SearchMap({
     }
   }, [map, onClusterClick]);
 
-  // IMPORTANTE: Solo mostrar markers si NO estamos en modo cluster
+  // Usar CACHE en lugar de props directos para evitar flickering
   const visibleProperties = useMemo(() => {
     if (isClustered) return []; // En modo cluster, NO mostrar markers individuales
-    return properties.slice(0, MAX_VISIBLE_MARKERS);
-  }, [properties, isClustered]);
+    // Usar cache durante fetching, datos frescos cuando está listo
+    const source = isFetching ? cachedProperties : properties;
+    return source.slice(0, MAX_VISIBLE_MARKERS);
+  }, [properties, cachedProperties, isClustered, isFetching]);
 
-  // IMPORTANTE: Solo mostrar clusters si ESTAMOS en modo cluster
+  // Usar CACHE para clusters
   const visibleClusters = useMemo(() => {
     if (!isClustered) return []; // En modo markers, NO mostrar clusters
-    return clusters;
-  }, [clusters, isClustered]);
+    // Usar cache durante fetching
+    return isFetching ? cachedClusters : clusters;
+  }, [clusters, cachedClusters, isClustered, isFetching]);
 
   // Formatear contador elegante
   const countDisplay = useMemo(() => {

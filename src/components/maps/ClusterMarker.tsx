@@ -100,7 +100,9 @@ export const ClusterMarker = memo(function ClusterMarker({
           'font-bold text-white tracking-tight',
           'transition-all duration-200 ease-out',
           'cursor-pointer select-none',
-          'focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent'
+          'focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent',
+          // Transición suave para evitar flickering
+          'animate-in fade-in-0 zoom-in-95 duration-150'
         )}
         style={{
           width: size,
