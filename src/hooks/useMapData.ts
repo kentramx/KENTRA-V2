@@ -82,6 +82,7 @@ export function useMapData({
         p_bathrooms: filters.min_bathrooms || null,
         p_state: filters.state || null,
         p_municipality: filters.municipality || null,
+        p_colonia: filters.colonia || null,
       });
 
       if (error) {

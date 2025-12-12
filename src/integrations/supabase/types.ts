@@ -2464,6 +2464,7 @@ export type Database = {
         Args: {
           p_bathrooms?: number
           p_bedrooms?: number
+          p_colonia?: string
           p_east: number
           p_listing_type?: string
           p_municipality?: string
@@ -2593,6 +2594,10 @@ export type Database = {
       mark_messages_as_read: {
         Args: { p_conversation_id: string; p_user_id: string }
         Returns: undefined
+      }
+      normalize_location: {
+        Args: { input_text: string; location_type?: string }
+        Returns: string
       }
       normalize_state_name: { Args: { input_state: string }; Returns: string }
       populate_geometry_columns:

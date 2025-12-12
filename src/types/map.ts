@@ -76,6 +76,7 @@ export interface MapFilters {
   min_bathrooms?: number;
   state?: string;
   municipality?: string;
+  colonia?: string;
 }
 
 // Estado del mapa
