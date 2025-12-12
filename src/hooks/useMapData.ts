@@ -2,10 +2,11 @@
  * Hook para obtener datos del mapa con server-side clustering
  * FUENTE ÚNICA DE DATOS para mapa Y lista (arquitectura Zillow)
  * KENTRA MAP STACK - OFICIAL
+ * 
+ * Usa Edge Function cluster-properties con Supercluster (algoritmo Mapbox)
  */
 
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { GOOGLE_MAPS_CONFIG } from '@/config/googleMaps';
 import type { MapViewport, MapFilters, MapDataResponse, PropertyMarker, PropertyCluster } from '@/types/map';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -53,32 +54,47 @@ export function useMapData({
 
       const { bounds, zoom } = debouncedViewport;
 
-      const { data, error } = await supabase.rpc('get_map_data', {
-        p_north: bounds.north,
-        p_south: bounds.south,
-        p_east: bounds.east,
-        p_west: bounds.west,
-        p_zoom: zoom,
-        p_listing_type: filters.listing_type || null,
-        p_property_type: filters.property_type || null,
-        p_price_min: filters.min_price || null,
-        p_price_max: filters.max_price || null,
-        p_bedrooms: filters.min_bedrooms || null,
-        p_bathrooms: filters.min_bathrooms || null,
-        p_state: filters.state || null,
-        p_municipality: filters.municipality || null,
-        p_colonia: filters.colonia || null,
-      });
+      // Call Edge Function with Supercluster clustering
+      const fetchResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cluster-properties`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            bounds: {
+              north: bounds.north,
+              south: bounds.south,
+              east: bounds.east,
+              west: bounds.west,
+            },
+            zoom,
+            filters: {
+              listing_type: filters.listing_type || null,
+              property_type: filters.property_type || null,
+              min_price: filters.min_price || null,
+              max_price: filters.max_price || null,
+              min_bedrooms: filters.min_bedrooms || null,
+              min_bathrooms: filters.min_bathrooms || null,
+              state: filters.state || null,
+              municipality: filters.municipality || null,
+              colonia: filters.colonia || null,
+            },
+          }),
+        }
+      );
 
-      if (error) {
-        console.error('[useMapData] Error:', error);
-        throw new Error(error.message);
+      if (!fetchResponse.ok) {
+        const errorData = await fetchResponse.json().catch(() => ({}));
+        console.error('[useMapData] Edge Function error:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch map data');
       }
 
-      const response = data as any;
+      const data = await fetchResponse.json();
       
       // Mapear propiedades con position en images
-      const properties: PropertyMarker[] = (response?.properties || []).map((p: any) => ({
+      const properties: PropertyMarker[] = (data?.properties || []).map((p: any) => ({
         id: p.id,
         lat: p.lat,
         lng: p.lng,
@@ -112,7 +128,7 @@ export function useMapData({
       }));
 
       // Mapear clusters con IDs únicos
-      const clusters: PropertyCluster[] = (response?.clusters || []).map((c: any, index: number) => ({
+      const clusters: PropertyCluster[] = (data?.clusters || []).map((c: any, index: number) => ({
         id: c.id || `cluster-${index}-${c.lat}-${c.lng}`,
         lat: c.lat,
         lng: c.lng,
@@ -126,8 +142,8 @@ export function useMapData({
       return {
         properties,
         clusters,
-        total_in_viewport: response?.total_count || 0,
-        is_clustered: response?.is_clustered ?? false,
+        total_in_viewport: data?.total_count || 0,
+        is_clustered: data?.is_clustered ?? false,
       };
     },
   });
