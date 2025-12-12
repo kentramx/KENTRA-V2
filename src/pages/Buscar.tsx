@@ -1543,8 +1543,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 properties={properties}
                 clusters={clusters}
                 totalCount={totalCount}
-                isLoading={loading || isFetching}
-                isTruncated={isClustered}
+                isClustered={isClustered}
+                isLoading={loading}
+                isFetching={isFetching}
                 initialCenter={searchCoordinates || undefined}
                 initialZoom={searchCoordinates ? 12 : 5}
                 height="100%"
