@@ -25,9 +25,37 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Security: Verify internal service token to prevent unauthorized calls
+    const authHeader = req.headers.get('Authorization');
+    const internalToken = Deno.env.get('INTERNAL_SERVICE_TOKEN');
+    
+    // If internal token is configured, require it for non-authenticated calls
+    if (internalToken && authHeader !== `Bearer ${internalToken}`) {
+      // Fall back to checking if this is a legitimate Supabase service call
+      const apiKey = req.headers.get('apikey');
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      
+      if (apiKey !== serviceRoleKey) {
+        console.warn('Unauthorized role change notification attempt blocked');
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     const { userEmail, userName, previousRole, newRole }: RoleChangeNotificationRequest = await req.json();
 
-    console.log('Sending role change notification:', { userEmail, userName, previousRole, newRole });
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!userEmail || !emailRegex.test(userEmail)) {
+      return new Response(JSON.stringify({ error: 'Invalid email format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Sending role change notification:', { userEmail, previousRole, newRole });
 
     // Format date
     const changeDate = new Date().toLocaleDateString('es-MX', {
