@@ -71,3 +71,6 @@ verify_jwt = true
 
 [functions.geocode-property]
 verify_jwt = true
+
+[functions.cluster-properties]
+verify_jwt = false
