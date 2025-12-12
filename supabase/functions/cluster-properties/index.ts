@@ -278,18 +278,26 @@ Deno.serve(async (req) => {
     propertiesForList = Array.from(uniqueMap.values());
 
     const duration = Date.now() - startTime;
+    
+    // Calcular el total REAL del viewport (clusters + individuales)
+    const clusterTotal = clusters.reduce((sum, c) => sum + (c.count || 0), 0);
+    const viewportTotal = clusterTotal + individualProperties.length;
+    
     console.log(
-      `[cluster-properties] Response: ${clusters.length} clusters, ${individualProperties.length} individual, ${propertiesForList.length} for list, ${duration}ms`
+      `[cluster-properties] Response: ${clusters.length} clusters, ${individualProperties.length} individual, ${propertiesForList.length} for list, viewportTotal=${viewportTotal}, ${duration}ms`
     );
 
     const response = {
-      properties: propertiesForList.slice(0, 200), // 200 para mostrar más markers en el mapa
+      properties: propertiesForList.slice(0, 200),
       clusters,
-      total_count: properties?.length || 0,
+      total_count: viewportTotal, // ← Total real del viewport, no de la DB
       is_clustered: clusters.length > 0,
       _debug: {
         duration_ms: duration,
         raw_points: points.length,
+        db_total: properties?.length || 0,
+        viewport_total: viewportTotal,
+        cluster_total: clusterTotal,
         individual_count: individualProperties.length,
         expanded_count: propertiesForList.length,
         zoom,
