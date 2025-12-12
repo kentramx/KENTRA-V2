@@ -31,13 +31,14 @@ interface RequestBody {
   };
 }
 
-// Configuración de Supercluster optimizada para real estate (estilo Zillow)
+// Configuración de Supercluster estilo Zillow/Airbnb
+// Zoom 0-9: clusters grandes | Zoom 10-11: clusters medianos | Zoom 12+: markers individuales
 const SUPERCLUSTER_OPTIONS = {
-  radius: 120,       // ↑ Radio más grande = clusters más grandes
-  maxZoom: 14,       // ↓ Dejar de clusterizar antes (markers a zoom 14+)
+  radius: 60,        // ↓ Radio pequeño = clusters más pequeños, se separan antes
+  maxZoom: 11,       // ↓ Mostrar markers individuales desde zoom 12
   minZoom: 0,
-  minPoints: 3,      // ↑ Mínimo 3 propiedades (evita clusters de 2)
-  extent: 256,       // ↓ Grilla más gruesa = agrupación más agresiva
+  minPoints: 2,      // ↓ Clusters desde 2 propiedades
+  extent: 512,       // ↑ Grid más fina = agrupación más precisa
   nodeSize: 64,
   // Agregar propiedades para mostrar en clusters
   map: (props: any) => ({
@@ -219,19 +220,78 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // EXPANDIR CLUSTERS PEQUEÑOS PARA LA LISTA
+    // Si hay clusters y estamos en zoom medio-alto, extraer propiedades
+    // de clusters pequeños (≤30) para poblar la lista
+    // ═══════════════════════════════════════════════════════════
+    let propertiesForList = [...individualProperties];
+
+    if (clusters.length > 0 && zoom >= 9) {
+      for (const feature of clustersRaw) {
+        if (feature.properties.cluster && feature.properties.point_count <= 30) {
+          try {
+            const leaves = index.getLeaves(feature.properties.cluster_id, 30);
+            for (const leaf of leaves) {
+              const props = leaf.properties;
+              propertiesForList.push({
+                id: props.id,
+                lat: leaf.geometry.coordinates[1],
+                lng: leaf.geometry.coordinates[0],
+                price: props.price,
+                currency: props.currency,
+                type: props.type,
+                title: props.title,
+                bedrooms: props.bedrooms,
+                bathrooms: props.bathrooms,
+                sqft: props.sqft,
+                parking: props.parking,
+                listing_type: props.listing_type,
+                address: props.address,
+                colonia: props.colonia,
+                state: props.state,
+                municipality: props.municipality,
+                for_sale: props.for_sale,
+                for_rent: props.for_rent,
+                sale_price: props.sale_price,
+                rent_price: props.rent_price,
+                images: [],
+                agent_id: props.agent_id,
+                is_featured: false,
+                created_at: props.created_at,
+              });
+            }
+          } catch (e) {
+            console.error(`[cluster-properties] Error expanding cluster:`, e);
+          }
+        }
+      }
+    }
+
+    // Eliminar duplicados por ID
+    const uniqueMap = new Map();
+    for (const p of propertiesForList) {
+      if (!uniqueMap.has(p.id)) {
+        uniqueMap.set(p.id, p);
+      }
+    }
+    propertiesForList = Array.from(uniqueMap.values());
+
     const duration = Date.now() - startTime;
     console.log(
-      `[cluster-properties] Response: ${clusters.length} clusters, ${individualProperties.length} properties, ${duration}ms`
+      `[cluster-properties] Response: ${clusters.length} clusters, ${individualProperties.length} individual, ${propertiesForList.length} for list, ${duration}ms`
     );
 
     const response = {
-      properties: individualProperties.slice(0, 200),
+      properties: propertiesForList.slice(0, 50), // 50 para la lista
       clusters,
       total_count: properties?.length || 0,
       is_clustered: clusters.length > 0,
       _debug: {
         duration_ms: duration,
         raw_points: points.length,
+        individual_count: individualProperties.length,
+        expanded_count: propertiesForList.length,
         zoom,
       },
     };
