@@ -230,12 +230,13 @@ export function SearchMap({
   // ═══════════════════════════════════════════════════════════
   const visibleCount = useMemo(() => {
     if (isClustered && clusters.length > 0) {
-      // Sumar todas las propiedades dentro de los clusters visibles
-      return clusters.reduce((sum, c) => sum + (c.count || 0), 0);
+      // Modo cluster: sumar propiedades de clusters + individuales sueltas
+      const clusterTotal = clusters.reduce((sum, c) => sum + (c.count || 0), 0);
+      return clusterTotal + properties.length;
     }
-    // En modo individual: propiedades en el viewport
-    return properties.length;
-  }, [properties, clusters, isClustered]);
+    // Modo individual: usar total_count del backend (no limitado a 50)
+    return totalCount || properties.length;
+  }, [properties, clusters, isClustered, totalCount]);
 
   // Formatear contador elegante
   const countDisplay = useMemo(() => {

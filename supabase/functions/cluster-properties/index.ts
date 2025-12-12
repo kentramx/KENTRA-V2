@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
     );
 
     const response = {
-      properties: propertiesForList.slice(0, 50), // 50 para la lista
+      properties: propertiesForList.slice(0, 200), // 200 para mostrar más markers en el mapa
       clusters,
       total_count: properties?.length || 0,
       is_clustered: clusters.length > 0,
