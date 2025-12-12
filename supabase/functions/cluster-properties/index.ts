@@ -31,13 +31,13 @@ interface RequestBody {
   };
 }
 
-// Configuración de Supercluster optimizada para real estate
+// Configuración de Supercluster optimizada para real estate (estilo Zillow)
 const SUPERCLUSTER_OPTIONS = {
-  radius: 80,        // Radio más grande = menos clusters
-  maxZoom: 16,       // Zoom máximo para clustering
+  radius: 120,       // ↑ Radio más grande = clusters más grandes
+  maxZoom: 14,       // ↓ Dejar de clusterizar antes (markers a zoom 14+)
   minZoom: 0,
-  minPoints: 2,      // Mínimo 2 puntos para formar cluster
-  extent: 512,
+  minPoints: 3,      // ↑ Mínimo 3 propiedades (evita clusters de 2)
+  extent: 256,       // ↓ Grilla más gruesa = agrupación más agresiva
   nodeSize: 64,
   // Agregar propiedades para mostrar en clusters
   map: (props: any) => ({
