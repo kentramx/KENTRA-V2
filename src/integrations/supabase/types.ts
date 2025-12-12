@@ -2594,6 +2594,7 @@ export type Database = {
         Args: { p_conversation_id: string; p_user_id: string }
         Returns: undefined
       }
+      normalize_state_name: { Args: { input_state: string }; Returns: string }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
