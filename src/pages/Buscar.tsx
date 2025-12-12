@@ -195,13 +195,13 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const properties = mapData?.properties || [];
   const clusters = mapData?.clusters || [];
   const totalCount = mapData?.total_in_viewport || 0;
-  const isTruncated = mapData?.truncated || false;
+  const isClustered = mapData?.is_clustered || false;
   const searchError = mapError;
 
   // Variables para compatibilidad con código existente
   const hasNextPage = false; // Ya no hay paginación infinita - todo viene del viewport
   const fetchNextPage = () => {}; // No-op
-  const hasTooManyResults = isTruncated;
+  const hasTooManyResults = isClustered;
   const actualTotal = totalCount;
 
   // Ordenar propiedades según criterio seleccionado
@@ -1544,7 +1544,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 clusters={clusters}
                 totalCount={totalCount}
                 isLoading={loading || isFetching}
-                isTruncated={isTruncated}
+                isTruncated={isClustered}
                 initialCenter={searchCoordinates || undefined}
                 initialZoom={searchCoordinates ? 12 : 5}
                 height="100%"
