@@ -72,69 +72,81 @@ Deno.serve(async (req) => {
     );
 
     // ═══════════════════════════════════════════════════════════
-    // LÍMITES DINÁMICOS BASADOS EN ZOOM
-    // Supabase limita a 1,000 por defecto - necesitamos más para vista nacional
+    // PAGINACIÓN EN LOTES - PostgREST limita a 1,000 por request
+    // Necesitamos múltiples requests para vistas nacionales
     // ═══════════════════════════════════════════════════════════
-    const MAX_PROPERTIES_NATIONAL = 50000;  // Zoom 0-7 (vista nacional)
-    const MAX_PROPERTIES_REGIONAL = 20000;  // Zoom 8-10 (vista regional)
-    const MAX_PROPERTIES_LOCAL = 10000;     // Zoom 11+ (vista local)
-    
-    const queryLimit = zoom <= 7 
-      ? MAX_PROPERTIES_NATIONAL 
-      : zoom <= 10 
-        ? MAX_PROPERTIES_REGIONAL 
-        : MAX_PROPERTIES_LOCAL;
+    const BATCH_SIZE = 1000;  // Máximo permitido por PostgREST
+    const MAX_BATCHES = zoom <= 7 ? 50 : zoom <= 10 ? 20 : 10;  // 50k/20k/10k max
 
-    // Cargar propiedades con buffer para clustering correcto en bordes
-    let query = supabase
-      .from("properties")
-      .select(`
-        id, lat, lng, price, currency, type, title,
-        bedrooms, bathrooms, sqft, parking, listing_type,
-        address, colonia, state, municipality,
-        for_sale, for_rent, sale_price, rent_price,
-        agent_id, created_at
-      `)
-      .eq("status", "activa")
-      .not("lat", "is", null)
-      .not("lng", "is", null)
-      .gte("lat", bounds.south - 0.5)
-      .lte("lat", bounds.north + 0.5)
-      .gte("lng", bounds.west - 0.5)
-      .lte("lng", bounds.east + 0.5)
-      .limit(queryLimit);
+    let allProperties: any[] = [];
+    let hasMore = true;
+    let batchIndex = 0;
 
-    // Aplicar filtros NO geográficos (los bounds ya filtran por ubicación)
-    // ✅ listing_type, property_type, price, bedrooms, bathrooms
-    // ❌ state, municipality, colonia - redundantes con bounds geográficos
-    if (filters.listing_type) {
-      query = query.eq("listing_type", filters.listing_type);
-    }
-    if (filters.property_type) {
-      query = query.eq("type", filters.property_type);
-    }
-    if (filters.min_price) {
-      query = query.gte("price", filters.min_price);
-    }
-    if (filters.max_price) {
-      query = query.lte("price", filters.max_price);
-    }
-    if (filters.min_bedrooms) {
-      query = query.gte("bedrooms", filters.min_bedrooms);
-    }
-    if (filters.min_bathrooms) {
-      query = query.gte("bathrooms", filters.min_bathrooms);
-    }
-    // NOTA: state/municipality/colonia ignorados - bounds geográficos son suficientes
-    // Esto evita problemas de nomenclatura (Cancún vs Benito Juárez, etc.)
+    const selectFields = `
+      id, lat, lng, price, currency, type, title,
+      bedrooms, bathrooms, sqft, parking, listing_type,
+      address, colonia, state, municipality,
+      for_sale, for_rent, sale_price, rent_price,
+      agent_id, created_at
+    `;
 
-    const { data: properties, error: dbError } = await query;
+    while (hasMore && batchIndex < MAX_BATCHES) {
+      const from = batchIndex * BATCH_SIZE;
+      const to = from + BATCH_SIZE - 1;
 
-    if (dbError) {
-      throw new Error(`Database error: ${dbError.message}`);
+      let query = supabase
+        .from("properties")
+        .select(selectFields)
+        .eq("status", "activa")
+        .not("lat", "is", null)
+        .not("lng", "is", null)
+        .gte("lat", bounds.south - 0.5)
+        .lte("lat", bounds.north + 0.5)
+        .gte("lng", bounds.west - 0.5)
+        .lte("lng", bounds.east + 0.5)
+        .range(from, to);  // ← Paginación con range
+
+      // Aplicar filtros NO geográficos
+      if (filters.listing_type) {
+        query = query.eq("listing_type", filters.listing_type);
+      }
+      if (filters.property_type) {
+        query = query.eq("type", filters.property_type);
+      }
+      if (filters.min_price) {
+        query = query.gte("price", filters.min_price);
+      }
+      if (filters.max_price) {
+        query = query.lte("price", filters.max_price);
+      }
+      if (filters.min_bedrooms) {
+        query = query.gte("bedrooms", filters.min_bedrooms);
+      }
+      if (filters.min_bathrooms) {
+        query = query.gte("bathrooms", filters.min_bathrooms);
+      }
+
+      const { data, error: dbError } = await query;
+
+      if (dbError) {
+        throw new Error(`Database error: ${dbError.message}`);
+      }
+
+      if (data && data.length > 0) {
+        allProperties = allProperties.concat(data);
+        hasMore = data.length === BATCH_SIZE;  // Si devuelve menos, no hay más
+        batchIndex++;
+        
+        if (batchIndex % 5 === 0) {
+          console.log(`[cluster-properties] Batch ${batchIndex}: ${allProperties.length} properties loaded`);
+        }
+      } else {
+        hasMore = false;
+      }
     }
 
-    console.log(`[cluster-properties] Loaded ${properties?.length || 0} properties from DB`);
+    const properties = allProperties;
+    console.log(`[cluster-properties] Total loaded: ${properties.length} properties in ${batchIndex} batches`);
 
     // Convertir a GeoJSON para Supercluster
     const points: any[] = (properties || []).map((p: any) => ({
