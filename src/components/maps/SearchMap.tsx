@@ -223,17 +223,32 @@ export function SearchMap({
     return Array.from(combined.values());
   }, [clusters, cachedClusters]);
 
+  // ═══════════════════════════════════════════════════════════
+  // CONTADOR DE PROPIEDADES VISIBLES EN VIEWPORT
+  // En modo cluster: suma de todas las propiedades en clusters
+  // En modo individual: cantidad de propiedades visibles
+  // ═══════════════════════════════════════════════════════════
+  const visibleCount = useMemo(() => {
+    if (isClustered && clusters.length > 0) {
+      // Sumar todas las propiedades dentro de los clusters visibles
+      return clusters.reduce((sum, c) => sum + (c.count || 0), 0);
+    }
+    // En modo individual: propiedades en el viewport
+    return properties.length;
+  }, [properties, clusters, isClustered]);
+
   // Formatear contador elegante
   const countDisplay = useMemo(() => {
-    if (totalCount === 0) return '0';
-    if (totalCount >= 1000000) {
-      return `${(totalCount / 1000000).toFixed(1)}M`;
+    const count = visibleCount;
+    if (count === 0) return '0';
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
     }
-    if (totalCount >= 1000) {
-      return `${(totalCount / 1000).toFixed(totalCount >= 10000 ? 0 : 1)}K`;
+    if (count >= 1000) {
+      return `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}K`;
     }
-    return totalCount.toLocaleString();
-  }, [totalCount]);
+    return count.toLocaleString();
+  }, [visibleCount]);
 
   return (
     <div className={cn('relative w-full', className)} style={{ height }}>
@@ -291,7 +306,7 @@ export function SearchMap({
           <MapPin className="h-3.5 w-3.5 mr-1.5 text-primary" />
           <span className="font-bold text-foreground">{countDisplay}</span>
           <span className="ml-1 text-muted-foreground font-normal">
-            {totalCount === 1 ? 'propiedad' : 'propiedades'}
+            {visibleCount === 1 ? 'propiedad' : 'propiedades'}
           </span>
         </Badge>
       </div>
@@ -314,7 +329,7 @@ export function SearchMap({
       {/* ═══════════════════════════════════════════════════════════
           INDICADOR DE MODO CLUSTER - Esquina inferior izquierda
           ═══════════════════════════════════════════════════════════ */}
-      {isClustered && totalCount > 0 && !isLoading && (
+      {isClustered && visibleCount > 0 && !isLoading && (
         <div className="absolute bottom-3 left-3 z-10">
           <Badge 
             variant="outline" 
@@ -335,7 +350,7 @@ export function SearchMap({
       {/* ═══════════════════════════════════════════════════════════
           ESTADO VACÍO - Cuando no hay propiedades
           ═══════════════════════════════════════════════════════════ */}
-      {!isLoading && totalCount === 0 && (
+      {!isLoading && visibleCount === 0 && (
         <div className="absolute bottom-3 left-3 z-10">
           <Badge 
             variant="outline" 

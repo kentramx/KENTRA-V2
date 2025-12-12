@@ -335,7 +335,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   const hoverFromMap = useRef(false);
   const [mobileView, setMobileView] = useState<'map' | 'list'>('list');
   const [mapDisplayError, setMapDisplayError] = useState<string | null>(null);
-  const [mapVisibleCount, setMapVisibleCount] = useState<number>(0);
 
   // Flag de viewport activo
   const isViewportActive = !!mapViewport;
@@ -1533,21 +1532,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 
           {/* Mapa a la izquierda - 50% width en desktop, condicional en móvil */}
           <div className={`relative ${mobileView === 'map' ? 'block' : 'hidden'} lg:block lg:w-1/2 lg:h-full`} style={{ height: 'calc(100vh - 200px)' }}>
-            {/* Contador de resultados */}
-            <div className="absolute top-4 left-4 z-10 bg-background/95 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg">
-                  {mobileView === 'map' || window.innerWidth >= 1024 ? mapVisibleCount : totalCount}
-                </span>
-                <span className="text-muted-foreground text-sm">
-                  {(mobileView === 'map' || window.innerWidth >= 1024 ? mapVisibleCount : totalCount) === 1 ? 'propiedad' : 'propiedades'}
-                </span>
-                {isFetching && properties.length > 0 && (
-                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                )}
-              </div>
-            </div>
-
             {/* ✅ Mapa con filtros unificados y manejo de errores */}
             {mapError ? (
               <div className="flex h-full items-center justify-center p-8">
