@@ -39,11 +39,16 @@ interface SearchMapProps {
   hoveredPropertyId?: string | null;
   visitedPropertyIds?: Set<string>;
   
+  // Auto-zoom to results
+  fitToBounds?: boolean;
+  onFitComplete?: () => void;
+  
   // Callbacks
   onPropertyClick?: (id: string) => void;
   onPropertyHover?: (property: PropertyMarker | null) => void;
   onViewportChange?: (viewport: MapViewport) => void;
   onClusterClick?: (cluster: PropertyCluster) => void;
+  onMapReady?: (map: google.maps.Map) => void;
 }
 
 // Límite de markers para rendimiento óptimo
@@ -63,12 +68,16 @@ export function SearchMap({
   selectedPropertyId,
   hoveredPropertyId,
   visitedPropertyIds = new Set(),
+  fitToBounds = false,
+  onFitComplete,
   onPropertyClick,
   onPropertyHover,
   onViewportChange,
   onClusterClick,
+  onMapReady: onMapReadyProp,
 }: SearchMapProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  const fitBoundsExecutedRef = useRef(false);
   
   // ═══════════════════════════════════════════════════════════
   // POOL DE MARKERS - Evita flickering manteniendo markers montados
@@ -100,7 +109,74 @@ export function SearchMap({
   // Handler de mapa listo
   const handleMapReady = useCallback((mapInstance: google.maps.Map) => {
     setMap(mapInstance);
-  }, []);
+    onMapReadyProp?.(mapInstance);
+  }, [onMapReadyProp]);
+
+  // ═══════════════════════════════════════════════════════════
+  // AUTO-ZOOM TO RESULTS (Fit to Bounds)
+  // Ejecuta fitBounds cuando hay datos y fitToBounds es true
+  // ═══════════════════════════════════════════════════════════
+  useEffect(() => {
+    // Condiciones para ejecutar fitBounds:
+    // 1. Hay mapa disponible
+    // 2. fitToBounds está activo
+    // 3. No se ha ejecutado ya para este ciclo
+    // 4. Hay propiedades o clusters para ajustar
+    if (!map || !fitToBounds || fitBoundsExecutedRef.current) return;
+    
+    const hasData = properties.length > 0 || clusters.length > 0;
+    if (!hasData) return;
+
+    // Calcular bounds de todas las propiedades Y clusters
+    const bounds = new google.maps.LatLngBounds();
+    let pointsAdded = 0;
+
+    // Agregar propiedades
+    properties.forEach(p => {
+      if (p.lat && p.lng) {
+        bounds.extend({ lat: p.lat, lng: p.lng });
+        pointsAdded++;
+      }
+    });
+
+    // Agregar clusters
+    clusters.forEach(c => {
+      if (c.lat && c.lng) {
+        bounds.extend({ lat: c.lat, lng: c.lng });
+        pointsAdded++;
+      }
+    });
+
+    // Solo ejecutar si hay puntos válidos
+    if (pointsAdded === 0) return;
+
+    // Marcar como ejecutado ANTES de la animación para evitar re-ejecuciones
+    fitBoundsExecutedRef.current = true;
+
+    // Ejecutar fitBounds con padding para que no queden pegados al borde
+    // Usar setTimeout para permitir que el mapa termine su renderizado inicial
+    setTimeout(() => {
+      map.fitBounds(bounds, {
+        top: 60,
+        right: 40,
+        bottom: 40,
+        left: 40,
+      });
+
+      // Notificar que el fit se completó después de la animación
+      setTimeout(() => {
+        onFitComplete?.();
+      }, 500); // Esperar animación de Google Maps (~400ms)
+    }, 100);
+
+  }, [map, fitToBounds, properties, clusters, onFitComplete]);
+
+  // Reset del flag cuando fitToBounds cambia a false
+  useEffect(() => {
+    if (!fitToBounds) {
+      fitBoundsExecutedRef.current = false;
+    }
+  }, [fitToBounds]);
 
   // Handler de click en cluster - zoom suave animado
   const handleClusterClick = useCallback((cluster: PropertyCluster) => {
