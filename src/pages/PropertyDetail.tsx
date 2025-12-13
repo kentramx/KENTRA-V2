@@ -609,7 +609,7 @@ const PropertyDetail = () => {
         description={seoDescription}
         canonical={`/propiedad/${id}`}
         ogType="product"
-        ogImage={mainImage}
+        ogImage={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/og-image?type=property&id=${id}`}
         ogUrl={propertyUrl}
         structuredData={[structuredData, breadcrumbStructuredData]}
       />
