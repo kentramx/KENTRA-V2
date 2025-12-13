@@ -153,8 +153,31 @@ const AgentProfile = () => {
     return null;
   }
 
+  // Generate SEO data
+  const seoTitle = generateAgentTitle(agent);
+  const seoDescription = generateAgentDescription({ ...agent, activeProperties: stats.activeProperties });
+  const structuredData = generateAgentStructuredData({
+    name: agent.name,
+    bio: agent.bio,
+    phone: agent.phone,
+    city: agent.city,
+    state: agent.state,
+    profileUrl: `https://kentra.com.mx/agente/${id}`,
+    propertiesCount: stats.activeProperties,
+    avgRating: stats.averageRating,
+    reviewCount: stats.totalReviews,
+  });
+  const ogImageUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/og-image?type=agent&id=${id}`;
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={seoTitle}
+        description={seoDescription}
+        canonical={`/agente/${id}`}
+        ogImage={ogImageUrl}
+        structuredData={structuredData}
+      />
       <Navbar />
 
       <div className="container mx-auto px-4 py-8">

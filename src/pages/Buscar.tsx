@@ -1046,6 +1046,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
         title={seoTitle}
         description={seoDescription}
         canonical="/buscar"
+        ogImage={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/og-image?type=search&estado=${encodeURIComponent(filters.estado || '')}&municipio=${encodeURIComponent(filters.municipio || '')}&tipo=${encodeURIComponent(filters.tipo || '')}&listingType=${encodeURIComponent(filters.listingType || '')}`}
         structuredData={listStructuredData}
       />
       <Navbar />

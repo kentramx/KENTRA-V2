@@ -24,4 +24,4 @@ Allow: /pricing-*
 Allow: /directorio-agentes*
 
 # Sitemap
-Sitemap: https://kentra.lovable.app/sitemap.xml
+Sitemap: https://kentra.com.mx/sitemap.xml
