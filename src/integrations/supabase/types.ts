@@ -916,6 +916,51 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_disputes: {
+        Row: {
+          amount: number
+          closed_at: string | null
+          created_at: string | null
+          currency: string | null
+          evidence_submitted: boolean | null
+          id: string
+          notes: string | null
+          reason: string | null
+          status: string
+          stripe_charge_id: string | null
+          stripe_dispute_id: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          closed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          evidence_submitted?: boolean | null
+          id?: string
+          notes?: string | null
+          reason?: string | null
+          status: string
+          stripe_charge_id?: string | null
+          stripe_dispute_id: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          closed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          evidence_submitted?: boolean | null
+          id?: string
+          notes?: string | null
+          reason?: string | null
+          status?: string
+          stripe_charge_id?: string | null
+          stripe_dispute_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       payment_history: {
         Row: {
           amount: number

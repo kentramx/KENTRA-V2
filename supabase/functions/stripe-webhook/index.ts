@@ -422,6 +422,97 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case 'charge.dispute.created': {
+        const dispute = event.data.object as Stripe.Dispute;
+        console.log(`🚨 DISPUTA CREADA: ${dispute.id}`);
+
+        // Buscar usuario por stripe_customer_id
+        const { data: subscription } = await supabaseClient
+          .from('user_subscriptions')
+          .select('user_id')
+          .eq('stripe_customer_id', dispute.customer as string)
+          .single();
+
+        // Registrar disputa
+        const { error: disputeError } = await supabaseClient
+          .from('payment_disputes')
+          .insert({
+            user_id: subscription?.user_id || null,
+            stripe_dispute_id: dispute.id,
+            stripe_charge_id: dispute.charge as string,
+            amount: dispute.amount,
+            currency: dispute.currency,
+            reason: dispute.reason,
+            status: dispute.status,
+          });
+
+        if (disputeError) {
+          console.error('Error registering dispute:', disputeError);
+        } else {
+          console.log('Dispute registered successfully');
+        }
+
+        // Notificar admin por email usando Resend
+        const resendKey = Deno.env.get('RESEND_API_KEY');
+        if (resendKey) {
+          try {
+            const emailResponse = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${resendKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: 'Kentra Alertas <alertas@kentra.com.mx>',
+                to: ['admin@kentra.com.mx'],
+                subject: `🚨 DISPUTA: $${(dispute.amount / 100).toLocaleString('es-MX')} ${dispute.currency.toUpperCase()}`,
+                html: `
+                  <h2>Se ha creado una disputa</h2>
+                  <p><strong>Monto:</strong> $${(dispute.amount / 100).toLocaleString('es-MX')} ${dispute.currency.toUpperCase()}</p>
+                  <p><strong>Razón:</strong> ${dispute.reason}</p>
+                  <p><strong>ID Disputa:</strong> ${dispute.id}</p>
+                  <p><strong>Usuario:</strong> ${subscription?.user_id || 'No identificado'}</p>
+                  <p><a href="https://dashboard.stripe.com/disputes/${dispute.id}">Ver en Stripe Dashboard</a></p>
+                `,
+              }),
+            });
+            
+            if (!emailResponse.ok) {
+              console.error('Error sending dispute email:', await emailResponse.text());
+            } else {
+              console.log('Dispute alert email sent successfully');
+            }
+          } catch (emailError) {
+            console.error('Error sending dispute email:', emailError);
+          }
+        } else {
+          console.warn('RESEND_API_KEY not configured, skipping email alert');
+        }
+
+        break;
+      }
+
+      case 'charge.dispute.closed': {
+        const dispute = event.data.object as Stripe.Dispute;
+        console.log(`✅ DISPUTA CERRADA: ${dispute.id}, Status: ${dispute.status}`);
+
+        const { error: updateError } = await supabaseClient
+          .from('payment_disputes')
+          .update({
+            status: dispute.status,
+            closed_at: new Date().toISOString(),
+          })
+          .eq('stripe_dispute_id', dispute.id);
+
+        if (updateError) {
+          console.error('Error updating dispute:', updateError);
+        } else {
+          console.log('Dispute closed successfully');
+        }
+
+        break;
+      }
+
       default:
         console.log('Unhandled event type:', event.type);
     }
