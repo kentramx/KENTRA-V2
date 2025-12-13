@@ -57,19 +57,32 @@ export const startSubscriptionCheckout = async (
 
 /**
  * Cambia el plan actual con prorrateo
+ * @param newPlanId - ID del nuevo plan (debe coincidir con subscription_plans.id o name)
+ * @param billingCycle - Ciclo de facturación ('monthly' | 'yearly')
+ * @param previewOnly - Si es true, solo retorna preview de proration sin ejecutar el cambio
  */
 export const changePlan = async (
-  targetPlanSlug: string,
-  billingCycle: 'monthly' | 'yearly'
-): Promise<{ success: boolean; error?: string }> => {
+  newPlanId: string,
+  billingCycle: 'monthly' | 'yearly',
+  previewOnly: boolean = false
+): Promise<{ success: boolean; error?: string; preview?: any }> => {
   try {
     const { data, error } = await supabase.functions.invoke('change-subscription-plan', {
-      body: { targetPlanSlug, billingCycle },
+      body: { 
+        newPlanId,      // Corregido: el backend espera "newPlanId"
+        billingCycle,
+        previewOnly,    // Soporte para preview de proration
+      },
     });
 
     if (error) {
       monitoring.error('Error changing plan', { util: 'stripeCheckout', error });
       return { success: false, error: error.message };
+    }
+
+    // Si es preview, retornar los datos de proration
+    if (previewOnly) {
+      return { success: true, preview: data };
     }
 
     if (!data?.success) {
@@ -78,7 +91,13 @@ export const changePlan = async (
 
     return { success: true };
   } catch (error) {
-    monitoring.captureException(error as Error, { util: 'stripeCheckout', function: 'changePlan' });
+    monitoring.captureException(error as Error, { 
+      util: 'stripeCheckout', 
+      function: 'changePlan',
+      newPlanId,
+      billingCycle,
+      previewOnly,
+    });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
