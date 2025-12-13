@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.og-image]
 verify_jwt = false
+
+[functions.create-portal-session]
+verify_jwt = true

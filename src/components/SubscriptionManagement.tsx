@@ -68,6 +68,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
   const [reactivating, setReactivating] = useState(false);
+  const [loadingPortal, setLoadingPortal] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
@@ -237,6 +238,26 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
       });
     } finally {
       setReactivating(false);
+    }
+  };
+
+  const handleManagePayment = async () => {
+    setLoadingPortal(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-portal-session');
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Error opening payment portal:', error);
+      toast({
+        title: 'Error',
+        description: 'Error al abrir el portal de pagos',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingPortal(false);
     }
   };
 
@@ -451,6 +472,19 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
               >
                 <TrendingUp className="h-4 w-4" />
                 Cambiar de Plan
+              </Button>
+            )}
+
+            {/* Administrar método de pago - Solo si hay suscripción activa */}
+            {(subscription.status === 'active' || subscription.status === 'trialing') && (
+              <Button 
+                variant="outline" 
+                onClick={handleManagePayment}
+                disabled={loadingPortal}
+                className="flex-1 gap-2"
+              >
+                <CreditCard className="h-4 w-4" />
+                {loadingPortal ? 'Abriendo...' : 'Administrar Pagos'}
               </Button>
             )}
             
