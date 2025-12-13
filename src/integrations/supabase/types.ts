@@ -1631,6 +1631,33 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_webhook_events: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          event_type: string
+          id: string
+          payload: Json | null
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          event_type: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
       subscription_changes: {
         Row: {
           change_type: string
@@ -2295,6 +2322,7 @@ export type Database = {
         Returns: Json
       }
       cleanup_old_data: { Args: never; Returns: undefined }
+      cleanup_old_webhook_events: { Args: never; Returns: number }
       database_health_check: {
         Args: never
         Returns: {

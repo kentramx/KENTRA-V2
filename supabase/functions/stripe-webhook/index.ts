@@ -59,6 +59,51 @@ Deno.serve(async (req) => {
       }
     );
 
+    // === IDEMPOTENCIA: Verificar si ya procesamos este evento ===
+    const { data: existingEvent, error: checkError } = await supabaseClient
+      .from('stripe_webhook_events')
+      .select('id')
+      .eq('event_id', event.id)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking event idempotency:', checkError);
+      // Continuar procesando si hay error en la verificación (fail open)
+    }
+
+    if (existingEvent) {
+      console.log(`Event ${event.id} already processed, skipping`);
+      return new Response(
+        JSON.stringify({ received: true, skipped: true, reason: 'duplicate' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Registrar el evento ANTES de procesarlo para evitar race conditions
+    const { error: insertError } = await supabaseClient
+      .from('stripe_webhook_events')
+      .insert({
+        event_id: event.id,
+        event_type: event.type,
+        payload: event.data.object,
+      });
+
+    if (insertError) {
+      // Si es error de duplicado (unique constraint), otro proceso ya lo está manejando
+      if (insertError.code === '23505') {
+        console.log(`Event ${event.id} being processed by another instance, skipping`);
+        return new Response(
+          JSON.stringify({ received: true, skipped: true, reason: 'concurrent' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.error('Error inserting event:', insertError);
+      // Continuar procesando si hay otro tipo de error
+    }
+
+    console.log('Processing new webhook event:', event.type, event.id);
+    // === FIN IDEMPOTENCIA ===
+
     // Handle different event types
     switch (event.type) {
       case 'checkout.session.completed': {
