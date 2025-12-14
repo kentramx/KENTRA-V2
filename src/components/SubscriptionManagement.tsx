@@ -361,7 +361,14 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
                 Plan {subscription.billing_cycle === 'yearly' ? 'Anual' : 'Mensual'}
               </CardDescription>
             </div>
-            {getStatusBadge(subscription.status)}
+            <div className="flex items-center gap-2">
+              {subscription.status === 'trialing' && subscription.current_period_end && (
+                <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-300">
+                  🎁 {Math.max(0, Math.ceil((new Date(subscription.current_period_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} días restantes
+                </Badge>
+              )}
+              {getStatusBadge(subscription.status)}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -502,7 +509,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
                 className="flex-1 gap-2"
               >
                 <CreditCard className="h-4 w-4" />
-                {loadingPortal ? 'Abriendo...' : 'Administrar Pagos'}
+                {loadingPortal ? 'Abriendo...' : 'Actualizar Método de Pago'}
               </Button>
             )}
             
@@ -547,61 +554,6 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
               </AlertDialog>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Payment History */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Historial de Pagos</CardTitle>
-          <CardDescription>
-            Últimos {payments.length} pagos realizados
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {payments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No hay pagos registrados</p>
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Concepto</TableHead>
-                    <TableHead>Monto</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>
-                        {format(new Date(payment.created_at), "d MMM yyyy, HH:mm", { locale: es })}
-                      </TableCell>
-                      <TableCell className="capitalize">
-                        {payment.payment_type === 'subscription' ? 'Suscripción' : payment.payment_type}
-                      </TableCell>
-                      <TableCell className="font-semibold">
-                        ${payment.amount.toLocaleString('es-MX')} {payment.currency}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getPaymentStatusIcon(payment.status)}
-                          <span className="capitalize text-sm">
-                            {payment.status === 'succeeded' && 'Exitoso'}
-                            {payment.status === 'pending' && 'Pendiente'}
-                            {payment.status === 'failed' && 'Fallido'}
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
         </CardContent>
       </Card>
         </TabsContent>

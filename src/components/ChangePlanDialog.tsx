@@ -740,7 +740,46 @@ export const ChangePlanDialog = ({
                       Preview del cambio de plan
                     </p>
                     
-          {preview && (
+          {/* Skeleton Loading for Preview */}
+          {loadingPreview && (
+            <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg border-2 border-blue-200 dark:border-blue-800 animate-pulse">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-9 h-9 bg-blue-300 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-5 bg-muted rounded w-48" />
+                  <div className="h-4 bg-muted rounded w-64" />
+                </div>
+              </div>
+              <div className="border-t border-muted my-4" />
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <div className="h-4 bg-muted rounded w-24" />
+                  <div className="h-4 bg-muted rounded w-32" />
+                </div>
+                <div className="flex justify-between">
+                  <div className="h-4 bg-muted rounded w-20" />
+                  <div className="h-4 bg-muted rounded w-36" />
+                </div>
+                <div className="flex justify-between">
+                  <div className="h-4 bg-muted rounded w-28" />
+                  <div className="h-4 bg-muted rounded w-24" />
+                </div>
+              </div>
+              <div className="border-t border-muted my-4" />
+              <div className="flex justify-between items-center p-4 bg-white/50 dark:bg-gray-900/50 rounded-lg">
+                <div className="space-y-2">
+                  <div className="h-5 bg-muted rounded w-32" />
+                  <div className="h-3 bg-muted rounded w-40" />
+                </div>
+                <div className="text-right space-y-2">
+                  <div className="h-7 bg-primary/20 rounded w-28" />
+                  <div className="h-3 bg-muted rounded w-20" />
+                </div>
+              </div>
+            </div>
+          )}
+                    
+          {preview && !loadingPreview && (
             <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
               <div className="flex items-start gap-3 mb-4">
                 <div className="p-2 bg-blue-500 rounded-lg">

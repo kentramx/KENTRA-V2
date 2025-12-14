@@ -11,13 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Check, Gift, Rocket, Zap, Crown, ArrowRight } from 'lucide-react';
+import { Check, Gift, Rocket, Zap, Crown, ArrowRight, Loader2 } from 'lucide-react';
 
 const PricingAgente = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [processingPlan, setProcessingPlan] = useState<string | null>(null);
 
   const scrollToPlans = () => {
     const element = document.getElementById('planes');
@@ -32,6 +33,7 @@ const PricingAgente = () => {
       return;
     }
 
+    setProcessingPlan(planSlug);
     try {
       // Verificar si ya tiene suscripción
       const { subscription } = await getCurrentSubscription();
@@ -51,6 +53,8 @@ const PricingAgente = () => {
     } catch (error) {
       console.error('Error:', error);
       toast.error('Ocurrió un error al procesar tu solicitud');
+    } finally {
+      setProcessingPlan(null);
     }
   };
 
@@ -332,8 +336,16 @@ const PricingAgente = () => {
                       className="w-full"
                       variant={plan.popular ? 'default' : 'outline'}
                       onClick={() => handleSelectPlan(plan.slug)}
+                      disabled={processingPlan !== null}
                     >
-                      {plan.buttonText}
+                      {processingPlan === plan.slug ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Procesando...
+                        </>
+                      ) : (
+                        plan.buttonText
+                      )}
                     </Button>
                   </CardContent>
                 </Card>

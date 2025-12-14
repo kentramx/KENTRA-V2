@@ -19,10 +19,25 @@ export function CouponInput({ onCouponApplied, planType }: CouponInputProps) {
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [discountInfo, setDiscountInfo] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [shakeError, setShakeError] = useState(false);
+
+  // Check if user is logged in
+  useState(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setIsLoggedIn(!!data.user);
+    });
+  });
+
+  const triggerShake = () => {
+    setShakeError(true);
+    setTimeout(() => setShakeError(false), 500);
+  };
 
   const validateCoupon = async () => {
     if (!couponCode.trim()) {
       toast.error("Ingresa un código de cupón");
+      triggerShake();
       return;
     }
 
@@ -31,6 +46,7 @@ export function CouponInput({ onCouponApplied, planType }: CouponInputProps) {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
         toast.error("Debes iniciar sesión para aplicar cupones");
+        triggerShake();
         return;
       }
 
@@ -52,6 +68,7 @@ export function CouponInput({ onCouponApplied, planType }: CouponInputProps) {
           toast.success("¡Cupón aplicado exitosamente!");
         } else {
           toast.error(validation.message);
+          triggerShake();
         }
       }
     } catch (error: any) {
@@ -106,10 +123,34 @@ export function CouponInput({ onCouponApplied, planType }: CouponInputProps) {
     );
   }
 
+  // User not logged in - show disabled state
+  if (isLoggedIn === false) {
+    return (
+      <div className="space-y-2">
+        <Label htmlFor="coupon" className="text-muted-foreground">¿Tienes un cupón de descuento?</Label>
+        <div className="flex gap-2">
+          <Input
+            id="coupon"
+            disabled
+            placeholder="Inicia sesión para usar cupones"
+            className="font-mono bg-muted cursor-not-allowed"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled
+          >
+            Aplicar
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <Label htmlFor="coupon">¿Tienes un cupón de descuento?</Label>
-      <div className="flex gap-2">
+      <div className={`flex gap-2 ${shakeError ? 'animate-shake' : ''}`}>
         <Input
           id="coupon"
           value={couponCode}

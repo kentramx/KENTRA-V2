@@ -11,6 +11,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Download, ExternalLink, Loader2, FileText, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -143,77 +149,95 @@ export const InvoiceHistory = ({ userId }: InvoiceHistoryProps) => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Historial de Facturas
-        </CardTitle>
-        <CardDescription>
-          Todas tus facturas de suscripción
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Número</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell className="font-medium">
-                    {invoice.number || '-'}
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(invoice.date * 1000), "d MMM yyyy", { locale: es })}
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate">
-                    {invoice.description}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold">
-                    {formatCurrency(invoice.amount, invoice.currency)}
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(invoice.status)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {invoice.pdfUrl && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(invoice.pdfUrl!, '_blank')}
-                          className="gap-1"
-                        >
-                          <Download className="h-4 w-4" />
-                          PDF
-                        </Button>
-                      )}
-                      {invoice.hostedInvoiceUrl && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => window.open(invoice.hostedInvoiceUrl!, '_blank')}
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+    <TooltipProvider>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Historial de Facturas
+          </CardTitle>
+          <CardDescription>
+            Todas tus facturas de suscripción
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Número</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+              </TableHeader>
+              <TableBody>
+                {invoices.map((invoice) => (
+                  <TableRow key={invoice.id}>
+                    <TableCell className="font-medium">
+                      {invoice.number || '-'}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(invoice.date * 1000), "d MMM yyyy", { locale: es })}
+                    </TableCell>
+                    <TableCell className="max-w-[200px]">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="truncate block cursor-help">
+                            {invoice.description}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[300px]">
+                          <p>{invoice.description}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {formatCurrency(invoice.amount, invoice.currency)}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(invoice.status)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {invoice.pdfUrl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(invoice.pdfUrl!, '_blank')}
+                            className="gap-1"
+                          >
+                            <Download className="h-4 w-4" />
+                            PDF
+                          </Button>
+                        )}
+                        {invoice.hostedInvoiceUrl && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(invoice.hostedInvoiceUrl!, '_blank')}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Ver factura en línea</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 };
