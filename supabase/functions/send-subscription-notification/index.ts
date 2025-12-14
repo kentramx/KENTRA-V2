@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface NotificationRequest {
   userId: string;
-  type: 'renewal_success' | 'payment_failed' | 'payment_failed_day_3' | 'payment_failed_day_5' | 'payment_failed_day_7' | 'subscription_canceled' | 'subscription_expiring' | 'downgrade_confirmed' | 'upgrade_confirmed' | 'trial_expired' | 'trial_started' | 'trial_expiring' | 'subscription_suspended' | 'welcome_paid';
+  type: 'renewal_success' | 'payment_failed' | 'payment_failed_day_3' | 'payment_failed_day_5' | 'payment_failed_day_7' | 'subscription_canceled' | 'subscription_expiring' | 'downgrade_confirmed' | 'upgrade_confirmed' | 'trial_expired' | 'trial_started' | 'trial_expiring' | 'subscription_suspended' | 'welcome_paid' | 'upsell_expired';
   metadata?: Record<string, any>;
 }
 
@@ -341,6 +341,28 @@ Deno.serve(async (req) => {
           <p><a href="https://kentra.com.mx/panel-agente" style="background-color: #7C3AED; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 16px;">Ir a mi panel</a></p>
           
           <p>Gracias por confiar en Kentra.</p>
+          <p>Equipo Kentra</p>
+        `;
+        break;
+
+      case 'upsell_expired':
+        subject = '⏰ Tu servicio adicional ha expirado - Kentra';
+        htmlContent = `
+          <h1>Tu servicio adicional ha expirado</h1>
+          <p>Hola ${userName},</p>
+          <p>Tu servicio <strong>${metadata.upsellName}</strong> ha expirado el ${metadata.expiredDate}.</p>
+          
+          <h3>¿Qué significa esto?</h3>
+          <ul>
+            <li>El beneficio ya no está activo</li>
+            <li>Puedes renovarlo en cualquier momento</li>
+          </ul>
+          
+          <a href="https://kentra.com.mx/panel-agente?tab=services" style="background-color: #616652; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0;">
+            Renovar Servicio
+          </a>
+          
+          <p>Si tienes alguna pregunta, estamos aquí para ayudarte.</p>
           <p>Equipo Kentra</p>
         `;
         break;

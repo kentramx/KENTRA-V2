@@ -387,13 +387,21 @@ const AgentDashboard = () => {
 
       if (upsellError || !upsell) throw new Error('Upsell no encontrado');
 
-      // Upsells feature disabled in v2.0 - users should upgrade their plan instead
-      toast({
-        title: 'Característica no disponible',
-        description: 'Por favor contacta a soporte para actualizar tu plan',
-        variant: 'default',
+      // Iniciar checkout de upsell
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: {
+          upsellOnly: true,
+          upsells: [{ id: upsellId, quantity: 1 }],
+        },
       });
-      return;
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No se recibió URL de checkout');
+      }
     } catch (error: any) {
       console.error('Error comprando upsell:', error);
       toast({
