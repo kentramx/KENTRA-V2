@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface NotificationRequest {
   userId: string;
-  type: 'renewal_success' | 'payment_failed' | 'payment_failed_day_3' | 'payment_failed_day_5' | 'payment_failed_day_7' | 'subscription_canceled' | 'subscription_expiring' | 'downgrade_confirmed' | 'upgrade_confirmed' | 'trial_expired' | 'trial_started' | 'trial_expiring' | 'subscription_suspended' | 'welcome_paid' | 'upsell_expired';
+  type: 'renewal_success' | 'payment_failed' | 'payment_failed_day_3' | 'payment_failed_day_5' | 'payment_failed_day_7' | 'subscription_canceled' | 'subscription_expiring' | 'downgrade_confirmed' | 'upgrade_confirmed' | 'trial_expired' | 'trial_started' | 'trial_expiring' | 'subscription_suspended' | 'welcome_paid' | 'upsell_expired' | 'renewal_reminder';
   metadata?: Record<string, any>;
 }
 
@@ -392,6 +392,32 @@ Deno.serve(async (req) => {
           
           <p>Si tienes alguna pregunta, estamos aquí para ayudarte.</p>
           <p>Saludos,<br>Equipo Kentra</p>
+        `;
+        break;
+
+      case 'renewal_reminder':
+        subject = '📅 Tu suscripción se renueva en 3 días - Kentra';
+        htmlContent = `
+          <h1>Recordatorio de Renovación</h1>
+          <p>Hola ${userName},</p>
+          <p>Te recordamos que tu suscripción al plan <strong>${metadata.planName}</strong> se renovará automáticamente el <strong>${metadata.renewalDate}</strong>.</p>
+          
+          <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 8px 0;"><strong>Plan:</strong> ${metadata.planName}</p>
+            <p style="margin: 8px 0;"><strong>Monto:</strong> $${metadata.amount} ${metadata.currency}/${metadata.billingCycle || 'mes'}</p>
+            <p style="margin: 8px 0;"><strong>Fecha de renovación:</strong> ${metadata.renewalDate}</p>
+          </div>
+          
+          <p>Si deseas actualizar tu método de pago o cambiar de plan, hazlo antes de la fecha de renovación.</p>
+          
+          <a href="https://kentra.com.mx/panel-agente?tab=subscription" style="background-color: #616652; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0;">
+            Administrar Suscripción
+          </a>
+          
+          <p>Si no deseas continuar, puedes cancelar tu suscripción en cualquier momento desde tu panel.</p>
+          
+          <p>Gracias por ser parte de Kentra.</p>
+          <p>Equipo Kentra</p>
         `;
         break;
 
