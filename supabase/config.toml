@@ -92,3 +92,12 @@ verify_jwt = true
 
 [functions.send-renewal-reminder]
 verify_jwt = false
+
+[functions.admin-get-subscriptions]
+verify_jwt = true
+
+[functions.admin-extend-trial]
+verify_jwt = true
+
+[functions.admin-subscription-action]
+verify_jwt = true
