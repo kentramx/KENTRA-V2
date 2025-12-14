@@ -41,9 +41,9 @@ const PricingAgente = () => {
         return;
       }
 
-      // Iniciar checkout con el nuevo sistema
+      // Iniciar checkout con el nuevo sistema (incluye cupón si está aplicado)
       const billingCycle = pricingPeriod === 'monthly' ? 'monthly' : 'yearly';
-      const result = await startSubscriptionCheckout(`agente_${planSlug}`, billingCycle);
+      const result = await startSubscriptionCheckout(`agente_${planSlug}`, billingCycle, appliedCoupon || undefined);
 
       if (!result.success) {
         toast.error(result.error || 'Error al iniciar el proceso de pago');

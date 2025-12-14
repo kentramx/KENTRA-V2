@@ -215,6 +215,52 @@ Deno.serve(async (req) => {
         } else {
           console.log('Subscription created successfully for user:', userId);
 
+          // === REGISTRAR REDENCIÓN DE CUPÓN SI APLICA ===
+          const couponCode = session.metadata?.coupon_code;
+          if (couponCode) {
+            console.log('Processing coupon redemption for:', couponCode);
+            
+            // Obtener datos del cupón
+            const { data: couponData, error: couponError } = await supabaseClient
+              .from('promotion_coupons')
+              .select('id, discount_value, currency')
+              .eq('code', couponCode)
+              .single();
+
+            if (couponError) {
+              console.error('Error fetching coupon:', couponError);
+            } else if (couponData) {
+              // Insertar registro de redención
+              const { error: redemptionError } = await supabaseClient
+                .from('coupon_redemptions')
+                .insert({
+                  coupon_id: couponData.id,
+                  user_id: userId,
+                  stripe_session_id: session.id,
+                  discount_amount: couponData.discount_value,
+                  currency: couponData.currency || 'mxn',
+                  plan_id: planId,
+                });
+
+              if (redemptionError) {
+                console.error('Error recording coupon redemption:', redemptionError);
+              } else {
+                console.log('Coupon redemption recorded successfully');
+                
+                // Incrementar contador de usos
+                const { error: incrementError } = await supabaseClient.rpc('increment_coupon_uses', {
+                  p_code: couponCode,
+                });
+
+                if (incrementError) {
+                  console.error('Error incrementing coupon uses:', incrementError);
+                } else {
+                  console.log('Coupon uses incremented for:', couponCode);
+                }
+              }
+            }
+          }
+
           // === ENVIAR EMAIL DE BIENVENIDA (PAGO) ===
           // Obtener detalles del plan para el email
           const { data: planDetails } = await supabaseClient

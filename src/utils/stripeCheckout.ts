@@ -6,7 +6,8 @@ import { monitoring } from '@/lib/monitoring';
  */
 export const startSubscriptionCheckout = async (
   planSlug: string,
-  billingCycle: 'monthly' | 'yearly'
+  billingCycle: 'monthly' | 'yearly',
+  couponCode?: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -32,7 +33,7 @@ export const startSubscriptionCheckout = async (
 
     // Crear sesión de checkout
     const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-      body: { planSlug, billingCycle },
+      body: { planSlug, billingCycle, couponCode },
     });
 
     if (error) {

@@ -2665,6 +2665,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_coupon_uses: { Args: { p_code: string }; Returns: undefined }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       longtransactionsenabled: { Args: never; Returns: boolean }
       mark_messages_as_read: {

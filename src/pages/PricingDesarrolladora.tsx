@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { startSubscriptionCheckout, getCurrentSubscription } from '@/utils/stripeCheckout';
 import Navbar from '@/components/Navbar';
+import { CouponInput } from '@/components/CouponInput';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ const PricingDesarrolladora = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
 
   const scrollToPlans = () => {
     document.getElementById('planes')?.scrollIntoView({ behavior: 'smooth' });
@@ -35,9 +37,9 @@ const PricingDesarrolladora = () => {
         return;
       }
 
-      // Iniciar checkout con el nuevo sistema
+      // Iniciar checkout con el nuevo sistema (incluye cupón si está aplicado)
       const billingCycleValue = billingCycle === 'monthly' ? 'monthly' : 'yearly';
-      const result = await startSubscriptionCheckout(`desarrolladora_${planSlug}`, billingCycleValue);
+      const result = await startSubscriptionCheckout(`desarrolladora_${planSlug}`, billingCycleValue, appliedCoupon || undefined);
 
       if (!result.success) {
         toast.error(result.error || 'Error al iniciar el proceso de pago');
@@ -100,6 +102,13 @@ const PricingDesarrolladora = () => {
       {/* Plans Section */}
       <section id="planes" className="container mx-auto px-4 py-16 scroll-mt-20">
         <div className="max-w-6xl mx-auto">
+          <div className="max-w-md mx-auto mb-8">
+            <CouponInput 
+              onCouponApplied={setAppliedCoupon}
+              planType="developer"
+            />
+          </div>
+          
           {/* Billing Toggle */}
           <div className="flex justify-center items-center gap-4 mb-12">
             <Label 

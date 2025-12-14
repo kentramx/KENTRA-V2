@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { startSubscriptionCheckout, getCurrentSubscription } from '@/utils/stripeCheckout';
 import Navbar from '@/components/Navbar';
+import { CouponInput } from '@/components/CouponInput';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ const PricingInmobiliaria = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
 
   const scrollToPlans = () => {
     const plansSection = document.getElementById('planes');
@@ -35,9 +37,9 @@ const PricingInmobiliaria = () => {
         return;
       }
 
-      // Iniciar checkout con el nuevo sistema
+      // Iniciar checkout con el nuevo sistema (incluye cupón si está aplicado)
       const billingCycleValue = billingPeriod === 'monthly' ? 'monthly' : 'yearly';
-      const result = await startSubscriptionCheckout(`inmobiliaria_${planSlug}`, billingCycleValue);
+      const result = await startSubscriptionCheckout(`inmobiliaria_${planSlug}`, billingCycleValue, appliedCoupon || undefined);
 
       if (!result.success) {
         toast.error(result.error || 'Error al iniciar el proceso de pago');
@@ -102,6 +104,13 @@ const PricingInmobiliaria = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-6">Elige el plan perfecto para tu inmobiliaria</h2>
+            
+            <div className="max-w-md mx-auto mb-6">
+              <CouponInput 
+                onCouponApplied={setAppliedCoupon}
+                planType="agency"
+              />
+            </div>
             
             {/* Billing Toggle */}
             <div className="inline-flex items-center gap-2 p-1 bg-muted rounded-lg">
