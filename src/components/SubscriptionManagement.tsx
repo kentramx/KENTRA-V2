@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,12 +26,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Calendar, CreditCard, TrendingUp, AlertCircle, CheckCircle2, Loader2, RefreshCcw } from 'lucide-react';
+import { Calendar, CreditCard, TrendingUp, AlertCircle, CheckCircle2, Loader2, RefreshCcw, FileText, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { ChangePlanDialog } from './ChangePlanDialog';
 import { ActiveUpsells } from './ActiveUpsells';
+import { InvoiceHistory } from './InvoiceHistory';
 import type { SubscriptionFeatures } from '@/types/subscription';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -332,7 +334,23 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
         onSuccess={handleChangePlanSuccess}
       />
       
-      <div className="space-y-6">
+      <Tabs defaultValue="subscription" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="subscription" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Suscripción
+          </TabsTrigger>
+          <TabsTrigger value="invoices" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Facturas
+          </TabsTrigger>
+          <TabsTrigger value="upsells" className="gap-2">
+            <Package className="h-4 w-4" />
+            Servicios
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="subscription" className="space-y-6">
         {/* Current Subscription Card */}
         <Card>
         <CardHeader>
@@ -586,10 +604,16 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           )}
         </CardContent>
       </Card>
+        </TabsContent>
 
-      {/* Active Upsells Section */}
-      <ActiveUpsells userId={userId} />
-      </div>
+        <TabsContent value="invoices">
+          <InvoiceHistory userId={userId} />
+        </TabsContent>
+
+        <TabsContent value="upsells">
+          <ActiveUpsells userId={userId} />
+        </TabsContent>
+      </Tabs>
     </>
   );
 };

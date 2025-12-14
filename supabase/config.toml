@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.expire-upsells]
 verify_jwt = false
+
+[functions.get-invoices]
+verify_jwt = true
