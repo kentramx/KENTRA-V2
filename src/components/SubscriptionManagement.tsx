@@ -21,7 +21,7 @@ import {
 import { Calendar, CreditCard, TrendingUp, AlertCircle, Loader2, RefreshCcw, FileText, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChangePlanDialog } from './ChangePlanDialog';
+import { ChangePlanDialog } from './subscription/change-plan';
 import { ActiveUpsells } from './ActiveUpsells';
 import { InvoiceHistory } from './InvoiceHistory';
 import { SubscriptionErrorBoundary } from './subscription/SubscriptionErrorBoundary';
