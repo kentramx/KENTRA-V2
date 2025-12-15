@@ -18,249 +18,101 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Calendar, CreditCard, TrendingUp, AlertCircle, CheckCircle2, Loader2, RefreshCcw, FileText, Package } from 'lucide-react';
+import { Calendar, CreditCard, TrendingUp, AlertCircle, Loader2, RefreshCcw, FileText, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useToast } from '@/hooks/use-toast';
 import { ChangePlanDialog } from './ChangePlanDialog';
 import { ActiveUpsells } from './ActiveUpsells';
 import { InvoiceHistory } from './InvoiceHistory';
+import { SubscriptionErrorBoundary } from './subscription/SubscriptionErrorBoundary';
+import { SubscriptionCardSkeleton } from './subscription/SubscriptionSkeletons';
+import { useSubscriptionRealtime } from '@/hooks/useSubscriptionRealtime';
+import { useSubscriptionActions } from '@/hooks/useSubscriptionActions';
 import type { SubscriptionFeatures } from '@/types/subscription';
-import type { Json } from '@/integrations/supabase/types';
 
 interface SubscriptionManagementProps {
   userId: string;
 }
 
-interface SubscriptionDetails {
-  plan_id: string;
-  plan_name: string;
-  plan_display_name: string;
-  status: string;
-  billing_cycle: string;
-  price_monthly: number;
-  price_yearly: number;
-  current_period_start: string;
-  current_period_end: string;
-  cancel_at_period_end: boolean;
-  features: SubscriptionFeatures;
-}
-
-interface PaymentRecord {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  payment_type: string;
-  created_at: string;
-  metadata: Json | null;
-}
-
 export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) => {
+  return (
+    <SubscriptionErrorBoundary>
+      <SubscriptionManagementContent userId={userId} />
+    </SubscriptionErrorBoundary>
+  );
+};
+
+function SubscriptionManagementContent({ userId }: SubscriptionManagementProps) {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [canceling, setCanceling] = useState(false);
-  const [reactivating, setReactivating] = useState(false);
-  const [loadingPortal, setLoadingPortal] = useState(false);
-  const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
-  const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
 
-  useEffect(() => {
-    fetchSubscriptionData();
-  }, [userId]);
+  // Use realtime hook for subscription data
+  const { subscription: realtimeSubscription, loading, refetch } = useSubscriptionRealtime({
+    showToasts: true,
+    onStatusChange: (oldStatus, newStatus) => {
+      console.log(`[SubscriptionManagement] Status changed: ${oldStatus} -> ${newStatus}`);
+    },
+  });
 
-  const fetchSubscriptionData = async () => {
-    try {
-      // Obtener suscripción activa únicamente
-      const { data: subData, error: subError } = await supabase
-        .from('user_subscriptions')
-        .select(`
-          plan_id,
-          status,
-          billing_cycle,
-          current_period_start,
-          current_period_end,
-          cancel_at_period_end,
-          subscription_plans (
-            name,
-            display_name,
-            price_monthly,
-            price_yearly,
-            features
-          )
-        `)
-        .eq('user_id', userId)
-        .in('status', ['active', 'trialing'])
-        .order('current_period_end', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+  // Use actions hook for cancel/reactivate/portal
+  const { 
+    cancel, 
+    reactivate, 
+    openPortal,
+    isCanceling,
+    isReactivating,
+    isOpeningPortal,
+  } = useSubscriptionActions({
+    onSuccess: () => {
+      refetch();
+    },
+  });
 
-      if (subError) throw subError;
-
-      // Si no hay suscripción activa, limpiar el estado
-      if (!subData || !subData.subscription_plans) {
-        setSubscription(null);
-        setLoading(false);
-        return;
-      }
-
-      if (subData && subData.subscription_plans) {
-        setSubscription({
-          plan_id: subData.plan_id,
-          plan_name: subData.subscription_plans.name,
-          plan_display_name: subData.subscription_plans.display_name,
-          status: subData.status,
-          billing_cycle: subData.billing_cycle,
-          price_monthly: Number(subData.subscription_plans.price_monthly),
-          price_yearly: Number(subData.subscription_plans.price_yearly),
-          current_period_start: subData.current_period_start,
-          current_period_end: subData.current_period_end,
-          cancel_at_period_end: subData.cancel_at_period_end,
-          features: subData.subscription_plans.features as SubscriptionFeatures,
-        });
-      }
-
-      // Obtener historial de pagos
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('payment_history')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (paymentsError) throw paymentsError;
-
-      setPayments(paymentsData || []);
-    } catch (error) {
-      console.error('Error fetching subscription data:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo cargar la información de la suscripción',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    // Prevenir doble click
-    if (canceling) return;
-    
-    setCanceling(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('cancel-subscription', {
-        method: 'POST',
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Suscripción cancelada',
-        description: 'Tu suscripción se cancelará al final del período actual',
-      });
-
-      // Recargar datos
-      await fetchSubscriptionData();
-    } catch (error) {
-      console.error('Error canceling subscription:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo cancelar la suscripción. Intenta de nuevo.',
-        variant: 'destructive',
-      });
-    } finally {
-      setCanceling(false);
-    }
-  };
+  // Transform realtime data to match expected shape
+  const subscription = realtimeSubscription ? {
+    plan_id: realtimeSubscription.plan_id,
+    plan_name: realtimeSubscription.subscription_plans?.name || '',
+    plan_display_name: realtimeSubscription.subscription_plans?.display_name || '',
+    status: realtimeSubscription.status,
+    billing_cycle: realtimeSubscription.billing_cycle || 'monthly',
+    price_monthly: realtimeSubscription.subscription_plans?.price_monthly || 0,
+    price_yearly: realtimeSubscription.subscription_plans?.price_yearly || 0,
+    current_period_start: realtimeSubscription.current_period_start || '',
+    current_period_end: realtimeSubscription.current_period_end || '',
+    cancel_at_period_end: realtimeSubscription.cancel_at_period_end || false,
+    features: (realtimeSubscription.subscription_plans?.features || {}) as SubscriptionFeatures,
+  } : null;
 
   const handleChangePlan = () => {
     setShowChangePlanDialog(true);
   };
 
   const handleChangePlanSuccess = () => {
-    fetchSubscriptionData();
+    refetch();
+  };
+
+  const handleCancelSubscription = async () => {
+    if (subscription) {
+      await cancel({
+        status: subscription.status,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        plan_id: subscription.plan_id,
+      });
+    }
   };
 
   const handleReactivateSubscription = async () => {
-    try {
-      setReactivating(true);
-      console.log('🔄 Calling reactivate-subscription function...');
-      
-      const { data, error } = await supabase.functions.invoke('reactivate-subscription');
-      
-      if (error) {
-        console.error('❌ Error reactivating subscription:', error);
-        throw error;
-      }
-
-      // Handle SUBSCRIPTION_ALREADY_CANCELED error
-      if (data?.error === 'SUBSCRIPTION_ALREADY_CANCELED') {
-        console.log('⚠️ Subscription already canceled, clearing state');
-        toast({
-          title: "Suscripción finalizada",
-          description: data.message || "Tu suscripción ya ha finalizado.",
-          variant: "destructive",
-        });
-        
-        // Forzar estado null para mostrar UI correcta inmediatamente
-        setSubscription(null);
-        return;
-      }
-
-      if (!data?.success) {
-        console.error('❌ Reactivation failed:', data);
-        throw new Error(data?.error || 'Error al reactivar la suscripción');
-      }
-
-      console.log('✅ Subscription reactivated successfully');
-      
-      toast({
-        title: "Suscripción reactivada",
-        description: "Tu suscripción continuará activa sin interrupciones",
+    if (subscription) {
+      await reactivate({
+        status: subscription.status,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        plan_id: subscription.plan_id,
       });
-      
-      await fetchSubscriptionData();
-    } catch (error: any) {
-      console.error('❌ Error in handleReactivateSubscription:', error);
-      toast({
-        title: "Error al reactivar",
-        description: error.message || 'No se pudo reactivar la suscripción',
-        variant: "destructive",
-      });
-    } finally {
-      setReactivating(false);
     }
   };
 
   const handleManagePayment = async () => {
-    setLoadingPortal(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-portal-session');
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error('Error opening payment portal:', error);
-      toast({
-        title: 'Error',
-        description: 'Error al abrir el portal de pagos',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingPortal(false);
-    }
+    await openPortal();
   };
 
   const getStatusBadge = (status: string) => {
@@ -271,28 +123,12 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
     return <Badge variant="secondary">No Activo</Badge>;
   };
 
-  const getPaymentStatusIcon = (status: string) => {
-    switch (status) {
-      case 'succeeded':
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-      case 'pending':
-        return <Loader2 className="h-4 w-4 text-amber-600 animate-spin" />;
-      case 'failed':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
-      default:
-        return null;
-    }
-  };
-
+  // Show skeleton while loading
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <SubscriptionCardSkeleton />;
   }
 
-  // Determinar si la suscripción está activa
+  // Determine if subscription is active
   const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
 
   if (!subscription || !isActive) {
@@ -314,7 +150,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
     );
   }
 
-  // Verificar si la suscripción ya expiró (cancel_at_period_end pero fecha pasada)
+  // Check if subscription has expired (cancel_at_period_end but date passed)
   const isExpired = subscription.cancel_at_period_end && 
                     new Date(subscription.current_period_end) < new Date();
 
@@ -372,7 +208,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Banner informativo para cancelación programada o expirada */}
+          {/* Banner for scheduled cancellation or expired */}
           {subscription.cancel_at_period_end && (
             isExpired ? (
               <Alert className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900">
@@ -422,7 +258,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
             <div className="flex-1">
               <p className="text-sm text-muted-foreground">Precio actual</p>
               <p className="text-2xl font-bold">
-                ${currentPrice.toLocaleString('es-MX')} MXN
+                ${currentPrice?.toLocaleString('es-MX')} MXN
                 <span className="text-sm font-normal text-muted-foreground">
                   /{subscription.billing_cycle === 'yearly' ? 'año' : 'mes'}
                 </span>
@@ -437,7 +273,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
               <div>
                 <p className="text-sm text-muted-foreground">Inicio del período</p>
                 <p className="font-semibold">
-                  {format(new Date(subscription.current_period_start), "d 'de' MMMM, yyyy", { locale: es })}
+                  {subscription.current_period_start && format(new Date(subscription.current_period_start), "d 'de' MMMM, yyyy", { locale: es })}
                 </p>
               </div>
             </div>
@@ -446,7 +282,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
               <div>
                 <p className="text-sm text-muted-foreground">Próxima renovación</p>
                 <p className="font-semibold">
-                  {format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}
+                  {subscription.current_period_end && format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}
                 </p>
               </div>
             </div>
@@ -456,14 +292,14 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Reactivar Suscripción - Mostrar SOLO si hay cancelación programada Y NO ha expirado */}
+            {/* Reactivate - Show ONLY if cancellation scheduled AND NOT expired */}
             {subscription.cancel_at_period_end && !isExpired && (
               <Button 
                 onClick={handleReactivateSubscription}
-                disabled={reactivating}
+                disabled={isReactivating}
                 className="flex-1 gap-2 bg-green-600 hover:bg-green-700 text-white"
               >
-                {reactivating ? (
+                {isReactivating ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Reactivando...
@@ -477,7 +313,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
               </Button>
             )}
 
-            {/* Contratar nuevo plan - Mostrar SOLO si ya expiró */}
+            {/* New plan - Show ONLY if expired */}
             {isExpired && (
               <Button 
                 onClick={() => navigate('/pricing-agente')}
@@ -488,7 +324,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
               </Button>
             )}
 
-            {/* Cambiar de Plan - disponible siempre si está activa */}
+            {/* Change Plan - available always if active */}
             {(subscription.status === 'active' || subscription.status === 'trialing') && (
               <Button 
                 onClick={handleChangePlan} 
@@ -500,20 +336,20 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
               </Button>
             )}
 
-            {/* Administrar método de pago - Solo si hay suscripción activa */}
+            {/* Manage payment method - Only if active */}
             {(subscription.status === 'active' || subscription.status === 'trialing') && (
               <Button 
                 variant="outline" 
                 onClick={handleManagePayment}
-                disabled={loadingPortal}
+                disabled={isOpeningPortal}
                 className="flex-1 gap-2"
               >
                 <CreditCard className="h-4 w-4" />
-                {loadingPortal ? 'Abriendo...' : 'Actualizar Método de Pago'}
+                {isOpeningPortal ? 'Abriendo...' : 'Actualizar Método de Pago'}
               </Button>
             )}
             
-            {/* Cancelar - Solo si NO hay cancelación programada */}
+            {/* Cancel - Only if NO scheduled cancellation */}
             {(subscription.status === 'active' || subscription.status === 'trialing') && 
              !subscription.cancel_at_period_end && (
               <AlertDialog>
@@ -527,7 +363,7 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
                     <AlertDialogTitle>¿Cancelar suscripción?</AlertDialogTitle>
                     <AlertDialogDescription>
                       Tu suscripción se cancelará al final del período de facturación actual el{' '}
-                      {format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}.
+                      {subscription.current_period_end && format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}.
                       Podrás seguir usando todas las funciones hasta esa fecha.
                       <br /><br />
                       Esta acción no se puede deshacer, pero podrás suscribirte nuevamente en cualquier momento.
@@ -537,10 +373,10 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
                     <AlertDialogCancel>No, mantener suscripción</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleCancelSubscription}
-                      disabled={canceling}
+                      disabled={isCanceling}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      {canceling ? (
+                      {isCanceling ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                           Cancelando...
@@ -568,4 +404,4 @@ export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) 
       </Tabs>
     </>
   );
-};
+}
