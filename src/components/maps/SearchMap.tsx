@@ -52,7 +52,7 @@ interface SearchMapProps {
 }
 
 // Límite de markers para rendimiento óptimo
-const MAX_VISIBLE_MARKERS = 100;
+const MAX_VISIBLE_MARKERS = 200;
 
 export function SearchMap({
   properties,
