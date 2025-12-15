@@ -243,7 +243,7 @@ const AgencyDashboard = () => {
               </TabsContent>
 
               <TabsContent value="subscription" className="mt-6">
-                <SubscriptionManagement userId={effectiveOwnerId || ''} />
+                <SubscriptionManagement userId={effectiveOwnerId || ''} userRole="agency" />
               </TabsContent>
             </Tabs>
           </CardContent>

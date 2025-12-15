@@ -4,7 +4,7 @@ import { monitoring } from '@/lib/monitoring';
 
 const IMPERSONATION_KEY = 'kentra_impersonated_role';
 
-export type ImpersonatedRole = 'buyer' | 'agent' | 'agency' | 'moderator' | null;
+export type ImpersonatedRole = 'buyer' | 'agent' | 'agency' | 'developer' | 'moderator' | null;
 
 export const useRoleImpersonation = () => {
   const [impersonatedRole, setImpersonatedRole] = useState<ImpersonatedRole>(null);
@@ -72,6 +72,8 @@ export const useRoleImpersonation = () => {
         return '00000000-0000-0000-0000-000000000001'; // Demo Agent
       case 'agency':
         return '00000000-0000-0000-0000-000000000010'; // Demo Agency Owner
+      case 'developer':
+        return '00000000-0000-0000-0000-000000000020'; // Demo Developer
       default:
         return null;
     }

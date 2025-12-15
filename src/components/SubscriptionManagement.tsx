@@ -28,23 +28,26 @@ import { SubscriptionErrorBoundary } from './subscription/SubscriptionErrorBound
 import { SubscriptionCardSkeleton } from './subscription/SubscriptionSkeletons';
 import { useSubscriptionRealtime } from '@/hooks/useSubscriptionRealtime';
 import { useSubscriptionActions } from '@/hooks/useSubscriptionActions';
+import { getPricingRoute } from '@/utils/getPricingRoute';
 import type { SubscriptionFeatures } from '@/types/subscription';
 
 interface SubscriptionManagementProps {
   userId: string;
+  userRole?: 'agent' | 'agency' | 'developer';
 }
 
-export const SubscriptionManagement = ({ userId }: SubscriptionManagementProps) => {
+export const SubscriptionManagement = ({ userId, userRole }: SubscriptionManagementProps) => {
   return (
     <SubscriptionErrorBoundary>
-      <SubscriptionManagementContent userId={userId} />
+      <SubscriptionManagementContent userId={userId} userRole={userRole} />
     </SubscriptionErrorBoundary>
   );
 };
 
-function SubscriptionManagementContent({ userId }: SubscriptionManagementProps) {
+function SubscriptionManagementContent({ userId, userRole }: SubscriptionManagementProps) {
   const navigate = useNavigate();
   const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
+  const pricingRoute = getPricingRoute(userRole);
 
   // Use realtime hook for subscription data
   const { subscription: realtimeSubscription, loading, refetch } = useSubscriptionRealtime({
@@ -141,7 +144,7 @@ function SubscriptionManagementContent({ userId }: SubscriptionManagementProps) 
             <p className="text-muted-foreground mb-4">
               Contrata un plan para comenzar a publicar tus propiedades
             </p>
-            <Button onClick={() => navigate('/pricing-agente')}>
+            <Button onClick={() => navigate(pricingRoute)}>
               Contratar un Plan
             </Button>
           </div>
@@ -223,8 +226,8 @@ function SubscriptionManagementContent({ userId }: SubscriptionManagementProps) 
                       <strong>{format(new Date(subscription.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}</strong>.
                       Contrata un nuevo plan para continuar publicando propiedades.
                     </p>
-                    <Button 
-                      onClick={() => navigate('/pricing-agente')}
+                    <Button
+                      onClick={() => navigate(pricingRoute)}
                       variant="destructive"
                       size="sm"
                     >
@@ -316,7 +319,7 @@ function SubscriptionManagementContent({ userId }: SubscriptionManagementProps) 
             {/* New plan - Show ONLY if expired */}
             {isExpired && (
               <Button 
-                onClick={() => navigate('/pricing-agente')}
+                onClick={() => navigate(pricingRoute)}
                 className="flex-1 gap-2"
                 variant="default"
               >

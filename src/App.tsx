@@ -22,6 +22,7 @@ import Favorites from "./pages/Favorites";
 import ComparePage from "./pages/ComparePage";
 import AgentDashboard from "./pages/AgentDashboard";
 import AgencyDashboard from "./pages/AgencyDashboard";
+import DeveloperDashboard from "./pages/DeveloperDashboard";
 import AgentProfile from "./pages/AgentProfile";
 import UserProfile from "./pages/UserProfile";
 import NotificationSettings from "./pages/NotificationSettings";
@@ -94,6 +95,7 @@ const AppContent = () => {
               <Route path="/comparar" element={<ComparePage />} />
               <Route path="/panel-agente" element={<AgentDashboard />} />
               <Route path="/panel-inmobiliaria" element={<AgencyDashboard />} />
+              <Route path="/panel-desarrolladora" element={<DeveloperDashboard />} />
               <Route path="/mensajes" element={<MessagesPage />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/publicar" element={<Publicar />} />
