@@ -122,7 +122,7 @@ const PlaceAutocomplete = ({
       const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
         componentRestrictions: { country: 'mx' },
         fields: ['address_components', 'geometry', 'formatted_address', 'name'],
-        types: ['geocode', 'establishment'],
+        types: ['geocode'],
       });
 
       autocomplete.addListener('place_changed', () => {
