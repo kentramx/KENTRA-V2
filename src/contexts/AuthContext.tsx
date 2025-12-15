@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { monitoring } from '@/lib/monitoring';
+import { monitoring, setUser as setSentryUser, clearUser as clearSentryUser } from '@/lib/monitoring';
 
 interface AuthContextType {
   user: User | null;
@@ -33,6 +33,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Update Sentry user context
+        if (session?.user) {
+          setSentryUser({
+            id: session.user.id,
+            email: session.user.email,
+            username: session.user.user_metadata?.name,
+          });
+        } else {
+          clearSentryUser();
+        }
       }
     );
 
@@ -41,6 +52,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Set Sentry user on initial load
+      if (session?.user) {
+        setSentryUser({
+          id: session.user.id,
+          email: session.user.email,
+          username: session.user.user_metadata?.name,
+        });
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -106,6 +126,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       monitoring.captureException(error as Error, { context: 'AuthContext', function: 'signOut' });
     } finally {
+      // Clear Sentry user context on logout
+      clearSentryUser();
       // Siempre limpiar el estado local y redirigir, incluso si falla el signOut
       setSession(null);
       setUser(null);

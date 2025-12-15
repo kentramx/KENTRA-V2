@@ -8,6 +8,7 @@ import { browserTracingIntegration, replayIntegration } from '@sentry/react';
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 const IS_PRODUCTION = import.meta.env.PROD;
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.0';
 
 export const initSentry = () => {
   if (!SENTRY_DSN) {
@@ -18,6 +19,7 @@ export const initSentry = () => {
     Sentry.init({
       dsn: SENTRY_DSN,
       environment: IS_PRODUCTION ? 'production' : 'preview',
+      release: `kentra@${APP_VERSION}`,
       
       // Sampling: capturar 100% de errores, 10% de transacciones en producción
       tracesSampleRate: IS_PRODUCTION ? 0.1 : 1.0,

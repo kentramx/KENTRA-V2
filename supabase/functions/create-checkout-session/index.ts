@@ -4,6 +4,7 @@ import Stripe from 'https://esm.sh/stripe@11.16.0?target=deno';
 import { createLogger } from '../_shared/logger.ts';
 import { withRetry, isRetryableStripeError } from '../_shared/retry.ts';
 import { withCircuitBreaker } from '../_shared/circuitBreaker.ts';
+import { withSentry } from '../_shared/sentry.ts';
 
 // Rate limiting utilities inlined
 interface RateLimitEntry {
@@ -91,7 +92,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-Deno.serve(async (req) => {
+Deno.serve(withSentry(async (req) => {
   const logger = createLogger('create-checkout-session');
   const startTime = Date.now();
 
@@ -473,4 +474,4 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
-});
+}));
