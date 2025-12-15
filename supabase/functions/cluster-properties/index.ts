@@ -34,8 +34,8 @@ interface RequestBody {
 // Configuración de Supercluster estilo Zillow/Airbnb
 // Zoom 0-9: clusters grandes | Zoom 10-11: clusters medianos | Zoom 12+: markers individuales
 const SUPERCLUSTER_OPTIONS = {
-  radius: 60,        // ↓ Radio pequeño = clusters más pequeños, se separan antes
-  maxZoom: 11,       // ↓ Mostrar markers individuales desde zoom 12
+  radius: 80,        // ↑ Radio más grande = agrupa más markers cercanos
+  maxZoom: 14,       // ↑ Mantiene clusters hasta zoom 15
   minZoom: 0,
   minPoints: 2,      // ↓ Clusters desde 2 propiedades
   extent: 512,       // ↑ Grid más fina = agrupación más precisa
