@@ -8,7 +8,7 @@ import { CouponInput } from '@/components/CouponInput';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Building2, MapPin, BarChart3, Users, FileText, Award } from 'lucide-react';
+import { Check, Building2, MapPin, BarChart3, Users, FileText, Award, Loader2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
 
@@ -17,17 +17,45 @@ const PricingDesarrolladora = () => {
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState<{type: 'percent' | 'fixed', value: number} | null>(null);
+  const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+
+  const getDiscountedPrice = (basePrice: number) => {
+    if (!appliedCoupon || !couponDiscount) {
+      return { original: null, final: basePrice, savings: 0 };
+    }
+    
+    let discountedPrice: number;
+    let savings: number;
+    
+    if (couponDiscount.type === 'percent') {
+      savings = basePrice * (couponDiscount.value / 100);
+      discountedPrice = basePrice - savings;
+    } else {
+      savings = Math.min(couponDiscount.value, basePrice);
+      discountedPrice = basePrice - savings;
+    }
+    
+    return { 
+      original: basePrice, 
+      final: Math.max(0, Math.round(discountedPrice)),
+      savings: Math.round(savings)
+    };
+  };
 
   const scrollToPlans = () => {
     document.getElementById('planes')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleSelectPlan = async (planSlug: string) => {
+    if (processingPlan) return;
+    
     if (!user) {
       navigate('/auth?redirect=/pricing-desarrolladora');
       return;
     }
 
+    setProcessingPlan(planSlug);
     try {
       // Verificar si ya tiene suscripción
       const { subscription } = await getCurrentSubscription();
@@ -47,6 +75,8 @@ const PricingDesarrolladora = () => {
     } catch (error) {
       console.error('Error:', error);
       toast.error('Ocurrió un error al procesar tu solicitud');
+    } finally {
+      setProcessingPlan(null);
     }
   };
 
@@ -105,6 +135,7 @@ const PricingDesarrolladora = () => {
           <div className="max-w-md mx-auto mb-8">
             <CouponInput 
               onCouponApplied={setAppliedCoupon}
+              onDiscountDetails={setCouponDiscount}
               planType="developer"
             />
           </div>
@@ -138,198 +169,270 @@ const PricingDesarrolladora = () => {
           {/* Plan Cards */}
           <div className="grid md:grid-cols-3 gap-8">
             {/* Start Plan */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Desarrolladora Start</CardTitle>
-                <CardDescription>
-                  <span className="text-3xl font-bold text-foreground">
-                    ${billingCycle === 'monthly' ? '5,990' : '59,900'}
-                  </span>
-                  <span className="text-muted-foreground"> MXN</span>
-                  {billingCycle === 'annual' && (
-                    <span className="block text-sm mt-1">
-                      equivale a $4,992/mes
-                    </span>
-                  )}
-                  <span className="block text-sm mt-1">
-                    {billingCycle === 'monthly' ? 'por mes' : 'por año'}
-                  </span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">1 proyecto activo</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Micrositio del desarrollo (galería, mapa, contacto)</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Leads directos a WhatsApp</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Dashboard con métricas de vistas y contactos</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Página corporativa con logotipo y descripción</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Visibilidad estándar en listados</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Soporte por email</span>
-                  </li>
-                </ul>
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  className="w-full" 
-                  variant="outline"
-                  onClick={() => handleSelectPlan('start')}
-                >
-                  Comenzar con Start
-                </Button>
-              </CardFooter>
-            </Card>
+            {(() => {
+              const basePrice = billingCycle === 'monthly' ? 5990 : 59900;
+              const { original, final, savings } = getDiscountedPrice(basePrice);
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Desarrolladora Start</CardTitle>
+                    <CardDescription>
+                      {original && original !== final && (
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                          <span className="text-lg text-muted-foreground line-through">
+                            ${original.toLocaleString('es-MX')}
+                          </span>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs dark:bg-green-900 dark:text-green-100">
+                            Ahorras ${savings.toLocaleString('es-MX')}
+                          </Badge>
+                        </div>
+                      )}
+                      <span className="text-3xl font-bold text-foreground">
+                        ${final.toLocaleString('es-MX')}
+                      </span>
+                      <span className="text-muted-foreground"> MXN</span>
+                      {billingCycle === 'annual' && (
+                        <span className="block text-sm mt-1">
+                          equivale a $4,992/mes
+                        </span>
+                      )}
+                      <span className="block text-sm mt-1">
+                        {billingCycle === 'monthly' ? 'por mes' : 'por año'}
+                      </span>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3">
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">1 proyecto activo</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Micrositio del desarrollo (galería, mapa, contacto)</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Leads directos a WhatsApp</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Dashboard con métricas de vistas y contactos</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Página corporativa con logotipo y descripción</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Visibilidad estándar en listados</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Soporte por email</span>
+                      </li>
+                    </ul>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      className="w-full" 
+                      variant="outline"
+                      onClick={() => handleSelectPlan('start')}
+                      disabled={processingPlan !== null}
+                    >
+                      {processingPlan === 'start' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Procesando...
+                        </>
+                      ) : (
+                        'Comenzar con Start'
+                      )}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })()}
 
             {/* Grow Plan - Más elegido */}
-            <Card className="border-primary shadow-lg relative">
-              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Más elegido</Badge>
-              <CardHeader>
-                <CardTitle>Desarrolladora Grow</CardTitle>
-                <CardDescription>
-                  <span className="text-3xl font-bold text-foreground">
-                    ${billingCycle === 'monthly' ? '12,900' : '129,000'}
-                  </span>
-                  <span className="text-muted-foreground"> MXN</span>
-                  {billingCycle === 'annual' && (
-                    <span className="block text-sm mt-1">
-                      equivale a $10,750/mes
-                    </span>
-                  )}
-                  <span className="block text-sm mt-1">
-                    {billingCycle === 'monthly' ? 'por mes' : 'por año'}
-                  </span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Hasta 3 proyectos activos</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Micrositio para cada desarrollo con galería multimedia</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Estadísticas completas por proyecto y contacto</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Dashboard de administración de leads y unidades</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Página corporativa con banner y branding</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Visibilidad alta en resultados y portada</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Publicación destacada mensual incluida</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Reporte de rendimiento mensual</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Soporte por chat prioritario</span>
-                  </li>
-                </ul>
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  className="w-full"
-                  onClick={() => handleSelectPlan('grow')}
-                >
-                  Continuar con Grow
-                </Button>
-              </CardFooter>
-            </Card>
+            {(() => {
+              const basePrice = billingCycle === 'monthly' ? 12900 : 129000;
+              const { original, final, savings } = getDiscountedPrice(basePrice);
+              return (
+                <Card className="border-primary shadow-lg relative">
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Más elegido</Badge>
+                  <CardHeader>
+                    <CardTitle>Desarrolladora Grow</CardTitle>
+                    <CardDescription>
+                      {original && original !== final && (
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                          <span className="text-lg text-muted-foreground line-through">
+                            ${original.toLocaleString('es-MX')}
+                          </span>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs dark:bg-green-900 dark:text-green-100">
+                            Ahorras ${savings.toLocaleString('es-MX')}
+                          </Badge>
+                        </div>
+                      )}
+                      <span className="text-3xl font-bold text-foreground">
+                        ${final.toLocaleString('es-MX')}
+                      </span>
+                      <span className="text-muted-foreground"> MXN</span>
+                      {billingCycle === 'annual' && (
+                        <span className="block text-sm mt-1">
+                          equivale a $10,750/mes
+                        </span>
+                      )}
+                      <span className="block text-sm mt-1">
+                        {billingCycle === 'monthly' ? 'por mes' : 'por año'}
+                      </span>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3">
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Hasta 3 proyectos activos</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Micrositio para cada desarrollo con galería multimedia</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Estadísticas completas por proyecto y contacto</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Dashboard de administración de leads y unidades</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Página corporativa con banner y branding</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Visibilidad alta en resultados y portada</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Publicación destacada mensual incluida</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Reporte de rendimiento mensual</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Soporte por chat prioritario</span>
+                      </li>
+                    </ul>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      className="w-full"
+                      onClick={() => handleSelectPlan('grow')}
+                      disabled={processingPlan !== null}
+                    >
+                      {processingPlan === 'grow' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Procesando...
+                        </>
+                      ) : (
+                        'Continuar con Grow'
+                      )}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })()}
 
             {/* Pro Plan */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Desarrolladora Pro</CardTitle>
-                <CardDescription>
-                  <span className="text-3xl font-bold text-foreground">
-                    ${billingCycle === 'monthly' ? '24,900' : '249,000'}
-                  </span>
-                  <span className="text-muted-foreground"> MXN</span>
-                  {billingCycle === 'annual' && (
-                    <span className="block text-sm mt-1">
-                      equivale a $20,750/mes
-                    </span>
-                  )}
-                  <span className="block text-sm mt-1">
-                    {billingCycle === 'monthly' ? 'por mes' : 'por año'}
-                  </span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Hasta 6 proyectos activos</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Micrositios personalizados con branding completo</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Estadísticas avanzadas y reporte de rendimiento mensual</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Inclusión mensual en portada y newsletter nacional</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Dashboard con métricas de origen de leads</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Máxima visibilidad y posicionamiento de marca</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-sm">Asesor comercial dedicado</span>
-                  </li>
-                </ul>
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  className="w-full" 
-                  variant="outline"
-                  onClick={() => handleSelectPlan('pro')}
-                >
-                  Actualizar a Pro
-                </Button>
-              </CardFooter>
-            </Card>
+            {(() => {
+              const basePrice = billingCycle === 'monthly' ? 24900 : 249000;
+              const { original, final, savings } = getDiscountedPrice(basePrice);
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Desarrolladora Pro</CardTitle>
+                    <CardDescription>
+                      {original && original !== final && (
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                          <span className="text-lg text-muted-foreground line-through">
+                            ${original.toLocaleString('es-MX')}
+                          </span>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs dark:bg-green-900 dark:text-green-100">
+                            Ahorras ${savings.toLocaleString('es-MX')}
+                          </Badge>
+                        </div>
+                      )}
+                      <span className="text-3xl font-bold text-foreground">
+                        ${final.toLocaleString('es-MX')}
+                      </span>
+                      <span className="text-muted-foreground"> MXN</span>
+                      {billingCycle === 'annual' && (
+                        <span className="block text-sm mt-1">
+                          equivale a $20,750/mes
+                        </span>
+                      )}
+                      <span className="block text-sm mt-1">
+                        {billingCycle === 'monthly' ? 'por mes' : 'por año'}
+                      </span>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3">
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Hasta 6 proyectos activos</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Micrositios personalizados con branding completo</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Estadísticas avanzadas y reporte de rendimiento mensual</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Inclusión mensual en portada y newsletter nacional</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Dashboard con métricas de origen de leads</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Máxima visibilidad y posicionamiento de marca</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <span className="text-sm">Asesor comercial dedicado</span>
+                      </li>
+                    </ul>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      className="w-full" 
+                      variant="outline"
+                      onClick={() => handleSelectPlan('pro')}
+                      disabled={processingPlan !== null}
+                    >
+                      {processingPlan === 'pro' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Procesando...
+                        </>
+                      ) : (
+                        'Actualizar a Pro'
+                      )}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })()}
           </div>
         </div>
       </section>

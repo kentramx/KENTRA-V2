@@ -8,12 +8,18 @@ import { Tag, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useMonitoring } from "@/lib/monitoring";
 
+interface DiscountDetails {
+  type: 'percent' | 'fixed';
+  value: number;
+}
+
 interface CouponInputProps {
   onCouponApplied: (couponCode: string | null) => void;
+  onDiscountDetails?: (details: DiscountDetails | null) => void;
   planType?: 'agent' | 'agency' | 'developer';
 }
 
-export function CouponInput({ onCouponApplied, planType }: CouponInputProps) {
+export function CouponInput({ onCouponApplied, onDiscountDetails, planType }: CouponInputProps) {
   const { error: logError, captureException } = useMonitoring();
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
@@ -65,6 +71,15 @@ export function CouponInput({ onCouponApplied, planType }: CouponInputProps) {
           setAppliedCoupon(couponCode.toUpperCase());
           setDiscountInfo(validation.message);
           onCouponApplied(couponCode.toUpperCase());
+          
+          // Expose discount details to parent
+          if (validation.discount_type && validation.discount_value) {
+            onDiscountDetails?.({
+              type: validation.discount_type === 'percentage' ? 'percent' : 'fixed',
+              value: validation.discount_value
+            });
+          }
+          
           toast.success("¡Cupón aplicado exitosamente!");
         } else {
           toast.error(validation.message);
@@ -94,6 +109,7 @@ export function CouponInput({ onCouponApplied, planType }: CouponInputProps) {
     setDiscountInfo(null);
     setCouponCode("");
     onCouponApplied(null);
+    onDiscountDetails?.(null);
     toast.info("Cupón removido");
   };
 

@@ -18,7 +18,31 @@ const PricingAgente = () => {
   const navigate = useNavigate();
   const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState<{type: 'percent' | 'fixed', value: number} | null>(null);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+
+  const getDiscountedPrice = (basePrice: number) => {
+    if (!appliedCoupon || !couponDiscount) {
+      return { original: null, final: basePrice, savings: 0 };
+    }
+    
+    let discountedPrice: number;
+    let savings: number;
+    
+    if (couponDiscount.type === 'percent') {
+      savings = basePrice * (couponDiscount.value / 100);
+      discountedPrice = basePrice - savings;
+    } else {
+      savings = Math.min(couponDiscount.value, basePrice);
+      discountedPrice = basePrice - savings;
+    }
+    
+    return { 
+      original: basePrice, 
+      final: Math.max(0, Math.round(discountedPrice)),
+      savings: Math.round(savings)
+    };
+  };
 
   const scrollToPlans = () => {
     const element = document.getElementById('planes');
@@ -246,6 +270,7 @@ const PricingAgente = () => {
             <div className="max-w-md mx-auto mb-6">
               <CouponInput 
                 onCouponApplied={setAppliedCoupon}
+                onDiscountDetails={setCouponDiscount}
                 planType="agent"
               />
             </div>
@@ -279,11 +304,12 @@ const PricingAgente = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {plans.map((plan) => {
               const Icon = plan.icon;
-              const displayPrice = plan.isFree 
-                ? 'Gratis' 
+              const basePrice = plan.isFree 
+                ? 0 
                 : pricingPeriod === 'annual'
-                  ? `$${plan.annualPrice?.toLocaleString('es-MX')}`
-                  : `$${plan.monthlyPrice?.toLocaleString('es-MX')}`;
+                  ? plan.annualPrice!
+                  : plan.monthlyPrice!;
+              const { original, final, savings } = getDiscountedPrice(basePrice);
               
               return (
                 <Card 
@@ -307,7 +333,17 @@ const PricingAgente = () => {
                         <div className="text-3xl font-bold">Gratis</div>
                       ) : (
                         <>
-                          <div className="text-3xl font-bold">{displayPrice}</div>
+                          {original && original !== final && (
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                              <span className="text-lg text-muted-foreground line-through">
+                                ${original.toLocaleString('es-MX')}
+                              </span>
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs dark:bg-green-900 dark:text-green-100">
+                                Ahorras ${savings.toLocaleString('es-MX')}
+                              </Badge>
+                            </div>
+                          )}
+                          <div className="text-3xl font-bold">${final.toLocaleString('es-MX')}</div>
                           {pricingPeriod === 'annual' && plan.annualMonthlyEquivalent && (
                             <p className="text-sm text-muted-foreground mt-1">
                               equivale a ${plan.annualMonthlyEquivalent.toFixed(2)}/mes

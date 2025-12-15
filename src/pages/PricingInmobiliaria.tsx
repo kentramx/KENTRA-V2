@@ -8,7 +8,7 @@ import { CouponInput } from '@/components/CouponInput';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const PricingInmobiliaria = () => {
@@ -16,6 +16,31 @@ const PricingInmobiliaria = () => {
   const navigate = useNavigate();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState<{type: 'percent' | 'fixed', value: number} | null>(null);
+  const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+
+  const getDiscountedPrice = (basePrice: number) => {
+    if (!appliedCoupon || !couponDiscount) {
+      return { original: null, final: basePrice, savings: 0 };
+    }
+    
+    let discountedPrice: number;
+    let savings: number;
+    
+    if (couponDiscount.type === 'percent') {
+      savings = basePrice * (couponDiscount.value / 100);
+      discountedPrice = basePrice - savings;
+    } else {
+      savings = Math.min(couponDiscount.value, basePrice);
+      discountedPrice = basePrice - savings;
+    }
+    
+    return { 
+      original: basePrice, 
+      final: Math.max(0, Math.round(discountedPrice)),
+      savings: Math.round(savings)
+    };
+  };
 
   const scrollToPlans = () => {
     const plansSection = document.getElementById('planes');
@@ -23,11 +48,14 @@ const PricingInmobiliaria = () => {
   };
 
   const handleSelectPlan = async (planSlug: string) => {
+    if (processingPlan) return;
+    
     if (!user) {
       navigate('/auth?redirect=/pricing-inmobiliaria');
       return;
     }
 
+    setProcessingPlan(planSlug);
     try {
       // Verificar si ya tiene suscripción
       const { subscription } = await getCurrentSubscription();
@@ -47,6 +75,8 @@ const PricingInmobiliaria = () => {
     } catch (error) {
       console.error('Error:', error);
       toast.error('Ocurrió un error al procesar tu solicitud');
+    } finally {
+      setProcessingPlan(null);
     }
   };
 
@@ -108,6 +138,7 @@ const PricingInmobiliaria = () => {
             <div className="max-w-md mx-auto mb-6">
               <CouponInput 
                 onCouponApplied={setAppliedCoupon}
+                onDiscountDetails={setCouponDiscount}
                 planType="agency"
               />
             </div>
@@ -140,204 +171,285 @@ const PricingInmobiliaria = () => {
 
           <div className="grid md:grid-cols-3 gap-8">
             {/* Plan Start */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Inmobiliaria Start</CardTitle>
-                <div className="mt-4">
-                  <div className="text-4xl font-bold">
-                    ${billingPeriod === 'monthly' ? '1,999' : '19,990'}
-                  </div>
-                  <div className="text-muted-foreground">
-                    MXN / {billingPeriod === 'monthly' ? 'mes' : 'año'}
-                  </div>
-                  {billingPeriod === 'annual' && (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Equivale a $1,665/mes
+            {(() => {
+              const basePrice = billingPeriod === 'monthly' ? 1999 : 19990;
+              const { original, final, savings } = getDiscountedPrice(basePrice);
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Inmobiliaria Start</CardTitle>
+                    <div className="mt-4">
+                      {original && original !== final && (
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                          <span className="text-lg text-muted-foreground line-through">
+                            ${original.toLocaleString('es-MX')}
+                          </span>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs dark:bg-green-900 dark:text-green-100">
+                            Ahorras ${savings.toLocaleString('es-MX')}
+                          </Badge>
+                        </div>
+                      )}
+                      <div className="text-4xl font-bold">
+                        ${final.toLocaleString('es-MX')}
+                      </div>
+                      <div className="text-muted-foreground">
+                        MXN / {billingPeriod === 'monthly' ? 'mes' : 'año'}
+                      </div>
+                      {billingPeriod === 'annual' && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          Equivale a $1,665/mes
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Hasta 100 propiedades activas</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Hasta 5 agentes incluidos</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Dashboard multiagente</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Perfiles individuales por agente</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Asignación de propiedades al equipo</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Estadísticas por propiedad y por agente</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Página corporativa personalizada</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Visibilidad estándar en resultados</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>5 propiedades destacadas al mes</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Soporte por email</span>
-                  </div>
-                </div>
-                <Button className="w-full" onClick={() => handleSelectPlan('start')}>
-                  Comenzar con Start
-                </Button>
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Hasta 100 propiedades activas</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Hasta 5 agentes incluidos</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Dashboard multiagente</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Perfiles individuales por agente</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Asignación de propiedades al equipo</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Estadísticas por propiedad y por agente</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Página corporativa personalizada</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Visibilidad estándar en resultados</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>5 propiedades destacadas al mes</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Soporte por email</span>
+                      </div>
+                    </div>
+                    <Button 
+                      className="w-full" 
+                      onClick={() => handleSelectPlan('start')}
+                      disabled={processingPlan !== null}
+                    >
+                      {processingPlan === 'start' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Procesando...
+                        </>
+                      ) : (
+                        'Comenzar con Start'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* Plan Grow */}
-            <Card className="border-primary relative">
-              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
-                Más elegido
-              </Badge>
-              <CardHeader>
-                <CardTitle>Inmobiliaria Grow</CardTitle>
-                <div className="mt-4">
-                  <div className="text-4xl font-bold">
-                    ${billingPeriod === 'monthly' ? '4,499' : '44,990'}
-                  </div>
-                  <div className="text-muted-foreground">
-                    MXN / {billingPeriod === 'monthly' ? 'mes' : 'año'}
-                  </div>
-                  {billingPeriod === 'annual' && (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Equivale a $3,749/mes
+            {(() => {
+              const basePrice = billingPeriod === 'monthly' ? 4499 : 44990;
+              const { original, final, savings } = getDiscountedPrice(basePrice);
+              return (
+                <Card className="border-primary relative">
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    Más elegido
+                  </Badge>
+                  <CardHeader>
+                    <CardTitle>Inmobiliaria Grow</CardTitle>
+                    <div className="mt-4">
+                      {original && original !== final && (
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                          <span className="text-lg text-muted-foreground line-through">
+                            ${original.toLocaleString('es-MX')}
+                          </span>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs dark:bg-green-900 dark:text-green-100">
+                            Ahorras ${savings.toLocaleString('es-MX')}
+                          </Badge>
+                        </div>
+                      )}
+                      <div className="text-4xl font-bold">
+                        ${final.toLocaleString('es-MX')}
+                      </div>
+                      <div className="text-muted-foreground">
+                        MXN / {billingPeriod === 'monthly' ? 'mes' : 'año'}
+                      </div>
+                      {billingPeriod === 'annual' && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          Equivale a $3,749/mes
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Hasta 250 propiedades activas</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Hasta 10 agentes incluidos</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Dashboard multiagente y administración avanzada</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Perfiles y catálogo individual por agente</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Asignación de propiedades y control de inventario</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Estadísticas por agente y rendimiento del equipo</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Página corporativa personalizada</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Visibilidad alta en listados y búsquedas</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>15 propiedades destacadas al mes</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Soporte por email</span>
-                  </div>
-                </div>
-                <Button className="w-full" onClick={() => handleSelectPlan('grow')}>
-                  Continuar con Grow
-                </Button>
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Hasta 250 propiedades activas</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Hasta 10 agentes incluidos</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Dashboard multiagente y administración avanzada</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Perfiles y catálogo individual por agente</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Asignación de propiedades y control de inventario</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Estadísticas por agente y rendimiento del equipo</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Página corporativa personalizada</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Visibilidad alta en listados y búsquedas</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>15 propiedades destacadas al mes</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Soporte por email</span>
+                      </div>
+                    </div>
+                    <Button 
+                      className="w-full" 
+                      onClick={() => handleSelectPlan('grow')}
+                      disabled={processingPlan !== null}
+                    >
+                      {processingPlan === 'grow' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Procesando...
+                        </>
+                      ) : (
+                        'Continuar con Grow'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* Plan Pro */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Inmobiliaria Pro</CardTitle>
-                <div className="mt-4">
-                  <div className="text-4xl font-bold">
-                    ${billingPeriod === 'monthly' ? '8,999' : '89,990'}
-                  </div>
-                  <div className="text-muted-foreground">
-                    MXN / {billingPeriod === 'monthly' ? 'mes' : 'año'}
-                  </div>
-                  {billingPeriod === 'annual' && (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Equivale a $7,499/mes
+            {(() => {
+              const basePrice = billingPeriod === 'monthly' ? 8999 : 89990;
+              const { original, final, savings } = getDiscountedPrice(basePrice);
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Inmobiliaria Pro</CardTitle>
+                    <div className="mt-4">
+                      {original && original !== final && (
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                          <span className="text-lg text-muted-foreground line-through">
+                            ${original.toLocaleString('es-MX')}
+                          </span>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs dark:bg-green-900 dark:text-green-100">
+                            Ahorras ${savings.toLocaleString('es-MX')}
+                          </Badge>
+                        </div>
+                      )}
+                      <div className="text-4xl font-bold">
+                        ${final.toLocaleString('es-MX')}
+                      </div>
+                      <div className="text-muted-foreground">
+                        MXN / {billingPeriod === 'monthly' ? 'mes' : 'año'}
+                      </div>
+                      {billingPeriod === 'annual' && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          Equivale a $7,499/mes
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Hasta 500 propiedades activas</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Hasta 20 agentes incluidos</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Dashboard completo con control de equipo</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Asignación avanzada de propiedades y rendimiento</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Perfiles públicos por agente con catálogo</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Página corporativa premium con tu branding</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Máxima visibilidad y prioridad en resultados</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>40 propiedades destacadas al mes</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Soporte por email</span>
-                  </div>
-                </div>
-                <Button className="w-full" onClick={() => handleSelectPlan('pro')}>
-                  Actualizar a Pro
-                </Button>
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Hasta 500 propiedades activas</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Hasta 20 agentes incluidos</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Dashboard completo con control de equipo</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Asignación avanzada de propiedades y rendimiento</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Perfiles públicos por agente con catálogo</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Página corporativa premium con tu branding</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Máxima visibilidad y prioridad en resultados</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>40 propiedades destacadas al mes</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Soporte por email</span>
+                      </div>
+                    </div>
+                    <Button 
+                      className="w-full" 
+                      onClick={() => handleSelectPlan('pro')}
+                      disabled={processingPlan !== null}
+                    >
+                      {processingPlan === 'pro' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Procesando...
+                        </>
+                      ) : (
+                        'Actualizar a Pro'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </div>
         </div>
       </section>
