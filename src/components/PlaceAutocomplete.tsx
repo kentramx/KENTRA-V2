@@ -133,39 +133,47 @@ const PlaceAutocomplete = ({
         }
 
         const addressComponents = place.address_components || [];
-        let state = '';
-        let municipality = '';
-        let colonia = '';
+        
+        // Recolectar TODOS los valores primero (sin asignar aún)
+        let adminLevel1 = '';      // Estado
+        let adminLevel2 = '';      // Municipio/Delegación
+        let locality = '';         // Ciudad
+        let sublocalityLevel1 = ''; // Colonia (prioridad 1)
+        let sublocality = '';       // Colonia (prioridad 2)
+        let neighborhood = '';      // Colonia (prioridad 3)
 
-        // Extraer componentes con prioridad correcta para México
         for (const component of addressComponents) {
           const types = component.types;
           
-          // Estado (siempre administrative_area_level_1)
           if (types.includes('administrative_area_level_1')) {
-            state = component.long_name;
+            adminLevel1 = component.long_name;
           }
-          
-          // Municipio/Alcaldía (administrative_area_level_2)
           if (types.includes('administrative_area_level_2')) {
-            municipality = component.long_name;
+            adminLevel2 = component.long_name;
           }
-          
-          // Fallback: usar locality como municipio si no hay level_2
-          if (!municipality && types.includes('locality')) {
-            municipality = component.long_name;
+          if (types.includes('locality')) {
+            locality = component.long_name;
           }
-          
-          // Colonia (sublocality_level_1, sublocality, neighborhood)
-          if (types.includes('sublocality_level_1') || 
-              types.includes('sublocality') || 
-              types.includes('neighborhood')) {
-            if (!colonia) {
-              colonia = component.long_name;
-            }
+          if (types.includes('sublocality_level_1')) {
+            sublocalityLevel1 = component.long_name;
+          }
+          if (types.includes('sublocality')) {
+            sublocality = component.long_name;
+          }
+          if (types.includes('neighborhood')) {
+            neighborhood = component.long_name;
           }
         }
 
+        // DESPUÉS del loop: Asignar con prioridad correcta
+        const state = adminLevel1;
+        
+        // Municipio: administrative_area_level_2 > locality
+        const municipality = adminLevel2 || locality || '';
+        
+        // Colonia: sublocality_level_1 > sublocality > neighborhood > fallback
+        let colonia = sublocalityLevel1 || sublocality || neighborhood || '';
+        
         // Fallback: extraer colonia del formatted_address si no se encontró
         if (!colonia) {
           colonia = extractColoniaFromComponents(addressComponents, place.formatted_address);
@@ -178,12 +186,23 @@ const PlaceAutocomplete = ({
 
         const location = {
           address: place.formatted_address || place.name || '',
-          municipality: municipality || '',
-          state: state || '',
+          municipality: municipality,
+          state: state,
           colonia: colonia || undefined,
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
         };
+
+        // Debug log para verificar el parseo
+        console.log('[PlaceAutocomplete] Componentes raw:', {
+          adminLevel1,
+          adminLevel2,
+          locality,
+          sublocalityLevel1,
+          sublocality,
+          neighborhood,
+        });
+        console.log('[PlaceAutocomplete] Ubicación final:', location);
 
         setInputValue(location.address);
         onPlaceSelect(location);
@@ -236,32 +255,51 @@ const PlaceAutocomplete = ({
           if (response.results[0]) {
             const place = response.results[0];
             const addressComponents = place.address_components || [];
-            let state = '';
-            let municipality = '';
+            
+            // Recolectar TODOS los valores primero
+            let adminLevel1 = '';
+            let adminLevel2 = '';
+            let locality = '';
+            let sublocalityLevel1 = '';
+            let sublocality = '';
+            let neighborhood = '';
 
-            // Extraer componentes con prioridad correcta para México
             for (const component of addressComponents) {
               const types = component.types;
               
               if (types.includes('administrative_area_level_1')) {
-                state = component.long_name;
+                adminLevel1 = component.long_name;
               }
-              
               if (types.includes('administrative_area_level_2')) {
-                municipality = component.long_name;
+                adminLevel2 = component.long_name;
               }
-              
-              if (!municipality && types.includes('locality')) {
-                municipality = component.long_name;
+              if (types.includes('locality')) {
+                locality = component.long_name;
+              }
+              if (types.includes('sublocality_level_1')) {
+                sublocalityLevel1 = component.long_name;
+              }
+              if (types.includes('sublocality')) {
+                sublocality = component.long_name;
+              }
+              if (types.includes('neighborhood')) {
+                neighborhood = component.long_name;
               }
             }
 
-            const colonia = extractColoniaFromComponents(addressComponents, place.formatted_address);
+            // Asignar con prioridad correcta
+            const state = adminLevel1;
+            const municipality = adminLevel2 || locality || '';
+            let colonia = sublocalityLevel1 || sublocality || neighborhood || '';
+
+            if (!colonia) {
+              colonia = extractColoniaFromComponents(addressComponents, place.formatted_address);
+            }
 
             const location = {
               address: place.formatted_address || '',
-              municipality: municipality || '',
-              state: state || '',
+              municipality: municipality,
+              state: state,
               colonia: colonia && colonia !== municipality ? colonia : undefined,
               lat: latitude,
               lng: longitude,
