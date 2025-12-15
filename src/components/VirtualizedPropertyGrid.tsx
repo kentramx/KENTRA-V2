@@ -9,10 +9,12 @@ import type { PropertySummary } from '@/types/property';
 
 interface VirtualizedPropertyGridProps {
   properties: PropertySummary[];
+  onPropertyClick?: (propertyId: string) => void;
 }
 
 const VirtualizedPropertyGridComponent = ({ 
   properties,
+  onPropertyClick,
 }: VirtualizedPropertyGridProps) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -22,6 +24,7 @@ const VirtualizedPropertyGridComponent = ({
           {...property}
           agentId={property.agent_id}
           isFeatured={property.is_featured}
+          onCardClick={onPropertyClick}
         />
       ))}
     </div>

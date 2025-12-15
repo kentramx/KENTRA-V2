@@ -383,7 +383,7 @@ const Home = () => {
               </div>
             ) : (
               <>
-                <VirtualizedPropertyGrid properties={featuredProperties.slice(0, 6)} />
+                <VirtualizedPropertyGrid properties={featuredProperties.slice(0, 6)} onPropertyClick={handlePropertyClick} />
                 <div className="mt-8 text-center">
                   <Button variant="outline" size="lg" onClick={() => navigate("/buscar")}>
                     Ver Todas las Propiedades <ArrowRight className="ml-2 h-4 w-4" />
@@ -428,7 +428,7 @@ const Home = () => {
             </div>
           ) : recentProperties.length > 0 ? (
             <>
-              <VirtualizedPropertyGrid properties={recentProperties.slice(0, 8)} />
+              <VirtualizedPropertyGrid properties={recentProperties.slice(0, 8)} onPropertyClick={handlePropertyClick} />
               <div className="mt-8 text-center">
                 <Button variant="outline" onClick={() => navigate("/buscar")}>
                   Ver Todas <ArrowRight className="ml-2 h-4 w-4" />
@@ -577,6 +577,12 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Property Detail Sheet */}
+      <PropertyDetailSheet
+        propertyId={selectedPropertyId}
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+      />
     </div>
   );
 };
