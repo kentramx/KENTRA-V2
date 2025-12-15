@@ -24,6 +24,7 @@ import { QuickUpsells } from '@/components/QuickUpsells';
 import { AgentUpsells } from '@/components/AgentUpsells';
 import { SubscriptionStatusBadge } from '@/components/SubscriptionStatusBadge';
 import { SubscriptionWidget } from '@/components/subscription/SubscriptionWidget';
+import { SubscriptionGate } from '@/components/subscription/SubscriptionGate';
 
 const AgentDashboard = () => {
   const { user, loading: authLoading, isEmailVerified } = useAuth();
@@ -545,9 +546,8 @@ const AgentDashboard = () => {
           </Alert>
         )}
 
-        {/* Subscription Widget + Plan Status Card */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
-          <SubscriptionWidget />
+          <SubscriptionWidget userRole={userRole} />
           <div className="md:col-span-1 lg:col-span-2">
             <PlanStatusCard subscriptionInfo={subscriptionInfo} userRole={userRole} />
           </div>
@@ -634,14 +634,20 @@ const AgentDashboard = () => {
               </TabsContent>
 
               <TabsContent value="form" className="mt-6">
-                <PropertyFormWizard
-                  property={editingProperty}
-                  onSuccess={editingProperty ? handlePropertyUpdated : handlePropertyCreated}
-                  onCancel={() => {
-                    setActiveTab('list');
-                    setEditingProperty(null);
-                  }}
-                />
+                <SubscriptionGate 
+                  type="property" 
+                  userRole={userRole}
+                  message="Necesitas una suscripción activa para publicar propiedades."
+                >
+                  <PropertyFormWizard
+                    property={editingProperty}
+                    onSuccess={editingProperty ? handlePropertyUpdated : handlePropertyCreated}
+                    onCancel={() => {
+                      setActiveTab('list');
+                      setEditingProperty(null);
+                    }}
+                  />
+                </SubscriptionGate>
               </TabsContent>
             </Tabs>
           </CardContent>

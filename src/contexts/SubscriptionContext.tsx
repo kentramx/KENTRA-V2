@@ -1,6 +1,7 @@
 import { createContext, useContext, ReactNode, useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
+import { toast } from 'sonner';
 
 interface SubscriptionPlan {
   id: string;
@@ -222,7 +223,29 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: 'user_subscriptions',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[SubscriptionContext] New subscription created');
+          fetchSubscription();
+          
+          // Show welcome toast for new subscriptions
+          const newSub = payload.new as { status?: string };
+          if (newSub.status === 'active' || newSub.status === 'trialing') {
+            toast.success('¡Suscripción activada!', {
+              description: 'Ya puedes comenzar a publicar tus propiedades.',
+              duration: 5000,
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
           schema: 'public',
           table: 'user_subscriptions',
           filter: `user_id=eq.${user.id}`,

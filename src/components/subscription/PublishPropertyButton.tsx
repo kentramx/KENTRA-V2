@@ -118,7 +118,7 @@ export function PublishPropertyButton({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <PropertyLimitModal open={showLimitModal} onOpenChange={setShowLimitModal} />
+        <PropertyLimitModal open={showLimitModal} onOpenChange={setShowLimitModal} userRole={userRole} />
       </>
     );
   }
@@ -133,7 +133,7 @@ export function PublishPropertyButton({
       >
         {buttonContent}
       </Button>
-      <PropertyLimitModal open={showLimitModal} onOpenChange={setShowLimitModal} />
+      <PropertyLimitModal open={showLimitModal} onOpenChange={setShowLimitModal} userRole={userRole} />
     </>
   );
 }

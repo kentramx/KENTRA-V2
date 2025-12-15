@@ -11,15 +11,19 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { TrendingUp, Package, Zap, ArrowRight } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { getPricingRoute } from '@/utils/getPricingRoute';
 
 interface PropertyLimitModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  userRole?: string | null;
 }
 
-export function PropertyLimitModal({ open, onOpenChange }: PropertyLimitModalProps) {
+export function PropertyLimitModal({ open, onOpenChange, userRole }: PropertyLimitModalProps) {
   const navigate = useNavigate();
   const { subscription, limits } = useSubscription();
+  
+  const pricingRoute = getPricingRoute(userRole, subscription?.plan?.name);
 
   const handleUpgrade = () => {
     onOpenChange(false);
@@ -28,14 +32,7 @@ export function PropertyLimitModal({ open, onOpenChange }: PropertyLimitModalPro
 
   const handleViewPricing = () => {
     onOpenChange(false);
-    const planName = subscription?.plan?.name || '';
-    if (planName.includes('inmobiliaria')) {
-      navigate('/pricing-inmobiliaria');
-    } else if (planName.includes('desarrolladora')) {
-      navigate('/pricing-desarrolladora');
-    } else {
-      navigate('/pricing-agente');
-    }
+    navigate(pricingRoute);
   };
 
   return (

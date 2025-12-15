@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { getPricingRoute } from '@/utils/getPricingRoute';
 
 type BannerType = 'payment_failed' | 'trial_expiring' | 'subscription_expiring' | 'suspended' | 'at_limit' | 'near_limit';
 
@@ -44,6 +45,8 @@ export function GlobalSubscriptionBanner() {
   // Don't render if not logged in, loading, or no subscription
   if (!user || isLoading || !hasSubscription) return null;
 
+  const pricingRoute = getPricingRoute(null, subscription?.plan?.name);
+
   const getBanners = (): BannerConfig[] => {
     const banners: BannerConfig[] = [];
 
@@ -82,7 +85,7 @@ export function GlobalSubscriptionBanner() {
         icon: Clock,
         title: `Tu prueba gratuita termina en ${trialDaysRemaining} día${trialDaysRemaining !== 1 ? 's' : ''}`,
         message: 'Elige un plan para continuar publicando tus propiedades sin interrupción.',
-        action: { label: 'Ver Planes', href: '/pricing-agente' },
+        action: { label: 'Ver Planes', href: pricingRoute },
         variant: 'warning',
         dismissable: true,
         priority: 3,

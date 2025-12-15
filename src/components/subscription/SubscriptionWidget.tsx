@@ -14,8 +14,13 @@ import {
 } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { cn } from '@/lib/utils';
+import { getPricingRoute } from '@/utils/getPricingRoute';
 
-export function SubscriptionWidget() {
+interface SubscriptionWidgetProps {
+  userRole?: string | null;
+}
+
+export function SubscriptionWidget({ userRole }: SubscriptionWidgetProps = {}) {
   const {
     isLoading,
     hasSubscription,
@@ -43,6 +48,8 @@ export function SubscriptionWidget() {
     );
   }
 
+  const pricingRoute = getPricingRoute(userRole, subscription?.plan?.name);
+
   if (!hasSubscription) {
     return (
       <Card className="border-dashed">
@@ -57,7 +64,7 @@ export function SubscriptionWidget() {
             Contrata un plan para comenzar a publicar propiedades
           </p>
           <Button asChild size="sm">
-            <Link to="/pricing-agente">Ver Planes</Link>
+            <Link to={pricingRoute}>Ver Planes</Link>
           </Button>
         </CardContent>
       </Card>
@@ -166,7 +173,7 @@ export function SubscriptionWidget() {
           
           {(limits.isNearLimit || limits.isAtLimit || isTrial) && (
             <Button asChild size="sm" className="flex-1">
-              <Link to="/pricing-agente">
+              <Link to={pricingRoute}>
                 <TrendingUp className="h-3 w-3 mr-1" />
                 {isTrial ? 'Ver Planes' : 'Upgrade'}
               </Link>
