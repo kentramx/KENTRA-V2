@@ -137,22 +137,39 @@ const PlaceAutocomplete = ({
         let municipality = '';
         let colonia = '';
 
+        // Extraer componentes con prioridad correcta para México
         for (const component of addressComponents) {
-          if (component.types.includes('administrative_area_level_1')) {
+          const types = component.types;
+          
+          // Estado (siempre administrative_area_level_1)
+          if (types.includes('administrative_area_level_1')) {
             state = component.long_name;
           }
-          // En CDMX, la alcaldía viene como sublocality_level_1 o locality
-          if (component.types.includes('locality') || 
-              component.types.includes('sublocality_level_1') ||
-              component.types.includes('administrative_area_level_2')) {
-            if (!municipality) {
-              municipality = component.long_name;
+          
+          // Municipio/Alcaldía (administrative_area_level_2)
+          if (types.includes('administrative_area_level_2')) {
+            municipality = component.long_name;
+          }
+          
+          // Fallback: usar locality como municipio si no hay level_2
+          if (!municipality && types.includes('locality')) {
+            municipality = component.long_name;
+          }
+          
+          // Colonia (sublocality_level_1, sublocality, neighborhood)
+          if (types.includes('sublocality_level_1') || 
+              types.includes('sublocality') || 
+              types.includes('neighborhood')) {
+            if (!colonia) {
+              colonia = component.long_name;
             }
           }
         }
 
-        // Extraer colonia
-        colonia = extractColoniaFromComponents(addressComponents, place.formatted_address);
+        // Fallback: extraer colonia del formatted_address si no se encontró
+        if (!colonia) {
+          colonia = extractColoniaFromComponents(addressComponents, place.formatted_address);
+        }
         
         // Evitar duplicar municipio en colonia
         if (colonia && colonia === municipality) {
@@ -222,16 +239,20 @@ const PlaceAutocomplete = ({
             let state = '';
             let municipality = '';
 
+            // Extraer componentes con prioridad correcta para México
             for (const component of addressComponents) {
-              if (component.types.includes('administrative_area_level_1')) {
+              const types = component.types;
+              
+              if (types.includes('administrative_area_level_1')) {
                 state = component.long_name;
               }
-              if (component.types.includes('locality') || 
-                  component.types.includes('sublocality_level_1') ||
-                  component.types.includes('administrative_area_level_2')) {
-                if (!municipality) {
-                  municipality = component.long_name;
-                }
+              
+              if (types.includes('administrative_area_level_2')) {
+                municipality = component.long_name;
+              }
+              
+              if (!municipality && types.includes('locality')) {
+                municipality = component.long_name;
               }
             }
 
