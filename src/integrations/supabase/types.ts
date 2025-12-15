@@ -1703,6 +1703,48 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_audit_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          new_data: Json | null
+          old_data: Json | null
+          table_name: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_data?: Json | null
+          old_data?: Json | null
+          table_name: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_data?: Json | null
+          old_data?: Json | null
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscription_changes: {
         Row: {
           change_type: string
@@ -2321,6 +2363,29 @@ export type Database = {
             Returns: string
           }
       auto_assign_badges: { Args: { p_user_id: string }; Returns: undefined }
+      calculate_churn_rate: {
+        Args: { p_days?: number }
+        Returns: {
+          churn_rate: number
+          churned_count: number
+          net_change: number
+          new_subscriptions: number
+          period_end: string
+          period_start: string
+          starting_count: number
+        }[]
+      }
+      calculate_mrr: {
+        Args: never
+        Returns: {
+          active_subscriptions: number
+          average_revenue_per_user: number
+          monthly_subscribers: number
+          mrr_by_plan: Json
+          total_mrr: number
+          yearly_subscribers: number
+        }[]
+      }
       calculate_property_images_score: {
         Args: { p_property_id: string }
         Returns: number
@@ -3375,6 +3440,20 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
+      }
+      subscription_cohort_analysis: {
+        Args: { p_months?: number }
+        Returns: {
+          avg_revenue: number
+          cohort_month: string
+          ltv_estimate: number
+          month_1_retention: number
+          month_2_retention: number
+          month_3_retention: number
+          month_6_retention: number
+          still_active: number
+          total_subscriptions: number
+        }[]
       }
       unaccent: { Args: { "": string }; Returns: string }
       unlockrows: { Args: { "": string }; Returns: number }
