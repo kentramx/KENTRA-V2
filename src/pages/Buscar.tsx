@@ -541,7 +541,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
       ? parseFloat(filters.precioMax) / (currentListingType === 'renta' ? 1000 : 1000000)
       : maxRange;
     setPriceRange([minFromUrl, maxFromUrl]);
-  }, []);
+  }, [filters.listingType, filters.precioMin, filters.precioMax]);
 
   const handlePriceRangeChange = (values: number[]) => {
     setPriceRange(values as [number, number]);
@@ -877,12 +877,13 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     if (!value || value.trim() === '') {
       setFilters(prev => {
         // Si ya están vacíos, no hacer nada
-        if (!prev.estado && !prev.municipio) return prev;
+        if (!prev.estado && !prev.municipio && !prev.colonia) return prev;
         
         return {
           ...prev,
           estado: '',
-          municipio: ''
+          municipio: '',
+          colonia: ''
         };
       });
       setSearchCoordinates(null); // Limpiar coordenadas
