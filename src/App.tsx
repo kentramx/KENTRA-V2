@@ -57,6 +57,7 @@ import AdminCoupons from "./pages/AdminCoupons";
 import AdminPlans from "./pages/AdminPlans";
 import UnirseEquipo from "./pages/UnirseEquipo";
 import { Footer } from "@/components/Footer";
+import BottomNav from "@/components/BottomNav";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -127,6 +128,7 @@ const AppContent = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Footer />
+            <BottomNav />
     </>
   );
 };
