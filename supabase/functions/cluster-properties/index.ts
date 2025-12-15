@@ -126,16 +126,18 @@ if (filters.min_bedrooms) {
       query = query.gte("bathrooms", filters.min_bathrooms);
     }
 
-    // Filtros geográficos (state, municipality, colonia)
+    // Filtros geográficos
     if (filters.state) {
       query = query.eq("state", filters.state);
     }
-    if (filters.municipality) {
-      query = query.eq("municipality", filters.municipality);
-    }
-    if (filters.colonia) {
-      query = query.eq("colonia", filters.colonia);
-    }
+    // TODO: Habilitar cuando se normalicen los datos de ubicación
+    // Por ahora, el viewport geográfico (bounds) filtra las propiedades por lat/lng
+    // if (filters.municipality) {
+    //   query = query.eq("municipality", filters.municipality);
+    // }
+    // if (filters.colonia) {
+    //   query = query.eq("colonia", filters.colonia);
+    // }
 
     const { data, error: dbError } = await query;
 
