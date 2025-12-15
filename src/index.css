@@ -56,7 +56,27 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+  }
+
+  h1, h2, .font-display {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+}
+
+/* Safe area para notch de iPhone */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Padding en mobile para que el contenido no quede detrás del bottom nav */
+@media (max-width: 767px) {
+  main, .main-content {
+    padding-bottom: 80px;
+  }
+  
+  footer {
+    margin-bottom: 64px;
   }
 }
 

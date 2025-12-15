@@ -19,6 +19,9 @@ import { usePropertiesInfinite } from "@/hooks/usePropertiesInfinite";
 import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
 import { LazyImage } from "@/components/LazyImage";
 import type { PropertySummary } from '@/types/property';
+import StatsCounter from '@/components/home/StatsCounter';
+import Testimonials from '@/components/home/Testimonials';
+import TrustedBy from '@/components/home/TrustedBy';
 import {
   Select,
   SelectContent,
@@ -162,7 +165,7 @@ const Home = () => {
       >
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
         <div className="container relative z-10 mx-auto px-4 text-center text-white">
-          <h1 className="mb-4 text-5xl font-bold md:text-6xl">
+          <h1 className="mb-4 text-5xl font-bold md:text-6xl font-serif">
             Encuentra Tu Hogar Ideal
           </h1>
           <p className="mb-8 text-xl md:text-2xl">
@@ -349,13 +352,19 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Trust Indicators */}
+      <TrustedBy />
+
+      {/* Stats Counter */}
+      <StatsCounter />
+
       {/* Featured Properties */}
       {featuredProperties.length > 0 && (
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4">
             <div className="mb-8 flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-bold">Propiedades Destacadas</h2>
+                <h2 className="text-3xl font-bold font-serif">Propiedades Destacadas</h2>
                 <p className="mt-2 text-muted-foreground">
                   Las mejores propiedades seleccionadas para ti
                 </p>
@@ -400,7 +409,7 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold">Propiedades Recientes</h2>
+              <h2 className="text-3xl font-bold font-serif">Propiedades Recientes</h2>
               <p className="mt-2 text-muted-foreground">
                 Últimas propiedades agregadas a la plataforma
               </p>
@@ -448,7 +457,7 @@ const Home = () => {
       {/* Property Types */}
       <section className="py-16 bg-background">
         <div className="container mx-auto px-4">
-          <h2 className="mb-8 text-center text-3xl font-bold">
+          <h2 className="mb-8 text-center text-3xl font-bold font-serif">
             Explora por Tipo de Propiedad
           </h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -546,7 +555,7 @@ const Home = () => {
       {/* CTA Section */}
       <section className="bg-muted py-16">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="mb-4 text-3xl font-bold">¿Tienes una Propiedad?</h2>
+          <h2 className="mb-4 text-3xl font-bold font-serif">¿Tienes una Propiedad?</h2>
           <p className="mb-8 text-xl text-muted-foreground">
             Publica tu propiedad y llega a miles de compradores potenciales
           </p>
@@ -560,11 +569,14 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Testimonials */}
+      <Testimonials />
+
       {/* Newsletter Section */}
       <section className="bg-primary/5 py-16">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="mb-4 text-3xl font-bold">
+            <h2 className="mb-4 text-3xl font-bold font-serif">
               Suscríbete a Nuestro Newsletter
             </h2>
             <p className="mb-8 text-lg text-muted-foreground">
