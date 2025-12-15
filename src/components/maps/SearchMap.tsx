@@ -304,11 +304,20 @@ export function SearchMap({
             'transition-all duration-200'
           )}
         >
-          <MapPin className="h-3.5 w-3.5 mr-1.5 text-primary" />
-          <span className="font-bold text-foreground">{countDisplay}</span>
-          <span className="ml-1 text-muted-foreground font-normal">
-            {visibleCount === 1 ? 'propiedad' : 'propiedades'}
-          </span>
+          {isLoading && !hasLoadedOnce.current ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 text-primary animate-spin" />
+              <span className="text-muted-foreground font-normal">Buscando propiedades...</span>
+            </>
+          ) : (
+            <>
+              <MapPin className="h-3.5 w-3.5 mr-1.5 text-primary" />
+              <span className="font-bold text-foreground">{countDisplay}</span>
+              <span className="ml-1 text-muted-foreground font-normal">
+                {visibleCount === 1 ? 'propiedad' : 'propiedades'}
+              </span>
+            </>
+          )}
         </Badge>
       </div>
 
@@ -351,7 +360,7 @@ export function SearchMap({
       {/* ═══════════════════════════════════════════════════════════
           ESTADO VACÍO - Cuando no hay propiedades
           ═══════════════════════════════════════════════════════════ */}
-      {!isLoading && visibleCount === 0 && (
+      {!isLoading && hasLoadedOnce.current && visibleCount === 0 && (
         <div className="absolute bottom-3 left-3 z-10">
           <Badge 
             variant="outline" 
