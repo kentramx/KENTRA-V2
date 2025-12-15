@@ -26,6 +26,7 @@ interface SearchMapProps {
   
   // Estados de carga
   isLoading: boolean;
+  isIdle?: boolean; // Query deshabilitado (esperando viewport válido)
   isFetching?: boolean;
   
   // Configuración
@@ -60,6 +61,7 @@ export function SearchMap({
   totalCount,
   isClustered,
   isLoading,
+  isIdle = false,
   isFetching = false,
   initialCenter,
   initialZoom = 12,
@@ -304,7 +306,7 @@ export function SearchMap({
             'transition-all duration-200'
           )}
         >
-          {isLoading && !hasLoadedOnce.current ? (
+          {(isLoading || isIdle) && !hasLoadedOnce.current ? (
             <>
               <Loader2 className="h-3.5 w-3.5 mr-1.5 text-primary animate-spin" />
               <span className="text-muted-foreground font-normal">Buscando propiedades...</span>
@@ -324,7 +326,7 @@ export function SearchMap({
       {/* ═══════════════════════════════════════════════════════════
           INDICADOR DE CARGA - Solo en carga inicial (no en navegación)
           ═══════════════════════════════════════════════════════════ */}
-      {isLoading && !hasLoadedOnce.current && (
+      {(isLoading || isIdle) && !hasLoadedOnce.current && (
         <div className="absolute top-3 right-3 z-10">
           <Badge 
             variant="outline" 
@@ -360,7 +362,7 @@ export function SearchMap({
       {/* ═══════════════════════════════════════════════════════════
           ESTADO VACÍO - Cuando no hay propiedades
           ═══════════════════════════════════════════════════════════ */}
-      {!isLoading && hasLoadedOnce.current && visibleCount === 0 && (
+      {!isLoading && !isIdle && hasLoadedOnce.current && visibleCount === 0 && (
         <div className="absolute bottom-3 left-3 z-10">
           <Badge 
             variant="outline" 

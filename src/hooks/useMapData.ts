@@ -152,6 +152,7 @@ export function useMapData({
     data: query.data ?? null,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
+    isIdle: !shouldQuery, // Query deshabilitado (esperando viewport válido)
     error: query.error as Error | null,
     isStale: query.isStale,
   };

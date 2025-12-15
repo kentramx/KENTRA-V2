@@ -187,6 +187,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     data: mapData,
     isLoading: loading,
     isFetching,
+    isIdle: mapIsIdle, // Query deshabilitado (esperando viewport válido)
     error: mapError,
   } = useMapData({
     viewport: mapViewport,
@@ -1558,6 +1559,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 totalCount={totalCount}
                 isClustered={isClustered}
                 isLoading={loading}
+                isIdle={mapIsIdle}
                 isFetching={isFetching}
                 initialCenter={searchCoordinates || undefined}
                 initialZoom={searchCoordinates ? 12 : 5}
