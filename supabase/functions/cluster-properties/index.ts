@@ -119,14 +119,25 @@ Deno.serve(async (req) => {
       if (filters.max_price) {
         query = query.lte("price", filters.max_price);
       }
-      if (filters.min_bedrooms) {
-        query = query.gte("bedrooms", filters.min_bedrooms);
-      }
-      if (filters.min_bathrooms) {
-        query = query.gte("bathrooms", filters.min_bathrooms);
-      }
+if (filters.min_bedrooms) {
+      query = query.gte("bedrooms", filters.min_bedrooms);
+    }
+    if (filters.min_bathrooms) {
+      query = query.gte("bathrooms", filters.min_bathrooms);
+    }
 
-      const { data, error: dbError } = await query;
+    // Filtros geográficos (state, municipality, colonia)
+    if (filters.state) {
+      query = query.eq("state", filters.state);
+    }
+    if (filters.municipality) {
+      query = query.eq("municipality", filters.municipality);
+    }
+    if (filters.colonia) {
+      query = query.eq("colonia", filters.colonia);
+    }
+
+    const { data, error: dbError } = await query;
 
       if (dbError) {
         throw new Error(`Database error: ${dbError.message}`);
