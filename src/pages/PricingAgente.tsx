@@ -25,42 +25,36 @@ const getIconForSlug = (slug: string) => {
 };
 
 const buildFeaturesArray = (plan: any): string[] => {
+  // Priorizar feature_list de la nueva estructura de BD
+  if (plan.features?.feature_list && Array.isArray(plan.features.feature_list)) {
+    return plan.features.feature_list.map((f: any) => f.text);
+  }
+  
+  // Fallback: generar features dinámicamente desde limits/capabilities
   const features: string[] = [];
   const propLimit = getPlanPropertyLimit(plan);
   const featuredLimit = getPlanFeaturedLimit(plan);
   
-  // Property limit
   if (propLimit === -1) {
     features.push('Propiedades ilimitadas');
   } else if (propLimit > 0) {
     features.push(`Hasta ${propLimit} propiedad${propLimit > 1 ? 'es' : ''} activa${propLimit > 1 ? 's' : ''}`);
   }
   
-  // Featured limit
   if (featuredLimit === -1) {
     features.push('Destacadas ilimitadas');
   } else if (featuredLimit > 0) {
     features.push(`${featuredLimit} propiedad${featuredLimit > 1 ? 'es' : ''} destacada${featuredLimit > 1 ? 's' : ''} al mes`);
   }
   
-  // Other features based on plan features object
-  if (plan.features.priority_support) {
-    features.push('Soporte prioritario');
-  } else {
-    features.push('Soporte por email');
-  }
-  
-  if (plan.features.analytics) {
-    features.push('Analíticas avanzadas');
-  } else {
-    features.push('Estadísticas básicas');
-  }
-  
-  if (plan.features.autopublicacion) features.push('Autopublicación a redes');
-  if (plan.features.reportes_avanzados) features.push('Reportes avanzados');
-  if (plan.features.branding) features.push('Branding personalizado');
-  if (plan.features.ia_copys) features.push('Copys automáticos con IA');
-  if (plan.features.asesor_dedicado) features.push('Asesor dedicado');
+  const caps = plan.features?.capabilities || plan.features || {};
+  if (caps.priority_support) features.push('Soporte prioritario');
+  else features.push('Soporte por email');
+  if (caps.analytics) features.push('Analíticas avanzadas');
+  if (caps.autopublicacion) features.push('Autopublicación a redes');
+  if (caps.reportes_avanzados) features.push('Reportes avanzados');
+  if (caps.ia_copys) features.push('Copys automáticos con IA');
+  if (caps.asesor_dedicado) features.push('Asesor dedicado');
   
   return features;
 };
