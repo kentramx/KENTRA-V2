@@ -134,7 +134,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     precioMin: '',
     precioMax: '',
     tipo: '',
-    listingType: '',
+    listingType: 'venta',
     recamaras: '',
     banos: '',
     orden: 'price_desc',
@@ -176,6 +176,7 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     min_bathrooms: filters.banos ? Number(filters.banos) : undefined,
     state: filters.estado || undefined,
     municipality: filters.municipio || undefined,
+    colonia: filters.colonia || undefined,
   }), [filters]);
 
   // 🗺️ Estado del mapa
