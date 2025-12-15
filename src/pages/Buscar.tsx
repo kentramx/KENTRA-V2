@@ -338,6 +338,9 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
 
   // Flag de viewport activo
   const isViewportActive = !!mapViewport;
+  
+  // Flag para evitar mostrar "No encontramos propiedades" antes de que el mapa reporte viewport
+  const isWaitingForViewport = !mapViewport;
 
   // Normalizar rango de precios para evitar valores fuera de rango al alternar Venta/Renta
   const [minRangeForType, maxRangeForType] = getPriceRangeForListingType(filters.listingType);
@@ -1591,8 +1594,21 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               </div>
             )}
 
-            {/* Estado de carga inicial */}
-            {!searchError && loading && properties.length === 0 && (
+            {/* Estado: Esperando viewport del mapa (evita flash de "No encontramos") */}
+            {!searchError && isWaitingForViewport && (
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Cargando mapa y propiedades...</span>
+                </div>
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-48 w-full" />
+                ))}
+              </div>
+            )}
+
+            {/* Estado de carga inicial (viewport ya disponible) */}
+            {!searchError && !isWaitingForViewport && loading && properties.length === 0 && (
               <div className="p-6 space-y-4">
                 <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -1604,8 +1620,8 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
               </div>
             )}
 
-            {/* Estado vacío - sin resultados */}
-            {!searchError && !loading && listProperties.length === 0 && (
+            {/* Estado vacío - sin resultados (solo cuando viewport está listo y no hay carga) */}
+            {!searchError && !isWaitingForViewport && !loading && listProperties.length === 0 && (
               <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center min-h-[400px]">
                 <div className="rounded-full bg-muted p-6">
                   <Search className="h-12 w-12 text-muted-foreground" />
