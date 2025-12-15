@@ -29,9 +29,12 @@ export function useMapData({
   );
 
   // Detectar si hay un viewport pendiente de debounce
-  const isViewportPending = viewport !== null && 
-    debouncedViewport !== null && 
-    JSON.stringify(viewport) !== JSON.stringify(debouncedViewport);
+  // Caso 1: viewport existe pero debouncedViewport aún no (primera carga)
+  // Caso 2: ambos existen pero son diferentes (cambio de viewport)
+  const isViewportPending = viewport !== null && (
+    debouncedViewport === null || 
+    JSON.stringify(viewport) !== JSON.stringify(debouncedViewport)
+  );
   
   const shouldQuery = enabled &&
     debouncedViewport !== null && 
