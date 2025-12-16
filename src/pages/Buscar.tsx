@@ -194,8 +194,20 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
   }), [filters]);
 
   // 🗺️ Estado del mapa
-  // ✅ Inicializar viewport desde URL si hay coordenadas para evitar flash
-  const [mapViewport, setMapViewport] = useState<MapViewport | null>(() => {
+  // Viewport por defecto: México completo (para lista sin mapa visible)
+  const DEFAULT_MEXICO_VIEWPORT: MapViewport = {
+    center: { lat: 23.6345, lng: -102.5528 },
+    zoom: 5,
+    bounds: {
+      north: 32.7187,  // Frontera norte
+      south: 14.5345,  // Frontera sur  
+      east: -86.7104,  // Este (Cancún)
+      west: -118.3644, // Oeste (Tijuana)
+    }
+  };
+
+  // ✅ Inicializar viewport desde URL si hay coordenadas, sino usar default de México
+  const [mapViewport, setMapViewport] = useState<MapViewport>(() => {
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
     if (lat && lng) {
@@ -214,7 +226,8 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
         }
       };
     }
-    return null;
+    // ✅ Sin coordenadas: usar viewport de México para que la lista cargue
+    return DEFAULT_MEXICO_VIEWPORT;
   });
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
 
@@ -386,7 +399,8 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
   const isViewportActive = !!mapViewport;
   
   // Flag para evitar mostrar "No encontramos propiedades" antes de que el mapa reporte viewport
-  const isWaitingForViewport = !mapViewport;
+  // ✅ Siempre hay viewport inicial (DEFAULT_MEXICO_VIEWPORT), nunca esperamos
+  const isWaitingForViewport = false;
 
 
   const filteredSavedSearches = savedSearches
