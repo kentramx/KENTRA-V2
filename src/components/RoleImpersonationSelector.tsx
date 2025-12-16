@@ -17,9 +17,9 @@ export const RoleImpersonationSelector = () => {
   const handleRoleChange = (value: string) => {
     if (value === 'none') {
       stopImpersonation();
+      window.location.reload();
     } else {
       startImpersonation(value as ImpersonatedRole);
-      // Reload page to apply new role simulation
       window.location.reload();
     }
   };
