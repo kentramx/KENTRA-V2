@@ -17,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
 import { MapPin, Bed, Bath, Car, Search, AlertCircle, Save, Star, Trash2, X, Tag, TrendingUp, ChevronDown, SlidersHorizontal, Loader2, Map as MapIcon, List as ListIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -96,28 +95,43 @@ const Buscar = () => {
   // 🗺️ Estados del mapa movidos al nuevo SearchMap
   // (viewportBounds ahora se deriva de mapViewport)
   
-// Rangos para VENTA (en millones)
-const SALE_MIN_PRICE = 0;
-const SALE_MAX_PRICE = 100; // $100M o más
+// Rangos predefinidos para VENTA (en pesos MXN)
+const SALE_PRICE_RANGES = [
+  { label: 'Cualquier precio', min: '', max: '' },
+  { label: 'Hasta $1M', min: '', max: '1000000' },
+  { label: '$1M - $2M', min: '1000000', max: '2000000' },
+  { label: '$2M - $3M', min: '2000000', max: '3000000' },
+  { label: '$3M - $5M', min: '3000000', max: '5000000' },
+  { label: '$5M - $10M', min: '5000000', max: '10000000' },
+  { label: '$10M - $20M', min: '10000000', max: '20000000' },
+  { label: '$20M - $50M', min: '20000000', max: '50000000' },
+  { label: '$50M+', min: '50000000', max: '' },
+];
 
-// Rangos para RENTA (en miles)
-const RENT_MIN_PRICE = 0;
-const RENT_MAX_PRICE = 200; // $200,000 mensuales o más
+// Rangos predefinidos para RENTA (mensual en pesos MXN)
+const RENT_PRICE_RANGES = [
+  { label: 'Cualquier precio', min: '', max: '' },
+  { label: 'Hasta $5,000', min: '', max: '5000' },
+  { label: '$5,000 - $10,000', min: '5000', max: '10000' },
+  { label: '$10,000 - $15,000', min: '10000', max: '15000' },
+  { label: '$15,000 - $25,000', min: '15000', max: '25000' },
+  { label: '$25,000 - $40,000', min: '25000', max: '40000' },
+  { label: '$40,000 - $60,000', min: '40000', max: '60000' },
+  { label: '$60,000 - $100,000', min: '60000', max: '100000' },
+  { label: '$100,000+', min: '100000', max: '' },
+];
 
-const getPriceRangeForListingType = (listingType: string): [number, number] => {
-  if (listingType === 'renta') {
-    return [RENT_MIN_PRICE, RENT_MAX_PRICE];
-  }
-  return [SALE_MIN_PRICE, SALE_MAX_PRICE];
+// Helper para obtener rangos según tipo de operación
+const getPriceRanges = (listingType: string) => {
+  return listingType === 'renta' ? RENT_PRICE_RANGES : SALE_PRICE_RANGES;
 };
 
-const convertSliderValueToPrice = (value: number, listingType: string): number => {
-  if (listingType === 'renta') {
-    return value * 1000; // Miles para rentas
-  }
-  return value * 1000000; // Millones para ventas
+// Helper para obtener el label del rango actual
+const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listingType: string) => {
+  const ranges = getPriceRanges(listingType);
+  const found = ranges.find(r => r.min === precioMin && r.max === precioMax);
+  return found?.label || 'Precio';
 };
-  const [priceRange, setPriceRange] = useState<[number, number]>([SALE_MIN_PRICE, SALE_MAX_PRICE]);
   
   const [savedSearches, setSavedSearches] = useState<any[]>([]);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -345,12 +359,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
   // Flag para evitar mostrar "No encontramos propiedades" antes de que el mapa reporte viewport
   const isWaitingForViewport = !mapViewport;
 
-  // Normalizar rango de precios para evitar valores fuera de rango al alternar Venta/Renta
-  const [minRangeForType, maxRangeForType] = getPriceRangeForListingType(filters.listingType);
-  const safePriceRange: [number, number] = [
-    Math.max(minRangeForType, Math.min(priceRange[0], maxRangeForType)),
-    Math.max(minRangeForType, Math.min(priceRange[1], maxRangeForType)),
-  ];
 
   const filteredSavedSearches = savedSearches
     .filter(search => 
@@ -369,28 +377,15 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     setHoveredProperty(property);
   }, []);
 
-  // ✅ Reiniciar y normalizar precio al cambiar tipo de operación (optimizado)
+  // ✅ Reiniciar precio al cambiar tipo de operación
   useEffect(() => {
-    const [minRange, maxRange] = getPriceRangeForListingType(filters.listingType);
-    
-    // Solo resetear si los valores actuales están fuera de rango
-    const needsReset = 
-      priceRange[0] < minRange || 
-      priceRange[0] > maxRange || 
-      priceRange[1] < minRange || 
-      priceRange[1] > maxRange;
-    
-    if (needsReset) {
-      setPriceRange([minRange, maxRange]);
-      
-      // ✅ Usar callback para evitar dependencia directa de filters
-      setFilters((prev) => ({
-        ...prev,
-        precioMin: '',
-        precioMax: '',
-      }));
-    }
-  }, [filters.listingType, priceRange]); // ✅ Agregar priceRange como dependencia
+    // Limpiar precios cuando cambia venta ↔ renta ya que los rangos son diferentes
+    setFilters((prev) => ({
+      ...prev,
+      precioMin: '',
+      precioMax: '',
+    }));
+  }, [filters.listingType]);
 
   // Track búsqueda en GA4 cuando se aplican filtros
   useEffect(() => {
@@ -530,58 +525,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
     }
   };
 
-  useEffect(() => {
-    const currentListingType = filters.listingType;
-    const [minRange, maxRange] = getPriceRangeForListingType(currentListingType);
-    
-    const minFromUrl = filters.precioMin 
-      ? parseFloat(filters.precioMin) / (currentListingType === 'renta' ? 1000 : 1000000)
-      : minRange;
-    const maxFromUrl = filters.precioMax 
-      ? parseFloat(filters.precioMax) / (currentListingType === 'renta' ? 1000 : 1000000)
-      : maxRange;
-    setPriceRange([minFromUrl, maxFromUrl]);
-  }, [filters.listingType, filters.precioMin, filters.precioMax]);
-
-  const handlePriceRangeChange = (values: number[]) => {
-    setPriceRange(values as [number, number]);
-    
-    const [minRange, maxRange] = getPriceRangeForListingType(filters.listingType);
-    
-    setFilters(prev => ({
-      ...prev,
-      precioMin: values[0] === minRange ? '' : convertSliderValueToPrice(values[0], prev.listingType).toString(),
-      precioMax: values[1] === maxRange ? '' : convertSliderValueToPrice(values[1], prev.listingType).toString(),
-    }));
-  };
-
-  const formatPriceDisplay = (value: number, listingType?: string) => {
-    const currentListingType = listingType || filters.listingType;
-    const [minRange, maxRange] = getPriceRangeForListingType(currentListingType);
-    
-    if (value === 0 || value === minRange) return '$0';
-    if (value === maxRange) return 'Sin límite';
-    
-    if (currentListingType === 'renta') {
-      return new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: 'MXN',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(value * 1000);
-    } else {
-      if (value >= 1) {
-        return `$${value.toFixed(1)}M`;
-      } else {
-        return new Intl.NumberFormat('es-MX', {
-          style: 'currency',
-          currency: 'MXN',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(value * 1000000);
-      }
-    }
-  };
 
   // ✅ Sincronización filters → URL (optimizado para evitar loops infinitos)
   useEffect(() => {
@@ -1161,19 +1104,33 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                       <Separator />
 
                       {/* Precio */}
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         <h4 className="font-medium text-sm">Rango de precio</h4>
-                        <Slider
-                          min={getPriceRangeForListingType(filters.listingType)[0]}
-                          max={getPriceRangeForListingType(filters.listingType)[1]}
-                          step={filters.listingType === 'renta' ? 1 : 0.5}
-                          value={safePriceRange}
-                          onValueChange={handlePriceRangeChange}
-                        />
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>{formatPriceDisplay(priceRange[0])}</span>
-                          <span>{formatPriceDisplay(priceRange[1])}</span>
-                        </div>
+                        <Select
+                          value={getCurrentPriceRangeLabel(filters.precioMin, filters.precioMax, filters.listingType)}
+                          onValueChange={(value) => {
+                            const ranges = getPriceRanges(filters.listingType);
+                            const selected = ranges.find(r => r.label === value);
+                            if (selected) {
+                              setFilters(prev => ({
+                                ...prev,
+                                precioMin: selected.min,
+                                precioMax: selected.max,
+                              }));
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Cualquier precio" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover z-50">
+                            {getPriceRanges(filters.listingType).map((range) => (
+                              <SelectItem key={range.label} value={range.label}>
+                                {range.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <Separator />
@@ -1318,36 +1275,32 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                 </PopoverContent>
               </Popover>
 
-              {/* 4. Precio */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    {(() => {
-                      const [minRange, maxRange] = getPriceRangeForListingType(filters.listingType);
-                      return priceRange[0] === minRange && priceRange[1] === maxRange 
-                        ? 'Precio' 
-                        : `${formatPriceDisplay(priceRange[0])} - ${formatPriceDisplay(priceRange[1])}`;
-                    })()}
-                    <ChevronDown className="h-4 w-4 ml-1" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80" align="start">
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-sm">Rango de precio</h4>
-                    <Slider
-                      min={getPriceRangeForListingType(filters.listingType)[0]}
-                      max={getPriceRangeForListingType(filters.listingType)[1]}
-                      step={filters.listingType === 'renta' ? 1 : 0.5}
-                      value={safePriceRange}
-                      onValueChange={handlePriceRangeChange}
-                    />
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>{formatPriceDisplay(priceRange[0])}</span>
-                      <span>{formatPriceDisplay(priceRange[1])}</span>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+              {/* 4. Precio - Dropdown con rangos predefinidos */}
+              <Select
+                value={getCurrentPriceRangeLabel(filters.precioMin, filters.precioMax, filters.listingType)}
+                onValueChange={(value) => {
+                  const ranges = getPriceRanges(filters.listingType);
+                  const selected = ranges.find(r => r.label === value);
+                  if (selected) {
+                    setFilters(prev => ({
+                      ...prev,
+                      precioMin: selected.min,
+                      precioMax: selected.max,
+                    }));
+                  }
+                }}
+              >
+                <SelectTrigger className="w-auto min-w-[140px] h-9 text-sm">
+                  <SelectValue placeholder="Precio" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  {getPriceRanges(filters.listingType).map((range) => (
+                    <SelectItem key={range.label} value={range.label}>
+                      {range.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {/* 5. Beds & Baths */}
               <Popover>
@@ -1503,7 +1456,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                   onClick={() => {
                     setFilters(DEFAULT_FILTERS);
                     setSearchCoordinates(null);
-                    setPriceRange([SALE_MIN_PRICE, SALE_MAX_PRICE]);
                     // La URL se limpiará automáticamente por el useEffect de sincronización
                   }}
                 >
@@ -1672,7 +1624,6 @@ const convertSliderValueToPrice = (value: number, listingType: string): number =
                   onClick={() => {
                     setFilters(DEFAULT_FILTERS);
                     setSearchCoordinates(null);
-                    setPriceRange([SALE_MIN_PRICE, SALE_MAX_PRICE]);
                   }}
                   variant="outline"
                 >
