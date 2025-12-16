@@ -35,7 +35,7 @@ const signupSchema = z.object({
   email: z.string().trim().email({ message: 'Correo electrónico inválido' }),
   password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres' }),
   confirmPassword: z.string(),
-  role: z.enum(['buyer', 'agent', 'agency'], { 
+  role: z.enum(['buyer', 'agent', 'agency', 'developer'], { 
     required_error: 'Debes seleccionar un tipo de cuenta',
   }),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -162,7 +162,7 @@ const Auth = () => {
         return;
       }
 
-      const { error } = await signUp(email, password, name, role as 'buyer' | 'agent' | 'agency');
+      const { error } = await signUp(email, password, name, role as 'buyer' | 'agent' | 'agency' | 'developer');
 
       if (error) {
         let errorMessage = 'Error al crear la cuenta';
@@ -178,11 +178,11 @@ const Auth = () => {
       } else {
         // Track Facebook Pixel: CompleteRegistration
         trackEvent('CompleteRegistration', {
-          content_name: role === 'agent' ? 'Agente' : role === 'agency' ? 'Agencia' : 'Comprador',
+          content_name: role === 'agent' ? 'Agente' : role === 'agency' ? 'Agencia' : role === 'developer' ? 'Desarrolladora' : 'Comprador',
           content_category: 'signup',
         });
 
-        const roleText = role === 'agent' ? 'agente inmobiliario' : role === 'agency' ? 'agencia inmobiliaria' : 'comprador';
+        const roleText = role === 'agent' ? 'agente inmobiliario' : role === 'agency' ? 'agencia inmobiliaria' : role === 'developer' ? 'desarrolladora inmobiliaria' : 'comprador';
         const actionText = pendingRole ? 'Continuemos con tu publicación' : 'Tu cuenta ha sido creada exitosamente';
         toast({
           title: '¡Cuenta creada!',
@@ -652,6 +652,15 @@ const Auth = () => {
                             <div className="font-medium">Agencia Inmobiliaria</div>
                             <div className="text-sm text-muted-foreground">
                               Gestiono una agencia con múltiples agentes
+                            </div>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-accent cursor-pointer">
+                          <RadioGroupItem value="developer" id="role-developer" />
+                          <Label htmlFor="role-developer" className="flex-1 cursor-pointer">
+                            <div className="font-medium">Desarrolladora Inmobiliaria</div>
+                            <div className="text-sm text-muted-foreground">
+                              Desarrollo y comercializo proyectos inmobiliarios
                             </div>
                           </Label>
                         </div>

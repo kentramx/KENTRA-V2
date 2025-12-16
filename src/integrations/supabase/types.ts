@@ -500,6 +500,213 @@ export type Database = {
         }
         Relationships: []
       }
+      developer_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          developer_id: string
+          email: string
+          expires_at: string | null
+          id: string
+          invited_at: string | null
+          invited_by: string
+          role: string | null
+          status: Database["public"]["Enums"]["invitation_status"] | null
+          token: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          developer_id: string
+          email: string
+          expires_at?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by: string
+          role?: string | null
+          status?: Database["public"]["Enums"]["invitation_status"] | null
+          token?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          developer_id?: string
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string
+          role?: string | null
+          status?: Database["public"]["Enums"]["invitation_status"] | null
+          token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_invitations_developer_id_fkey"
+            columns: ["developer_id"]
+            isOneToOne: false
+            referencedRelation: "developers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      developer_projects: {
+        Row: {
+          address: string | null
+          amenities: Json | null
+          available_units: number | null
+          city: string | null
+          cover_image_url: string | null
+          created_at: string | null
+          delivery_date: string | null
+          description: string | null
+          developer_id: string
+          gallery: Json | null
+          id: string
+          lat: number | null
+          lng: number | null
+          name: string
+          state: string | null
+          status: string | null
+          total_units: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          amenities?: Json | null
+          available_units?: number | null
+          city?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          delivery_date?: string | null
+          description?: string | null
+          developer_id: string
+          gallery?: Json | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name: string
+          state?: string | null
+          status?: string | null
+          total_units?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          amenities?: Json | null
+          available_units?: number | null
+          city?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          delivery_date?: string | null
+          description?: string | null
+          developer_id?: string
+          gallery?: Json | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name?: string
+          state?: string | null
+          status?: string | null
+          total_units?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_projects_developer_id_fkey"
+            columns: ["developer_id"]
+            isOneToOne: false
+            referencedRelation: "developers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      developer_team: {
+        Row: {
+          developer_id: string
+          id: string
+          joined_at: string | null
+          role: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          developer_id: string
+          id?: string
+          joined_at?: string | null
+          role?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          developer_id?: string
+          id?: string
+          joined_at?: string | null
+          role?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_team_developer_id_fkey"
+            columns: ["developer_id"]
+            isOneToOne: false
+            referencedRelation: "developers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      developers: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string | null
+          description: string | null
+          email: string | null
+          id: string
+          is_verified: boolean | null
+          logo_url: string | null
+          name: string
+          owner_id: string
+          phone: string | null
+          state: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          id?: string
+          is_verified?: boolean | null
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          id?: string
+          is_verified?: boolean | null
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string | null
@@ -1340,6 +1547,7 @@ export type Database = {
           parking: number | null
           price: number
           price_history: Json | null
+          project_id: string | null
           property_code: string | null
           rejection_history: Json | null
           rent_price: number | null
@@ -1393,6 +1601,7 @@ export type Database = {
           parking?: number | null
           price: number
           price_history?: Json | null
+          project_id?: string | null
           property_code?: string | null
           rejection_history?: Json | null
           rent_price?: number | null
@@ -1446,6 +1655,7 @@ export type Database = {
           parking?: number | null
           price?: number
           price_history?: Json | null
+          project_id?: string | null
           property_code?: string | null
           rejection_history?: Json | null
           rent_price?: number | null
@@ -1474,6 +1684,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "developer_projects"
             referencedColumns: ["id"]
           },
         ]

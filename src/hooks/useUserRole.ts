@@ -60,12 +60,13 @@ export const useUserRole = () => {
         return;
       }
 
-      // Role priority: super_admin > admin > moderator > agency > agent > buyer
+      // Role priority: super_admin > admin > moderator > agency/developer > agent > buyer
       const rolePriority: Record<UserRole, number> = {
         super_admin: 6,
         admin: 5,
         moderator: 4,
         agency: 3,
+        developer: 3,
         agent: 2,
         buyer: 1,
       };
