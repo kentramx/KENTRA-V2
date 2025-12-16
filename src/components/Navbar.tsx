@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Home, Heart, User, PlusCircle, LogOut, Search, Building, GitCompare, Settings, DollarSign } from "lucide-react";
+import { Home, Heart, User, Users, PlusCircle, LogOut, Search, Building, GitCompare, Settings, DollarSign } from "lucide-react";
 import { MessageBadge } from "./MessageBadge";
 import { MobileMenu } from "./MobileMenu";
 import { PublishPropertyButton } from "./subscription/PublishPropertyButton";
@@ -318,6 +318,15 @@ const Navbar = () => {
                             Verificaciones KYC
                           </DropdownMenuItem>
                         </Link>
+                        {isSuperAdmin && (
+                          <Link to="/admin/users">
+                            <DropdownMenuItem className="cursor-pointer">
+                              <Users className="mr-2 h-4 w-4" />
+                              <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                              Gestión de Usuarios
+                            </DropdownMenuItem>
+                          </Link>
+                        )}
                         <DropdownMenuSeparator />
                       </>
                     )}
@@ -498,6 +507,15 @@ const Navbar = () => {
                               Verificaciones KYC
                             </DropdownMenuItem>
                           </Link>
+                          {isSuperAdmin && (
+                            <Link to="/admin/users">
+                              <DropdownMenuItem className="cursor-pointer">
+                                <Users className="mr-2 h-4 w-4" />
+                                <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                                Gestión de Usuarios
+                              </DropdownMenuItem>
+                            </Link>
+                          )}
                           <Link to="/admin/notification-settings">
                             <DropdownMenuItem className="cursor-pointer">
                               <Badge className="mr-2 bg-purple-600">Admin</Badge>
