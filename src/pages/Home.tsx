@@ -22,52 +22,38 @@ import type { PropertySummary } from '@/types/property';
 import StatsCounter from '@/components/home/StatsCounter';
 import Testimonials from '@/components/home/Testimonials';
 import TrustedBy from '@/components/home/TrustedBy';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [listingType, setListingType] = useState<"venta" | "renta">("venta");
   const [propertyType, setPropertyType] = useState<string>("all");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  
+
   // Usar infinite scroll para propiedades destacadas y recientes
-  const { 
-    data: featuredData, 
+  const {
+    data: featuredData,
     fetchNextPage: fetchNextFeatured,
     hasNextPage: hasNextFeatured,
     isFetchingNextPage: isFetchingNextFeatured,
     isLoading: isLoadingFeatured
-  } = usePropertiesInfinite({ 
-    status: ['activa'],
+  } = usePropertiesInfinite({
+    status: ['activa']
     // Filtrar solo featured en el futuro, por ahora mostramos activas
   });
-
-  const { 
-    data: recentData, 
+  const {
+    data: recentData,
     fetchNextPage: fetchNextRecent,
     hasNextPage: hasNextRecent,
     isFetchingNextPage: isFetchingNextRecent,
     isLoading: isLoadingRecent
-  } = usePropertiesInfinite({ 
-    status: ['activa'],
+  } = usePropertiesInfinite({
+    status: ['activa']
   });
-
-  const featuredProperties = (featuredData?.pages.flatMap(page => page.properties) || [])
-    .filter(p => p.is_featured === true) as PropertySummary[];
+  const featuredProperties = (featuredData?.pages.flatMap(page => page.properties) || []).filter(p => p.is_featured === true) as PropertySummary[];
   const recentProperties = recentData?.pages.flatMap(page => page.properties) || [] as PropertySummary[];
   const isLoadingProperties = isLoadingFeatured || isLoadingRecent;
-  
+
   // Estado para almacenar la ubicación seleccionada del autocomplete
   const [selectedLocation, setSelectedLocation] = useState<{
     address: string;
@@ -76,60 +62,50 @@ const Home = () => {
     lat?: number;
     lng?: number;
   } | null>(null);
-  
+
   // Advanced filters
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [bedrooms, setBedrooms] = useState("all");
   const [bathrooms, setBathrooms] = useState("all");
   const [parking, setParking] = useState("all");
-  
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  
   const navigate = useNavigate();
-
   const handleSearch = () => {
     const params = new URLSearchParams();
     const hasLocation = selectedLocation?.state || selectedLocation?.municipality;
     const hasPropertyType = propertyType && propertyType !== 'all';
-    const hasAdvancedFilters = priceMin || priceMax || 
-                               (bedrooms && bedrooms !== 'all') || 
-                               (bathrooms && bathrooms !== 'all') || 
-                               (parking && parking !== 'all');
-    
+    const hasAdvancedFilters = priceMin || priceMax || bedrooms && bedrooms !== 'all' || bathrooms && bathrooms !== 'all' || parking && parking !== 'all';
     const hasAnyFilter = hasLocation || hasPropertyType || hasAdvancedFilters;
-    
+
     // Solo agregar listingType si hay filtros activos
     if (hasAnyFilter) {
       params.set('listingType', listingType);
     }
-    
     if (propertyType && propertyType !== 'all') params.set('tipo', propertyType);
-    
+
     // Usar la ubicación seleccionada del autocomplete si existe
     if (selectedLocation) {
       if (selectedLocation.state) params.set('estado', selectedLocation.state);
       if (selectedLocation.municipality) params.set('municipio', selectedLocation.municipality);
-      
+
       // Pasar coordenadas para centrar el mapa
       if (selectedLocation.lat && selectedLocation.lng) {
         params.set('lat', selectedLocation.lat.toString());
         params.set('lng', selectedLocation.lng.toString());
       }
     }
-    
     if (priceMin) params.set('precioMin', priceMin);
     if (priceMax) params.set('precioMax', priceMax);
     if (bedrooms && bedrooms !== 'all') params.set('recamaras', bedrooms);
     if (bathrooms && bathrooms !== 'all') params.set('banos', bathrooms);
     if (parking && parking !== 'all') params.set('estacionamiento', parking);
-    
+
     // Navegar con o sin parámetros
     const queryString = params.toString();
     navigate(queryString ? `/buscar?${queryString}` : '/buscar');
   };
-
   const handlePlaceSelect = (place: {
     address: string;
     municipality: string;
@@ -139,35 +115,21 @@ const Home = () => {
   }) => {
     setSelectedLocation(place);
   };
-
   const handlePropertyClick = (propertyId: string) => {
     setSelectedPropertyId(propertyId);
     setSheetOpen(true);
   };
-
-  return (
-    <div className="min-h-screen bg-background">
-      <SEOHead
-        title="Kentra - Encuentra tu Propiedad Ideal en México | Casas, Departamentos y más"
-        description="Plataforma inmobiliaria líder en México. Miles de propiedades en venta y renta: casas, departamentos, terrenos, oficinas. Contacta directamente con agentes certificados."
-        canonical="/"
-        structuredData={[
-          generateWebsiteStructuredData(),
-          generateOrganizationStructuredData(),
-        ]}
-      />
+  return <div className="min-h-screen bg-background">
+      <SEOHead title="Kentra - Encuentra tu Propiedad Ideal en México | Casas, Departamentos y más" description="Plataforma inmobiliaria líder en México. Miles de propiedades en venta y renta: casas, departamentos, terrenos, oficinas. Contacta directamente con agentes certificados." canonical="/" structuredData={[generateWebsiteStructuredData(), generateOrganizationStructuredData()]} />
       <Navbar />
 
       {/* Hero Section */}
-      <section
-        className="relative flex min-h-[600px] items-center justify-center bg-cover bg-center"
-        style={{ backgroundImage: `url(${heroBackground})` }}
-      >
+      <section className="relative flex min-h-[600px] items-center justify-center bg-cover bg-center" style={{
+      backgroundImage: `url(${heroBackground})`
+    }}>
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
         <div className="container relative z-10 mx-auto px-4 text-center text-white">
-          <h1 className="mb-4 text-5xl font-bold md:text-6xl font-serif">
-            Encuentra Tu Hogar Ideal
-          </h1>
+          <h1 className="mb-4 text-5xl font-bold md:text-6xl font-serif">Encuentra Tu Propiedad Ideal</h1>
           <p className="mb-8 text-xl md:text-2xl">
             Miles de propiedades en México esperándote
           </p>
@@ -177,22 +139,10 @@ const Home = () => {
             <div className="flex flex-col gap-4">
               {/* Listing Type Selector */}
               <div className="flex justify-center gap-2">
-                <Button
-                  type="button"
-                  variant={listingType === "venta" ? "default" : "outline"}
-                  size="lg"
-                  onClick={() => setListingType("venta")}
-                  className={listingType === "venta" ? "" : "bg-white/90 text-foreground hover:bg-white border-white/50"}
-                >
+                <Button type="button" variant={listingType === "venta" ? "default" : "outline"} size="lg" onClick={() => setListingType("venta")} className={listingType === "venta" ? "" : "bg-white/90 text-foreground hover:bg-white border-white/50"}>
                   Venta
                 </Button>
-                <Button
-                  type="button"
-                  variant={listingType === "renta" ? "default" : "outline"}
-                  size="lg"
-                  onClick={() => setListingType("renta")}
-                  className={listingType === "renta" ? "" : "bg-white/90 text-foreground hover:bg-white border-white/50"}
-                >
+                <Button type="button" variant={listingType === "renta" ? "default" : "outline"} size="lg" onClick={() => setListingType("renta")} className={listingType === "renta" ? "" : "bg-white/90 text-foreground hover:bg-white border-white/50"}>
                   Renta
                 </Button>
               </div>
@@ -220,11 +170,7 @@ const Home = () => {
               {/* Advanced Filters */}
               <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
                 <CollapsibleTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full max-w-xs mx-auto bg-white/95 text-foreground border-white/50 hover:bg-white"
-                  >
+                  <Button type="button" variant="outline" className="w-full max-w-xs mx-auto bg-white/95 text-foreground border-white/50 hover:bg-white">
                     <SlidersHorizontal className="mr-2 h-4 w-4" />
                     Filtros Avanzados
                   </Button>
@@ -237,27 +183,13 @@ const Home = () => {
                         <Label htmlFor="priceMin" className="text-sm font-medium text-foreground">
                           Precio Mínimo
                         </Label>
-                        <Input
-                          id="priceMin"
-                          type="number"
-                          placeholder="$0"
-                          value={priceMin}
-                          onChange={(e) => setPriceMin(e.target.value)}
-                          className="bg-white text-foreground"
-                        />
+                        <Input id="priceMin" type="number" placeholder="$0" value={priceMin} onChange={e => setPriceMin(e.target.value)} className="bg-white text-foreground" />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="priceMax" className="text-sm font-medium text-foreground">
                           Precio Máximo
                         </Label>
-                        <Input
-                          id="priceMax"
-                          type="number"
-                          placeholder="Sin límite"
-                          value={priceMax}
-                          onChange={(e) => setPriceMax(e.target.value)}
-                          className="bg-white text-foreground"
-                        />
+                        <Input id="priceMax" type="number" placeholder="Sin límite" value={priceMax} onChange={e => setPriceMax(e.target.value)} className="bg-white text-foreground" />
                       </div>
                     </div>
 
@@ -320,33 +252,21 @@ const Home = () => {
                     </div>
 
                     {/* Clear Filters Button */}
-                    {(priceMin || priceMax || (bedrooms && bedrooms !== 'all') || (bathrooms && bathrooms !== 'all') || (parking && parking !== 'all')) && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setPriceMin("");
-                          setPriceMax("");
-                          setBedrooms("all");
-                          setBathrooms("all");
-                          setParking("all");
-                        }}
-                        className="w-full"
-                      >
+                    {(priceMin || priceMax || bedrooms && bedrooms !== 'all' || bathrooms && bathrooms !== 'all' || parking && parking !== 'all') && <Button type="button" variant="outline" onClick={() => {
+                    setPriceMin("");
+                    setPriceMax("");
+                    setBedrooms("all");
+                    setBathrooms("all");
+                    setParking("all");
+                  }} className="w-full">
                         Limpiar Filtros
-                      </Button>
-                    )}
+                      </Button>}
                   </div>
                 </CollapsibleContent>
               </Collapsible>
 
               {/* Barra de búsqueda */}
-              <SearchBar
-                onPlaceSelect={handlePlaceSelect}
-                onSearch={handleSearch}
-                placeholder="Ciudad, colonia o código postal"
-                defaultValue={searchQuery}
-              />
+              <SearchBar onPlaceSelect={handlePlaceSelect} onSearch={handleSearch} placeholder="Ciudad, colonia o código postal" defaultValue={searchQuery} />
             </div>
           </div>
         </div>
@@ -359,8 +279,7 @@ const Home = () => {
       <StatsCounter />
 
       {/* Featured Properties */}
-      {featuredProperties.length > 0 && (
-        <section className="py-16 bg-background">
+      {featuredProperties.length > 0 && <section className="py-16 bg-background">
           <div className="container mx-auto px-4">
             <div className="mb-8 flex items-center justify-between">
               <div>
@@ -369,40 +288,29 @@ const Home = () => {
                   Las mejores propiedades seleccionadas para ti
                 </p>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => navigate("/buscar")}
-                className="hidden md:flex items-center gap-2"
-              >
+              <Button variant="outline" onClick={() => navigate("/buscar")} className="hidden md:flex items-center gap-2">
                 Ver Todas
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
 
-            {isLoadingProperties ? (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="space-y-3">
+            {isLoadingProperties ? <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(6)].map((_, i) => <div key={i} className="space-y-3">
                     <Skeleton className="aspect-[4/3] w-full rounded-lg" />
                     <Skeleton className="h-6 w-3/4" />
                     <Skeleton className="h-8 w-1/2" />
                     <Skeleton className="h-4 w-full" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <>
+                  </div>)}
+              </div> : <>
                 <VirtualizedPropertyGrid properties={featuredProperties.slice(0, 6)} onPropertyClick={handlePropertyClick} />
                 <div className="mt-8 text-center">
                   <Button variant="outline" size="lg" onClick={() => navigate("/buscar")}>
                     Ver Todas las Propiedades <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
-              </>
-            )}
+              </>}
           </div>
-        </section>
-      )}
+        </section>}
 
       {/* Recent Properties */}
       <section className="py-16 bg-muted">
@@ -414,43 +322,31 @@ const Home = () => {
                 Últimas propiedades agregadas a la plataforma
               </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/buscar")}
-              className="hidden md:flex items-center gap-2"
-            >
+            <Button variant="outline" onClick={() => navigate("/buscar")} className="hidden md:flex items-center gap-2">
               Ver Todas
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
 
-          {isLoadingProperties ? (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="space-y-3">
+          {isLoadingProperties ? <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {[...Array(8)].map((_, i) => <div key={i} className="space-y-3">
                   <Skeleton className="aspect-[4/3] w-full rounded-lg" />
                   <Skeleton className="h-6 w-3/4" />
                   <Skeleton className="h-8 w-1/2" />
                   <Skeleton className="h-4 w-full" />
-                </div>
-              ))}
-            </div>
-          ) : recentProperties.length > 0 ? (
-            <>
+                </div>)}
+            </div> : recentProperties.length > 0 ? <>
               <VirtualizedPropertyGrid properties={recentProperties.slice(0, 8)} onPropertyClick={handlePropertyClick} />
               <div className="mt-8 text-center">
                 <Button variant="outline" onClick={() => navigate("/buscar")}>
                   Ver Todas <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
-            </>
-          ) : (
-            <div className="py-12 text-center">
+            </> : <div className="py-12 text-center">
               <p className="text-muted-foreground">
                 No hay propiedades recientes disponibles
               </p>
-            </div>
-          )}
+            </div>}
         </div>
       </section>
 
@@ -461,10 +357,7 @@ const Home = () => {
             Explora por Tipo de Propiedad
           </h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            <button
-              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=casa`)}
-              className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
-            >
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=casa`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
               <HomeIcon className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
               <h3 className="text-xl font-semibold">Casas</h3>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -472,10 +365,7 @@ const Home = () => {
               </p>
             </button>
 
-            <button
-              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=departamento`)}
-              className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
-            >
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=departamento`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
               <Building2 className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
               <h3 className="text-xl font-semibold">Departamentos</h3>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -483,10 +373,7 @@ const Home = () => {
               </p>
             </button>
 
-            <button
-              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=terreno`)}
-              className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
-            >
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=terreno`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
               <TreePine className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
               <h3 className="text-xl font-semibold">Terrenos</h3>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -494,10 +381,7 @@ const Home = () => {
               </p>
             </button>
 
-            <button
-              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=oficina`)}
-              className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
-            >
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=oficina`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
               <Briefcase className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
               <h3 className="text-xl font-semibold">Oficinas</h3>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -505,10 +389,7 @@ const Home = () => {
               </p>
             </button>
 
-            <button
-              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=local`)}
-              className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
-            >
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=local`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
               <Store className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
               <h3 className="text-xl font-semibold">Locales</h3>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -516,10 +397,7 @@ const Home = () => {
               </p>
             </button>
 
-            <button
-              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=bodega`)}
-              className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
-            >
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=bodega`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
               <Warehouse className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
               <h3 className="text-xl font-semibold">Bodegas</h3>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -527,10 +405,7 @@ const Home = () => {
               </p>
             </button>
 
-            <button
-              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=edificio`)}
-              className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
-            >
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=edificio`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
               <Building className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
               <h3 className="text-xl font-semibold">Edificios</h3>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -538,10 +413,7 @@ const Home = () => {
               </p>
             </button>
 
-            <button
-              onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=rancho`)}
-              className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg"
-            >
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=rancho`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
               <Tractor className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
               <h3 className="text-xl font-semibold">Ranchos</h3>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -559,11 +431,7 @@ const Home = () => {
           <p className="mb-8 text-xl text-muted-foreground">
             Publica tu propiedad y llega a miles de compradores potenciales
           </p>
-          <Button
-            size="lg"
-            onClick={() => navigate("/publicar")}
-            className="bg-secondary hover:bg-secondary/90"
-          >
+          <Button size="lg" onClick={() => navigate("/publicar")} className="bg-secondary hover:bg-secondary/90">
             Publicar Gratis
           </Button>
         </div>
@@ -590,13 +458,7 @@ const Home = () => {
       </section>
 
       {/* Property Detail Sheet */}
-      <PropertyDetailSheet
-        propertyId={selectedPropertyId}
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-      />
-    </div>
-  );
+      <PropertyDetailSheet propertyId={selectedPropertyId} open={sheetOpen} onClose={() => setSheetOpen(false)} />
+    </div>;
 };
-
 export default Home;
