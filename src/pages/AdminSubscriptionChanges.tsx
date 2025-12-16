@@ -244,12 +244,12 @@ const AdminSubscriptionChanges = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8 mt-16">
+      <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8 mt-16">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Shield className="h-8 w-8 text-primary" />
+          <Shield className="h-6 w-6 md:h-8 md:w-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">Panel de Administración</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">Panel de Administración</h1>
             <p className="text-muted-foreground">Auditoría de cambios de suscripción</p>
           </div>
         </div>

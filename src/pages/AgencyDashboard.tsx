@@ -212,7 +212,7 @@ const AgencyDashboard = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 gap-1">
+              <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 gap-1 overflow-x-auto scrollbar-hide">
                 <TabsTrigger value="inventory" className="text-xs md:text-sm px-2">Inventario</TabsTrigger>
                 <TabsTrigger value="team" className="text-xs md:text-sm px-2">Equipo</TabsTrigger>
                 <TabsTrigger value="analytics" className="text-xs md:text-sm px-2">Reportes</TabsTrigger>

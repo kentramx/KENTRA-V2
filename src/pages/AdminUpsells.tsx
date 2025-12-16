@@ -267,7 +267,7 @@ const AdminUpsells = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
         <DynamicBreadcrumbs
           items={[
             { label: 'Inicio', href: '/', active: false },

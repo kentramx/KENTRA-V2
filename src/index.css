@@ -177,3 +177,67 @@ gmp-place-autocomplete {
   height: 100vh;
   background: hsl(var(--background));
 }
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE-FIRST GLOBAL STYLES - KENTRA
+   ═══════════════════════════════════════════════════════════ */
+
+/* Prevenir selección accidental de texto */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Scroll suave en listas */
+.scroll-smooth {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Ocultar scrollbar pero mantener funcionalidad */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe areas completas para notch/home indicator */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.safe-left {
+  padding-left: env(safe-area-inset-left);
+}
+.safe-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Tap highlight removal */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent pull-to-refresh en páginas específicas */
+.no-pull-refresh {
+  overscroll-behavior-y: contain;
+}
+
+/* Animaciones reducidas para usuarios que lo prefieren */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Input zoom prevention en iOS - CRÍTICO */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}

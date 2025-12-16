@@ -214,7 +214,7 @@ const DeveloperDashboard = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-4 overflow-x-auto scrollbar-hide">
                 <TabsTrigger value="projects" className="gap-2">
                   <Building2 className="h-4 w-4" />
                   <span className="hidden sm:inline">Proyectos</span>

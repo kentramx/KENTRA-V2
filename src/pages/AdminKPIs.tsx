@@ -41,9 +41,9 @@ const AdminKPIs = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground">KPIs de Negocio</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">KPIs de Negocio</h1>
           <p className="text-muted-foreground mt-2">
             Métricas estratégicas y análisis de crecimiento
           </p>
