@@ -73,6 +73,22 @@ export const Footer = () => {
             </ul>
           </div>
 
+          {/* Legal */}
+          <div>
+            <h4 className="font-semibold mb-4">Legal</h4>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link to="/privacidad" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Política de Privacidad
+                </Link>
+              </li>
+              <li>
+                <Link to="/terminos" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Términos de Servicio
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
 
         {/* Copyright */}
