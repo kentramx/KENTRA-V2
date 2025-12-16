@@ -1176,6 +1176,10 @@ export type Database = {
           phone_verified: boolean | null
           phone_verified_at: string | null
           state: string | null
+          status: Database["public"]["Enums"]["user_status"]
+          suspended_at: string | null
+          suspended_by: string | null
+          suspended_reason: string | null
           updated_at: string | null
           whatsapp_business_hours: string | null
           whatsapp_enabled: boolean | null
@@ -1198,6 +1202,10 @@ export type Database = {
           phone_verified?: boolean | null
           phone_verified_at?: string | null
           state?: string | null
+          status?: Database["public"]["Enums"]["user_status"]
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspended_reason?: string | null
           updated_at?: string | null
           whatsapp_business_hours?: string | null
           whatsapp_enabled?: boolean | null
@@ -1220,6 +1228,10 @@ export type Database = {
           phone_verified?: boolean | null
           phone_verified_at?: string | null
           state?: string | null
+          status?: Database["public"]["Enums"]["user_status"]
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspended_reason?: string | null
           updated_at?: string | null
           whatsapp_business_hours?: string | null
           whatsapp_enabled?: boolean | null
@@ -3538,6 +3550,7 @@ export type Database = {
         | "bodega"
         | "edificio"
         | "rancho"
+      user_status: "active" | "suspended" | "banned"
     }
     CompositeTypes: {
       geometry_dump: {
@@ -3708,6 +3721,7 @@ export const Constants = {
         "edificio",
         "rancho",
       ],
+      user_status: ["active", "suspended", "banned"],
     },
   },
 } as const
