@@ -253,6 +253,10 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
   const searchError = mapError;
 
   // ✅ LISTA INDEPENDIENTE: Usar usePropertiesInfinite para la lista (NO depende del zoom)
+  // Obtener coordenadas directamente de URL para evitar dependencia de orden
+  const urlLat = searchParams.get('lat');
+  const urlLng = searchParams.get('lng');
+  
   const listFilters = useMemo(() => ({
     estado: filters.estado || undefined,
     municipio: filters.municipio || undefined,
@@ -264,8 +268,10 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
     recamaras: filters.recamaras || undefined,
     banos: filters.banos || undefined,
     orden: filters.orden || undefined,
-    // ✅ NO pasamos bounds - la lista muestra TODAS las propiedades filtradas
-  }), [filters]);
+    // ✅ Usar coordenadas para filtrar geográficamente (evita problemas de acentos)
+    lat: urlLat ? Number(urlLat) : undefined,
+    lng: urlLng ? Number(urlLng) : undefined,
+  }), [filters, urlLat, urlLng]);
 
   const {
     properties: listPropertiesRaw,

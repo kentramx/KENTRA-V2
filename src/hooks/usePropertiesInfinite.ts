@@ -27,8 +27,22 @@ export const usePropertiesInfinite = (filters: PropertyFilters) => {
       // 1. STATUS: Filtrar solo propiedades activas
       query = query.eq('status', 'activa');
 
-      // 2. LÓGICA DE PRIORIDAD: Mapa > Texto (Estilo Zillow)
-      if (filters.bounds) {
+      // 2. LÓGICA DE PRIORIDAD: Coordenadas > Bounds > Texto
+      const hasCoordinates = filters.lat && filters.lng;
+      
+      if (hasCoordinates) {
+        // ✅ MODO COORDENADAS: Crear bounds automáticos (~20km radio)
+        const lat = Number(filters.lat);
+        const lng = Number(filters.lng);
+        const delta = 0.18; // ~20km aproximadamente
+        
+        console.log('📍 [List] Filtrando por coordenadas:', { lat, lng, delta });
+        query = query
+          .gte('lat', lat - delta)
+          .lte('lat', lat + delta)
+          .gte('lng', lng - delta)
+          .lte('lng', lng + delta);
+      } else if (filters.bounds) {
         // ✅ MODO MAPA: Si hay bounds, filtramos por coordenadas y IGNORAMOS ubicación de texto
         console.log('🗺️ [List] Filtrando por bounds del mapa:', filters.bounds);
         query = query
@@ -37,7 +51,7 @@ export const usePropertiesInfinite = (filters: PropertyFilters) => {
           .gte('lng', filters.bounds.minLng)
           .lte('lng', filters.bounds.maxLng);
       } else {
-        // ✅ MODO TEXTO: Solo si NO hay bounds, usamos los filtros de texto
+        // ✅ MODO TEXTO: Solo si NO hay coordenadas ni bounds, usamos los filtros de texto
         console.log('📝 [List] Filtrando por texto:', { estado: filters.estado, municipio: filters.municipio });
         
         if (filters.estado?.trim()) query = query.ilike('state', `%${filters.estado}%`);

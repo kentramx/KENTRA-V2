@@ -257,4 +257,6 @@ export interface PropertyFilters {
   status?: string[];
   orden?: string;
   bounds?: ViewportBounds;
+  lat?: number;
+  lng?: number;
 }
