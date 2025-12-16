@@ -2639,6 +2639,15 @@ export type Database = {
           total_views: number
         }[]
       }
+      get_auth_users_for_admin: {
+        Args: never
+        Returns: {
+          email: string
+          email_confirmed_at: string
+          id: string
+          last_sign_in_at: string
+        }[]
+      }
       get_churn_metrics: {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
