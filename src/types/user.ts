@@ -43,6 +43,7 @@ export type AppRole =
   | 'buyer' 
   | 'agent' 
   | 'agency' 
+  | 'developer'
   | 'admin' 
   | 'moderator' 
   | 'super_admin';
