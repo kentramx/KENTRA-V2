@@ -58,6 +58,8 @@ import AdminPlans from "./pages/AdminPlans";
 import AdminSettings from "./pages/AdminSettings";
 import AdminUsers from "./pages/AdminUsers";
 import UnirseEquipo from "./pages/UnirseEquipo";
+import Privacidad from "./pages/Privacidad";
+import Terminos from "./pages/Terminos";
 import { Footer } from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
 
@@ -128,6 +130,8 @@ const AppContent = () => {
               <Route path="/admin/plans" element={<AdminPlans />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
               <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/privacidad" element={<Privacidad />} />
+              <Route path="/terminos" element={<Terminos />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
