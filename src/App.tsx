@@ -13,6 +13,7 @@ import { useTracking } from "@/hooks/useTracking";
 import { monitoring } from "@/lib/monitoring";
 import { initSentry } from "@/lib/sentry";
 import { GlobalSubscriptionBanner } from "@/components/subscription/GlobalSubscriptionBanner";
+import { InstallPrompt, UpdatePrompt } from "@/components/native";
 
 // Inicializar Sentry al cargar la app
 initSentry();
@@ -151,6 +152,8 @@ const App = () => (
           <AuthProvider>
             <SubscriptionProvider>
               <AppContent />
+              <InstallPrompt />
+              <UpdatePrompt />
             </SubscriptionProvider>
           </AuthProvider>
         </BrowserRouter>
