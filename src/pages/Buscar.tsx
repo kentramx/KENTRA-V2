@@ -1628,57 +1628,84 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
               </div>
             )}
 
-            {/* Estado vacío - sin resultados (solo cuando viewport está listo, no hay carga, ni fetching, ni debounce pendiente) */}
+            {/* Estado vacío - distinguir entre modo cluster y sin resultados reales */}
             {!searchError && !isWaitingForViewport && !loading && !isFetching && !isViewportPending && listProperties.length === 0 && (
               <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center min-h-[400px]">
                 <div className="rounded-full bg-muted p-6">
-                  <Search className="h-12 w-12 text-muted-foreground" />
+                  {totalCount > 0 ? (
+                    <MapPin className="h-12 w-12 text-muted-foreground" />
+                  ) : (
+                    <Search className="h-12 w-12 text-muted-foreground" />
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold">No encontramos propiedades</h3>
-                  <p className="text-muted-foreground max-w-md">
-                    No hay propiedades que coincidan con tus filtros actuales.
-                  </p>
-                </div>
-                {/* 🔍 Panel de diagnóstico en modo debug */}
-                {typeof window !== 'undefined' && (window as any).__KENTRA_MAP_DEBUG__ === true && (
-                  <div className="mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-xs font-mono text-yellow-900 max-w-2xl">
-                    <div className="font-bold mb-1">🔍 DEBUG INFO:</div>
-                    <div>Zoom: {mapViewport?.zoom?.toFixed(2) || 'N/A'}</div>
-                    <div>Estado: {filters.estado || '(ninguno)'}</div>
-                    <div>Municipio: {filters.municipio || '(ninguno)'}</div>
-                    <div>Colonia: {filters.colonia || '(ninguno)'}</div>
-                    <div>Tipo: {filters.tipo || '(todos)'}</div>
-                    <div>Operación: {filters.listingType}</div>
-                    {mapViewport && (
-                      <div>
-                        Bounds: {mapViewport.bounds.south.toFixed(4)},{mapViewport.bounds.west.toFixed(4)} →{' '}
-                        {mapViewport.bounds.north.toFixed(4)},{mapViewport.bounds.east.toFixed(4)}
+                
+                {totalCount > 0 ? (
+                  // ✅ MODO CLUSTER: Hay propiedades pero zoom muy bajo
+                  <>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-semibold">
+                        {totalCount.toLocaleString()} propiedades en esta zona
+                      </h3>
+                      <p className="text-muted-foreground max-w-md">
+                        Acerca el mapa o selecciona una ubicación más específica para ver propiedades individuales.
+                      </p>
+                    </div>
+                    {/* Botón para ir al mapa en móvil */}
+                    <Button onClick={() => setMobileView('map')} className="lg:hidden">
+                      <MapIcon className="h-4 w-4 mr-2" />
+                      Ver mapa
+                    </Button>
+                  </>
+                ) : (
+                  // ❌ SIN RESULTADOS: No hay propiedades que coincidan
+                  <>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-semibold">No encontramos propiedades</h3>
+                      <p className="text-muted-foreground max-w-md">
+                        No hay propiedades que coincidan con tus filtros actuales.
+                      </p>
+                    </div>
+                    {/* 🔍 Panel de diagnóstico en modo debug */}
+                    {typeof window !== 'undefined' && (window as any).__KENTRA_MAP_DEBUG__ === true && (
+                      <div className="mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-xs font-mono text-yellow-900 max-w-2xl">
+                        <div className="font-bold mb-1">🔍 DEBUG INFO:</div>
+                        <div>Zoom: {mapViewport?.zoom?.toFixed(2) || 'N/A'}</div>
+                        <div>Estado: {filters.estado || '(ninguno)'}</div>
+                        <div>Municipio: {filters.municipio || '(ninguno)'}</div>
+                        <div>Colonia: {filters.colonia || '(ninguno)'}</div>
+                        <div>Tipo: {filters.tipo || '(todos)'}</div>
+                        <div>Operación: {filters.listingType}</div>
+                        {mapViewport && (
+                          <div>
+                            Bounds: {mapViewport.bounds.south.toFixed(4)},{mapViewport.bounds.west.toFixed(4)} →{' '}
+                            {mapViewport.bounds.north.toFixed(4)},{mapViewport.bounds.east.toFixed(4)}
+                          </div>
+                        )}
+                        <div>Properties: {properties.length}</div>
+                        <div>Clusters: {clusters.length}</div>
+                        <div>isViewportActive: {isViewportActive ? 'true' : 'false'}</div>
+                        <div>listProperties.length: {listProperties.length}</div>
                       </div>
                     )}
-                    <div>Properties: {properties.length}</div>
-                    <div>Clusters: {clusters.length}</div>
-                    <div>isViewportActive: {isViewportActive ? 'true' : 'false'}</div>
-                    <div>listProperties.length: {listProperties.length}</div>
-                  </div>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>Intenta:</p>
+                      <ul className="space-y-1">
+                        <li>• Ampliar el rango de precio</li>
+                        <li>• Cambiar la ubicación</li>
+                        <li>• Ajustar los filtros de recámaras y baños</li>
+                      </ul>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        setFilters(DEFAULT_FILTERS);
+                        setSearchCoordinates(null);
+                      }}
+                      variant="outline"
+                    >
+                      Limpiar todos los filtros
+                    </Button>
+                  </>
                 )}
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>Intenta:</p>
-                  <ul className="space-y-1">
-                    <li>• Ampliar el rango de precio</li>
-                    <li>• Cambiar la ubicación</li>
-                    <li>• Ajustar los filtros de recámaras y baños</li>
-                  </ul>
-                </div>
-                <Button
-                  onClick={() => {
-                    setFilters(DEFAULT_FILTERS);
-                    setSearchCoordinates(null);
-                  }}
-                  variant="outline"
-                >
-                  Limpiar todos los filtros
-                </Button>
               </div>
             )}
 
