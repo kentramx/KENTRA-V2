@@ -29,30 +29,30 @@ export function MobileMenu() {
           </SheetTitle>
         </SheetHeader>
         
-        <div className="flex flex-col gap-4 mt-6">
+        <div className="flex flex-col gap-2 mt-6">
           <Link to="/buscar">
-            <Button variant="ghost" className="w-full justify-start">
-              <Home className="mr-2 h-4 w-4" />
+            <Button variant="ghost" className="w-full justify-start min-h-[48px]">
+              <Home className="mr-2 h-5 w-5" />
               Propiedades
             </Button>
           </Link>
           
           <Link to="/buscar">
-            <Button variant="ghost" className="w-full justify-start">
-              <Search className="mr-2 h-4 w-4" />
+            <Button variant="ghost" className="w-full justify-start min-h-[48px]">
+              <Search className="mr-2 h-5 w-5" />
               Buscar con Mapa
             </Button>
           </Link>
 
           <Link to="/agentes">
-            <Button variant="ghost" className="w-full justify-start">
-              <Search className="mr-2 h-4 w-4" />
+            <Button variant="ghost" className="w-full justify-start min-h-[48px]">
+              <Search className="mr-2 h-5 w-5" />
               Buscar Inmobiliarias
             </Button>
           </Link>
 
           <Link to="/leaderboard">
-            <Button variant="ghost" className="w-full justify-start">
+            <Button variant="ghost" className="w-full justify-start min-h-[48px]">
               Leaderboard
             </Button>
           </Link>
@@ -60,38 +60,38 @@ export function MobileMenu() {
           {user ? (
             <>
               <Link to="/favoritos">
-                <Button variant="ghost" className="w-full justify-start">
-                  <Heart className="mr-2 h-4 w-4" />
+                <Button variant="ghost" className="w-full justify-start min-h-[48px]">
+                  <Heart className="mr-2 h-5 w-5" />
                   Favoritos
                 </Button>
               </Link>
               
               <Link to="/panel-agente">
-                <Button variant="ghost" className="w-full justify-start">
-                  <PlusCircle className="mr-2 h-4 w-4" />
+                <Button variant="ghost" className="w-full justify-start min-h-[48px]">
+                  <PlusCircle className="mr-2 h-5 w-5" />
                   Mis Propiedades
                 </Button>
               </Link>
               
               <Link to="/perfil">
-                <Button variant="ghost" className="w-full justify-start">
-                  <User className="mr-2 h-4 w-4" />
+                <Button variant="ghost" className="w-full justify-start min-h-[48px]">
+                  <User className="mr-2 h-5 w-5" />
                   Mi Perfil
                 </Button>
               </Link>
 
               <Button
                 variant="ghost"
-                className="w-full justify-start text-destructive"
+                className="w-full justify-start min-h-[48px] text-destructive"
                 onClick={signOut}
               >
-                <LogOut className="mr-2 h-4 w-4" />
+                <LogOut className="mr-2 h-5 w-5" />
                 Cerrar Sesión
               </Button>
             </>
           ) : (
             <Link to="/auth">
-              <Button className="w-full">Iniciar Sesión</Button>
+              <Button className="w-full min-h-[48px]">Iniciar Sesión</Button>
             </Link>
           )}
 

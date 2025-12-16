@@ -151,11 +151,11 @@ export const ContactPropertyDialog = ({
             <Label>¿Qué te interesa?</Label>
             <RadioGroup value={reason} onValueChange={setReason}>
               {CONTACT_REASONS.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
+                <div key={option.value} className="flex items-center space-x-2 min-h-[44px] py-1">
                   <RadioGroupItem value={option.value} id={option.value} />
                   <Label
                     htmlFor={option.value}
-                    className="font-normal cursor-pointer"
+                    className="font-normal cursor-pointer flex-1"
                   >
                     {option.label}
                   </Label>

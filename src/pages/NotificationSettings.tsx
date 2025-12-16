@@ -150,7 +150,7 @@ const NotificationSettings = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
         <Button
           variant="ghost"
           onClick={() => navigate('/perfil')}
@@ -161,9 +161,9 @@ const NotificationSettings = () => {
         </Button>
 
         <div className="max-w-3xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-              <Bell className="h-8 w-8 text-primary" />
+          <div className="mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
+              <Bell className="h-6 w-6 md:h-8 md:w-8 text-primary" />
               Configuración de Notificaciones
             </h1>
             <p className="text-muted-foreground mt-2">
