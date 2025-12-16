@@ -6,32 +6,35 @@ import { useRoleImpersonation } from '@/hooks/useRoleImpersonation';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Building2, CreditCard, FileText, BarChart3 } from 'lucide-react';
+import { Loader2, Building2, Users, CreditCard, BarChart3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DynamicBreadcrumbs } from '@/components/DynamicBreadcrumbs';
 import { PlanStatusCard } from '@/components/PlanStatusCard';
 import { SubscriptionManagement } from '@/components/SubscriptionManagement';
 import { EmailVerificationRequired } from '@/components/EmailVerificationRequired';
-import { SubscriptionWidget } from '@/components/subscription/SubscriptionWidget';
+import { DeveloperProjectManagement } from '@/components/DeveloperProjectManagement';
+import { DeveloperTeamManagement } from '@/components/DeveloperTeamManagement';
+import { DeveloperAnalytics } from '@/components/DeveloperAnalytics';
 
 const DeveloperDashboard = () => {
   const { user, loading: authLoading, isEmailVerified } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { isImpersonating, impersonatedRole, getDemoUserId } = useRoleImpersonation();
+  const { isImpersonating, impersonatedRole, getDemoUserId, getDemoDeveloperId } = useRoleImpersonation();
   const emailVerified = isEmailVerified();
   const [loading, setLoading] = useState(true);
-  const [developerInfo, setDeveloperInfo] = useState<any>(null);
+  const [developer, setDeveloper] = useState<any>(null);
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState(
-    searchParams.get('tab') || 'projects'
-  );
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'projects');
   
-  // Si está simulando rol developer, usar user demo; si no, usar user real
-  const effectiveUserId = (isImpersonating && impersonatedRole === 'developer') 
+  // Si está simulando rol developer, usar owner/developer demo
+  const effectiveOwnerId = (isImpersonating && impersonatedRole === 'developer') 
     ? getDemoUserId() 
     : user?.id;
+  const effectiveDeveloperId = (isImpersonating && impersonatedRole === 'developer')
+    ? getDemoDeveloperId()
+    : developer?.id;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -45,22 +48,29 @@ const DeveloperDashboard = () => {
   }, [user, authLoading, navigate, isImpersonating, impersonatedRole]);
 
   const checkDeveloperStatus = async () => {
-    // Chequeo sincronizado inmediato por localStorage para evitar carreras
     const localImpersonated = localStorage.getItem('kentra_impersonated_role');
     const isLocalSimulatingDeveloper = localImpersonated === 'developer';
-    const DEMO_DEVELOPER_ID = '00000000-0000-0000-0000-000000000020';
+    const DEMO_OWNER_ID = '00000000-0000-0000-0000-000000000020';
+    const DEMO_DEVELOPER_ID = '30000000-0000-0000-0000-000000000001';
 
     if (isLocalSimulatingDeveloper) {
       try {
-        const userId = DEMO_DEVELOPER_ID;
+        const ownerId = DEMO_OWNER_ID;
+        const developerId = DEMO_DEVELOPER_ID;
 
-        setDeveloperInfo({ 
-          name: 'Desarrolladora Demo', 
-          id: userId,
-          company_name: 'Kentra Desarrollos Demo'
+        const { data: developerData } = await supabase
+          .from('developers')
+          .select('*')
+          .eq('owner_id', ownerId)
+          .single();
+
+        setDeveloper(developerData || { 
+          name: 'Kentra Desarrollos Demo', 
+          owner_id: ownerId, 
+          id: developerId 
         });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: userId });
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: ownerId });
         if (subInfo && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
       } finally {
         setLoading(false);
@@ -68,23 +78,29 @@ const DeveloperDashboard = () => {
       return;
     }
 
-    if (!effectiveUserId) {
+    if (!effectiveOwnerId) {
       setLoading(false);
       return;
     }
 
     try {
-      // Si está simulando (vía hook), cargar datos demo
       if (isImpersonating && impersonatedRole === 'developer') {
-        const userId = getDemoUserId() || DEMO_DEVELOPER_ID;
+        const ownerId = getDemoUserId() || DEMO_OWNER_ID;
+        const developerId = getDemoDeveloperId() || DEMO_DEVELOPER_ID;
 
-        setDeveloperInfo({ 
-          name: 'Desarrolladora Demo', 
-          id: userId,
-          company_name: 'Kentra Desarrollos Demo'
+        const { data: developerData } = await supabase
+          .from('developers')
+          .select('*')
+          .eq('owner_id', ownerId)
+          .single();
+        
+        setDeveloper(developerData || { 
+          name: 'Kentra Desarrollos Demo', 
+          owner_id: ownerId, 
+          id: developerId 
         });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: userId });
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: ownerId });
         if (subInfo && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
         
         setLoading(false);
@@ -109,19 +125,16 @@ const DeveloperDashboard = () => {
         return;
       }
 
-      // Obtener datos del perfil
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+      // Obtener datos de la desarrolladora
+      const { data: developerData, error: developerError } = await supabase
+        .from('developers')
         .select('*')
-        .eq('id', user?.id)
+        .eq('owner_id', user?.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (developerError) throw developerError;
 
-      setDeveloperInfo({
-        ...profileData,
-        company_name: profileData?.name || 'Mi Desarrolladora'
-      });
+      setDeveloper(developerData);
 
       // Obtener información de suscripción
       const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info', {
@@ -151,7 +164,7 @@ const DeveloperDashboard = () => {
     );
   }
 
-  if (!developerInfo) {
+  if (!developer) {
     return null;
   }
 
@@ -174,18 +187,13 @@ const DeveloperDashboard = () => {
             Panel de Desarrolladora
           </h1>
           <p className="text-muted-foreground">
-            {developerInfo.company_name} - Gestión de proyectos y desarrollos
+            {developer.name} - Gestión de proyectos y equipo
           </p>
         </div>
 
         {/* Plan Status Card */}
         <div className="mb-6">
           <PlanStatusCard subscriptionInfo={subscriptionInfo} userRole="developer" />
-        </div>
-
-        {/* Subscription Widget */}
-        <div className="mb-6">
-          <SubscriptionWidget userRole="developer" />
         </div>
 
         {/* Email Verification Banner */}
@@ -197,11 +205,11 @@ const DeveloperDashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {activeTab === 'projects' && <><Building2 className="h-5 w-5" /> Proyectos</>}
-              {activeTab === 'subscription' && <><CreditCard className="h-5 w-5" /> Gestión de Suscripción</>}
-              {activeTab === 'invoices' && <><FileText className="h-5 w-5" /> Facturas</>}
-              {activeTab === 'analytics' && <><BarChart3 className="h-5 w-5" /> Reportes</>}
+            <CardTitle>
+              {activeTab === 'projects' && 'Proyectos de Desarrollo'}
+              {activeTab === 'team' && 'Gestión de Equipo'}
+              {activeTab === 'analytics' && 'Reportes y Analíticas'}
+              {activeTab === 'subscription' && 'Gestión de Suscripción'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -209,56 +217,42 @@ const DeveloperDashboard = () => {
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="projects" className="gap-2">
                   <Building2 className="h-4 w-4" />
-                  Proyectos
+                  <span className="hidden sm:inline">Proyectos</span>
                 </TabsTrigger>
-                <TabsTrigger value="subscription" className="gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  Suscripción
-                </TabsTrigger>
-                <TabsTrigger value="invoices" className="gap-2">
-                  <FileText className="h-4 w-4" />
-                  Facturas
+                <TabsTrigger value="team" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">Equipo</span>
                 </TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
-                  Reportes
+                  <span className="hidden sm:inline">Reportes</span>
+                </TabsTrigger>
+                <TabsTrigger value="subscription" className="gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  <span className="hidden sm:inline">Suscripción</span>
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="projects" className="mt-6">
-                <div className="text-center py-12">
-                  <Building2 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">Gestión de Proyectos</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Aquí podrás gestionar tus desarrollos inmobiliarios, 
-                    agregar nuevos proyectos y dar seguimiento a cada uno.
-                  </p>
-                </div>
+                <DeveloperProjectManagement 
+                  developerId={effectiveDeveloperId || developer?.id || ''} 
+                  subscriptionInfo={subscriptionInfo}
+                />
               </TabsContent>
 
-              <TabsContent value="subscription" className="mt-6">
-                <SubscriptionManagement userId={effectiveUserId || ''} userRole="developer" />
-              </TabsContent>
-
-              <TabsContent value="invoices" className="mt-6">
-                <div className="text-center py-12">
-                  <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">Historial de Facturas</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Consulta y descarga tus facturas desde la pestaña de Suscripción.
-                  </p>
-                </div>
+              <TabsContent value="team" className="mt-6">
+                <DeveloperTeamManagement 
+                  developerId={effectiveDeveloperId || developer?.id || ''} 
+                  subscriptionInfo={subscriptionInfo}
+                />
               </TabsContent>
 
               <TabsContent value="analytics" className="mt-6">
-                <div className="text-center py-12">
-                  <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">Reportes y Analíticas</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Próximamente podrás ver estadísticas detalladas de tus proyectos,
-                    leads generados y rendimiento general.
-                  </p>
-                </div>
+                <DeveloperAnalytics developerId={effectiveDeveloperId || developer?.id || ''} />
+              </TabsContent>
+
+              <TabsContent value="subscription" className="mt-6">
+                <SubscriptionManagement userId={effectiveOwnerId || ''} userRole="developer" />
               </TabsContent>
             </Tabs>
           </CardContent>

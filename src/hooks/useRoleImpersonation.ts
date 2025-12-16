@@ -84,6 +84,11 @@ export const useRoleImpersonation = () => {
     return '20000000-0000-0000-0000-000000000001'; // Demo Agency
   };
 
+  const getDemoDeveloperId = (): string | null => {
+    if (!isImpersonating || impersonatedRole !== 'developer') return null;
+    return '30000000-0000-0000-0000-000000000001'; // Demo Developer
+  };
+
   return {
     impersonatedRole,
     isImpersonating,
@@ -93,5 +98,6 @@ export const useRoleImpersonation = () => {
     isSimulating,
     getDemoUserId,
     getDemoAgencyId,
+    getDemoDeveloperId,
   };
 };
