@@ -1722,7 +1722,7 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
             {!searchError && listProperties.length > 0 && (
               <InfiniteScrollContainer
                 onLoadMore={() => {
-                  if (!isViewportActive && hasNextPage && !isFetching) {
+                  if (hasNextPage && !isFetching) {
                     fetchNextPage();
                   }
                 }}
@@ -1764,7 +1764,7 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
                 />
 
                 {/* Botón fallback para cargar más si IntersectionObserver falla */}
-                {!isViewportActive && hasNextPage && !isFetching && (
+                {hasNextPage && !isFetching && (
                   <div className="flex justify-center py-4 px-4">
                     <Button 
                       onClick={() => fetchNextPage()} 
