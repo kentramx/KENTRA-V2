@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMapData } from '@/hooks/useMapData';
 import { usePropertiesInfinite } from '@/hooks/usePropertiesInfinite';
+import { useFavorites } from '@/hooks/useFavorites';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
 import type { PropertySummary } from '@/types/property';
 import Navbar from '@/components/Navbar';
@@ -79,6 +80,7 @@ const Buscar = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isFiltering, setIsFiltering] = useState(false);
   const { trackGA4Event } = useTracking();
+  const { favorites: favoriteIds, toggleFavorite } = useFavorites();
   
   // Flag para prevenir sobrescritura durante sincronización URL -> estado
   const syncingFromUrl = useRef(false);
@@ -1761,6 +1763,8 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
                   }}
                   highlightedPropertyId={hoveredPropertyId || selectedPropertyFromMap}
                   scrollToPropertyId={selectedPropertyFromMap}
+                  favoriteIds={favoriteIds}
+                  onToggleFavorite={toggleFavorite}
                 />
 
                 {/* Botón fallback para cargar más si IntersectionObserver falla */}

@@ -24,6 +24,10 @@ interface SearchResultsListProps {
   onScrollToSavedSearches?: () => void;
   highlightedPropertyId?: string | null;
   scrollToPropertyId?: string | null;
+  /** Set de IDs de propiedades favoritas */
+  favoriteIds?: Set<string>;
+  /** Callback para toggle de favorito */
+  onToggleFavorite?: (propertyId: string, title: string) => void;
 }
 
 export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
@@ -37,6 +41,8 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
     onScrollToSavedSearches,
     highlightedPropertyId,
     scrollToPropertyId,
+    favoriteIds,
+    onToggleFavorite,
   }) => {
     const propertyCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -194,6 +200,8 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = React.memo(
                       isFeatured={property.is_featured}
                       createdAt={property.created_at}
                       onCardClick={onPropertyClick}
+                      isFavorite={favoriteIds?.has(property.id)}
+                      onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(property.id, property.title) : undefined}
                     />
                   </div>
                 </React.Fragment>

@@ -10,11 +10,17 @@ import type { PropertySummary } from '@/types/property';
 interface VirtualizedPropertyGridProps {
   properties: PropertySummary[];
   onPropertyClick?: (propertyId: string) => void;
+  /** Set de IDs de propiedades favoritas */
+  favoriteIds?: Set<string>;
+  /** Callback para toggle de favorito */
+  onToggleFavorite?: (propertyId: string, title: string) => void;
 }
 
 const VirtualizedPropertyGridComponent = ({ 
   properties,
   onPropertyClick,
+  favoriteIds,
+  onToggleFavorite,
 }: VirtualizedPropertyGridProps) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -25,6 +31,8 @@ const VirtualizedPropertyGridComponent = ({
           agentId={property.agent_id}
           isFeatured={property.is_featured}
           onCardClick={onPropertyClick}
+          isFavorite={favoriteIds?.has(property.id)}
+          onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(property.id, property.title) : undefined}
         />
       ))}
     </div>
