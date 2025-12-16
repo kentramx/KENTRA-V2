@@ -144,7 +144,7 @@ const PricingDesarrolladora = () => {
       
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-24 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold mb-6">Planes para Desarrolladoras</h1>
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Planes para Desarrolladoras</h1>
         <p className="text-muted-foreground text-lg md:text-xl max-w-3xl mx-auto mb-8">
           Promociona tus proyectos, genera leads calificados y posiciona tu marca con la visibilidad que solo Kentra ofrece.
         </p>

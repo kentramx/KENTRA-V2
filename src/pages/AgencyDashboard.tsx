@@ -169,7 +169,7 @@ const AgencyDashboard = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
         {/* Breadcrumbs */}
         <DynamicBreadcrumbs 
           items={[
@@ -179,8 +179,8 @@ const AgencyDashboard = () => {
           className="mb-4" 
         />
 
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-2">
             Panel de Inmobiliaria
           </h1>
           <p className="text-muted-foreground">
@@ -212,12 +212,12 @@ const AgencyDashboard = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="inventory">Inventario</TabsTrigger>
-                <TabsTrigger value="team">Equipo</TabsTrigger>
-                <TabsTrigger value="analytics">Reportes</TabsTrigger>
-                <TabsTrigger value="history">Historial</TabsTrigger>
-                <TabsTrigger value="subscription">Suscripción</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 gap-1">
+                <TabsTrigger value="inventory" className="text-xs md:text-sm px-2">Inventario</TabsTrigger>
+                <TabsTrigger value="team" className="text-xs md:text-sm px-2">Equipo</TabsTrigger>
+                <TabsTrigger value="analytics" className="text-xs md:text-sm px-2">Reportes</TabsTrigger>
+                <TabsTrigger value="history" className="text-xs md:text-sm px-2">Historial</TabsTrigger>
+                <TabsTrigger value="subscription" className="text-xs md:text-sm px-2">Suscripción</TabsTrigger>
               </TabsList>
 
               <TabsContent value="inventory" className="mt-6">

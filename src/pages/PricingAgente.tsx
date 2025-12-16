@@ -234,7 +234,7 @@ const PricingAgente = () => {
       <div className="container mx-auto px-4 py-16 md:py-24">
         {/* Hero Section */}
         <div className="max-w-4xl mx-auto text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">Planes para Agentes</h1>
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Planes para Agentes</h1>
           <p className="text-xl text-muted-foreground mb-8">
             Publica tus propiedades, recibe leads directos y haz crecer tu negocio inmobiliario con Kentra.
           </p>

@@ -343,10 +343,10 @@ export default function AdminUsers() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-6">
-        <Users className="h-8 w-8 text-primary" />
-        <h1 className="text-2xl font-bold">Gestión de Usuarios</h1>
+    <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
+      <div className="flex items-center gap-3 mb-4 md:mb-6">
+        <Users className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+        <h1 className="text-xl md:text-2xl font-bold">Gestión de Usuarios</h1>
       </div>
 
       {/* Metrics Cards */}

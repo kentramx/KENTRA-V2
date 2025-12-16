@@ -218,7 +218,7 @@ const Leaderboard = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
         <DynamicBreadcrumbs 
           items={[
             { label: 'Inicio', href: '/', active: false },
@@ -228,20 +228,20 @@ const Leaderboard = () => {
         />
 
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Trophy className="h-12 w-12 text-yellow-500" />
-            <h1 className="text-4xl font-bold">Leaderboard de Agentes</h1>
+        <div className="text-center mb-6 md:mb-8">
+          <div className="flex items-center justify-center gap-2 md:gap-3 mb-3 md:mb-4">
+            <Trophy className="h-8 w-8 md:h-12 md:w-12 text-yellow-500" />
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold">Leaderboard de Agentes</h1>
           </div>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-base md:text-lg">
             Los mejores agentes inmobiliarios de México
           </p>
         </div>
 
         {/* Filters */}
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <Card className="mb-6 md:mb-8">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 items-stretch sm:items-center">
               <div className="flex-1">
                 <label className="text-sm font-medium mb-2 block">
                   Filtrar por Estado

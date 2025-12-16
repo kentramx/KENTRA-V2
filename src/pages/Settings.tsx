@@ -244,7 +244,7 @@ const Settings = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
@@ -266,18 +266,18 @@ const Settings = () => {
           </div>
 
           <Tabs defaultValue="account" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="account">
-                <User className="mr-2 h-4 w-4" />
-                Cuenta
+            <TabsList className="grid w-full grid-cols-3 gap-1">
+              <TabsTrigger value="account" className="flex items-center gap-1 px-2 py-2">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">Cuenta</span>
               </TabsTrigger>
-              <TabsTrigger value="notifications">
-                <Bell className="mr-2 h-4 w-4" />
-                Notificaciones
+              <TabsTrigger value="notifications" className="flex items-center gap-1 px-2 py-2">
+                <Bell className="h-4 w-4" />
+                <span className="hidden sm:inline">Notificaciones</span>
               </TabsTrigger>
-              <TabsTrigger value="security">
-                <Shield className="mr-2 h-4 w-4" />
-                Seguridad
+              <TabsTrigger value="security" className="flex items-center gap-1 px-2 py-2">
+                <Shield className="h-4 w-4" />
+                <span className="hidden sm:inline">Seguridad</span>
               </TabsTrigger>
             </TabsList>
 

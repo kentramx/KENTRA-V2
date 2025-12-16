@@ -68,18 +68,18 @@ const Publicar = () => {
     <div className="min-h-screen bg-white">
       <Navbar />
       
-      <main className="flex items-center justify-center px-4 py-16 md:py-24">
-        <div className="w-full max-w-3xl space-y-12">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+      <main className="flex items-center justify-center px-4 py-12 md:py-24 pb-24 md:pb-8">
+        <div className="w-full max-w-3xl space-y-8 md:space-y-12">
+          <div className="text-center space-y-3 md:space-y-4">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
               ¿Quién va a publicar?
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground">
+            <p className="text-base md:text-lg lg:text-xl text-muted-foreground">
               Elige el tipo de cuenta que se adapta a tu actividad.
             </p>
           </div>
 
-          <div className="space-y-6 md:px-16">
+          <div className="space-y-4 md:space-y-6 px-0 md:px-16">
             {options.map((option) => (
               <Button
                 key={option.path}

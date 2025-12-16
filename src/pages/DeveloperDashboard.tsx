@@ -172,7 +172,7 @@ const DeveloperDashboard = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
         {/* Breadcrumbs */}
         <DynamicBreadcrumbs 
           items={[
@@ -182,8 +182,8 @@ const DeveloperDashboard = () => {
           className="mb-4" 
         />
 
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-2">
             Panel de Desarrolladora
           </h1>
           <p className="text-muted-foreground">

@@ -61,7 +61,7 @@ const MessagesPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-6 md:py-8 px-4 pb-24 md:pb-8">
         {/* Breadcrumbs */}
         <DynamicBreadcrumbs 
           items={[
@@ -71,13 +71,13 @@ const MessagesPage = () => {
           className="mb-4" 
         />
 
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => navigate('/')} className="mb-4">
+        <div className="mb-4 md:mb-6">
+          <Button variant="ghost" onClick={() => navigate('/')} className="mb-2 md:mb-4 h-11">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Volver al Inicio
           </Button>
-          <h1 className="text-3xl font-bold">Mensajes</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold">Mensajes</h1>
+          <p className="text-muted-foreground text-sm md:text-base">
             Conversa con agentes sobre propiedades de tu interés
           </p>
         </div>

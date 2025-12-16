@@ -39,10 +39,10 @@ const AdminFinancial = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground">Panel Financiero</h1>
-          <p className="text-muted-foreground mt-2">
+      <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Panel Financiero</h1>
+          <p className="text-muted-foreground mt-2 text-sm md:text-base">
             Métricas financieras y análisis de ingresos
           </p>
         </div>

@@ -143,7 +143,7 @@ const PricingInmobiliaria = () => {
       
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-24 text-center">
-        <h1 className="text-5xl font-bold mb-6">Planes para Inmobiliarias</h1>
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Planes para Inmobiliarias</h1>
         <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-8">
           Gestiona tu equipo, administra tus propiedades y obtén mayor visibilidad con Kentra Inmobiliarias.
         </p>

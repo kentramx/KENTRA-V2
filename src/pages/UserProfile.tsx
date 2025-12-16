@@ -285,7 +285,7 @@ const UserProfile = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
         {/* Breadcrumbs */}
         <DynamicBreadcrumbs 
           items={[
@@ -295,37 +295,43 @@ const UserProfile = () => {
           className="mb-4" 
         />
 
-        <h1 className="text-3xl font-bold mb-8">Mi Perfil</h1>
+        <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">Mi Perfil</h1>
 
         <Tabs 
           value={activeTab} 
           onValueChange={(value) => setSearchParams({ tab: value })}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="profile">
-              <User className="mr-2 h-4 w-4" />
-              Información Personal
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 gap-1">
+            <TabsTrigger value="profile" className="flex items-center gap-1 px-2 py-2">
+              <User className="h-4 w-4" />
+              <span className="hidden md:inline">Información Personal</span>
+              <span className="md:hidden text-xs">Perfil</span>
             </TabsTrigger>
-            <TabsTrigger value="verification">
-              <Shield className="mr-2 h-4 w-4" />
-              Verificación
+            <TabsTrigger value="verification" className="flex items-center gap-1 px-2 py-2">
+              <Shield className="h-4 w-4" />
+              <span className="hidden md:inline">Verificación</span>
+              <span className="md:hidden text-xs">Verificar</span>
             </TabsTrigger>
-            <TabsTrigger value="searches">
-              <Search className="mr-2 h-4 w-4" />
-              Búsquedas Guardadas
+            <TabsTrigger value="searches" className="flex items-center gap-1 px-2 py-2">
+              <Search className="h-4 w-4" />
+              <span className="hidden md:inline">Búsquedas Guardadas</span>
+              <span className="md:hidden text-xs">Búsquedas</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications">
-              <Bell className="mr-2 h-4 w-4" />
-              Notificaciones
+            <TabsTrigger value="notifications" className="flex items-center gap-1 px-2 py-2">
+              <Bell className="h-4 w-4" />
+              <span className="hidden md:inline">Notificaciones</span>
+              <span className="md:hidden text-xs">Alertas</span>
             </TabsTrigger>
-            <TabsTrigger value="security">
-              <Lock className="mr-2 h-4 w-4" />
-              Seguridad
+            <TabsTrigger value="security" className="flex items-center gap-1 px-2 py-2">
+              <Lock className="h-4 w-4" />
+              <span className="hidden md:inline">Seguridad</span>
+              <span className="md:hidden text-xs">Seguridad</span>
             </TabsTrigger>
-            <TabsTrigger value="advanced">
-              <Settings className="mr-2 h-4 w-4" />
-              Avanzado
+            <TabsTrigger value="advanced" className="flex items-center gap-1 px-2 py-2">
+              <Settings className="h-4 w-4" />
+              <span className="hidden md:inline">Avanzado</span>
+              <span className="md:hidden text-xs">Más</span>
             </TabsTrigger>
           </TabsList>
 

@@ -135,17 +135,17 @@ const ComparePage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate(-1)}>
+            <Button variant="ghost" onClick={() => navigate(-1)} className="h-11">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Volver
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">Comparar Propiedades</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-2xl md:text-3xl font-bold">Comparar Propiedades</h1>
+              <p className="text-muted-foreground text-sm md:text-base">
                 Comparando {properties.length} {properties.length === 1 ? "propiedad" : "propiedades"}
               </p>
             </div>

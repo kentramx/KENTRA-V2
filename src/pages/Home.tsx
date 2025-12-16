@@ -129,7 +129,7 @@ const Home = () => {
     }}>
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
         <div className="container relative z-10 mx-auto px-4 text-center text-white">
-          <h1 className="mb-4 text-5xl font-bold md:text-6xl font-serif">Encuentra Tu Propiedad Ideal</h1>
+          <h1 className="mb-4 text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold font-serif">Encuentra Tu Propiedad Ideal</h1>
           <p className="mb-8 text-xl md:text-2xl">
             Miles de propiedades en México esperándote
           </p>
@@ -283,7 +283,7 @@ const Home = () => {
           <div className="container mx-auto px-4">
             <div className="mb-8 flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-bold font-serif">Propiedades Destacadas</h2>
+                <h2 className="text-2xl md:text-3xl font-bold font-serif">Propiedades Destacadas</h2>
                 <p className="mt-2 text-muted-foreground">
                   Las mejores propiedades seleccionadas para ti
                 </p>
@@ -317,7 +317,7 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold font-serif">Propiedades Recientes</h2>
+              <h2 className="text-2xl md:text-3xl font-bold font-serif">Propiedades Recientes</h2>
               <p className="mt-2 text-muted-foreground">
                 Últimas propiedades agregadas a la plataforma
               </p>
@@ -353,70 +353,70 @@ const Home = () => {
       {/* Property Types */}
       <section className="py-16 bg-background">
         <div className="container mx-auto px-4">
-          <h2 className="mb-8 text-center text-3xl font-bold font-serif">
+          <h2 className="mb-6 md:mb-8 text-center text-2xl md:text-3xl font-bold font-serif">
             Explora por Tipo de Propiedad
           </h2>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=casa`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
-              <HomeIcon className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-xl font-semibold">Casas</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=casa`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
+              <HomeIcon className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
+              <h3 className="text-base md:text-xl font-semibold">Casas</h3>
+              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
                 Encuentra tu casa perfecta
               </p>
             </button>
 
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=departamento`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Building2 className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-xl font-semibold">Departamentos</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=departamento`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
+              <Building2 className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
+              <h3 className="text-base md:text-xl font-semibold">Departamentos</h3>
+              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
                 Vida urbana moderna
               </p>
             </button>
 
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=terreno`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
-              <TreePine className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-xl font-semibold">Terrenos</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=terreno`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
+              <TreePine className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
+              <h3 className="text-base md:text-xl font-semibold">Terrenos</h3>
+              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
                 Construye tu proyecto
               </p>
             </button>
 
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=oficina`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Briefcase className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-xl font-semibold">Oficinas</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=oficina`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
+              <Briefcase className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
+              <h3 className="text-base md:text-xl font-semibold">Oficinas</h3>
+              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
                 Espacios profesionales
               </p>
             </button>
 
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=local`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Store className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-xl font-semibold">Locales</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=local`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
+              <Store className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
+              <h3 className="text-base md:text-xl font-semibold">Locales</h3>
+              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
                 Comercios y negocios
               </p>
             </button>
 
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=bodega`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Warehouse className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-xl font-semibold">Bodegas</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=bodega`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
+              <Warehouse className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
+              <h3 className="text-base md:text-xl font-semibold">Bodegas</h3>
+              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
                 Almacenamiento e industria
               </p>
             </button>
 
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=edificio`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Building className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-xl font-semibold">Edificios</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=edificio`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
+              <Building className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
+              <h3 className="text-base md:text-xl font-semibold">Edificios</h3>
+              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
                 Inversión comercial
               </p>
             </button>
 
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=rancho`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Tractor className="mb-4 h-16 w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-xl font-semibold">Ranchos</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
+            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=rancho`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
+              <Tractor className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
+              <h3 className="text-base md:text-xl font-semibold">Ranchos</h3>
+              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
                 Vida campestre
               </p>
             </button>
