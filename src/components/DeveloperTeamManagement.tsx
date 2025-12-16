@@ -168,20 +168,19 @@ export const DeveloperTeamManagement = ({ developerId, subscriptionInfo }: Devel
         .eq('id', user.id)
         .single();
 
-      // Crear invitación en la base de datos
-      const { error: inviteError } = await supabase
-        .from('developer_invitations')
-        .insert({
-          developer_id: developerId,
+      // Llamar Edge Function para crear invitación y enviar email
+      const { data, error } = await supabase.functions.invoke('send-developer-invitation', {
+        body: {
+          developerId,
           email: inviteEmail,
-          role: inviteRole,
-          invited_by: user.id,
-          status: 'pending',
-        });
+          role: inviteRole === 'admin' || inviteRole === 'manager' ? 'manager' : 'member',
+          developerName,
+          inviterName: profile?.name || 'Un miembro del equipo',
+        },
+      });
 
-      if (inviteError) throw inviteError;
-
-      // TODO: Llamar Edge Function para enviar email (send-developer-invitation)
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast({
         title: '✅ Invitación enviada',

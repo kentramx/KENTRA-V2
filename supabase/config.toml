@@ -107,3 +107,6 @@ verify_jwt = true
 
 [functions.admin-user-action]
 verify_jwt = true
+
+[functions.send-developer-invitation]
+verify_jwt = true
