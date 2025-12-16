@@ -72,6 +72,22 @@ Deno.serve(async (req) => {
     );
 
     // ═══════════════════════════════════════════════════════════
+    // OBTENER TIPO DE CAMBIO DINÁMICO DESDE app_settings
+    // ═══════════════════════════════════════════════════════════
+    let exchangeRate = 20.15; // Fallback
+
+    const { data: settingsData } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "exchange_rate_usd_mxn")
+      .single();
+
+    if (settingsData?.value?.rate) {
+      exchangeRate = settingsData.value.rate;
+      console.log(`[cluster-properties] Using exchange rate: ${exchangeRate} MXN/USD`);
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // PAGINACIÓN EN LOTES - PostgREST limita a 1,000 por request
     // Necesitamos múltiples requests para vistas nacionales
     // ═══════════════════════════════════════════════════════════
@@ -89,6 +105,17 @@ Deno.serve(async (req) => {
       for_sale, for_rent, sale_price, rent_price,
       agent_id, created_at
     `;
+
+    // ═══════════════════════════════════════════════════════════
+    // CALCULAR RANGOS DE PRECIO PARA USD Y MXN
+    // Los filtros del frontend vienen en MXN, convertimos a USD
+    // ═══════════════════════════════════════════════════════════
+    const minPriceMXN = filters.min_price || 0;
+    const maxPriceMXN = filters.max_price || 999999999;
+    const minPriceUSD = Math.floor(minPriceMXN / exchangeRate);
+    const maxPriceUSD = Math.ceil(maxPriceMXN / exchangeRate);
+
+    const hasPriceFilter = filters.min_price || filters.max_price;
 
     while (hasMore && batchIndex < MAX_BATCHES) {
       const from = batchIndex * BATCH_SIZE;
@@ -113,11 +140,17 @@ Deno.serve(async (req) => {
       if (filters.property_type) {
         query = query.eq("type", filters.property_type);
       }
-      if (filters.min_price) {
-        query = query.gte("price", filters.min_price);
-      }
-      if (filters.max_price) {
-        query = query.lte("price", filters.max_price);
+
+      // ═══════════════════════════════════════════════════════════
+      // FILTRO DE PRECIO MULTI-MONEDA (MXN y USD)
+      // Filtra: (MXN en rango MXN) OR (USD en rango USD equivalente) OR (null currency en rango MXN)
+      // ═══════════════════════════════════════════════════════════
+      if (hasPriceFilter) {
+        query = query.or(
+          `and(currency.eq.MXN,price.gte.${minPriceMXN},price.lte.${maxPriceMXN}),` +
+          `and(currency.eq.USD,price.gte.${minPriceUSD},price.lte.${maxPriceUSD}),` +
+          `and(currency.is.null,price.gte.${minPriceMXN},price.lte.${maxPriceMXN})`
+        );
       }
 if (filters.min_bedrooms) {
       query = query.gte("bedrooms", filters.min_bedrooms);

@@ -55,6 +55,7 @@ import AdminChurn from "./pages/AdminChurn";
 import AdminGeocoding from "./pages/AdminGeocoding";
 import AdminCoupons from "./pages/AdminCoupons";
 import AdminPlans from "./pages/AdminPlans";
+import AdminSettings from "./pages/AdminSettings";
 import UnirseEquipo from "./pages/UnirseEquipo";
 import { Footer } from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
@@ -124,6 +125,7 @@ const AppContent = () => {
               <Route path="/admin/geocoding" element={<AdminGeocoding />} />
               <Route path="/admin/coupons" element={<AdminCoupons />} />
               <Route path="/admin/plans" element={<AdminPlans />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
