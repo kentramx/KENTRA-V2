@@ -37,6 +37,19 @@ export function GoogleMapBase({
   const mapRef = useRef<google.maps.Map | null>(null);
   const hasInitialized = useRef(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  
+  // ✅ FIX: Guardar el centro/zoom inicial en refs para no re-aplicarlos
+  const savedCenter = useRef(initialCenter);
+  const savedZoom = useRef(initialZoom);
+
+  // Solo actualizar savedCenter/savedZoom si el mapa NO ha sido inicializado
+  // Esto permite que búsquedas nuevas centren el mapa correctamente
+  useEffect(() => {
+    if (!hasInitialized.current) {
+      savedCenter.current = initialCenter;
+      savedZoom.current = initialZoom;
+    }
+  }, [initialCenter, initialZoom]);
 
   // Cargar API de Google Maps
   const { isLoaded, loadError } = useJsApiLoader({
@@ -160,8 +173,8 @@ export function GoogleMapBase({
     <GoogleMap
       mapContainerStyle={{ width: '100%', height }}
       mapContainerClassName={className}
-      center={hasInitialized.current ? undefined : initialCenter}
-      zoom={hasInitialized.current ? undefined : initialZoom}
+      center={savedCenter.current}
+      zoom={savedZoom.current}
       onLoad={handleMapLoad}
       onIdle={handleIdle}
       options={mapOptions}
