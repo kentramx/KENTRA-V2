@@ -256,7 +256,7 @@ const Settings = () => {
 
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
               <SettingsIcon className="h-8 w-8 text-primary" />
               Configuración
             </h1>

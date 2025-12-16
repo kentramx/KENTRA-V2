@@ -125,9 +125,9 @@ export default function AdminNotificationSettings() {
   if (!isAdmin) return null;
 
   return (
-    <div className="container max-w-4xl py-8 space-y-6">
+    <div className="container max-w-4xl py-6 md:py-8 pb-24 md:pb-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Configuración de Notificaciones</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Configuración de Notificaciones</h1>
         <p className="text-muted-foreground mt-2">
           Personaliza qué eventos quieres recibir y cómo quieres ser notificado
         </p>

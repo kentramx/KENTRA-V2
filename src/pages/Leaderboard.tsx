@@ -266,7 +266,7 @@ const Leaderboard = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-3 mb-8 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="sellers" className="flex items-center gap-2">
               <Trophy className="h-4 w-4" />
               Top Vendedores

@@ -226,10 +226,10 @@ export default function AdminGeocoding() {
   const progress = stats.total > 0 ? (stats.withCoords / stats.total) * 100 : 0;
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl space-y-6">
+    <div className="container mx-auto p-4 md:p-6 max-w-6xl space-y-6 pb-24 md:pb-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Geocodificación Masiva</h1>
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">Geocodificación Masiva</h1>
           <p className="text-muted-foreground">
             Procesa hasta {limit} propiedades por ejecución (lotes paralelos) con Google Geocoding API
           </p>

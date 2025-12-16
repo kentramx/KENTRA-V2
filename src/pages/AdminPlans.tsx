@@ -267,11 +267,11 @@ const AdminPlans = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-6 md:py-8 px-4 pb-24 md:pb-8">
         <div className="flex justify-between items-start mb-8">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <DollarSign className="h-8 w-8" />
+            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
+              <DollarSign className="h-6 w-6 md:h-8 md:w-8" />
               Gestión de Planes
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -289,7 +289,7 @@ const AdminPlans = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="agent">
-              <TabsList className="mb-6">
+              <TabsList className="mb-6 overflow-x-auto scrollbar-hide">
                 <TabsTrigger value="agent" className="gap-2">
                   <Users className="h-4 w-4" />
                   Agentes ({agentPlans.length})

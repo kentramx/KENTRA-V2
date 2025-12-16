@@ -34,7 +34,7 @@ const AdminMarketing = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
         <DynamicBreadcrumbs 
           items={[
             { label: 'Inicio', href: '/', active: false },
@@ -44,9 +44,9 @@ const AdminMarketing = () => {
           className="mb-4" 
         />
 
-        <div className="flex items-center gap-3 mb-8">
-          <TrendingUp className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Dashboard de Marketing</h1>
+        <div className="flex items-center gap-3 mb-6 md:mb-8">
+          <TrendingUp className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+          <h1 className="text-2xl md:text-3xl font-bold">Dashboard de Marketing</h1>
         </div>
 
         <MarketingMetrics />
