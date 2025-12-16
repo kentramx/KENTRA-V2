@@ -81,17 +81,15 @@ serve(async (req: Request) => {
 
     const offset = (page - 1) * pageSize;
 
-    // Get all auth users for email lookup via direct SQL query
-    // (Admin API listUsers() fails with "Database error finding users")
+    // Get all auth users for email lookup via RPC function
+    // (Direct access to auth schema fails with PGRST106)
     const emailMap = new Map<string, { email: string; lastSignIn: string | null; emailConfirmed: boolean }>();
     
     const { data: authUsers, error: authUsersError } = await supabaseAdmin
-      .schema('auth')
-      .from('users')
-      .select('id, email, email_confirmed_at, last_sign_in_at');
+      .rpc('get_auth_users_for_admin');
 
     if (authUsersError) {
-      console.error('Error fetching auth users via SQL:', authUsersError);
+      console.error('Error fetching auth users via RPC:', authUsersError);
     } else if (authUsers) {
       authUsers.forEach((u: any) => {
         emailMap.set(u.id, { 
@@ -102,7 +100,7 @@ serve(async (req: Request) => {
       });
     }
 
-    console.log(`[admin-list-users] Loaded ${emailMap.size} auth users emails via SQL`);
+    console.log(`[admin-list-users] Loaded ${emailMap.size} auth users emails via RPC`);
 
     // Build query for profiles
     let query = supabaseAdmin
