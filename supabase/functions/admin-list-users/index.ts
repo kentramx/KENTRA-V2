@@ -63,25 +63,31 @@ serve(async (req: Request) => {
 
     const offset = (page - 1) * pageSize;
 
-    // Get all auth users for email lookup
-    const { data: authUsers, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers({
-      page: 1,
-      perPage: 10000, // Get all for search/filter
-    });
+    // Get all auth users for email lookup (paginated - Supabase max is 1000)
+    const emailMap = new Map<string, string>();
+    let authPage = 1;
+    let hasMoreAuthUsers = true;
 
-    if (authUsersError) {
-      console.error('Error fetching auth users:', authUsersError);
-      return new Response(JSON.stringify({ error: 'Error fetching users' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    while (hasMoreAuthUsers) {
+      const { data: authUsersPage, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers({
+        page: authPage,
+        perPage: 1000,
       });
+
+      if (authUsersError) {
+        console.error('Error fetching auth users page:', authPage, authUsersError);
+        break;
+      }
+
+      authUsersPage.users.forEach(u => {
+        if (u.email) emailMap.set(u.id, u.email);
+      });
+
+      hasMoreAuthUsers = authUsersPage.users.length === 1000;
+      authPage++;
     }
 
-    // Build email lookup map
-    const emailMap = new Map<string, string>();
-    authUsers.users.forEach(u => {
-      if (u.email) emailMap.set(u.id, u.email);
-    });
+    console.log(`[admin-list-users] Loaded ${emailMap.size} auth users emails`);
 
     // Build query for profiles
     let query = supabaseAdmin
