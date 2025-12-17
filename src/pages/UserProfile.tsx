@@ -712,7 +712,7 @@ const UserProfile = () => {
                       
                       {userRole === 'buyer' && (
                         <p className="text-sm text-muted-foreground mt-2">
-                          Conviértete en agente inmobiliario y crea 20 propiedades de demostración
+                          Publica propiedades, conecta con compradores y haz crecer tu negocio inmobiliario
                         </p>
                       )}
                     </div>
