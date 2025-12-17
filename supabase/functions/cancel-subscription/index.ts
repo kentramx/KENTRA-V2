@@ -38,12 +38,12 @@ Deno.serve(withSentry(async (req) => {
 
     console.log('Canceling subscription for user:', user.id);
 
-    // Get current subscription
+    // Get current subscription (only active or trialing - cannot cancel already canceled)
     const { data: subscription, error: subError } = await supabaseClient
       .from('user_subscriptions')
       .select('*')
       .eq('user_id', user.id)
-      .in('status', ['active', 'trialing', 'canceled'])
+      .in('status', ['active', 'trialing'])
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
