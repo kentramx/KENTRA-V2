@@ -222,6 +222,15 @@ export function ChangePlanDialog({
         });
 
         if (error) throw error;
+        
+        // Handle trial users without Stripe subscription
+        if (data?.error === 'TRIAL_NO_STRIPE') {
+          toast.info('Para activar un plan de pago, serás redirigido a la página de checkout');
+          onOpenChange(false);
+          navigate(getPricingRoute(userRole, currentPlanName));
+          return;
+        }
+        
         if (data?.error) {
           if (data.code === 'COOLDOWN_ACTIVE' && !isAdmin) {
             setCooldownInfo({
