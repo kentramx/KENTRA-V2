@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAgentProperties } from '@/hooks/useAgentProperties';
@@ -67,6 +68,27 @@ const AgentDashboard = () => {
 
   // Fetch properties con React Query
   const { data: allProperties = [] } = useAgentProperties(effectiveAgentId);
+  
+  // Fetch unread messages count
+  const { data: unreadMessagesCount = 0 } = useQuery({
+    queryKey: ['unread-messages', effectiveAgentId],
+    queryFn: async () => {
+      if (!effectiveAgentId) return 0;
+      const { data, error } = await supabase
+        .from('conversation_participants')
+        .select('unread_count')
+        .eq('user_id', effectiveAgentId);
+      
+      if (error) {
+        console.error('Error fetching unread messages:', error);
+        return 0;
+      }
+      
+      return data?.reduce((sum, item) => sum + (item.unread_count || 0), 0) || 0;
+    },
+    enabled: !!effectiveAgentId,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
   
   // Calcular counts desde los datos
   const activePropertiesCount = useMemo(() => {
@@ -506,9 +528,25 @@ const AgentDashboard = () => {
         {/* Quick Actions Bar */}
         <QuickActionsBar
           onNewProperty={handleNewProperty}
-          onViewAnalytics={() => setActiveTab('analytics')}
-          onViewServices={() => setActiveTab('services')}
-          onViewSubscription={() => setActiveTab('subscription')}
+          onViewAnalytics={() => {
+            setActiveTab('analytics');
+            setTimeout(() => {
+              document.getElementById('dashboard-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+          }}
+          onViewServices={() => {
+            setActiveTab('services');
+            setTimeout(() => {
+              document.getElementById('dashboard-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+          }}
+          onViewSubscription={() => {
+            setActiveTab('subscription');
+            setTimeout(() => {
+              document.getElementById('dashboard-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+          }}
+          unreadMessages={unreadMessagesCount}
           pendingReminders={propertyCounts.reminders}
         />
 
@@ -613,7 +651,7 @@ const AgentDashboard = () => {
         )}
 
         {/* Main Tabs Card */}
-        <Card className="border-border shadow-xl bg-card">
+        <Card id="dashboard-tabs" className="border-border shadow-xl bg-card scroll-mt-4">
           <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               {/* Premium Tab Header */}
