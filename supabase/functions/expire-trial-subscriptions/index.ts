@@ -1,5 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
 
+/**
+ * CONSTANTE CENTRALIZADA: Duración del período de prueba
+ * MANTENER SINCRONIZADA CON: src/config/subscriptionBusinessRules.ts
+ */
+const TRIAL_DURATION_DAYS = 14;
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -100,7 +106,7 @@ Deno.serve(async (req) => {
               userId: trial.user_id,
               type: 'trial_expired',
               metadata: {
-                trialDays: 14,
+                trialDays: TRIAL_DURATION_DAYS,
                 expiredDate: new Date().toLocaleDateString('es-MX', {
                   year: 'numeric',
                   month: 'long',

@@ -48,20 +48,20 @@ Deno.serve(async (req) => {
 
     console.log('✅ User authenticated:', user.id);
 
-    // Get user's active subscription with pending cancellation
+    // Get user's subscription: with pending cancellation OR suspended status
     const { data: subscription, error: subError } = await supabaseClient
       .from('user_subscriptions')
       .select('*')
       .eq('user_id', user.id)
-      .eq('cancel_at_period_end', true)
+      .or('cancel_at_period_end.eq.true,status.eq.suspended')
       .single();
 
     if (subError || !subscription) {
-      console.error('❌ No subscription with pending cancellation found:', subError);
+      console.error('❌ No subscription eligible for reactivation found:', subError);
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'No se encontró una suscripción con cancelación programada',
+          error: 'No se encontró una suscripción con cancelación programada o suspendida',
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -125,18 +125,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if subscription is active/trialing with pending cancellation
-    const validStatuses = ['active', 'trialing'];
-    if (!validStatuses.includes(stripeSubscription.status) || !stripeSubscription.cancel_at_period_end) {
+    // Check if subscription is eligible for reactivation:
+    // 1. Active/trialing with pending cancellation
+    // 2. Past_due (can be reactivated after payment)
+    // 3. Local status is 'suspended' (grace period expired but Stripe still active)
+    const validStatuses = ['active', 'trialing', 'past_due'];
+    const hasValidStripeStatus = validStatuses.includes(stripeSubscription.status);
+    const hasPendingCancellation = stripeSubscription.cancel_at_period_end;
+    const isLocallySuspended = subscription.status === 'suspended';
+    
+    // Allow reactivation if: pending cancellation OR locally suspended with valid Stripe status
+    if (!hasValidStripeStatus || (!hasPendingCancellation && !isLocallySuspended)) {
       console.error('❌ Subscription not eligible for reactivation:', {
-        status: stripeSubscription.status,
-        cancel_at_period_end: stripeSubscription.cancel_at_period_end
+        stripeStatus: stripeSubscription.status,
+        cancel_at_period_end: stripeSubscription.cancel_at_period_end,
+        localStatus: subscription.status
       });
       
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Tu suscripción no tiene una cancelación programada o no está activa',
+          error: 'Tu suscripción no es elegible para reactivación. Contacta soporte si crees que es un error.',
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -153,13 +162,21 @@ Deno.serve(async (req) => {
 
     console.log('✅ Stripe subscription reactivated');
 
-    // Update database
+    // Update database - restore to active status if was suspended
+    const updateData: Record<string, any> = {
+      cancel_at_period_end: false,
+      updated_at: new Date().toISOString(),
+    };
+    
+    // If was suspended, restore to active status
+    if (subscription.status === 'suspended') {
+      updateData.status = 'active';
+      console.log('📦 Restoring suspended subscription to active status');
+    }
+    
     const { error: updateError } = await supabaseClient
       .from('user_subscriptions')
-      .update({
-        cancel_at_period_end: false,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', subscription.id);
 
     if (updateError) {
