@@ -521,12 +521,16 @@ Deno.serve(withSentry(async (req) => {
     }
 
     // Apply the subscription change
+    // 💳 Use 'always_invoice' to charge proration immediately
+    // 📅 Use 'unchanged' to keep original billing cycle (only charge proration, not next cycle)
     const updateParams: any = {
       items: [{
         id: stripeSubscription.items.data[0].id,
         price: newPriceId,
       }],
-      proration_behavior: 'create_prorations',
+      proration_behavior: 'always_invoice',      // Creates and charges invoice immediately
+      billing_cycle_anchor: 'unchanged',         // Keeps original renewal date (only proration charged now)
+      payment_behavior: 'error_if_incomplete',   // Fails if payment can't be completed
       metadata: {
         plan_id: newPlanId,
         user_id: user.id,
