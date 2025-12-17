@@ -6,25 +6,28 @@ import { useAgentProperties } from '@/hooks/useAgentProperties';
 import { useRoleImpersonation } from '@/hooks/useRoleImpersonation';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, RefreshCcw, AlertCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Home, BarChart3, Bell, Sparkles, CreditCard, FileEdit, AlertCircle, RefreshCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PropertyFormWizard } from '@/components/property-form/PropertyFormWizard';
 import AgentPropertyList from '@/components/AgentPropertyList';
 import { AgentAnalytics } from '@/components/AgentAnalytics';
 import { DynamicBreadcrumbs } from '@/components/DynamicBreadcrumbs';
-import { PlanStatusCard } from '@/components/PlanStatusCard';
 import { SubscriptionManagement } from '@/components/SubscriptionManagement';
 import { PropertyExpiryReminders } from '@/components/PropertyExpiryReminders';
-import { PlanMetricsCards } from '@/components/PlanMetricsCards';
 import { EmailVerificationRequired } from '@/components/EmailVerificationRequired';
 import { QuickUpsells } from '@/components/QuickUpsells';
 import { AgentUpsells } from '@/components/AgentUpsells';
-import { SubscriptionStatusBadge } from '@/components/SubscriptionStatusBadge';
-import { SubscriptionWidget } from '@/components/subscription/SubscriptionWidget';
 import { SubscriptionGate } from '@/components/subscription/SubscriptionGate';
+import { 
+  DashboardHero, 
+  QuickActionsBar, 
+  PremiumMetricsCards,
+  PremiumSubscriptionCard 
+} from '@/components/dashboard';
 
 const AgentDashboard = () => {
   const { user, loading: authLoading, isEmailVerified } = useAuth();
@@ -41,7 +44,7 @@ const AgentDashboard = () => {
     return tabParam && validTabs.includes(tabParam) ? tabParam : 'list';
   });
   
-  // Sincronizar activeTab cuando cambia la URL (ej: desde SubscriptionWidget)
+  // Sincronizar activeTab cuando cambia la URL
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     const validTabs = ['list', 'analytics', 'reminders', 'services', 'subscription', 'form'];
@@ -55,6 +58,7 @@ const AgentDashboard = () => {
   const [userRole, setUserRole] = useState<string>('');
   const [featuredCount, setFeaturedCount] = useState(0);
   const [reactivating, setReactivating] = useState(false);
+  const [totalViews, setTotalViews] = useState(0);
   
   // Si está simulando rol agent, usar agent demo; si no, usar user real
   const effectiveAgentId = (isImpersonating && impersonatedRole === 'agent') 
@@ -69,6 +73,17 @@ const AgentDashboard = () => {
     return allProperties.filter(p => p.status === 'activa').length;
   }, [allProperties]);
 
+  // Contar propiedades por estado para badges
+  const propertyCounts = useMemo(() => {
+    const pending = allProperties.filter(p => p.status === 'pendiente_aprobacion').length;
+    const reminders = allProperties.filter(p => {
+      if (!p.expires_at) return false;
+      const daysUntilExpiry = Math.ceil((new Date(p.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
+    }).length;
+    return { pending, reminders, total: allProperties.length };
+  }, [allProperties]);
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
@@ -81,7 +96,6 @@ const AgentDashboard = () => {
   }, [user, authLoading, navigate, isImpersonating, impersonatedRole]);
 
   const checkAgentStatus = async () => {
-    // Chequeo sincronizado inmediato por localStorage para evitar carreras
     const localImpersonated = localStorage.getItem('kentra_impersonated_role');
     const isLocalSimulatingAgent = localImpersonated === 'agent';
     const DEMO_AGENT_ID = '00000000-0000-0000-0000-000000000001';
@@ -105,7 +119,7 @@ const AgentDashboard = () => {
       } finally {
         setLoading(false);
       }
-      return; // salir siempre en simulación
+      return;
     }
 
     if (!effectiveAgentId) {
@@ -114,11 +128,9 @@ const AgentDashboard = () => {
     }
 
     try {
-      // Si está simulando, cargar datos demo
       if (isImpersonating && impersonatedRole === 'agent') {
         setUserRole('agent');
         
-        // Cargar perfil demo
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
@@ -127,7 +139,6 @@ const AgentDashboard = () => {
         
         setProfile(profileData || { name: 'Demo Agent Kentra', id: effectiveAgentId });
 
-        // Cargar suscripción demo
         const { data: subInfo } = await supabase.rpc('get_user_subscription_info', {
           user_uuid: effectiveAgentId,
         });
@@ -136,14 +147,12 @@ const AgentDashboard = () => {
           setSubscriptionInfo(subInfo[0]);
         }
 
-        // Get featured properties count
         await fetchFeaturedCount();
         
         setLoading(false);
         return;
       }
 
-      // Check user role from user_roles table
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -161,7 +170,6 @@ const AgentDashboard = () => {
         return;
       }
 
-      // Si es agencia, redirigir al dashboard de inmobiliaria
       if (roleData.role === 'agency') {
         navigate('/panel-inmobiliaria');
         return;
@@ -169,7 +177,6 @@ const AgentDashboard = () => {
 
       setUserRole(roleData.role);
 
-      // Get profile data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -180,7 +187,6 @@ const AgentDashboard = () => {
 
       setProfile(profileData);
 
-      // Get subscription info
       const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info', {
         user_uuid: user?.id,
       });
@@ -188,11 +194,9 @@ const AgentDashboard = () => {
       if (!subError && subInfo && subInfo.length > 0) {
         setSubscriptionInfo(subInfo[0]);
         
-        // Sincronizar estado con Stripe si hay suscripción cancelada
         if (subInfo[0].status === 'canceled') {
           try {
             await supabase.functions.invoke('sync-subscription-status');
-            // Recargar info de suscripción después de sincronizar
             const { data: updatedSubInfo } = await supabase.rpc('get_user_subscription_info', {
               user_uuid: user?.id,
             });
@@ -205,7 +209,6 @@ const AgentDashboard = () => {
         }
       }
 
-      // Get featured properties count
       await fetchFeaturedCount();
     } catch (error) {
       console.error('Error checking agent status:', error);
@@ -262,7 +265,6 @@ const AgentDashboard = () => {
       
       if (error) throw error;
       
-      // Check if the operation was successful
       if (!data.success) {
         if (data.code === 'SUBSCRIPTION_FULLY_CANCELED') {
           toast({
@@ -291,7 +293,6 @@ const AgentDashboard = () => {
         description: data.message || "Tu suscripción ha sido reactivada exitosamente.",
       });
       
-      // Recargar información de suscripción
       if (effectiveAgentId) {
         const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { 
           user_uuid: effectiveAgentId 
@@ -325,7 +326,6 @@ const AgentDashboard = () => {
     if (!user) return;
 
     try {
-      // Validar si puede crear propiedades
       const { data: validation, error } = await supabase.rpc('can_create_property', {
         user_uuid: user.id,
       });
@@ -334,10 +334,7 @@ const AgentDashboard = () => {
 
       if (!validation || !validation[0]?.can_create) {
         const reason = validation?.[0]?.reason || 'No puedes publicar más propiedades';
-        const currentCount = validation?.[0]?.current_count || 0;
-        const maxAllowed = validation?.[0]?.max_allowed || 0;
         
-        // Mensaje personalizado según el plan
         let upgradeMessage = '';
         if (subscriptionInfo) {
           const planName = subscriptionInfo.plan_name;
@@ -365,7 +362,6 @@ const AgentDashboard = () => {
         return;
       }
 
-      // Puede crear - mostrar formulario
       setEditingProperty(null);
       setActiveTab('form');
     } catch (error) {
@@ -391,7 +387,6 @@ const AgentDashboard = () => {
     try {
       setLoading(true);
       
-      // Obtener detalles del upsell
       const { data: upsell, error: upsellError } = await supabase
         .from('upsells')
         .select('*')
@@ -400,7 +395,6 @@ const AgentDashboard = () => {
 
       if (upsellError || !upsell) throw new Error('Upsell no encontrado');
 
-      // Iniciar checkout de upsell
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           upsellOnly: true,
@@ -429,8 +423,11 @@ const AgentDashboard = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground">Cargando tu panel...</p>
+        </div>
       </div>
     );
   }
@@ -439,8 +436,50 @@ const AgentDashboard = () => {
     return null;
   }
 
+  // Tab configuration with icons and badges
+  const tabs = [
+    { 
+      value: 'list', 
+      label: 'Propiedades', 
+      icon: Home,
+      badge: propertyCounts.total > 0 ? propertyCounts.total : null,
+    },
+    { 
+      value: 'analytics', 
+      label: 'Analíticas', 
+      icon: BarChart3,
+      badge: null,
+    },
+    { 
+      value: 'reminders', 
+      label: 'Recordatorios', 
+      icon: Bell,
+      badge: propertyCounts.reminders > 0 ? propertyCounts.reminders : null,
+      badgeVariant: 'warning' as const,
+    },
+    { 
+      value: 'services', 
+      label: 'Servicios', 
+      icon: Sparkles,
+      badge: null,
+    },
+    { 
+      value: 'subscription', 
+      label: 'Suscripción', 
+      icon: CreditCard,
+      badge: null,
+    },
+    { 
+      value: 'form', 
+      label: editingProperty ? 'Editar' : 'Nueva',
+      icon: FileEdit,
+      badge: null,
+      disabled: !emailVerified && !editingProperty,
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <Navbar />
 
       <main className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
@@ -453,28 +492,29 @@ const AgentDashboard = () => {
           className="mb-4" 
         />
 
-        <div className="mb-8">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-2">
-                Panel de {userRole === 'agency' ? 'Inmobiliaria' : 'Agente'}
-              </h1>
-              <p className="text-muted-foreground">
-                Gestiona tus propiedades en venta o renta
-              </p>
-            </div>
-            <div className="flex-shrink-0">
-              <SubscriptionStatusBadge 
-                status={subscriptionInfo?.status || null}
-                currentPeriodEnd={subscriptionInfo?.current_period_end}
-              />
-            </div>
-          </div>
-        </div>
+        {/* Hero Section */}
+        <DashboardHero
+          profileName={profile?.name || 'Agente'}
+          planName={subscriptionInfo?.plan_name}
+          planDisplayName={subscriptionInfo?.display_name}
+          status={subscriptionInfo?.status}
+          activePropertiesCount={activePropertiesCount}
+          totalViews={totalViews}
+          onNewProperty={handleNewProperty}
+        />
 
-        {/* Alerta de suscripción en período de gracia - puede reactivarse */}
+        {/* Quick Actions Bar */}
+        <QuickActionsBar
+          onNewProperty={handleNewProperty}
+          onViewAnalytics={() => setActiveTab('analytics')}
+          onViewServices={() => setActiveTab('services')}
+          onViewSubscription={() => setActiveTab('subscription')}
+          pendingReminders={propertyCounts.reminders}
+        />
+
+        {/* Alerts Section */}
         {subscriptionInfo?.status === 'canceled' && subscriptionInfo?.cancel_at_period_end && (
-          <Alert className="mb-6 border-destructive/50 bg-destructive/10">
+          <Alert className="mb-6 border-destructive/50 bg-destructive/10 rounded-xl">
             <AlertCircle className="h-5 w-5 text-destructive" />
             <AlertTitle className="text-lg font-semibold text-destructive">
               Suscripción Cancelada
@@ -506,28 +546,27 @@ const AgentDashboard = () => {
                   ) : (
                     <>
                       <RefreshCcw className="mr-2 h-4 w-4" />
-                      Reactivar Suscripción
+                      Reactivar
                     </>
                   )}
                 </Button>
                 <Button onClick={handleGoToPricing} size="lg" variant="secondary">
-                  Contratar Nuevo Plan
+                  Nuevo Plan
                 </Button>
               </div>
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Alerta de suscripción completamente cancelada - solo CTA para contratar */}
         {subscriptionInfo?.status === 'canceled' && !subscriptionInfo?.cancel_at_period_end && (
-          <Alert className="mb-6 border-destructive/50 bg-destructive/10">
+          <Alert className="mb-6 border-destructive/50 bg-destructive/10 rounded-xl">
             <AlertCircle className="h-5 w-5 text-destructive" />
             <AlertTitle className="text-lg font-semibold text-destructive">
               Suscripción Expirada
             </AlertTitle>
             <AlertDescription className="mt-2 flex items-center justify-between gap-4 flex-wrap">
               <div className="text-sm text-muted-foreground flex-1 min-w-[300px]">
-                Tu suscripción ha expirado. Para volver a publicar y acceder a todas las funcionalidades, necesitas contratar un nuevo plan.
+                Tu suscripción ha expirado. Para volver a publicar, necesitas contratar un nuevo plan.
               </div>
               <Button onClick={handleGoToPricing} size="lg" className="bg-primary hover:bg-primary/90 shadow-lg">
                 Contratar Nuevo Plan
@@ -536,53 +575,35 @@ const AgentDashboard = () => {
           </Alert>
         )}
 
-        {/* Alerta de plan discontinuado */}
-        {subscriptionInfo && (!subscriptionInfo.name || subscriptionInfo.properties_limit === 0) && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-5 w-5" />
-            <AlertTitle className="text-lg font-semibold">
-              Plan Discontinuado
-            </AlertTitle>
-            <AlertDescription className="mt-2 flex items-center justify-between gap-4 flex-wrap">
-              <div className="text-sm flex-1 min-w-[300px]">
-                Tu plan actual ya no está disponible. Por favor contrata un nuevo plan para continuar publicando propiedades y acceder a todas las funcionalidades.
-              </div>
-              <Button 
-                onClick={handleGoToPricing} 
-                size="lg" 
-                className="bg-primary hover:bg-primary/90 shadow-lg"
-              >
-                Ver Planes Disponibles
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
-          <SubscriptionWidget userRole={userRole} />
-          <div className="md:col-span-1 lg:col-span-2">
-            <PlanStatusCard subscriptionInfo={subscriptionInfo} userRole={userRole} />
-          </div>
-        </div>
-
-        {/* Plan Metrics Cards */}
-        <PlanMetricsCards
-          subscriptionInfo={subscriptionInfo}
-          activePropertiesCount={activePropertiesCount}
-          featuredCount={featuredCount}
-        />
-
-        {/* Quick Upsells Section */}
-        {subscriptionInfo && (
-          <div className="mb-6">
-            <QuickUpsells 
+        {/* Main Grid: Subscription Card + Metrics */}
+        <div className="grid gap-6 lg:grid-cols-3 mb-6">
+          <div className="lg:col-span-1">
+            <PremiumSubscriptionCard
               subscriptionInfo={subscriptionInfo}
+              userRole={userRole}
               activePropertiesCount={activePropertiesCount}
-              onPurchase={handleUpsellPurchase}
-              onViewAll={() => setActiveTab('services')}
+              featuredCount={featuredCount}
+              onManage={() => setActiveTab('subscription')}
             />
           </div>
-        )}
+          <div className="lg:col-span-2">
+            <PremiumMetricsCards
+              subscriptionInfo={subscriptionInfo}
+              activePropertiesCount={activePropertiesCount}
+              featuredCount={featuredCount}
+            />
+            
+            {/* Quick Upsells - Compact */}
+            {subscriptionInfo && (
+              <QuickUpsells 
+                subscriptionInfo={subscriptionInfo}
+                activePropertiesCount={activePropertiesCount}
+                onPurchase={handleUpsellPurchase}
+                onViewAll={() => setActiveTab('services')}
+              />
+            )}
+          </div>
+        </div>
 
         {/* Email Verification Banner */}
         {!emailVerified && (
@@ -591,37 +612,36 @@ const AgentDashboard = () => {
           </div>
         )}
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>
-                {activeTab === 'analytics' ? 'Panel de Analíticas' : 'Mis Propiedades'}
-              </CardTitle>
-              {activeTab === 'list' && (
-                <Button onClick={handleNewProperty}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nueva Propiedad
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
+        {/* Main Tabs Card */}
+        <Card className="border-border/50 shadow-lg">
+          <CardContent className="p-4 md:p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-6">
-                <TabsTrigger value="list">Mis Propiedades</TabsTrigger>
-                <TabsTrigger value="analytics">Analíticas</TabsTrigger>
-                <TabsTrigger value="reminders">Recordatorios</TabsTrigger>
-                <TabsTrigger value="services">Servicios</TabsTrigger>
-                <TabsTrigger value="subscription">Suscripción</TabsTrigger>
-                <TabsTrigger 
-                  value="form" 
-                  disabled={!emailVerified && !editingProperty}
-                >
-                  {editingProperty ? 'Editar' : 'Nueva'} Propiedad
-                </TabsTrigger>
+              <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1 rounded-xl mb-6">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <TabsTrigger 
+                      key={tab.value}
+                      value={tab.value}
+                      disabled={tab.disabled}
+                      className="flex-1 min-w-[100px] flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="hidden sm:inline">{tab.label}</span>
+                      {tab.badge && (
+                        <Badge 
+                          variant={tab.badgeVariant === 'warning' ? 'destructive' : 'secondary'}
+                          className="ml-1 h-5 min-w-[20px] px-1.5 text-[10px]"
+                        >
+                          {tab.badge}
+                        </Badge>
+                      )}
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
 
-              <TabsContent value="list" className="mt-6">
+              <TabsContent value="list" className="mt-0">
                 <AgentPropertyList 
                   onEdit={handleEditProperty} 
                   subscriptionInfo={subscriptionInfo}
@@ -629,23 +649,23 @@ const AgentDashboard = () => {
                 />
               </TabsContent>
 
-              <TabsContent value="analytics" className="mt-6">
+              <TabsContent value="analytics" className="mt-0">
                 <AgentAnalytics agentId={effectiveAgentId || ''} />
               </TabsContent>
 
-              <TabsContent value="reminders" className="mt-6">
+              <TabsContent value="reminders" className="mt-0">
                 <PropertyExpiryReminders agentId={effectiveAgentId || ''} />
               </TabsContent>
 
-              <TabsContent value="services" className="mt-6">
+              <TabsContent value="services" className="mt-0">
                 <AgentUpsells onPurchase={handleUpsellPurchase} />
               </TabsContent>
 
-              <TabsContent value="subscription" className="mt-6">
+              <TabsContent value="subscription" className="mt-0">
                 <SubscriptionManagement userId={effectiveAgentId || ''} />
               </TabsContent>
 
-              <TabsContent value="form" className="mt-6">
+              <TabsContent value="form" className="mt-0">
                 <SubscriptionGate 
                   type="property" 
                   userRole={userRole}
