@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Home, BarChart3, Bell, Sparkles, CreditCard, FileEdit, AlertCircle, RefreshCcw } from 'lucide-react';
+import { Loader2, Home, BarChart3, Bell, Sparkles, CreditCard, FileEdit, AlertCircle, RefreshCcw, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PropertyFormWizard } from '@/components/property-form/PropertyFormWizard';
@@ -24,8 +24,7 @@ import { QuickUpsells } from '@/components/QuickUpsells';
 import { AgentUpsells } from '@/components/AgentUpsells';
 import { SubscriptionGate } from '@/components/subscription/SubscriptionGate';
 import { 
-  DashboardHero, 
-  QuickActionsBar, 
+  CompactDashboardHeader,
   PremiumMetricsCards,
   PremiumSubscriptionCard 
 } from '@/components/dashboard';
@@ -41,14 +40,14 @@ const AgentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
-    const validTabs = ['list', 'analytics', 'reminders', 'services', 'subscription', 'form'];
+    const validTabs = ['list', 'analytics', 'reminders', 'services', 'plan', 'form'];
     return tabParam && validTabs.includes(tabParam) ? tabParam : 'list';
   });
   
   // Sincronizar activeTab cuando cambia la URL
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    const validTabs = ['list', 'analytics', 'reminders', 'services', 'subscription', 'form'];
+    const validTabs = ['list', 'analytics', 'reminders', 'services', 'plan', 'form'];
     if (tabParam && validTabs.includes(tabParam) && tabParam !== activeTab) {
       setActiveTab(tabParam);
     }
@@ -502,7 +501,7 @@ const AgentDashboard = () => {
     return null;
   }
 
-  // Tab configuration with icons and badges - Orden optimizado por flujo de usuario
+  // Tab configuration with icons and badges - Orden optimizado: Properties First
   const tabs = [
     { 
       value: 'list', 
@@ -537,9 +536,9 @@ const AgentDashboard = () => {
       badge: null,
     },
     { 
-      value: 'subscription', 
-      label: 'Suscripción', 
-      icon: CreditCard,
+      value: 'plan', 
+      label: 'Mi Plan', 
+      icon: Package,
       badge: null,
     },
   ];
@@ -558,81 +557,43 @@ const AgentDashboard = () => {
           className="mb-4" 
         />
 
-        {/* Hero Section */}
-        <DashboardHero
+        {/* Compact Header - Properties First Layout */}
+        <CompactDashboardHeader
           profileName={profile?.name || 'Agente'}
           planName={subscriptionInfo?.plan_name}
           planDisplayName={subscriptionInfo?.display_name}
-          status={subscriptionInfo?.status}
           activePropertiesCount={activePropertiesCount}
           totalViews={totalViewsData}
-          onNewProperty={handleNewProperty}
-        />
-
-        {/* Quick Actions Bar */}
-        <QuickActionsBar
-          onNewProperty={handleNewProperty}
-          onViewAnalytics={() => {
-            setActiveTab('analytics');
-            setTimeout(() => {
-              document.getElementById('dashboard-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-          }}
-          onViewServices={() => {
-            setActiveTab('services');
-            setTimeout(() => {
-              document.getElementById('dashboard-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-          }}
-          onViewSubscription={() => {
-            setActiveTab('subscription');
-            setTimeout(() => {
-              document.getElementById('dashboard-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-          }}
-          unreadMessages={unreadMessagesCount}
           pendingReminders={propertyCounts.reminders}
+          onNewProperty={handleNewProperty}
         />
 
-        {/* Alerts Section */}
+        {/* Alerts Section - Only show when critical */}
         {subscriptionInfo?.status === 'canceled' && subscriptionInfo?.cancel_at_period_end && (
-          <Alert className="mb-6 border-destructive/50 bg-destructive/10 rounded-xl">
+          <Alert className="mb-4 border-destructive/50 bg-destructive/10 rounded-xl">
             <AlertCircle className="h-5 w-5 text-destructive" />
-            <AlertTitle className="text-lg font-semibold text-destructive">
-              Suscripción Cancelada
-            </AlertTitle>
-            <AlertDescription className="mt-2 flex items-center justify-between gap-4 flex-wrap">
-              <div className="text-sm text-muted-foreground flex-1 min-w-[300px]">
-                Tu suscripción se cancelará el{' '}
+            <AlertTitle className="font-semibold text-destructive">Suscripción Cancelada</AlertTitle>
+            <AlertDescription className="mt-1 flex items-center justify-between gap-4 flex-wrap">
+              <span className="text-sm text-muted-foreground">
+                Se cancelará el{' '}
                 <span className="font-medium text-foreground">
                   {new Date(subscriptionInfo.current_period_end).toLocaleDateString('es-MX', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
+                    day: 'numeric',
+                    month: 'short'
                   })}
                 </span>
-                . Después de esa fecha perderás acceso a tus propiedades y servicios.
-              </div>
-              <div className="flex items-center gap-3">
+              </span>
+              <div className="flex items-center gap-2">
                 <Button
                   onClick={handleReactivateSubscription}
                   disabled={reactivating}
-                  size="lg"
-                  className="bg-primary hover:bg-primary/90 shadow-lg"
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90"
                 >
-                  {reactivating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Reactivando...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCcw className="mr-2 h-4 w-4" />
-                      Reactivar
-                    </>
-                  )}
+                  {reactivating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4 mr-1" />}
+                  Reactivar
                 </Button>
-                <Button onClick={handleGoToPricing} size="lg" variant="secondary">
+                <Button onClick={handleGoToPricing} size="sm" variant="outline">
                   Nuevo Plan
                 </Button>
               </div>
@@ -641,55 +602,23 @@ const AgentDashboard = () => {
         )}
 
         {subscriptionInfo?.status === 'canceled' && !subscriptionInfo?.cancel_at_period_end && (
-          <Alert className="mb-6 border-destructive/50 bg-destructive/10 rounded-xl">
+          <Alert className="mb-4 border-destructive/50 bg-destructive/10 rounded-xl">
             <AlertCircle className="h-5 w-5 text-destructive" />
-            <AlertTitle className="text-lg font-semibold text-destructive">
-              Suscripción Expirada
-            </AlertTitle>
-            <AlertDescription className="mt-2 flex items-center justify-between gap-4 flex-wrap">
-              <div className="text-sm text-muted-foreground flex-1 min-w-[300px]">
-                Tu suscripción ha expirado. Para volver a publicar, necesitas contratar un nuevo plan.
-              </div>
-              <Button onClick={handleGoToPricing} size="lg" className="bg-primary hover:bg-primary/90 shadow-lg">
-                Contratar Nuevo Plan
+            <AlertTitle className="font-semibold text-destructive">Suscripción Expirada</AlertTitle>
+            <AlertDescription className="mt-1 flex items-center justify-between gap-4 flex-wrap">
+              <span className="text-sm text-muted-foreground">
+                Tu suscripción ha expirado. Contrata un nuevo plan para publicar.
+              </span>
+              <Button onClick={handleGoToPricing} size="sm" className="bg-primary hover:bg-primary/90">
+                Contratar Plan
               </Button>
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Main Grid: Subscription Card + Metrics */}
-        <div className="grid gap-6 lg:grid-cols-3 mb-6">
-          <div className="lg:col-span-1">
-            <PremiumSubscriptionCard
-              subscriptionInfo={subscriptionInfo}
-              userRole={userRole}
-              activePropertiesCount={activePropertiesCount}
-              featuredCount={featuredCount}
-              onManage={() => setActiveTab('subscription')}
-            />
-          </div>
-          <div className="lg:col-span-2">
-            <PremiumMetricsCards
-              subscriptionInfo={subscriptionInfo}
-              activePropertiesCount={activePropertiesCount}
-              featuredCount={featuredCount}
-            />
-            
-            {/* Quick Upsells - Compact */}
-            {subscriptionInfo && (
-              <QuickUpsells 
-                subscriptionInfo={subscriptionInfo}
-                activePropertiesCount={activePropertiesCount}
-                onPurchase={handleUpsellPurchase}
-                onViewAll={() => setActiveTab('services')}
-              />
-            )}
-          </div>
-        </div>
-
         {/* Email Verification Banner */}
         {!emailVerified && (
-          <div className="mb-6">
+          <div className="mb-4">
             <EmailVerificationRequired />
           </div>
         )}
@@ -773,7 +702,35 @@ const AgentDashboard = () => {
                 <AgentUpsells onPurchase={handleUpsellPurchase} />
               </TabsContent>
 
-              <TabsContent value="subscription" className="mt-0">
+              <TabsContent value="plan" className="mt-0 space-y-6">
+                {/* Plan Overview Grid */}
+                <div className="grid gap-6 lg:grid-cols-3">
+                  <div className="lg:col-span-1">
+                    <PremiumSubscriptionCard
+                      subscriptionInfo={subscriptionInfo}
+                      userRole={userRole}
+                      activePropertiesCount={activePropertiesCount}
+                      featuredCount={featuredCount}
+                      onManage={() => {}}
+                    />
+                  </div>
+                  <div className="lg:col-span-2">
+                    <PremiumMetricsCards
+                      subscriptionInfo={subscriptionInfo}
+                      activePropertiesCount={activePropertiesCount}
+                      featuredCount={featuredCount}
+                    />
+                    {subscriptionInfo && (
+                      <QuickUpsells 
+                        subscriptionInfo={subscriptionInfo}
+                        activePropertiesCount={activePropertiesCount}
+                        onPurchase={handleUpsellPurchase}
+                        onViewAll={() => setActiveTab('services')}
+                      />
+                    )}
+                  </div>
+                </div>
+                {/* Subscription Management */}
                 <SubscriptionManagement userId={effectiveAgentId || ''} />
               </TabsContent>
 
