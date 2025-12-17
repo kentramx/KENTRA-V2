@@ -38,24 +38,28 @@ interface UseSubscriptionRealtimeOptions {
 export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions = {}) {
   const { user } = useAuth();
   const { userId, onUpdate, onStatusChange, showToasts = true } = options;
-  
+
   // Usar userId explícito o caer en user.id del contexto
   const effectiveUserId = userId ?? user?.id;
-  
+
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const previousStatusRef = useRef<string | null>(null);
-  
-  // Refs para callbacks - evita bucle infinito de dependencias
-  const onUpdateRef = useRef(onUpdate);
-  const onStatusChangeRef = useRef(onStatusChange);
-  
-  // Actualizar refs cuando cambien los callbacks
-  useEffect(() => {
-    onUpdateRef.current = onUpdate;
-    onStatusChangeRef.current = onStatusChange;
-  }, [onUpdate, onStatusChange]);
+
+  // Mantener una sola ref para NO cambiar la firma de hooks (mejor compatibilidad con Fast Refresh)
+  const stateRef = useRef<{
+    previousStatus: string | null;
+    onUpdate?: (subscription: SubscriptionData) => void;
+    onStatusChange?: (oldStatus: string, newStatus: string) => void;
+  }>({
+    previousStatus: null,
+    onUpdate,
+    onStatusChange,
+  });
+
+  // Actualizar callbacks en cada render (sin hooks extra)
+  stateRef.current.onUpdate = onUpdate;
+  stateRef.current.onStatusChange = onStatusChange;
 
   const fetchSubscription = useCallback(async () => {
     if (!effectiveUserId) {
@@ -85,9 +89,9 @@ export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions 
         .maybeSingle();
 
       if (fetchError) throw fetchError;
-      
+
       setSubscription(data);
-      previousStatusRef.current = data?.status || null;
+      stateRef.current.previousStatus = data?.status || null;
     } catch (err) {
       console.error('[useSubscriptionRealtime] Fetch error:', err);
       setError(err as Error);
@@ -96,41 +100,44 @@ export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions 
     }
   }, [effectiveUserId]);
 
-  const handleSubscriptionUpdate = useCallback((payload: { new: unknown; old: unknown }) => {
-    console.log('[useSubscriptionRealtime] Update received:', payload);
-    
-    const newData = payload.new as SubscriptionData;
-    const oldData = payload.old as SubscriptionData;
-    
-    fetchSubscription().then(() => {
-      if (oldData?.status && newData?.status && oldData.status !== newData.status) {
-        onStatusChangeRef.current?.(oldData.status, newData.status);
-        
-        if (showToasts) {
-          const messages: Record<string, string> = {
-            'active': '✅ Tu suscripción está activa',
-            'past_due': '⚠️ Hay un problema con tu pago',
-            'canceled': '❌ Tu suscripción ha sido cancelada',
-            'suspended': '🚫 Tu cuenta ha sido suspendida',
-            'trialing': '🎉 Tu período de prueba ha comenzado',
-          };
-          
-          const message = messages[newData.status];
-          if (message) {
-            if (newData.status === 'active') {
-              toast.success(message);
-            } else if (newData.status === 'past_due' || newData.status === 'suspended') {
-              toast.error(message);
-            } else {
-              toast.info(message);
+  const handleSubscriptionUpdate = useCallback(
+    (payload: { new: unknown; old: unknown }) => {
+      console.log('[useSubscriptionRealtime] Update received:', payload);
+
+      const newData = payload.new as SubscriptionData;
+      const oldData = payload.old as SubscriptionData;
+
+      fetchSubscription().then(() => {
+        if (oldData?.status && newData?.status && oldData.status !== newData.status) {
+          stateRef.current.onStatusChange?.(oldData.status, newData.status);
+
+          if (showToasts) {
+            const messages: Record<string, string> = {
+              active: '✅ Tu suscripción está activa',
+              past_due: '⚠️ Hay un problema con tu pago',
+              canceled: '❌ Tu suscripción ha sido cancelada',
+              suspended: '🚫 Tu cuenta ha sido suspendida',
+              trialing: '🎉 Tu período de prueba ha comenzado',
+            };
+
+            const message = messages[newData.status];
+            if (message) {
+              if (newData.status === 'active') {
+                toast.success(message);
+              } else if (newData.status === 'past_due' || newData.status === 'suspended') {
+                toast.error(message);
+              } else {
+                toast.info(message);
+              }
             }
           }
         }
-      }
-      
-      onUpdateRef.current?.(newData);
-    });
-  }, [fetchSubscription, showToasts]);
+
+        stateRef.current.onUpdate?.(newData);
+      });
+    },
+    [fetchSubscription, showToasts]
+  );
 
   useEffect(() => {
     if (!effectiveUserId) return;
