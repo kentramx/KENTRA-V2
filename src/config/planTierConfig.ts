@@ -22,10 +22,14 @@ import {
   Calendar,
   CheckCircle,
   AlertTriangle,
+  User,
+  Building2,
+  HardHat,
   type LucideIcon 
 } from 'lucide-react';
 
 export type PlanTier = 'elite' | 'pro' | 'basic' | 'trial' | 'free' | 'none';
+export type UserType = 'agent' | 'agency' | 'developer';
 
 export interface TierConfig {
   icon: LucideIcon;
@@ -102,6 +106,31 @@ export const PLAN_TIER_CONFIG: Record<PlanTier, TierConfig> = {
 };
 
 /**
+ * Configuración por tipo de usuario - visible públicamente
+ */
+export const USER_TYPE_CONFIG: Record<UserType, {
+  icon: LucideIcon;
+  label: string;
+  labelShort: string;
+}> = {
+  agent: {
+    icon: User,
+    label: 'Agente',
+    labelShort: 'Agente',
+  },
+  agency: {
+    icon: Building2,
+    label: 'Inmobiliaria',
+    labelShort: 'Inmob.',
+  },
+  developer: {
+    icon: HardHat,
+    label: 'Desarrolladora',
+    labelShort: 'Desarr.',
+  },
+};
+
+/**
  * Iconos para métricas - usar consistentemente en todo el dashboard
  */
 export const METRIC_ICONS = {
@@ -122,12 +151,41 @@ export function getPlanTier(planName?: string | null): PlanTier {
   
   const lower = planName.toLowerCase();
   
-  if (lower.includes('elite') || lower.includes('premium')) return 'elite';
+  if (lower.includes('elite') || lower.includes('premium') || lower.includes('grow')) return 'elite';
   if (lower.includes('pro') || lower.includes('profesional')) return 'pro';
   if (lower.includes('trial') || lower.includes('prueba')) return 'trial';
   if (lower.includes('start') || lower.includes('basico') || lower.includes('basic') || lower.includes('inicial')) return 'basic';
   
   return 'basic';
+}
+
+/**
+ * Detecta el tipo de usuario desde el nombre del plan
+ */
+export function getUserTypeFromPlan(planName?: string | null): UserType {
+  if (!planName) return 'agent';
+  const lower = planName.toLowerCase();
+  
+  if (lower.includes('inmobiliaria')) return 'agency';
+  if (lower.includes('desarrolladora')) return 'developer';
+  return 'agent'; // Default: agente
+}
+
+/**
+ * Extrae el nombre corto del tier (Elite, Pro, Start, etc.)
+ */
+export function getShortTierName(planName?: string | null): string {
+  if (!planName) return '';
+  const lower = planName.toLowerCase();
+  
+  if (lower.includes('elite')) return 'Elite';
+  if (lower.includes('grow')) return 'Grow';
+  if (lower.includes('pro')) return 'Pro';
+  if (lower.includes('start')) return 'Start';
+  if (lower.includes('trial') || lower.includes('prueba')) return 'Trial';
+  if (lower.includes('basic') || lower.includes('basico')) return 'Básico';
+  
+  return '';
 }
 
 /**

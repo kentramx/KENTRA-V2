@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Star, Home, ShieldCheck, Smartphone, MessageCircle } from "lucide-react";
 import AgentBadges from "@/components/AgentBadges";
+import { PublicPlanBadge } from "@/components/PublicPlanBadge";
 
 interface BadgeData {
   code: string;
@@ -60,11 +61,7 @@ const AgentCard = ({
       .slice(0, 2);
   };
 
-  const getPlanBadgeColor = () => {
-    if (plan_level === "elite") return "bg-gradient-to-r from-purple-500 to-pink-500 text-white";
-    if (plan_level === "pro") return "bg-gradient-to-r from-blue-500 to-cyan-500 text-white";
-    return "bg-secondary text-secondary-foreground";
-  };
+  // getPlanBadgeColor removed - using PublicPlanBadge instead
 
   const isFeatured = () => {
     if (!plan_level) return false;
@@ -127,9 +124,7 @@ const AgentCard = ({
               </div>
 
               {plan_name && (
-                <Badge className={`text-xs ${getPlanBadgeColor()}`}>
-                  {plan_name}
-                </Badge>
+                <PublicPlanBadge planName={plan_name} size="sm" />
               )}
             </div>
           </div>
