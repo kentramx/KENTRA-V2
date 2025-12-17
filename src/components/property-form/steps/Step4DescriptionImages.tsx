@@ -5,8 +5,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { PropertyFormData } from '@/hooks/useFormWizard';
-import { Upload, X, Video, FileText } from 'lucide-react';
+import { Upload, X, Video, FileText, Sparkles, Loader2 } from 'lucide-react';
 import { useImageUpload } from '@/hooks/useImageUpload';
+import { useGenerateDescription } from '@/hooks/useGenerateDescription';
 
 interface Step4DescriptionImagesProps {
   formData: PropertyFormData;
@@ -25,6 +26,14 @@ export const Step4DescriptionImages = ({
 }: Step4DescriptionImagesProps) => {
   const { uploadImages } = useImageUpload();
   const [dragActive, setDragActive] = useState(false);
+  const { generateDescription, isGenerating, remaining } = useGenerateDescription();
+
+  const handleGenerateDescription = async () => {
+    const description = await generateDescription(formData);
+    if (description) {
+      updateFormData({ description });
+    }
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -76,15 +85,42 @@ export const Step4DescriptionImages = ({
       <Card>
         <CardContent className="pt-6 space-y-4">
           <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Descripción
-              <span className="text-destructive">*</span>
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Descripción
+                <span className="text-destructive">*</span>
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateDescription}
+                disabled={isGenerating || !formData.type || !formData.state}
+                className="gap-2 text-primary border-primary/30 hover:bg-primary/5"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    Generar con IA
+                  </>
+                )}
+              </Button>
+            </div>
+            {remaining !== null && (
+              <p className="text-xs text-muted-foreground text-right">
+                {remaining} generaciones restantes esta hora
+              </p>
+            )}
             <Textarea
               value={formData.description}
               onChange={(e) => updateFormData({ description: e.target.value })}
-              placeholder="Describe tu propiedad: características principales, acabados, ubicación, ventajas..."
+              placeholder="Describe tu propiedad: características principales, acabados, ubicación, ventajas... O usa el botón de IA para generar automáticamente."
               rows={8}
               className="resize-none"
             />

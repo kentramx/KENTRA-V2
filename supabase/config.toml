@@ -1,5 +1,8 @@
 project_id = "jazjzwhbagwllensnkaz"
 
+[functions.generate-property-description]
+verify_jwt = true
+
 [functions.refresh-stats-views]
 verify_jwt = false
 
