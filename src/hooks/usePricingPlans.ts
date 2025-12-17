@@ -10,6 +10,14 @@ export interface PricingPlan {
   stripe_price_id_monthly: string | null;
   stripe_price_id_yearly: string | null;
   features: {
+    // Estructura anidada (preferida)
+    limits?: {
+      max_properties?: number;
+      featured_per_month?: number;
+      max_agents?: number;
+      max_projects?: number;
+    };
+    // Fallback para estructura plana legacy
     max_properties?: number;
     properties_limit?: number;
     featured_listings?: number;
@@ -64,31 +72,42 @@ export function usePricingPlans(planType: PlanType) {
 }
 
 /**
- * Get the property limit for a plan
+ * Get the property limit for a plan - reads nested structure first
  */
 export function getPlanPropertyLimit(plan: PricingPlan): number {
-  return plan.features.max_properties || plan.features.properties_limit || 0;
+  return plan.features.limits?.max_properties 
+    ?? plan.features.max_properties 
+    ?? plan.features.properties_limit 
+    ?? 0;
 }
 
 /**
- * Get the featured listings limit for a plan
+ * Get the featured listings limit for a plan - reads nested structure first
  */
 export function getPlanFeaturedLimit(plan: PricingPlan): number {
-  return plan.features.featured_listings || plan.features.featured_per_month || 0;
+  return plan.features.limits?.featured_per_month
+    ?? plan.features.featured_listings 
+    ?? plan.features.featured_per_month 
+    ?? 0;
 }
 
 /**
- * Get the max agents for a plan (agency plans)
+ * Get the max agents for a plan (agency plans) - reads nested structure first
  */
 export function getPlanMaxAgents(plan: PricingPlan): number {
-  return plan.features.max_agents || 0;
+  return plan.features.limits?.max_agents 
+    ?? plan.features.max_agents 
+    ?? 0;
 }
 
 /**
- * Get the max projects for a plan (developer plans)
+ * Get the max projects for a plan (developer plans) - reads nested structure first
  */
 export function getPlanMaxProjects(plan: PricingPlan): number {
-  return plan.features.max_projects || plan.features.proyectos || 0;
+  return plan.features.limits?.max_projects 
+    ?? plan.features.max_projects 
+    ?? plan.features.proyectos 
+    ?? 0;
 }
 
 /**
