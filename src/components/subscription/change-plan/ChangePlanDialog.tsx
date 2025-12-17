@@ -98,6 +98,9 @@ export function ChangePlanDialog({
 
   const changeType = getChangeType();
 
+  // State for suspended status
+  const [isSuspended, setIsSuspended] = useState(false);
+
   // Fetch user role and subscription status
   useEffect(() => {
     if (!open || !userId) return;
@@ -115,15 +118,18 @@ export function ChangePlanDialog({
           setUserRole(roleData.role as UserRole);
         }
 
-        // Check for pending cancellation and get current period end
+        // Check for pending cancellation, suspended status, and get current period end
         const { data: subData } = await supabase
           .from('user_subscriptions')
-          .select('cancel_at_period_end, current_period_end')
+          .select('cancel_at_period_end, current_period_end, status')
           .eq('user_id', userId)
           .maybeSingle();
         
         setHasPendingCancellation(subData?.cancel_at_period_end || false);
         setCurrentPeriodEnd(subData?.current_period_end || null);
+        
+        // NUEVO: Detectar si está suspendido
+        setIsSuspended(subData?.status === 'suspended');
 
         // Check cooldown
         const { data: changeData } = await supabase
@@ -331,6 +337,7 @@ export function ChangePlanDialog({
 
   const canConfirm = selectedPlanId && 
     !loadingPreview && 
+    !isSuspended &&
     (!cooldownInfo.isInCooldown || isAdmin) &&
     (selectedPlanId !== currentPlanId || billingCycle !== currentBillingCycle);
 
@@ -345,6 +352,15 @@ export function ChangePlanDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Suspended Warning */}
+          {isSuspended && (
+            <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+              <p className="text-sm text-destructive font-medium">
+                Tu suscripción está suspendida. Debes resolver el problema de pago antes de cambiar de plan.
+              </p>
+            </div>
+          )}
+
           {/* Cooldown Warning */}
           <CooldownWarning cooldownInfo={cooldownInfo} isAdmin={isAdmin} />
 
@@ -352,7 +368,7 @@ export function ChangePlanDialog({
           <BillingCycleToggle
             value={billingCycle}
             onChange={setBillingCycle}
-            disabled={processing || (cooldownInfo.isInCooldown && !isAdmin)}
+            disabled={processing || isSuspended || (cooldownInfo.isInCooldown && !isAdmin)}
           />
 
           {/* Plan Selector */}
@@ -368,7 +384,7 @@ export function ChangePlanDialog({
               currentPlanId={currentPlanId}
               billingCycle={billingCycle}
               onSelectPlan={setSelectedPlanId}
-              disabled={processing || (cooldownInfo.isInCooldown && !isAdmin)}
+              disabled={processing || isSuspended || (cooldownInfo.isInCooldown && !isAdmin)}
               hasPendingCancellation={hasPendingCancellation}
             />
           )}
