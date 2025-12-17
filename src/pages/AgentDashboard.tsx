@@ -40,6 +40,16 @@ const AgentDashboard = () => {
     const validTabs = ['list', 'analytics', 'reminders', 'services', 'subscription', 'form'];
     return tabParam && validTabs.includes(tabParam) ? tabParam : 'list';
   });
+  
+  // Sincronizar activeTab cuando cambia la URL (ej: desde SubscriptionWidget)
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    const validTabs = ['list', 'analytics', 'reminders', 'services', 'subscription', 'form'];
+    if (tabParam && validTabs.includes(tabParam) && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+  
   const [editingProperty, setEditingProperty] = useState<any>(null);
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>('');
