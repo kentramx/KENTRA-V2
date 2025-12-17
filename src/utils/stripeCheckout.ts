@@ -41,8 +41,8 @@ export const startSubscriptionCheckout = async (
       return { success: false, error: error.message };
     }
 
-    if (data?.url) {
-      window.location.href = data.url;
+    if (data?.checkoutUrl) {
+      window.location.href = data.checkoutUrl;
       return { success: true };
     }
 
