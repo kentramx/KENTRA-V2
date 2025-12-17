@@ -10,6 +10,13 @@ interface SubscriptionPlan {
   price_monthly: number;
   price_yearly: number | null;
   features: {
+    limits?: {
+      max_properties?: number;
+      featured_per_month?: number;
+      max_agents?: number;
+      max_projects?: number;
+    };
+    // Fallback para estructura plana legacy
     properties_limit?: number;
     featured_limit?: number;
     [key: string]: unknown;
@@ -152,7 +159,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
       const plan = sub.subscription_plans as SubscriptionPlan | null;
       const features = plan?.features || {};
-      const maxProps = (features.properties_limit as number) || 0;
+      // Leer de estructura anidada (features.limits.max_properties) con fallback a estructura plana
+      const limits = features.limits || {};
+      const maxProps = limits.max_properties ?? (features.properties_limit as number) ?? 0;
       const remaining = Math.max(0, maxProps - currentCount);
       const usagePercent = maxProps > 0 ? (currentCount / maxProps) * 100 : 100;
 
