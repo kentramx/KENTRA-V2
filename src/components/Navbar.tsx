@@ -328,6 +328,15 @@ const Navbar = () => {
                               </DropdownMenuItem>
                             </Link>
                           )}
+                          {isSuperAdmin && (
+                            <Link to="/admin/plans">
+                              <DropdownMenuItem className="cursor-pointer">
+                                <DollarSign className="mr-2 h-4 w-4" />
+                                <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                                Gestión de Planes
+                              </DropdownMenuItem>
+                            </Link>
+                          )}
                           <DropdownMenuSeparator />
                         </>
                       )}
@@ -511,6 +520,15 @@ const Navbar = () => {
                                 <Users className="mr-2 h-4 w-4" />
                                 <Badge className="mr-2 bg-purple-600">Admin</Badge>
                                 Gestión de Usuarios
+                              </DropdownMenuItem>
+                            </Link>
+                          )}
+                          {isSuperAdmin && (
+                            <Link to="/admin/plans">
+                              <DropdownMenuItem className="cursor-pointer">
+                                <DollarSign className="mr-2 h-4 w-4" />
+                                <Badge className="mr-2 bg-purple-600">Admin</Badge>
+                                Gestión de Planes
                               </DropdownMenuItem>
                             </Link>
                           )}
