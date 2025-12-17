@@ -12,7 +12,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { getPricingRoute } from '@/utils/getPricingRoute';
 
 import { BillingCycleToggle } from './BillingCycleToggle';
-import { CooldownWarning } from './CooldownWarning';
 import { PlanSelector } from './PlanSelector';
 import { ProrationPreview } from './ProrationPreview';
 import { ConfirmChangeButton } from './ConfirmChangeButton';
@@ -22,7 +21,6 @@ import {
   SubscriptionPlan, 
   ProrationPreviewData,
   BillingCycle,
-  CooldownInfo,
   ChangeType,
   UserRole,
 } from './types';
@@ -56,12 +54,6 @@ export function ChangePlanDialog({
   const [userRole, setUserRole] = useState<UserRole>('buyer');
   const [hasPendingCancellation, setHasPendingCancellation] = useState(false);
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(null);
-  const [cooldownInfo, setCooldownInfo] = useState<CooldownInfo>({
-    isInCooldown: false,
-    lastChangeDate: null,
-    daysRemaining: 0,
-    canBypass: false,
-  });
   
   // Loading states
   const [loadingPlans, setLoadingPlans] = useState(true);
@@ -72,8 +64,6 @@ export function ChangePlanDialog({
   // Derived state
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
   const currentPlan = plans.find(p => p.id === currentPlanId);
-  const isAdmin = userRole === 'moderator' || userRole === 'super_admin';
-  
 
   // Calculate change type
   const getChangeType = (): ChangeType => {
@@ -127,33 +117,7 @@ export function ChangePlanDialog({
         
         setHasPendingCancellation(subData?.cancel_at_period_end || false);
         setCurrentPeriodEnd(subData?.current_period_end || null);
-        
-        // NUEVO: Detectar si está suspendido
         setIsSuspended(subData?.status === 'suspended');
-
-        // Check cooldown
-        const { data: changeData } = await supabase
-          .from('subscription_changes')
-          .select('changed_at')
-          .eq('user_id', userId)
-          .order('changed_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (changeData?.changed_at) {
-          const lastChange = new Date(changeData.changed_at);
-          const daysSinceChange = Math.floor((Date.now() - lastChange.getTime()) / (1000 * 60 * 60 * 24));
-          const cooldownDays = 30;
-          
-          if (daysSinceChange < cooldownDays) {
-            setCooldownInfo({
-              isInCooldown: true,
-              lastChangeDate: changeData.changed_at,
-              daysRemaining: cooldownDays - daysSinceChange,
-              canBypass: roleData?.role === 'moderator' || roleData?.role === 'super_admin',
-            });
-          }
-        }
       } catch (error) {
         console.error('Error fetching user data:', error);
       }
@@ -235,26 +199,16 @@ export function ChangePlanDialog({
         if (data?.error === 'TRIAL_NO_STRIPE') {
           toast.info('Para activar un plan de pago, serás redirigido a la página de checkout');
           onOpenChange(false);
-          // Usar el nombre del plan actual para determinar la ruta correcta
-          // (ej: 'agente_trial' -> 'agente' -> '/pricing-agente')
           const planType = currentPlanName.split('_')[0];
           const pricingRoute = planType === 'agente' ? '/pricing-agente' 
             : planType === 'inmobiliaria' ? '/pricing-inmobiliaria'
             : planType === 'desarrolladora' ? '/pricing-desarrolladora'
-            : '/pricing-agente'; // fallback
+            : '/pricing-agente';
           navigate(pricingRoute);
           return;
         }
         
         if (data?.error) {
-          if (data.code === 'COOLDOWN_ACTIVE' && !isAdmin) {
-            setCooldownInfo({
-              isInCooldown: true,
-              lastChangeDate: data.lastChangeDate,
-              daysRemaining: data.daysRemaining,
-              canBypass: false,
-            });
-          }
           throw new Error(data.error);
         }
 
@@ -269,7 +223,7 @@ export function ChangePlanDialog({
 
     const debounceTimer = setTimeout(fetchPreview, 300);
     return () => clearTimeout(debounceTimer);
-  }, [selectedPlanId, billingCycle, open, currentPlanId, currentBillingCycle, isAdmin]);
+  }, [selectedPlanId, billingCycle, open, currentPlanId, currentBillingCycle]);
 
   // Handle plan change confirmation
   const handleConfirmChange = async () => {
@@ -282,7 +236,6 @@ export function ChangePlanDialog({
           newPlanId: selectedPlanId,
           billingCycle,
           previewOnly: false,
-          adminBypass: isAdmin && cooldownInfo.isInCooldown,
         },
       });
 
@@ -296,7 +249,7 @@ export function ChangePlanDialog({
         return;
       }
       
-      // 🔧 FIX: Manejar errores de pago con mensaje claro al usuario
+      // Handle payment failures
       if (data?.error === 'PAYMENT_FAILED') {
         toast.error('Pago rechazado', {
           description: data.message || 'No se pudo procesar el pago. Por favor verifica tu método de pago.',
@@ -338,7 +291,6 @@ export function ChangePlanDialog({
   const canConfirm = selectedPlanId && 
     !loadingPreview && 
     !isSuspended &&
-    (!cooldownInfo.isInCooldown || isAdmin) &&
     (selectedPlanId !== currentPlanId || billingCycle !== currentBillingCycle);
 
   return (
@@ -361,14 +313,11 @@ export function ChangePlanDialog({
             </div>
           )}
 
-          {/* Cooldown Warning */}
-          <CooldownWarning cooldownInfo={cooldownInfo} isAdmin={isAdmin} />
-
           {/* Billing Cycle Toggle */}
           <BillingCycleToggle
             value={billingCycle}
             onChange={setBillingCycle}
-            disabled={processing || isSuspended || (cooldownInfo.isInCooldown && !isAdmin)}
+            disabled={processing || isSuspended}
           />
 
           {/* Plan Selector */}
@@ -384,7 +333,7 @@ export function ChangePlanDialog({
               currentPlanId={currentPlanId}
               billingCycle={billingCycle}
               onSelectPlan={setSelectedPlanId}
-              disabled={processing || isSuspended || (cooldownInfo.isInCooldown && !isAdmin)}
+              disabled={processing || isSuspended}
               hasPendingCancellation={hasPendingCancellation}
             />
           )}

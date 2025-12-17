@@ -52,13 +52,6 @@ export interface ProrationPreviewProps {
   currentPeriodEnd?: string | null;
 }
 
-export interface CooldownInfo {
-  isInCooldown: boolean;
-  lastChangeDate: string | null;
-  daysRemaining: number;
-  canBypass: boolean;
-}
-
 export type BillingCycle = 'monthly' | 'yearly';
 
 export type ChangeType = 'upgrade' | 'downgrade' | 'cycle_change' | null;

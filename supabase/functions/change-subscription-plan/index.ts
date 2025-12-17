@@ -61,73 +61,12 @@ Deno.serve(withSentry(async (req) => {
       });
     }
 
-    // Check if user is admin (can bypass cooldown)
-    const { data: userRole, error: roleError } = await supabaseClient
-      .rpc('get_user_role', { _user_id: user.id });
-
-    const isAdmin = userRole === 'admin';
-
     console.log('Changing subscription plan:', {
       userId: user.id,
       newPlanId,
       billingCycle,
       previewOnly: previewOnly || false,
-      isAdmin,
-      bypassCooldown: bypassCooldown || false,
     });
-
-    // Check cooldown period (30 days) - only for actual changes, not previews
-    // Admins can bypass cooldown restriction
-    if (!previewOnly && !isAdmin && !bypassCooldown) {
-      const { data: recentChanges, error: changesError } = await supabaseClient
-        .from('subscription_changes')
-        .select('changed_at')
-        .eq('user_id', user.id)
-        .order('changed_at', { ascending: false })
-        .limit(1);
-
-      if (changesError) {
-        console.error('Error checking recent changes:', changesError);
-      }
-
-      if (recentChanges && recentChanges.length > 0) {
-        const lastChangeDate = new Date(recentChanges[0].changed_at);
-        const daysSinceLastChange = Math.floor(
-          (Date.now() - lastChangeDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        const cooldownDays = 30;
-
-        if (daysSinceLastChange < cooldownDays) {
-          const daysRemaining = cooldownDays - daysSinceLastChange;
-          const nextChangeDate = new Date(lastChangeDate);
-          nextChangeDate.setDate(nextChangeDate.getDate() + cooldownDays);
-
-          console.log('Cooldown period active:', {
-            daysSinceLastChange,
-            daysRemaining,
-            nextChangeDate,
-          });
-
-          // Return 200 with success: false for business rule errors
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: 'COOLDOWN_ACTIVE',
-              message: `Debes esperar ${daysRemaining} día${daysRemaining > 1 ? 's' : ''} antes de cambiar de plan nuevamente`,
-              daysRemaining,
-              nextChangeDate: nextChangeDate.toISOString(),
-              lastChangeDate: lastChangeDate.toISOString(),
-            }),
-            {
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            }
-          );
-        }
-      }
-    } else if (isAdmin && !previewOnly) {
-      console.log('Admin bypassing cooldown restriction');
-    }
 
     // Get current subscription
     const { data: currentSub, error: subError } = await supabaseClient
@@ -598,8 +537,6 @@ Deno.serve(withSentry(async (req) => {
         metadata: {
           previous_plan_name: currentPlan.name,
           new_plan_name: newPlan.name,
-          bypassed_cooldown: isAdmin || bypassCooldown,
-          changed_by_admin: isAdmin,
         },
       });
 
