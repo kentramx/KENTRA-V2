@@ -475,9 +475,9 @@ const Auth = () => {
 
             {view === 'auth' && (
               <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
-                  <TabsTrigger value="signup">Registrarse</TabsTrigger>
+                <TabsList className="w-full">
+                  <TabsTrigger value="login" className="flex-1">Iniciar Sesión</TabsTrigger>
+                  <TabsTrigger value="signup" className="flex-1">Registrarse</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="login">
