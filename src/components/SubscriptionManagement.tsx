@@ -51,6 +51,7 @@ function SubscriptionManagementContent({ userId, userRole }: SubscriptionManagem
 
   // Use realtime hook for subscription data
   const { subscription: realtimeSubscription, loading, refetch } = useSubscriptionRealtime({
+    userId,
     showToasts: true,
     onStatusChange: (oldStatus, newStatus) => {
       console.log(`[SubscriptionManagement] Status changed: ${oldStatus} -> ${newStatus}`);

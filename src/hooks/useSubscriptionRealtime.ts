@@ -29,6 +29,7 @@ interface SubscriptionData {
 }
 
 interface UseSubscriptionRealtimeOptions {
+  userId?: string;
   onUpdate?: (subscription: SubscriptionData) => void;
   onStatusChange?: (oldStatus: string, newStatus: string) => void;
   showToasts?: boolean;
@@ -36,15 +37,28 @@ interface UseSubscriptionRealtimeOptions {
 
 export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions = {}) {
   const { user } = useAuth();
-  const { onUpdate, onStatusChange, showToasts = true } = options;
+  const { userId, onUpdate, onStatusChange, showToasts = true } = options;
+  
+  // Usar userId explícito o caer en user.id del contexto
+  const effectiveUserId = userId ?? user?.id;
   
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const previousStatusRef = useRef<string | null>(null);
+  
+  // Refs para callbacks - evita bucle infinito de dependencias
+  const onUpdateRef = useRef(onUpdate);
+  const onStatusChangeRef = useRef(onStatusChange);
+  
+  // Actualizar refs cuando cambien los callbacks
+  useEffect(() => {
+    onUpdateRef.current = onUpdate;
+    onStatusChangeRef.current = onStatusChange;
+  }, [onUpdate, onStatusChange]);
 
   const fetchSubscription = useCallback(async () => {
-    if (!user?.id) {
+    if (!effectiveUserId) {
       setSubscription(null);
       setLoading(false);
       return;
@@ -67,7 +81,7 @@ export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions 
             features
           )
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .maybeSingle();
 
       if (fetchError) throw fetchError;
@@ -80,7 +94,7 @@ export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions 
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [effectiveUserId]);
 
   const handleSubscriptionUpdate = useCallback((payload: { new: unknown; old: unknown }) => {
     console.log('[useSubscriptionRealtime] Update received:', payload);
@@ -90,7 +104,7 @@ export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions 
     
     fetchSubscription().then(() => {
       if (oldData?.status && newData?.status && oldData.status !== newData.status) {
-        onStatusChange?.(oldData.status, newData.status);
+        onStatusChangeRef.current?.(oldData.status, newData.status);
         
         if (showToasts) {
           const messages: Record<string, string> = {
@@ -114,24 +128,24 @@ export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions 
         }
       }
       
-      onUpdate?.(newData);
+      onUpdateRef.current?.(newData);
     });
-  }, [fetchSubscription, onStatusChange, onUpdate, showToasts]);
+  }, [fetchSubscription, showToasts]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!effectiveUserId) return;
 
     fetchSubscription();
 
     const channel = supabase
-      .channel(`subscription-${user.id}`)
+      .channel(`subscription-${effectiveUserId}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'user_subscriptions',
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${effectiveUserId}`,
         },
         handleSubscriptionUpdate
       )
@@ -141,7 +155,7 @@ export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions 
           event: 'INSERT',
           schema: 'public',
           table: 'user_subscriptions',
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${effectiveUserId}`,
         },
         handleSubscriptionUpdate
       )
@@ -153,7 +167,7 @@ export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions 
       console.log('[useSubscriptionRealtime] Cleaning up channel');
       supabase.removeChannel(channel);
     };
-  }, [user?.id, fetchSubscription, handleSubscriptionUpdate]);
+  }, [effectiveUserId, fetchSubscription, handleSubscriptionUpdate]);
 
   return {
     subscription,
