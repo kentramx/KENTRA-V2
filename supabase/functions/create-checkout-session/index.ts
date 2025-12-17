@@ -139,6 +139,11 @@ Deno.serve(withSentry(async (req) => {
     // Soporte para planSlug (nuevo) o planId (legacy)
     const planIdentifier = planSlug || body.planId;
 
+    // === GENERAR URLs DE REDIRECCIÓN POR DEFECTO ===
+    const origin = req.headers.get('origin') || 'https://kentra.mx';
+    const finalSuccessUrl = successUrl || `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+    const finalCancelUrl = cancelUrl || `${origin}/pricing-agente`;
+
     // Supabase Admin client para validar cupones
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -283,8 +288,8 @@ Deno.serve(withSentry(async (req) => {
         payment_method_types: ['card'],
         customer: customerId,
         line_items: lineItems,
-        success_url: successUrl,
-        cancel_url: cancelUrl,
+        success_url: finalSuccessUrl,
+        cancel_url: finalCancelUrl,
         client_reference_id: user.id,
         metadata: {
           user_id: user.id,
@@ -421,8 +426,8 @@ Deno.serve(withSentry(async (req) => {
       payment_method_types: ['card'],
       customer: customerId,
       line_items: lineItems,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
+      success_url: finalSuccessUrl,
+      cancel_url: finalCancelUrl,
       client_reference_id: user.id,
       metadata,
       ...(mode === 'subscription' ? {
