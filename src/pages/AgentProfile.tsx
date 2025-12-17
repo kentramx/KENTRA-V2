@@ -9,6 +9,7 @@ import { AgentReviews } from "@/components/AgentReviews";
 import { ReviewForm } from "@/components/ReviewForm";
 import { ContactAgentDialog } from "@/components/ContactAgentDialog";
 import AgentBadges from "@/components/AgentBadges";
+import { PublicPlanBadge } from "@/components/PublicPlanBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,7 @@ const AgentProfile = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [agent, setAgent] = useState<any>(null);
+  const [agentPlanName, setAgentPlanName] = useState<string | null>(null);
   const [properties, setProperties] = useState<any[]>([]);
   const [badges, setBadges] = useState<BadgeData[]>([]);
   const [stats, setStats] = useState<AgentStats>({
@@ -82,6 +84,18 @@ const AgentProfile = () => {
 
       if (agentError) throw agentError;
       setAgent(agentData);
+
+      // Fetch agent subscription/plan
+      const { data: subscriptionData } = await supabase
+        .from("user_subscriptions")
+        .select("plan_id, subscription_plans(name)")
+        .eq("user_id", id)
+        .eq("status", "active")
+        .maybeSingle();
+      
+      if (subscriptionData?.subscription_plans) {
+        setAgentPlanName((subscriptionData.subscription_plans as any).name);
+      }
 
       // Fetch agent badges
       const { data: badgesData, error: badgesError } = await supabase
@@ -212,7 +226,12 @@ const AgentProfile = () => {
               
               <div className="flex-1">
                 <div className="mb-2">
-                  <h1 className="text-3xl font-bold mb-2">{agent.name}</h1>
+                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                    <h1 className="text-2xl md:text-3xl font-bold">{agent.name}</h1>
+                    {agentPlanName && (
+                      <PublicPlanBadge planName={agentPlanName} size="md" />
+                    )}
+                  </div>
                   
                   {/* Ubicación */}
                   {(agent.city || agent.state) && (
