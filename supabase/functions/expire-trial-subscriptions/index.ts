@@ -18,16 +18,14 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // Buscar suscripciones trial activas que tengan más de 14 días
-    const fourteenDaysAgo = new Date();
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    // Buscar suscripciones trial que hayan expirado (current_period_end < now)
+    const now = new Date().toISOString();
 
     const { data: expiredTrials, error: trialsError } = await supabaseClient
       .from('user_subscriptions')
       .select('*, subscription_plans(*)')
-      .eq('status', 'active')
-      .eq('subscription_plans.name', 'agente_trial')
-      .lt('created_at', fourteenDaysAgo.toISOString());
+      .eq('status', 'trialing')
+      .lt('current_period_end', now);
 
     if (trialsError) {
       console.error('Error fetching expired trials:', trialsError);

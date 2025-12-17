@@ -62,6 +62,7 @@ interface SubscriptionState {
   isPastDue: boolean;
   isSuspended: boolean;
   isCanceled: boolean;
+  isIncomplete: boolean; // Para pagos pendientes OXXO/SPEI
   
   // Trial específico
   trialDaysRemaining: number | null;
@@ -107,6 +108,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     isPastDue: false,
     isSuspended: false,
     isCanceled: false,
+    isIncomplete: false,
     trialDaysRemaining: null,
     isTrialExpiringSoon: false,
     limits: defaultLimits,
@@ -172,6 +174,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         : null;
 
       const isTrial = sub.status === 'trialing';
+      const isIncomplete = sub.status === 'incomplete';
       const isActive = sub.status === 'active' || isTrial;
       const isPastDue = sub.status === 'past_due';
       const isSuspended = sub.status === 'suspended';
@@ -194,6 +197,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         isPastDue,
         isSuspended,
         isCanceled,
+        isIncomplete,
         trialDaysRemaining: isTrial ? daysUntilEnd : null,
         isTrialExpiringSoon: isTrial && daysUntilEnd !== null && daysUntilEnd <= 3,
         limits: {
@@ -205,7 +209,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           isNearLimit: usagePercent >= 80 && usagePercent < 100,
         },
         alerts: {
-          showPaymentFailed: isPastDue,
+          showPaymentFailed: isPastDue || isIncomplete,
           showTrialExpiring: isTrial && daysUntilEnd !== null && daysUntilEnd <= 3,
           showSubscriptionExpiring: sub.cancel_at_period_end && daysUntilEnd !== null && daysUntilEnd <= 7,
           showAtPropertyLimit: remaining <= 0 && isActive,

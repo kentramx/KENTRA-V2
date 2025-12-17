@@ -92,9 +92,32 @@ const PricingInmobiliaria = () => {
         return;
       }
 
+      // Buscar el plan completo para verificar si es trial (precio = 0)
+      const fullPlanName = `inmobiliaria_${planSlug}`;
+      const selectedPlan = dbPlans?.find(p => p.name === fullPlanName);
+      const isTrialPlan = selectedPlan?.price_monthly === 0;
+
+      if (isTrialPlan) {
+        // Plan trial gratuito - usar start-trial directamente
+        const { data, error } = await (await import('@/integrations/supabase/client')).supabase.functions.invoke('start-trial', {
+          body: { planName: fullPlanName },
+        });
+
+        if (error || !data?.success) {
+          toast.error(data?.error || 'Error al iniciar el período de prueba');
+          return;
+        }
+
+        toast.success('¡Período de prueba activado!', {
+          description: 'Ya puedes comenzar a usar Kentra.',
+        });
+        navigate('/panel-inmobiliaria');
+        return;
+      }
+
       // Iniciar checkout con el nuevo sistema (incluye cupón si está aplicado)
       const billingCycleValue = billingPeriod === 'monthly' ? 'monthly' : 'yearly';
-      const result = await startSubscriptionCheckout(`inmobiliaria_${planSlug}`, billingCycleValue, appliedCoupon || undefined);
+      const result = await startSubscriptionCheckout(fullPlanName, billingCycleValue, appliedCoupon || undefined);
 
       if (!result.success) {
         toast.error(result.error || 'Error al iniciar el proceso de pago');

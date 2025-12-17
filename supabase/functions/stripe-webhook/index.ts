@@ -531,21 +531,53 @@ Deno.serve(withSentry(async (req) => {
           ? new Date(subscription.current_period_end * 1000).toISOString()
           : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-        // Update subscription status
+        // Detectar si el precio/plan cambió externamente (desde Stripe Dashboard)
+        const currentPriceId = subscription.items?.data[0]?.price?.id;
+        let newPlanId: string | null = null;
+        
+        if (currentPriceId) {
+          // Buscar plan por stripe_price_id
+          const { data: matchedPlan } = await supabaseClient
+            .from('subscription_plans')
+            .select('id')
+            .or(`stripe_price_id.eq.${currentPriceId},stripe_price_id_yearly.eq.${currentPriceId}`)
+            .maybeSingle();
+          
+          if (matchedPlan) {
+            newPlanId = matchedPlan.id;
+            console.log('Detected plan change from Stripe, new plan_id:', newPlanId);
+          }
+        }
+
+        // Detectar billing_cycle del precio actual
+        let billingCycle: 'monthly' | 'yearly' = 'monthly';
+        const priceInterval = subscription.items?.data[0]?.price?.recurring?.interval;
+        if (priceInterval === 'year') {
+          billingCycle = 'yearly';
+        }
+
+        // Update subscription status + plan_id si cambió
+        const updateData: Record<string, unknown> = {
+          status: subscription.status,
+          current_period_start: periodStart,
+          current_period_end: periodEnd,
+          cancel_at_period_end: subscription.cancel_at_period_end,
+          billing_cycle: billingCycle,
+        };
+        
+        if (newPlanId) {
+          updateData.plan_id = newPlanId;
+        }
+
         const { error: updateError } = await supabaseClient
           .from('user_subscriptions')
-          .update({
-            status: subscription.status,
-            current_period_start: periodStart,
-            current_period_end: periodEnd,
-            cancel_at_period_end: subscription.cancel_at_period_end,
-          })
+          .update(updateData)
           .eq('stripe_subscription_id', subscription.id);
 
         if (updateError) {
           console.error('Error updating subscription:', updateError);
         } else {
-          console.log('Subscription updated successfully');
+          console.log('Subscription updated successfully', newPlanId ? `with new plan_id: ${newPlanId}` : '');
         }
 
         break;

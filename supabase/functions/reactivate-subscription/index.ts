@@ -125,8 +125,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if subscription is active with pending cancellation
-    if (stripeSubscription.status !== 'active' || !stripeSubscription.cancel_at_period_end) {
+    // Check if subscription is active/trialing with pending cancellation
+    const validStatuses = ['active', 'trialing'];
+    if (!validStatuses.includes(stripeSubscription.status) || !stripeSubscription.cancel_at_period_end) {
       console.error('❌ Subscription not eligible for reactivation:', {
         status: stripeSubscription.status,
         cancel_at_period_end: stripeSubscription.cancel_at_period_end
