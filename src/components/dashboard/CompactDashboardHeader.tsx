@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle, Building2, Users, HardHat, FolderKanban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -11,30 +11,56 @@ interface SubscriptionInfo {
   currentPeriodEnd?: string;
   maxProperties?: number;
   featuredPerMonth?: number;
+  maxAgents?: number;
+  maxProjects?: number;
 }
+
+export type DashboardType = 'agent' | 'agency' | 'developer';
 
 interface CompactDashboardHeaderProps {
   profileName: string;
   planName?: string;
   planDisplayName?: string;
-  activePropertiesCount: number;
   totalViews: number;
   pendingReminders: number;
   onNewProperty: () => void;
   subscriptionInfo?: SubscriptionInfo;
+  
+  // Type of dashboard
+  dashboardType?: DashboardType;
+  
+  // Agent-specific
+  activePropertiesCount?: number;
   featuredCount?: number;
+  
+  // Agency-specific
+  inventoryCount?: number;
+  teamAgentsCount?: number;
+  
+  // Developer-specific
+  projectsCount?: number;
+  teamMembersCount?: number;
+  
+  // Custom labels
+  newButtonLabel?: string;
 }
 
 export const CompactDashboardHeader = ({
   profileName,
   planName,
   planDisplayName,
-  activePropertiesCount,
   totalViews,
   pendingReminders,
   onNewProperty,
   subscriptionInfo,
+  dashboardType = 'agent',
+  activePropertiesCount = 0,
   featuredCount = 0,
+  inventoryCount = 0,
+  teamAgentsCount = 0,
+  projectsCount = 0,
+  teamMembersCount = 0,
+  newButtonLabel,
 }: CompactDashboardHeaderProps) => {
   // Saludo según hora del día
   const greeting = useMemo(() => {
@@ -44,7 +70,7 @@ export const CompactDashboardHeader = ({
     return 'Buenas noches';
   }, []);
 
-  const firstName = profileName?.split(' ')[0] || 'Agente';
+  const firstName = profileName?.split(' ')[0] || 'Usuario';
 
   // Usar config centralizado
   const planTier = useMemo(() => getPlanTier(planName), [planName]);
@@ -58,11 +84,18 @@ export const CompactDashboardHeader = ({
   const AlertsIcon = METRIC_ICONS.alerts;
   const RenewalIcon = METRIC_ICONS.renewal;
 
-  // Calculate subscription metrics
+  // Calculate subscription metrics based on dashboard type
   const maxProperties = subscriptionInfo?.maxProperties || 5;
   const maxFeatured = subscriptionInfo?.featuredPerMonth || 1;
+  const maxAgents = subscriptionInfo?.maxAgents || 5;
+  const maxProjects = subscriptionInfo?.maxProjects || 3;
+  
   const propertyUsage = Math.min((activePropertiesCount / maxProperties) * 100, 100);
   const featuredUsage = Math.min((featuredCount / maxFeatured) * 100, 100);
+  const inventoryUsage = Math.min((inventoryCount / maxProperties) * 100, 100);
+  const agentsUsage = Math.min((teamAgentsCount / maxAgents) * 100, 100);
+  const projectsUsage = Math.min((projectsCount / maxProjects) * 100, 100);
+  const teamUsage = Math.min((teamMembersCount / maxAgents) * 100, 100);
   
   // Days until renewal
   const daysUntilRenewal = useMemo(() => {
@@ -75,9 +108,18 @@ export const CompactDashboardHeader = ({
   }, [subscriptionInfo?.currentPeriodEnd]);
 
   // Alerts
-  const isNearPropertyLimit = propertyUsage >= 80;
+  const isNearPropertyLimit = dashboardType === 'agent' 
+    ? propertyUsage >= 80 
+    : dashboardType === 'agency' 
+    ? inventoryUsage >= 80 
+    : projectsUsage >= 80;
   const isTrialEnding = planTier === 'trial' && daysUntilRenewal !== null && daysUntilRenewal <= 3;
   const isPendingPayment = subscriptionInfo?.status === 'incomplete';
+
+  // Dynamic button label
+  const buttonLabel = newButtonLabel || (
+    dashboardType === 'developer' ? 'Nuevo Proyecto' : 'Nueva Propiedad'
+  );
 
   return (
     <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${currentTier.gradient} border border-border shadow-xl mb-4 md:mb-6`}>
@@ -106,45 +148,119 @@ export const CompactDashboardHeader = ({
             className="h-11 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-xl shadow-primary/30 text-primary-foreground font-semibold px-5 rounded-xl whitespace-nowrap transition-all hover:-translate-y-0.5"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Nueva Propiedad
+            {buttonLabel}
           </Button>
         </div>
         
-        {/* Row 2: Stats + Subscription Widget */}
+        {/* Row 2: Stats - Dynamic based on dashboard type */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-3">
-          {/* Stat: Active Properties with limit */}
-          <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
-            <div className="flex items-center gap-2 mb-1.5">
-              <HomeIcon className={`w-4 h-4 ${currentTier.accent}`} />
-              <span className="text-xs text-muted-foreground">Propiedades</span>
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-lg font-bold text-foreground">{activePropertiesCount}</span>
-              <span className="text-xs text-muted-foreground">/ {maxProperties}</span>
-            </div>
-            <Progress value={propertyUsage} className="h-1 mt-1.5" />
-            {isNearPropertyLimit && (
-              <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                Cerca del límite
-              </p>
-            )}
-          </div>
+          
+          {/* AGENT: Properties + Featured */}
+          {dashboardType === 'agent' && (
+            <>
+              <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <HomeIcon className={`w-4 h-4 ${currentTier.accent}`} />
+                  <span className="text-xs text-muted-foreground">Propiedades</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-foreground">{activePropertiesCount}</span>
+                  <span className="text-xs text-muted-foreground">/ {maxProperties}</span>
+                </div>
+                <Progress value={propertyUsage} className="h-1 mt-1.5" />
+                {isNearPropertyLimit && (
+                  <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Cerca del límite
+                  </p>
+                )}
+              </div>
 
-          {/* Stat: Featured */}
-          <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
-            <div className="flex items-center gap-2 mb-1.5">
-              <FeaturedIcon className={`w-4 h-4 ${currentTier.accent}`} />
-              <span className="text-xs text-muted-foreground">Destacadas</span>
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-lg font-bold text-foreground">{featuredCount}</span>
-              <span className="text-xs text-muted-foreground">/ {maxFeatured}</span>
-            </div>
-            <Progress value={featuredUsage} className="h-1 mt-1.5" />
-          </div>
+              <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <FeaturedIcon className={`w-4 h-4 ${currentTier.accent}`} />
+                  <span className="text-xs text-muted-foreground">Destacadas</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-foreground">{featuredCount}</span>
+                  <span className="text-xs text-muted-foreground">/ {maxFeatured}</span>
+                </div>
+                <Progress value={featuredUsage} className="h-1 mt-1.5" />
+              </div>
+            </>
+          )}
 
-          {/* Stat: Views */}
+          {/* AGENCY: Inventory + Team Agents */}
+          {dashboardType === 'agency' && (
+            <>
+              <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Building2 className={`w-4 h-4 ${currentTier.accent}`} />
+                  <span className="text-xs text-muted-foreground">Inventario</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-foreground">{inventoryCount}</span>
+                  <span className="text-xs text-muted-foreground">/ {maxProperties}</span>
+                </div>
+                <Progress value={inventoryUsage} className="h-1 mt-1.5" />
+                {isNearPropertyLimit && (
+                  <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Cerca del límite
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Users className={`w-4 h-4 ${currentTier.accent}`} />
+                  <span className="text-xs text-muted-foreground">Agentes</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-foreground">{teamAgentsCount}</span>
+                  <span className="text-xs text-muted-foreground">/ {maxAgents}</span>
+                </div>
+                <Progress value={agentsUsage} className="h-1 mt-1.5" />
+              </div>
+            </>
+          )}
+
+          {/* DEVELOPER: Projects + Team Members */}
+          {dashboardType === 'developer' && (
+            <>
+              <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <FolderKanban className={`w-4 h-4 ${currentTier.accent}`} />
+                  <span className="text-xs text-muted-foreground">Proyectos</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-foreground">{projectsCount}</span>
+                  <span className="text-xs text-muted-foreground">/ {maxProjects}</span>
+                </div>
+                <Progress value={projectsUsage} className="h-1 mt-1.5" />
+                {isNearPropertyLimit && (
+                  <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Cerca del límite
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <HardHat className={`w-4 h-4 ${currentTier.accent}`} />
+                  <span className="text-xs text-muted-foreground">Equipo</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-foreground">{teamMembersCount}</span>
+                  <span className="text-xs text-muted-foreground">/ {maxAgents}</span>
+                </div>
+                <Progress value={teamUsage} className="h-1 mt-1.5" />
+              </div>
+            </>
+          )}
+
+          {/* Common: Views */}
           <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
             <div className="flex items-center gap-2 mb-1.5">
               <ViewsIcon className={`w-4 h-4 ${currentTier.accent}`} />
@@ -153,7 +269,7 @@ export const CompactDashboardHeader = ({
             <span className="text-lg font-bold text-foreground">{totalViews.toLocaleString()}</span>
           </div>
 
-          {/* Stat: Reminders/Alerts */}
+          {/* Common: Reminders/Alerts */}
           <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
             <div className="flex items-center gap-2 mb-1.5">
               <AlertsIcon className={`w-4 h-4 ${pendingReminders > 0 ? 'text-amber-500' : currentTier.accent}`} />
@@ -164,7 +280,7 @@ export const CompactDashboardHeader = ({
             </span>
           </div>
 
-          {/* Stat: Renewal / Trial */}
+          {/* Common: Renewal / Trial */}
           <div className="col-span-2 md:col-span-4 lg:col-span-1 bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
             <div className="flex items-center gap-2 mb-1.5">
               <RenewalIcon className={`w-4 h-4 ${isTrialEnding ? 'text-amber-500' : currentTier.accent}`} />
