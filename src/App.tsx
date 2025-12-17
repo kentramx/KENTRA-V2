@@ -39,6 +39,7 @@ import PricingDesarrolladora from "./pages/PricingDesarrolladora";
 import DirectorioAgentes from "./pages/DirectorioAgentes";
 import Leaderboard from "./pages/Leaderboard";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCanceled from "./pages/PaymentCanceled";
 import AdminRoles from "./pages/AdminRoles";
 import AdminRoleAudit from "./pages/AdminRoleAudit";
 import AdminNotificationSettings from "./pages/AdminNotificationSettings";
@@ -111,6 +112,7 @@ const AppContent = () => {
               <Route path="/agentes" element={<DirectorioAgentes />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/payment-canceled" element={<PaymentCanceled />} />
               <Route path="/unirse-equipo" element={<UnirseEquipo />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/financiero" element={<AdminFinancial />} />
