@@ -401,6 +401,7 @@ Deno.serve(withSentry(async (req) => {
     // METADATA COMPLETA para webhook - CRÍTICO para sincronización correcta
     const metadata: Record<string, string> = {
       user_id: user.id,
+      plan_id: plan.id, // CRÍTICO: Necesario para que el webhook actualice la suscripción
       plan_slug: upsellOnly ? 'upsell' : plan.name,
       billing_cycle: billingCycle,
       upsell_only: upsellOnly.toString(),
