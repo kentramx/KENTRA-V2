@@ -557,7 +557,7 @@ const AgentDashboard = () => {
           className="mb-4" 
         />
 
-        {/* Compact Header - Properties First Layout */}
+        {/* Compact Header - Properties First Layout with Premium Look */}
         <CompactDashboardHeader
           profileName={profile?.name || 'Agente'}
           planName={subscriptionInfo?.plan_name}
@@ -566,6 +566,14 @@ const AgentDashboard = () => {
           totalViews={totalViewsData}
           pendingReminders={propertyCounts.reminders}
           onNewProperty={handleNewProperty}
+          subscriptionInfo={{
+            status: subscriptionInfo?.status,
+            planName: subscriptionInfo?.plan_name,
+            currentPeriodEnd: subscriptionInfo?.current_period_end,
+            maxProperties: subscriptionInfo?.max_properties || 5,
+            featuredPerMonth: subscriptionInfo?.featured_per_month || 1,
+          }}
+          featuredCount={featuredCount}
         />
 
         {/* Alerts Section - Only show when critical */}
