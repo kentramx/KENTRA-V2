@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Crown, Sparkles, Star, AlertTriangle, Clock } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getPlanTier, PLAN_TIER_CONFIG } from '@/config/planTierConfig';
 
 export function PlanBadge() {
   const { 
@@ -40,12 +41,11 @@ export function PlanBadge() {
     );
   }
 
-  const getPlanIcon = () => {
-    const planName = subscription?.plan?.name || '';
-    if (planName.includes('elite') || planName.includes('pro')) return Crown;
-    if (planName.includes('start')) return Star;
-    return Sparkles;
-  };
+  // Usar config centralizado para obtener icono según tier
+  const planName = subscription?.plan?.name || '';
+  const planTier = getPlanTier(planName);
+  const tierConfig = PLAN_TIER_CONFIG[planTier];
+  const PlanIcon = tierConfig.icon;
 
   const getStatusConfig = () => {
     if (isSuspended) {
@@ -67,14 +67,14 @@ export function PlanBadge() {
     if (isTrial) {
       return {
         variant: 'secondary' as const,
-        icon: Clock,
+        icon: PLAN_TIER_CONFIG.trial.icon,
         tooltip: `Trial - ${trialDaysRemaining} días restantes`,
         showAlert: trialDaysRemaining !== null && trialDaysRemaining <= 3,
       };
     }
     return {
       variant: 'default' as const,
-      icon: getPlanIcon(),
+      icon: PlanIcon,
       tooltip: `${subscription?.plan?.display_name} - ${limits.currentProperties}/${limits.maxProperties} propiedades`,
       showAlert: false,
     };

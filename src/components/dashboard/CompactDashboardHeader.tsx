@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { Plus, Home, Eye, Bell, Crown, Sparkles, TrendingUp, Calendar, Zap, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { getPlanTier, PLAN_TIER_CONFIG, METRIC_ICONS } from '@/config/planTierConfig';
 
 interface SubscriptionInfo {
   status: string;
@@ -20,7 +21,6 @@ interface CompactDashboardHeaderProps {
   totalViews: number;
   pendingReminders: number;
   onNewProperty: () => void;
-  // New subscription props
   subscriptionInfo?: SubscriptionInfo;
   featuredCount?: number;
 }
@@ -46,57 +46,17 @@ export const CompactDashboardHeader = ({
 
   const firstName = profileName?.split(' ')[0] || 'Agente';
 
-  // Determinar tier del plan para estilos
-  const planTier = useMemo(() => {
-    if (!planName) return 'free';
-    const lowerName = planName.toLowerCase();
-    if (lowerName.includes('elite') || lowerName.includes('premium')) return 'elite';
-    if (lowerName.includes('pro') || lowerName.includes('profesional')) return 'pro';
-    if (lowerName.includes('basico') || lowerName.includes('basic')) return 'basic';
-    if (lowerName.includes('trial')) return 'trial';
-    return 'basic';
-  }, [planName]);
-
-  const tierConfig = {
-    elite: {
-      gradient: 'from-amber-500/10 via-yellow-500/5 to-orange-500/10',
-      badge: 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-0 shadow-lg shadow-amber-500/30',
-      icon: Crown,
-      accent: 'text-amber-500',
-      progressColor: 'bg-amber-500',
-    },
-    pro: {
-      gradient: 'from-primary/10 via-secondary/5 to-accent/10',
-      badge: 'bg-gradient-to-r from-primary to-secondary text-white border-0 shadow-lg shadow-primary/30',
-      icon: Sparkles,
-      accent: 'text-primary',
-      progressColor: 'bg-primary',
-    },
-    basic: {
-      gradient: 'from-secondary/10 via-muted/5 to-secondary/10',
-      badge: 'bg-secondary text-secondary-foreground border border-border shadow-md',
-      icon: Home,
-      accent: 'text-secondary-foreground',
-      progressColor: 'bg-secondary',
-    },
-    trial: {
-      gradient: 'from-blue-500/10 via-cyan-500/5 to-blue-500/10',
-      badge: 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 shadow-lg shadow-blue-500/30',
-      icon: TrendingUp,
-      accent: 'text-blue-500',
-      progressColor: 'bg-blue-500',
-    },
-    free: {
-      gradient: 'from-muted/20 via-background to-muted/20',
-      badge: 'bg-muted text-muted-foreground border border-border',
-      icon: Home,
-      accent: 'text-muted-foreground',
-      progressColor: 'bg-muted-foreground',
-    },
-  };
-
-  const currentTier = tierConfig[planTier] || tierConfig.basic;
+  // Usar config centralizado
+  const planTier = useMemo(() => getPlanTier(planName), [planName]);
+  const currentTier = PLAN_TIER_CONFIG[planTier];
   const TierIcon = currentTier.icon;
+
+  // Metric icons from centralized config
+  const HomeIcon = METRIC_ICONS.properties;
+  const FeaturedIcon = METRIC_ICONS.featured;
+  const ViewsIcon = METRIC_ICONS.views;
+  const AlertsIcon = METRIC_ICONS.alerts;
+  const RenewalIcon = METRIC_ICONS.renewal;
 
   // Calculate subscription metrics
   const maxProperties = subscriptionInfo?.maxProperties || 5;
@@ -155,7 +115,7 @@ export const CompactDashboardHeader = ({
           {/* Stat: Active Properties with limit */}
           <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
             <div className="flex items-center gap-2 mb-1.5">
-              <Home className={`w-4 h-4 ${currentTier.accent}`} />
+              <HomeIcon className={`w-4 h-4 ${currentTier.accent}`} />
               <span className="text-xs text-muted-foreground">Propiedades</span>
             </div>
             <div className="flex items-baseline gap-1">
@@ -174,7 +134,7 @@ export const CompactDashboardHeader = ({
           {/* Stat: Featured */}
           <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
             <div className="flex items-center gap-2 mb-1.5">
-              <Zap className={`w-4 h-4 ${currentTier.accent}`} />
+              <FeaturedIcon className={`w-4 h-4 ${currentTier.accent}`} />
               <span className="text-xs text-muted-foreground">Destacadas</span>
             </div>
             <div className="flex items-baseline gap-1">
@@ -187,7 +147,7 @@ export const CompactDashboardHeader = ({
           {/* Stat: Views */}
           <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
             <div className="flex items-center gap-2 mb-1.5">
-              <Eye className={`w-4 h-4 ${currentTier.accent}`} />
+              <ViewsIcon className={`w-4 h-4 ${currentTier.accent}`} />
               <span className="text-xs text-muted-foreground">Vistas</span>
             </div>
             <span className="text-lg font-bold text-foreground">{totalViews.toLocaleString()}</span>
@@ -196,7 +156,7 @@ export const CompactDashboardHeader = ({
           {/* Stat: Reminders/Alerts */}
           <div className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
             <div className="flex items-center gap-2 mb-1.5">
-              <Bell className={`w-4 h-4 ${pendingReminders > 0 ? 'text-amber-500' : currentTier.accent}`} />
+              <AlertsIcon className={`w-4 h-4 ${pendingReminders > 0 ? 'text-amber-500' : currentTier.accent}`} />
               <span className="text-xs text-muted-foreground">Alertas</span>
             </div>
             <span className={`text-lg font-bold ${pendingReminders > 0 ? 'text-amber-600' : 'text-foreground'}`}>
@@ -207,7 +167,7 @@ export const CompactDashboardHeader = ({
           {/* Stat: Renewal / Trial */}
           <div className="col-span-2 md:col-span-4 lg:col-span-1 bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 shadow-sm">
             <div className="flex items-center gap-2 mb-1.5">
-              <Calendar className={`w-4 h-4 ${isTrialEnding ? 'text-amber-500' : currentTier.accent}`} />
+              <RenewalIcon className={`w-4 h-4 ${isTrialEnding ? 'text-amber-500' : currentTier.accent}`} />
               <span className="text-xs text-muted-foreground">
                 {planTier === 'trial' ? 'Trial' : 'Renovación'}
               </span>

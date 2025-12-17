@@ -1,6 +1,6 @@
-import { Home, Star, CheckCircle, Calendar, AlertTriangle } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import type { SubscriptionInfo } from '@/types/subscription';
+import { METRIC_ICONS } from '@/config/planTierConfig';
 
 interface PremiumMetricsCardsProps {
   subscriptionInfo: SubscriptionInfo | null;
@@ -28,10 +28,17 @@ export const PremiumMetricsCards = ({
   const propertiesPercent = isUnlimited ? 0 : Math.min((activePropertiesCount / propertiesLimit) * 100, 100);
   const featuredPercent = isFeaturedUnlimited ? 0 : featuredLimit > 0 ? Math.min((featuredCount / featuredLimit) * 100, 100) : 0;
 
+  // Usar iconos centralizados
+  const PropertiesIcon = METRIC_ICONS.properties;
+  const FeaturedIcon = METRIC_ICONS.featured;
+  const ActiveIcon = METRIC_ICONS.active;
+  const RenewalIcon = METRIC_ICONS.renewal;
+  const WarningIcon = METRIC_ICONS.warning;
+
   const metrics = [
     {
       id: 'properties',
-      icon: Home,
+      icon: PropertiesIcon,
       label: 'Propiedades Publicadas',
       value: isUnlimited ? activePropertiesCount.toString() : `${activePropertiesCount}/${propertiesLimit}`,
       subtext: isUnlimited ? 'Sin límite' : `${Math.max(0, propertiesLimit - activePropertiesCount)} disponibles`,
@@ -44,7 +51,7 @@ export const PremiumMetricsCards = ({
     },
     {
       id: 'featured',
-      icon: Star,
+      icon: FeaturedIcon,
       label: 'Destacadas del Mes',
       value: isFeaturedUnlimited ? featuredCount.toString() : `${featuredCount}/${featuredLimit}`,
       subtext: isFeaturedUnlimited ? 'Sin límite' : featuredLimit > 0 ? `${Math.max(0, featuredLimit - featuredCount)} disponibles` : 'No incluido',
@@ -57,7 +64,7 @@ export const PremiumMetricsCards = ({
     },
     {
       id: 'active',
-      icon: CheckCircle,
+      icon: ActiveIcon,
       label: 'Activas Ahora',
       value: activePropertiesCount.toString(),
       subtext: 'Propiedades visibles',
@@ -70,7 +77,7 @@ export const PremiumMetricsCards = ({
     },
     {
       id: 'renewal',
-      icon: Calendar,
+      icon: RenewalIcon,
       label: 'Próxima Renovación',
       value: daysUntilRenewal !== null
         ? daysUntilRenewal > 0
@@ -106,7 +113,7 @@ export const PremiumMetricsCards = ({
             {/* Warning indicator */}
             {metric.warning && (
               <div className="absolute top-3 right-3">
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                <WarningIcon className="w-4 h-4 text-amber-500" />
               </div>
             )}
             
