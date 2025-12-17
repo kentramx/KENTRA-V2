@@ -9,7 +9,9 @@ import {
   ArrowUpRight,
   CreditCard,
   Calendar,
-  Zap
+  Zap,
+  Home,
+  Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,39 +50,49 @@ export const PremiumSubscriptionCard = ({
   // Estilos según tier
   const tierConfig = {
     elite: {
-      gradient: 'from-amber-500/20 via-yellow-500/10 to-orange-500/20',
-      border: 'border-amber-500/30',
-      badge: 'bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950',
+      gradient: 'from-amber-50 via-yellow-50/50 to-orange-50/30',
+      border: 'border-amber-300',
+      badge: 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white',
       icon: Crown,
-      glow: 'shadow-amber-500/10',
+      iconBg: 'bg-amber-100',
+      iconColor: 'text-amber-600',
+      accentColor: 'text-amber-600',
     },
     pro: {
-      gradient: 'from-primary/20 via-accent/10 to-primary/20',
-      border: 'border-primary/30',
-      badge: 'bg-gradient-to-r from-primary to-accent text-primary-foreground',
+      gradient: 'from-primary/10 via-card to-accent/10',
+      border: 'border-primary/40',
+      badge: 'bg-gradient-to-r from-primary to-secondary text-white',
       icon: Sparkles,
-      glow: 'shadow-primary/10',
+      iconBg: 'bg-primary/10',
+      iconColor: 'text-primary',
+      accentColor: 'text-primary',
     },
     basic: {
-      gradient: 'from-slate-500/10 via-gray-500/5 to-slate-500/10',
+      gradient: 'from-slate-50 via-card to-gray-50/50',
       border: 'border-border',
       badge: 'bg-secondary text-secondary-foreground',
       icon: CheckCircle,
-      glow: '',
+      iconBg: 'bg-secondary/50',
+      iconColor: 'text-secondary-foreground',
+      accentColor: 'text-secondary',
     },
     trial: {
-      gradient: 'from-blue-500/10 via-indigo-500/5 to-blue-500/10',
-      border: 'border-blue-500/30 border-dashed',
+      gradient: 'from-blue-50 via-card to-indigo-50/30',
+      border: 'border-blue-300 border-dashed',
       badge: 'bg-blue-500 text-white',
       icon: Clock,
-      glow: 'shadow-blue-500/10',
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      accentColor: 'text-blue-600',
     },
     none: {
-      gradient: 'from-muted/50 to-muted/30',
+      gradient: 'from-muted/30 via-card to-muted/20',
       border: 'border-border border-dashed',
       badge: 'bg-muted text-muted-foreground',
       icon: AlertTriangle,
-      glow: '',
+      iconBg: 'bg-muted',
+      iconColor: 'text-muted-foreground',
+      accentColor: 'text-muted-foreground',
     },
   };
 
@@ -114,20 +126,21 @@ export const PremiumSubscriptionCard = ({
 
   if (!subscriptionInfo) {
     return (
-      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${config.gradient} border-2 ${config.border} p-6 ${config.glow} shadow-lg`}>
-        <div className="flex flex-col items-center text-center py-4">
-          <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-            <AlertTriangle className="w-8 h-8 text-muted-foreground" />
+      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${config.gradient} border-2 ${config.border} p-6 shadow-lg h-full`}>
+        <div className="flex flex-col items-center text-center py-6">
+          <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mb-5">
+            <AlertTriangle className="w-10 h-10 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">Sin Suscripción Activa</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Contrata un plan para empezar a publicar tus propiedades
+          <h3 className="text-xl font-bold text-foreground mb-2">Sin Suscripción</h3>
+          <p className="text-muted-foreground mb-6 max-w-[200px]">
+            Contrata un plan para publicar propiedades
           </p>
           <Button 
             onClick={() => navigate(pricingRoute)}
-            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            size="lg"
+            className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white font-bold shadow-lg"
           >
-            <Zap className="w-4 h-4 mr-2" />
+            <Zap className="w-5 h-5 mr-2" />
             Ver Planes
           </Button>
         </div>
@@ -136,44 +149,36 @@ export const PremiumSubscriptionCard = ({
   }
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${config.gradient} border-2 ${config.border} p-5 md:p-6 ${config.glow} shadow-lg transition-all duration-300 hover:shadow-xl`}>
-      {/* Background decorations */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-white/5 to-transparent rounded-full -translate-y-1/2 translate-x-1/2" />
-      
+    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${config.gradient} border-2 ${config.border} p-5 md:p-6 shadow-lg transition-all duration-300 hover:shadow-xl h-full flex flex-col`}>
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-xl ${planTier === 'elite' ? 'bg-amber-500/20' : planTier === 'pro' ? 'bg-primary/20' : 'bg-muted'} flex items-center justify-center`}>
-            <TierIcon className={`w-6 h-6 ${planTier === 'elite' ? 'text-amber-500' : planTier === 'pro' ? 'text-primary' : 'text-muted-foreground'}`} />
+      <div className="flex items-start gap-4 mb-5">
+        <div className={`w-14 h-14 rounded-xl ${config.iconBg} flex items-center justify-center flex-shrink-0`}>
+          <TierIcon className={`w-7 h-7 ${config.iconColor}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-lg font-bold text-foreground truncate">
+              {subscriptionInfo.display_name || subscriptionInfo.plan_name || 'Mi Plan'}
+            </h3>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-foreground">
-                {subscriptionInfo.display_name || subscriptionInfo.plan_name || 'Mi Plan'}
-              </h3>
-              <Badge className={`${config.badge} text-xs px-2 py-0.5`}>
-                {isTrial ? 'Prueba' : isActive ? 'Activo' : isPastDue ? 'Pendiente' : isCanceled ? 'Cancelado' : 'Activo'}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {subscriptionInfo.billing_cycle === 'yearly' ? 'Facturación anual' : 'Facturación mensual'}
-            </p>
-          </div>
+          <Badge className={`${config.badge} text-xs px-2.5 py-1 font-semibold`}>
+            {isTrial ? 'Prueba Gratuita' : isActive ? 'Activo' : isPastDue ? 'Pago Pendiente' : isCanceled ? 'Cancelado' : 'Activo'}
+          </Badge>
         </div>
       </div>
 
       {/* Trial/Past Due Alert */}
       {(isTrial || isPastDue) && daysRemaining !== null && (
-        <div className={`mb-4 p-3 rounded-lg ${isPastDue ? 'bg-destructive/10 border border-destructive/20' : 'bg-blue-500/10 border border-blue-500/20'}`}>
+        <div className={`mb-4 p-3 rounded-xl ${isPastDue ? 'bg-red-100 border border-red-200' : 'bg-blue-100 border border-blue-200'}`}>
           <div className="flex items-center gap-2">
             {isPastDue ? (
-              <AlertTriangle className="w-4 h-4 text-destructive" />
+              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
             ) : (
-              <Clock className="w-4 h-4 text-blue-500" />
+              <Clock className="w-5 h-5 text-blue-600 flex-shrink-0" />
             )}
-            <span className={`text-sm font-medium ${isPastDue ? 'text-destructive' : 'text-blue-600'}`}>
+            <span className={`text-sm font-semibold ${isPastDue ? 'text-red-700' : 'text-blue-700'}`}>
               {isPastDue 
-                ? 'Pago pendiente - actualiza tu método de pago'
+                ? 'Actualiza tu método de pago'
                 : `${daysRemaining} días restantes de prueba`
               }
             </span>
@@ -182,36 +187,42 @@ export const PremiumSubscriptionCard = ({
       )}
 
       {/* Usage Stats */}
-      <div className="space-y-3 mb-4">
-        <div>
-          <div className="flex items-center justify-between text-sm mb-1.5">
-            <span className="text-muted-foreground">Propiedades</span>
-            <span className="font-medium text-foreground">
+      <div className="space-y-4 mb-5 flex-1">
+        <div className="bg-card/60 rounded-xl p-4 border border-border/50">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Home className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-foreground">Propiedades</span>
+            </div>
+            <span className={`text-sm font-bold ${config.accentColor}`}>
               {isUnlimited ? `${activePropertiesCount} / ∞` : `${activePropertiesCount} / ${propertiesLimit}`}
             </span>
           </div>
           <Progress 
             value={isUnlimited ? 30 : propertiesUsage} 
-            className="h-2"
+            className="h-2.5"
           />
           {!isUnlimited && propertiesUsage >= 80 && (
-            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" />
+            <p className="text-xs text-amber-600 mt-2 flex items-center gap-1 font-medium">
+              <AlertTriangle className="w-3.5 h-3.5" />
               {propertiesUsage >= 100 ? 'Límite alcanzado' : 'Cerca del límite'}
             </p>
           )}
         </div>
 
-        <div>
-          <div className="flex items-center justify-between text-sm mb-1.5">
-            <span className="text-muted-foreground">Destacadas este mes</span>
-            <span className="font-medium text-foreground">
+        <div className="bg-card/60 rounded-xl p-4 border border-border/50">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 text-amber-500" />
+              <span className="text-sm font-medium text-foreground">Destacadas</span>
+            </div>
+            <span className={`text-sm font-bold ${config.accentColor}`}>
               {featuredLimit === -1 ? `${featuredCount} / ∞` : `${featuredCount} / ${featuredLimit}`}
             </span>
           </div>
           <Progress 
             value={featuredLimit === -1 ? 30 : featuredLimit > 0 ? (featuredCount / featuredLimit) * 100 : 0} 
-            className="h-2"
+            className="h-2.5"
           />
         </div>
       </div>
@@ -219,23 +230,23 @@ export const PremiumSubscriptionCard = ({
       {/* Renewal Info */}
       {subscriptionInfo.current_period_end && !isCanceled && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 pb-4 border-b border-border/50">
-          <Calendar className="w-4 h-4" />
+          <Calendar className="w-4 h-4 flex-shrink-0" />
           <span>
-            {isTrial ? 'Prueba termina' : 'Próxima renovación'}:{' '}
-            <span className="font-medium text-foreground">
-              {format(new Date(subscriptionInfo.current_period_end), "d 'de' MMMM", { locale: es })}
+            {isTrial ? 'Termina' : 'Renovación'}:{' '}
+            <span className="font-semibold text-foreground">
+              {format(new Date(subscriptionInfo.current_period_end), "d 'de' MMMM, yyyy", { locale: es })}
             </span>
           </span>
         </div>
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mt-auto">
         <Button 
           variant="outline" 
           size="sm" 
           onClick={onManage}
-          className="flex-1 border-border/50 hover:bg-muted/50"
+          className="flex-1 h-11 border-border hover:bg-muted font-medium"
         >
           <CreditCard className="w-4 h-4 mr-2" />
           Administrar
@@ -244,10 +255,10 @@ export const PremiumSubscriptionCard = ({
           <Button 
             size="sm" 
             onClick={() => navigate(pricingRoute)}
-            className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            className="flex-1 h-11 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white font-medium"
           >
             <ArrowUpRight className="w-4 h-4 mr-2" />
-            Mejorar Plan
+            Mejorar
           </Button>
         )}
       </div>

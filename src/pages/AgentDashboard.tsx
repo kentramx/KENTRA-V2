@@ -613,33 +613,52 @@ const AgentDashboard = () => {
         )}
 
         {/* Main Tabs Card */}
-        <Card className="border-border/50 shadow-lg">
-          <CardContent className="p-4 md:p-6">
+        <Card className="border-border shadow-xl bg-card">
+          <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1 rounded-xl mb-6">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <TabsTrigger 
-                      key={tab.value}
-                      value={tab.value}
-                      disabled={tab.disabled}
-                      className="flex-1 min-w-[100px] flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span className="hidden sm:inline">{tab.label}</span>
-                      {tab.badge && (
-                        <Badge 
-                          variant={tab.badgeVariant === 'warning' ? 'destructive' : 'secondary'}
-                          className="ml-1 h-5 min-w-[20px] px-1.5 text-[10px]"
-                        >
-                          {tab.badge}
-                        </Badge>
-                      )}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
+              {/* Premium Tab Header */}
+              <div className="border-b border-border bg-gradient-to-r from-muted/50 via-background to-muted/50 p-4 md:p-6">
+                <TabsList className="w-full flex flex-wrap h-auto gap-2 bg-transparent p-0">
+                  {tabs.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.value;
+                    return (
+                      <TabsTrigger 
+                        key={tab.value}
+                        value={tab.value}
+                        disabled={tab.disabled}
+                        className={`
+                          relative flex-1 min-w-[90px] flex items-center justify-center gap-2 
+                          px-4 py-3 rounded-xl font-medium text-sm
+                          transition-all duration-200
+                          ${isActive 
+                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25' 
+                            : 'bg-card text-muted-foreground hover:bg-muted hover:text-foreground border border-border'
+                          }
+                          ${tab.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                          data-[state=active]:bg-primary data-[state=active]:text-primary-foreground
+                        `}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="hidden sm:inline">{tab.label}</span>
+                        {tab.badge && (
+                          <Badge 
+                            variant={tab.badgeVariant === 'warning' ? 'destructive' : 'secondary'}
+                            className={`ml-1 h-5 min-w-[20px] px-1.5 text-[10px] font-bold ${
+                              isActive ? 'bg-white/20 text-white' : ''
+                            }`}
+                          >
+                            {tab.badge}
+                          </Badge>
+                        )}
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+              </div>
+              
+              {/* Tab Content Area */}
+              <div className="p-4 md:p-6">
 
               <TabsContent value="list" className="mt-0">
                 <AgentPropertyList 
@@ -681,6 +700,7 @@ const AgentDashboard = () => {
                   />
                 </SubscriptionGate>
               </TabsContent>
+              </div>
             </Tabs>
           </CardContent>
         </Card>
