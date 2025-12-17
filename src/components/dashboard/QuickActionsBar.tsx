@@ -66,7 +66,7 @@ export const QuickActionsBar = ({
       shortLabel: 'Plan',
       icon: CreditCard,
       onClick: onViewSubscription,
-      badge: pendingReminders > 0 ? '!' : null,
+      badge: pendingReminders > 0 ? pendingReminders : null,
       className: 'bg-purple-500/10 text-purple-700 hover:bg-purple-500/20 border border-purple-500/30',
     },
   ];

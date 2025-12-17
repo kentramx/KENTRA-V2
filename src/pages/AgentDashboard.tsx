@@ -59,7 +59,7 @@ const AgentDashboard = () => {
   const [userRole, setUserRole] = useState<string>('');
   const [featuredCount, setFeaturedCount] = useState(0);
   const [reactivating, setReactivating] = useState(false);
-  const [totalViews, setTotalViews] = useState(0);
+  
   
   // Si está simulando rol agent, usar agent demo; si no, usar user real
   const effectiveAgentId = (isImpersonating && impersonatedRole === 'agent') 
@@ -67,7 +67,7 @@ const AgentDashboard = () => {
     : user?.id;
 
   // Fetch properties con React Query
-  const { data: allProperties = [] } = useAgentProperties(effectiveAgentId);
+  const { data: allProperties = [], isLoading: propertiesLoading } = useAgentProperties(effectiveAgentId);
   
   // Fetch unread messages count
   const { data: unreadMessagesCount = 0 } = useQuery({
@@ -87,7 +87,38 @@ const AgentDashboard = () => {
       return data?.reduce((sum, item) => sum + (item.unread_count || 0), 0) || 0;
     },
     enabled: !!effectiveAgentId,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 30000,
+  });
+
+  // Fetch total views for agent's properties
+  const { data: totalViewsData = 0 } = useQuery({
+    queryKey: ['agent-total-views', effectiveAgentId],
+    queryFn: async () => {
+      if (!effectiveAgentId) return 0;
+      
+      // Get all property IDs for this agent
+      const { data: propertyIds, error: propError } = await supabase
+        .from('properties')
+        .select('id')
+        .eq('agent_id', effectiveAgentId);
+      
+      if (propError || !propertyIds?.length) return 0;
+      
+      // Count total views for those properties
+      const { count, error: viewsError } = await supabase
+        .from('property_views')
+        .select('*', { count: 'exact', head: true })
+        .in('property_id', propertyIds.map(p => p.id));
+      
+      if (viewsError) {
+        console.error('Error fetching views:', viewsError);
+        return 0;
+      }
+      
+      return count || 0;
+    },
+    enabled: !!effectiveAgentId,
+    staleTime: 60 * 1000, // Cache for 1 minute
   });
   
   // Calcular counts desde los datos
@@ -534,7 +565,7 @@ const AgentDashboard = () => {
           planDisplayName={subscriptionInfo?.display_name}
           status={subscriptionInfo?.status}
           activePropertiesCount={activePropertiesCount}
-          totalViews={totalViews}
+          totalViews={totalViewsData}
           onNewProperty={handleNewProperty}
         />
 
@@ -712,11 +743,22 @@ const AgentDashboard = () => {
               <div className="p-4 md:p-6">
 
               <TabsContent value="list" className="mt-0">
-                <AgentPropertyList 
-                  onEdit={handleEditProperty} 
-                  subscriptionInfo={subscriptionInfo}
-                  onCreateProperty={handleNewProperty}
-                />
+                {propertiesLoading ? (
+                  <div className="space-y-4">
+                    <div className="h-8 w-48 bg-muted animate-pulse rounded-lg" />
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="h-64 bg-muted animate-pulse rounded-xl" />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <AgentPropertyList 
+                    onEdit={handleEditProperty} 
+                    subscriptionInfo={subscriptionInfo}
+                    onCreateProperty={handleNewProperty}
+                  />
+                )}
               </TabsContent>
 
               <TabsContent value="analytics" className="mt-0">
