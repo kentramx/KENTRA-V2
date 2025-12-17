@@ -399,9 +399,10 @@ Deno.serve(withSentry(async (req) => {
         break;
       }
 
-      case 'invoice.payment_succeeded': {
+      case 'invoice.payment_succeeded':
+      case 'invoice.paid': {
         const invoice = event.data.object as Stripe.Invoice;
-        console.log('Payment succeeded:', invoice.id);
+        console.log(`Invoice ${event.type}:`, invoice.id, 'billing_reason:', invoice.billing_reason);
 
         // Verificar que exista subscription en el invoice
         if (!invoice.subscription) {
@@ -440,6 +441,16 @@ Deno.serve(withSentry(async (req) => {
             .eq('id', subRecord.id);
         }
 
+        // 🔧 FIX: Detectar tipo de factura para registro correcto
+        const isProration = invoice.billing_reason === 'subscription_update';
+        const isRenewal = invoice.billing_reason === 'subscription_cycle';
+        const isFirstPayment = invoice.billing_reason === 'subscription_create';
+        
+        const paymentType = isProration ? 'proration' 
+          : isRenewal ? 'renewal' 
+          : isFirstPayment ? 'subscription'
+          : 'subscription';
+
         // Record payment
         const { error: paymentError } = await supabaseClient
           .from('payment_history')
@@ -450,35 +461,52 @@ Deno.serve(withSentry(async (req) => {
             amount: invoice.amount_paid / 100, // Convert from cents
             currency: invoice.currency.toUpperCase(),
             status: 'succeeded',
-            payment_type: 'subscription',
+            payment_type: paymentType,
             metadata: {
               invoice_id: invoice.id,
               billing_reason: invoice.billing_reason,
+              is_proration: isProration,
             },
           });
 
         if (paymentError) {
           console.error('Error recording payment:', paymentError);
         } else {
-          console.log('Payment recorded successfully');
+          console.log(`Payment recorded successfully (${paymentType})`);
         }
 
-        // Send renewal success notification
-        await supabaseClient.functions.invoke('send-subscription-notification', {
-          body: {
-            userId: subRecord.user_id,
-            type: 'renewal_success',
-            metadata: {
-              planName: subRecord.subscription_plans.display_name,
-              amount: (invoice.amount_paid / 100).toFixed(2),
-              nextBillingDate: new Date(invoice.period_end * 1000).toLocaleDateString('es-MX', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              }),
+        // 🔧 FIX: Sincronizar fechas de período desde la suscripción actualizada
+        if (subscription.current_period_start && subscription.current_period_end) {
+          await supabaseClient
+            .from('user_subscriptions')
+            .update({
+              current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            })
+            .eq('id', subRecord.id);
+          console.log('Synced subscription period dates from Stripe');
+        }
+
+        // Send renewal success notification (only for renewals, not prorations)
+        if (!isProration) {
+          await supabaseClient.functions.invoke('send-subscription-notification', {
+            body: {
+              userId: subRecord.user_id,
+              type: 'renewal_success',
+              metadata: {
+                planName: subRecord.subscription_plans.display_name,
+                amount: (invoice.amount_paid / 100).toFixed(2),
+                nextBillingDate: new Date(subscription.current_period_end * 1000).toLocaleDateString('es-MX', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                }),
+              },
             },
-          },
-        });
+          });
+        } else {
+          console.log('Proration payment processed - skipping renewal notification');
+        }
 
         break;
       }

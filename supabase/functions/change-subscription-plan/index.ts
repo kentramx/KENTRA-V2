@@ -384,6 +384,8 @@ Deno.serve(withSentry(async (req) => {
         percentageRemaining: ((daysRemaining / totalDays) * 100).toFixed(2) + '%',
       });
 
+      // 🔧 FIX: Preview debe usar los mismos parámetros que la ejecución real
+      // para que los montos mostrados coincidan exactamente con lo que se cobra
       const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
         customer: stripeCustomerId,
         subscription: currentSub.stripe_subscription_id,
@@ -391,7 +393,8 @@ Deno.serve(withSentry(async (req) => {
           id: stripeSubscription.items.data[0].id,
           price: newPriceId,
         }],
-        subscription_proration_behavior: 'create_prorations',
+        subscription_proration_behavior: 'always_invoice',  // ✅ Igual que ejecución
+        subscription_billing_cycle_anchor: 'unchanged',     // ✅ Mantiene fecha renovación
       });
 
       // 💰 DIAGNOSIS - Stripe Proration Calculation
@@ -551,13 +554,16 @@ Deno.serve(withSentry(async (req) => {
         retryOn: isRetryableStripeError,
         onRetry: (attempt, error) => logger.warn(`Stripe subscription update retry ${attempt}`, { error: error.message }),
       }
-    );
+    ) as Stripe.Subscription;
 
-    // Update database
+    // Update database with synchronized dates from Stripe
+    // 🔧 FIX: Sincronizar current_period_start/end desde Stripe para evitar inconsistencias
     const dbUpdate: any = {
       plan_id: newPlanId,
       billing_cycle: billingCycle,
       updated_at: new Date().toISOString(),
+      current_period_start: new Date(updatedSubscription.current_period_start * 1000).toISOString(),
+      current_period_end: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
     };
 
     // 🔄 Sync cancel_at_period_end with Stripe
@@ -710,8 +716,43 @@ Deno.serve(withSentry(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error changing subscription plan', {}, error as Error);
+    
+    // 🔧 FIX: Detectar errores de pago de Stripe y devolver mensaje claro
+    const isPaymentError = 
+      error?.type === 'StripeCardError' || 
+      error?.code === 'card_declined' ||
+      error?.code === 'insufficient_funds' ||
+      error?.code === 'expired_card' ||
+      error?.raw?.code === 'card_declined' ||
+      error?.message?.toLowerCase()?.includes('card was declined') ||
+      error?.message?.toLowerCase()?.includes('payment') ||
+      error?.message?.toLowerCase()?.includes('declined');
+    
+    if (isPaymentError) {
+      const declineCode = error?.decline_code || error?.raw?.decline_code || 'unknown';
+      const declineMessages: Record<string, string> = {
+        'insufficient_funds': 'Fondos insuficientes en la tarjeta',
+        'card_declined': 'La tarjeta fue rechazada',
+        'expired_card': 'La tarjeta ha expirado',
+        'incorrect_cvc': 'El código de seguridad es incorrecto',
+        'processing_error': 'Error al procesar el pago',
+        'unknown': 'No se pudo procesar el pago',
+      };
+      const friendlyMessage = declineMessages[declineCode] || 'No se pudo procesar el pago. Por favor verifica tu método de pago.';
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'PAYMENT_FAILED',
+          message: friendlyMessage,
+          decline_code: declineCode,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',

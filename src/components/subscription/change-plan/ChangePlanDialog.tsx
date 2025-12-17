@@ -290,6 +290,15 @@ export function ChangePlanDialog({
         return;
       }
       
+      // 🔧 FIX: Manejar errores de pago con mensaje claro al usuario
+      if (data?.error === 'PAYMENT_FAILED') {
+        toast.error('Pago rechazado', {
+          description: data.message || 'No se pudo procesar el pago. Por favor verifica tu método de pago.',
+          duration: 8000,
+        });
+        return;
+      }
+      
       if (data?.error) throw new Error(data.error);
 
       toast.success(
