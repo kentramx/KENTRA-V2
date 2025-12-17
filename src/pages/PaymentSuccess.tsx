@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Loader2, ArrowRight, Calendar, CreditCard, Plus, Settings, Home, Sparkles, Rocket } from 'lucide-react';
+import { CheckCircle2, Loader2, ArrowRight, Calendar, CreditCard, Plus, Settings, Home, Sparkles, Rocket, XCircle, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useTracking } from '@/hooks/useTracking';
@@ -28,14 +28,20 @@ const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
+  const [paymentFailed, setPaymentFailed] = useState(false);
+  const [failureReason, setFailureReason] = useState<string>('');
   const { trackEvent } = useTracking();
   const { refetch: refetchSubscription } = useSubscription();
 
   useEffect(() => {
     const payment = searchParams.get('payment');
+    const sessionId = searchParams.get('session_id');
     const type = searchParams.get('type');
     
-    if (payment !== 'success') {
+    // Aceptar tanto payment=success como session_id presente
+    const isSuccess = payment === 'success' || !!sessionId;
+    
+    if (!isSuccess) {
       navigate('/');
       return;
     }
@@ -54,9 +60,30 @@ const PaymentSuccess = () => {
         setLoading(false);
       }, 1500);
     } else {
-      fetchSubscription();
+      // Si tenemos session_id, verificar el estado del pago
+      if (sessionId) {
+        verifyPaymentSession(sessionId);
+      } else {
+        fetchSubscription();
+      }
     }
   }, [user, searchParams, navigate, refetchSubscription]);
+
+  const verifyPaymentSession = async (sessionId: string) => {
+    try {
+      // Esperar un momento para que el webhook procese
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Intentar obtener la suscripción
+      await fetchSubscription();
+      
+    } catch (error) {
+      console.error('Error verifying payment session:', error);
+      setPaymentFailed(true);
+      setFailureReason('No pudimos verificar el estado de tu pago. Por favor contacta soporte.');
+      setLoading(false);
+    }
+  };
 
   const fetchSubscription = async () => {
     if (!user) return;
@@ -67,10 +94,20 @@ const PaymentSuccess = () => {
         .from('user_subscriptions')
         .select('*, plan:subscription_plans(*)')
         .eq('user_id', user.id)
-        .eq('status', 'active')
+        .in('status', ['active', 'trialing', 'incomplete'])
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (subError) throw subError;
+
+      // Si el pago está incompleto (OXXO/SPEI pendiente)
+      if (userSub?.status === 'incomplete') {
+        setPaymentFailed(true);
+        setFailureReason('Tu pago está pendiente de confirmación. Recibirás un correo cuando se complete.');
+        setLoading(false);
+        return;
+      }
 
       if (userSub && userSub.plan) {
         const subscriptionData = {
@@ -100,6 +137,18 @@ const PaymentSuccess = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getPlanTypeFromName = (planName?: string): string => {
+    if (!planName) return 'agente';
+    if (planName.includes('inmobiliaria')) return 'inmobiliaria';
+    if (planName.includes('desarrolladora')) return 'desarrolladora';
+    return 'agente';
+  };
+
+  const getPricingRoute = () => {
+    const planType = getPlanTypeFromName(subscription?.planName);
+    return `/pricing-${planType}`;
   };
 
   const handlePublishProperty = () => {
@@ -179,6 +228,39 @@ const PaymentSuccess = () => {
     );
   }
 
+  // Si el pago falló o está pendiente
+  if (paymentFailed) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+        <Navbar />
+        <main className="container mx-auto px-4 py-16">
+          <div className="max-w-xl mx-auto">
+            <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-yellow-100 mb-6">
+                <XCircle className="h-14 w-14 text-yellow-600" />
+              </div>
+              <h1 className="text-3xl font-bold text-foreground mb-4">
+                Pago pendiente
+              </h1>
+              <p className="text-lg text-muted-foreground mb-6">
+                {failureReason}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button size="lg" onClick={() => navigate(getPricingRoute())}>
+                  <RefreshCw className="h-5 w-5 mr-2" />
+                  Intentar de nuevo
+                </Button>
+                <Button variant="outline" size="lg" onClick={() => navigate('/')}>
+                  Ir al inicio
+                </Button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   if (!subscription) {
     return (
       <div className="min-h-screen bg-background">
@@ -186,10 +268,13 @@ const PaymentSuccess = () => {
         <div className="container mx-auto px-4 py-16">
           <Card className="max-w-2xl mx-auto">
             <CardContent className="pt-6 text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">
-                No se encontró información de suscripción. Por favor, contacta con soporte.
+                Estamos procesando tu pago. Esto puede tomar unos segundos...
               </p>
-              <Button onClick={() => navigate('/')}>Ir al inicio</Button>
+              <p className="text-xs text-muted-foreground">
+                Si el problema persiste, contacta con soporte.
+              </p>
             </CardContent>
           </Card>
         </div>

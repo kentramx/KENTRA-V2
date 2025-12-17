@@ -141,8 +141,23 @@ Deno.serve(withSentry(async (req) => {
 
     // === GENERAR URLs DE REDIRECCIÓN POR DEFECTO ===
     const origin = req.headers.get('origin') || 'https://kentra.mx';
-    const finalSuccessUrl = successUrl || `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
-    const finalCancelUrl = cancelUrl || `${origin}/pricing-agente`;
+    
+    // Determinar tipo de plan para URLs dinámicas
+    const determinePlanType = (planId: string): string => {
+      if (!planId) return 'agente';
+      const lowerPlan = planId.toLowerCase();
+      if (lowerPlan.includes('inmobiliaria')) return 'inmobiliaria';
+      if (lowerPlan.includes('desarrolladora')) return 'desarrolladora';
+      return 'agente';
+    };
+    
+    const planType = determinePlanType(planIdentifier);
+    const checkoutType = upsellOnly ? 'upsell' : 'subscription';
+    
+    // URL de éxito con todos los parámetros necesarios
+    const finalSuccessUrl = successUrl || `${origin}/payment-success?payment=success&session_id={CHECKOUT_SESSION_ID}&type=${checkoutType}`;
+    // URL de cancelación dinámica según tipo de plan
+    const finalCancelUrl = cancelUrl || `${origin}/payment-canceled?type=${planType}`;
 
     // Supabase Admin client para validar cupones
     const supabaseAdmin = createClient(
