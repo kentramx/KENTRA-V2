@@ -227,7 +227,14 @@ export function ChangePlanDialog({
         if (data?.error === 'TRIAL_NO_STRIPE') {
           toast.info('Para activar un plan de pago, serás redirigido a la página de checkout');
           onOpenChange(false);
-          navigate(getPricingRoute(userRole, currentPlanName));
+          // Usar el nombre del plan actual para determinar la ruta correcta
+          // (ej: 'agente_trial' -> 'agente' -> '/pricing-agente')
+          const planType = currentPlanName.split('_')[0];
+          const pricingRoute = planType === 'agente' ? '/pricing-agente' 
+            : planType === 'inmobiliaria' ? '/pricing-inmobiliaria'
+            : planType === 'desarrolladora' ? '/pricing-desarrolladora'
+            : '/pricing-agente'; // fallback
+          navigate(pricingRoute);
           return;
         }
         
