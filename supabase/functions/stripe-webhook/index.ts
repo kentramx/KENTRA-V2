@@ -661,7 +661,57 @@ Deno.serve(withSentry(async (req) => {
           
           console.log(`Updated existing subscription for customer ${subscription.customer}`);
         } else {
-          console.log(`No existing user found for customer ${subscription.customer}, will be handled by checkout.session.completed`);
+          // MEJORADO: Intentar crear suscripción si tenemos user_id en metadata
+          const userId = subscription.metadata?.user_id;
+          if (userId) {
+            console.log(`Creating subscription for user ${userId} from subscription.created event`);
+            
+            // Detectar plan_id desde el precio
+            const priceId = subscription.items?.data[0]?.price?.id;
+            let planId: string | null = null;
+            
+            if (priceId) {
+              const { data: matchedPlan } = await supabaseClient
+                .from('subscription_plans')
+                .select('id')
+                .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId}`)
+                .maybeSingle();
+              
+              if (matchedPlan) {
+                planId = matchedPlan.id;
+              }
+            }
+            
+            if (planId) {
+              const billingCycle = subscription.items?.data[0]?.price?.recurring?.interval === 'year' ? 'yearly' : 'monthly';
+              
+              const { error: createError } = await supabaseClient
+                .from('user_subscriptions')
+                .upsert({
+                  user_id: userId,
+                  plan_id: planId,
+                  stripe_subscription_id: subscription.id,
+                  stripe_customer_id: subscription.customer as string,
+                  status: subscription.status,
+                  billing_cycle: billingCycle,
+                  current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+                  current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                  cancel_at_period_end: subscription.cancel_at_period_end,
+                }, {
+                  onConflict: 'user_id',
+                });
+              
+              if (createError) {
+                console.error('Error creating subscription from subscription.created:', createError);
+              } else {
+                console.log(`Subscription created for user ${userId} with plan ${planId}`);
+              }
+            } else {
+              console.warn(`Could not find plan for price ${priceId}`);
+            }
+          } else {
+            console.log(`No user_id in metadata for customer ${subscription.customer}, will be handled by checkout.session.completed`);
+          }
         }
         
         break;

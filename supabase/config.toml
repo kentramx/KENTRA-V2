@@ -110,3 +110,12 @@ verify_jwt = true
 
 [functions.send-developer-invitation]
 verify_jwt = true
+
+[functions.expire-incomplete-payments]
+verify_jwt = false
+
+[functions.start-trial]
+verify_jwt = true
+
+[functions.expire-trial-subscriptions]
+verify_jwt = false

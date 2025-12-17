@@ -176,6 +176,8 @@ export const getCurrentSubscription = async () => {
       return { subscription: null };
     }
 
+    // CORREGIDO: past_due no debe considerarse como "activa" para propósitos de UI
+    // past_due requiere acción del usuario (actualizar método de pago)
     const { data, error } = await supabase
       .from('user_subscriptions')
       .select(`
@@ -190,7 +192,7 @@ export const getCurrentSubscription = async () => {
         )
       `)
       .eq('user_id', user.id)
-      .in('status', ['active', 'trialing', 'past_due'])
+      .in('status', ['active', 'trialing'])
       .single();
 
     if (error || !data) {
