@@ -2,6 +2,34 @@ import { supabase } from '@/integrations/supabase/client';
 import { monitoring } from '@/lib/monitoring';
 
 /**
+ * Inicia una prueba gratuita sin pasar por Stripe
+ */
+export const startFreeTrial = async (): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('start-trial', {
+      body: { deviceFingerprint: navigator.userAgent },
+    });
+
+    if (error) {
+      monitoring.error('Error starting free trial', { util: 'stripeCheckout', error });
+      return { success: false, error: error.message };
+    }
+
+    if (data?.error) {
+      return { success: false, error: data.message || data.error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    monitoring.captureException(error as Error, { util: 'stripeCheckout', function: 'startFreeTrial' });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+};
+
+/**
  * Inicia el proceso de checkout para una nueva suscripción
  */
 export const startSubscriptionCheckout = async (

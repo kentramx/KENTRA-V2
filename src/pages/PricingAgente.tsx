@@ -115,7 +115,24 @@ const PricingAgente = () => {
         return;
       }
 
-      // Iniciar checkout con el nuevo sistema (incluye cupón si está aplicado)
+      // Encontrar el plan para saber si es gratuito
+      const selectedPlan = dbPlans?.find(p => p.name.replace('agente_', '') === planSlug);
+      
+      // Si es plan gratuito (precio $0), usar start-trial directamente
+      if (selectedPlan && selectedPlan.price_monthly === 0) {
+        const { startFreeTrial } = await import('@/utils/stripeCheckout');
+        const result = await startFreeTrial();
+        if (result.success) {
+          toast.success('¡Tu prueba gratuita ha comenzado!');
+          navigate('/panel-agente');
+          return;
+        } else {
+          toast.error(result.error || 'No pudimos iniciar tu prueba gratuita');
+          return;
+        }
+      }
+
+      // Si es plan de pago, ir a Stripe checkout
       const billingCycle = pricingPeriod === 'monthly' ? 'monthly' : 'yearly';
       const result = await startSubscriptionCheckout(`agente_${planSlug}`, billingCycle, appliedCoupon || undefined);
 
