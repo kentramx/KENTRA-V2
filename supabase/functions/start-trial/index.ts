@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
+import { createLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,6 +7,8 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  const logger = createLogger('start-trial');
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -43,7 +46,7 @@ Deno.serve(async (req) => {
     
     const { deviceFingerprint } = await req.json();
 
-    console.log('Starting trial for user:', user.id, 'from IP:', ipAddress);
+    logger.info('Starting trial', { userId: user.id, ip: ipAddress?.slice(0, 10) });
 
     // Validar si ya tuvo trial desde este dispositivo
     const { data: trialValidation, error: validationError } = await supabaseClient
@@ -59,7 +62,7 @@ Deno.serve(async (req) => {
 
     if (!trialValidation || !trialValidation[0]?.can_trial) {
       const reason = trialValidation?.[0]?.reason || 'No puedes iniciar un trial';
-      console.log('Trial denied:', reason);
+      logger.warn('Trial denied', { userId: user.id, reason });
       
       return new Response(
         JSON.stringify({
@@ -129,7 +132,7 @@ Deno.serve(async (req) => {
       throw subError;
     }
 
-    console.log('Trial subscription created:', newSubscription.id);
+    logger.info('Trial subscription created', { subscriptionId: newSubscription.id, userId: user.id });
 
     // === ASIGNAR ROL DE AGENTE AUTOMÁTICAMENTE ===
     // Verificar si ya tiene el rol de agente

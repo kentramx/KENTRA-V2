@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,7 +38,18 @@ interface SubscriptionData {
   price_yearly: number;
 }
 
+// Mensajes de error amigables para el usuario
+const ERROR_MESSAGES = {
+  NO_AUTH: 'Se requiere autenticación para acceder a este recurso',
+  UNAUTHORIZED: 'No tienes permisos para acceder a esta información',
+  ADMIN_REQUIRED: 'Se requiere rol de super administrador',
+  FETCH_ERROR: 'Error al obtener las suscripciones. Por favor intenta de nuevo.',
+  INTERNAL_ERROR: 'Error interno del servidor. Contacta soporte si persiste.',
+} as const;
+
 serve(async (req) => {
+  const logger = createLogger('admin-get-subscriptions');
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -47,10 +59,18 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+    // Parse query params for pagination
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get('page') || '1', 10);
+    const pageSize = Math.min(parseInt(url.searchParams.get('pageSize') || '50', 10), 100);
+    const statusFilter = url.searchParams.get('status') || null;
+    const planFilter = url.searchParams.get('planId') || null;
+    const searchQuery = url.searchParams.get('search') || null;
+
     // Verify admin access
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No authorization header" }), {
+      return new Response(JSON.stringify({ error: ERROR_MESSAGES.NO_AUTH }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -62,7 +82,7 @@ serve(async (req) => {
 
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      return new Response(JSON.stringify({ error: ERROR_MESSAGES.UNAUTHORIZED }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -75,14 +95,15 @@ serve(async (req) => {
     });
 
     if (!isSuperAdmin) {
-      return new Response(JSON.stringify({ error: "Access denied. Super admin required." }), {
+      logger.warn('Access denied - not super admin', { userId: user.id });
+      return new Response(JSON.stringify({ error: ERROR_MESSAGES.ADMIN_REQUIRED }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Fetch all subscriptions with related data
-    const { data: subscriptions, error: subsError } = await adminClient
+    // Build query with filters
+    let query = adminClient
       .from("user_subscriptions")
       .select(`
         id,
@@ -105,23 +126,47 @@ serve(async (req) => {
           price_monthly,
           price_yearly
         )
-      `)
-      .order("created_at", { ascending: false });
+      `, { count: 'exact' });
 
-    if (subsError) {
-      console.error("Error fetching subscriptions:", subsError);
-      throw subsError;
+    // Apply filters
+    if (statusFilter) {
+      query = query.eq('status', statusFilter);
+    }
+    if (planFilter) {
+      query = query.eq('plan_id', planFilter);
     }
 
-    // Get user emails from auth.users
+    // Apply pagination
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    
+    const { data: subscriptions, error: subsError, count: totalCount } = await query
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (subsError) {
+      logger.error('Error fetching subscriptions', {}, subsError as Error);
+      return new Response(JSON.stringify({ error: ERROR_MESSAGES.FETCH_ERROR }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get user emails from auth.users (only for current page)
     const userIds = [...new Set(subscriptions?.map((s: any) => s.user_id) || [])];
     const userEmails: Record<string, string> = {};
 
-    for (const userId of userIds) {
-      const { data: authUser } = await adminClient.auth.admin.getUserById(userId);
-      if (authUser?.user?.email) {
-        userEmails[userId] = authUser.user.email;
-      }
+    // Batch fetch emails (max 50 at a time to avoid rate limits)
+    for (let i = 0; i < userIds.length; i += 50) {
+      const batch = userIds.slice(i, i + 50);
+      await Promise.all(
+        batch.map(async (userId) => {
+          const { data: authUser } = await adminClient.auth.admin.getUserById(userId);
+          if (authUser?.user?.email) {
+            userEmails[userId] = authUser.user.email;
+          }
+        })
+      );
     }
 
     // Transform subscriptions data
@@ -145,58 +190,55 @@ serve(async (req) => {
       price_yearly: sub.subscription_plans?.price_yearly || 0,
     }));
 
-    // Calculate metrics
+    // Calculate metrics (use cached/aggregated data for performance on large datasets)
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const activeCount = transformedSubscriptions.filter(
-      (s) => s.status === "active" && !s.cancel_at_period_end
-    ).length;
+    // Get aggregated counts efficiently
+    const [
+      { count: activeCount },
+      { count: trialingCount },
+      { count: pastDueCount },
+      { count: suspendedCount },
+      { count: canceledCount },
+    ] = await Promise.all([
+      adminClient.from("user_subscriptions").select('*', { count: 'exact', head: true }).eq('status', 'active').eq('cancel_at_period_end', false),
+      adminClient.from("user_subscriptions").select('*', { count: 'exact', head: true }).eq('status', 'trialing'),
+      adminClient.from("user_subscriptions").select('*', { count: 'exact', head: true }).eq('status', 'past_due'),
+      adminClient.from("user_subscriptions").select('*', { count: 'exact', head: true }).eq('status', 'suspended'),
+      adminClient.from("subscription_changes").select('*', { count: 'exact', head: true }).eq('change_type', 'canceled').gte('changed_at', thirtyDaysAgo.toISOString()),
+    ]);
 
-    const trialingCount = transformedSubscriptions.filter(
-      (s) => s.status === "trialing"
-    ).length;
+    // Calculate MRR from active subscriptions
+    const { data: activeForMrr } = await adminClient
+      .from("user_subscriptions")
+      .select(`
+        billing_cycle,
+        subscription_plans (price_monthly, price_yearly)
+      `)
+      .eq('status', 'active')
+      .eq('cancel_at_period_end', false);
 
-    const pastDueCount = transformedSubscriptions.filter(
-      (s) => s.status === "past_due"
-    ).length;
+    const mrr = (activeForMrr || []).reduce((acc, s: any) => {
+      if (s.billing_cycle === "yearly") {
+        return acc + (s.subscription_plans?.price_yearly || 0) / 12;
+      }
+      return acc + (s.subscription_plans?.price_monthly || 0);
+    }, 0);
 
-    const suspendedCount = transformedSubscriptions.filter(
-      (s) => s.status === "suspended"
-    ).length;
-
-    // Count canceled in last 30 days
-    const { data: canceledRecent } = await adminClient
-      .from("subscription_changes")
-      .select("id")
-      .eq("change_type", "canceled")
-      .gte("changed_at", thirtyDaysAgo.toISOString());
-
-    const canceledThisMonth = canceledRecent?.length || 0;
-
-    // Calculate MRR (Monthly Recurring Revenue)
-    const mrr = transformedSubscriptions
-      .filter((s) => s.status === "active" && !s.cancel_at_period_end)
-      .reduce((acc, s) => {
-        if (s.billing_cycle === "yearly") {
-          return acc + (s.price_yearly || 0) / 12;
-        }
-        return acc + (s.price_monthly || 0);
-      }, 0);
-
-    // Calculate churn rate (canceled in last 30 days / total active at start of period)
-    const totalActiveStart = activeCount + canceledThisMonth;
+    // Calculate churn rate
+    const totalActiveStart = (activeCount || 0) + (canceledCount || 0);
     const churnRate = totalActiveStart > 0 
-      ? (canceledThisMonth / totalActiveStart) * 100 
+      ? ((canceledCount || 0) / totalActiveStart) * 100 
       : 0;
 
     const metrics: SubscriptionMetrics = {
-      totalSubscriptions: transformedSubscriptions.length,
-      activeCount,
-      trialingCount,
-      pastDueCount,
-      canceledThisMonth,
-      suspendedCount,
+      totalSubscriptions: totalCount || 0,
+      activeCount: activeCount || 0,
+      trialingCount: trialingCount || 0,
+      pastDueCount: pastDueCount || 0,
+      canceledThisMonth: canceledCount || 0,
+      suspendedCount: suspendedCount || 0,
       mrr: Math.round(mrr * 100) / 100,
       churnRate: Math.round(churnRate * 100) / 100,
     };
@@ -208,13 +250,24 @@ serve(async (req) => {
       .eq("is_active", true)
       .order("price_monthly", { ascending: true });
 
-    console.log(`[admin-get-subscriptions] Fetched ${transformedSubscriptions.length} subscriptions, MRR: $${metrics.mrr}`);
+    logger.info('Subscriptions fetched successfully', { 
+      page, 
+      pageSize, 
+      totalCount, 
+      mrr: metrics.mrr 
+    });
 
     return new Response(
       JSON.stringify({
         subscriptions: transformedSubscriptions,
         metrics,
         plans: plans || [],
+        pagination: {
+          page,
+          pageSize,
+          totalCount: totalCount || 0,
+          totalPages: Math.ceil((totalCount || 0) / pageSize),
+        },
       }),
       {
         status: 200,
@@ -222,10 +275,9 @@ serve(async (req) => {
       }
     );
   } catch (error: unknown) {
-    console.error("[admin-get-subscriptions] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    logger.error('Unexpected error', {}, error as Error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: ERROR_MESSAGES.INTERNAL_ERROR }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
