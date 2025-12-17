@@ -15,10 +15,56 @@
 import { supabase } from '@/integrations/supabase/client';
 
 // ============================================================================
-// TIPOS Y ESTADOS
+// TIPOS Y ESTADOS DE SUSCRIPCIÓN
 // ============================================================================
 
-export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete';
+/**
+ * Estados posibles de una suscripción
+ * IMPORTANTE: Mantener sincronizado con stripe-webhook y otros edge functions
+ */
+export const SUBSCRIPTION_STATUSES = {
+  /** Suscripción activa y pagada */
+  ACTIVE: 'active',
+  /** En período de prueba gratuito */
+  TRIALING: 'trialing',
+  /** Pago fallido, en período de gracia (7 días) */
+  PAST_DUE: 'past_due',
+  /** Cancelada por el usuario o por sistema */
+  CANCELED: 'canceled',
+  /** Pago incompleto (OXXO/SPEI pendiente) */
+  INCOMPLETE: 'incomplete',
+  /** Suspendida por falta de pago después de grace period */
+  SUSPENDED: 'suspended',
+  /** Trial o suscripción expirada */
+  EXPIRED: 'expired',
+} as const;
+
+export type SubscriptionStatus = typeof SUBSCRIPTION_STATUSES[keyof typeof SUBSCRIPTION_STATUSES];
+
+/**
+ * Estados donde el usuario puede usar el servicio normalmente
+ */
+export const OPERATIONAL_STATUSES: SubscriptionStatus[] = [
+  SUBSCRIPTION_STATUSES.ACTIVE,
+  SUBSCRIPTION_STATUSES.TRIALING,
+];
+
+/**
+ * Estados que requieren acción inmediata del usuario
+ */
+export const REQUIRES_ACTION_STATUSES: SubscriptionStatus[] = [
+  SUBSCRIPTION_STATUSES.PAST_DUE,
+  SUBSCRIPTION_STATUSES.INCOMPLETE,
+];
+
+/**
+ * Estados donde el usuario NO puede publicar propiedades
+ */
+export const BLOCKED_STATUSES: SubscriptionStatus[] = [
+  SUBSCRIPTION_STATUSES.SUSPENDED,
+  SUBSCRIPTION_STATUSES.EXPIRED,
+  SUBSCRIPTION_STATUSES.CANCELED,
+];
 
 export interface SubscriptionInfo {
   has_subscription: boolean;

@@ -4,14 +4,42 @@ import Stripe from 'https://esm.sh/stripe@11.16.0?target=deno';
 import { createLogger } from '../_shared/logger.ts';
 import { withSentry, captureException } from '../_shared/sentry.ts';
 
+// ============================================================================
+// CONSTANTES DE ESTADOS DE SUSCRIPCIÓN
+// TODO: Mover a _shared/subscriptionStates.ts cuando se necesite reutilizar
+// ============================================================================
+const SUBSCRIPTION_STATUSES = {
+  ACTIVE: 'active',
+  TRIALING: 'trialing',
+  PAST_DUE: 'past_due',
+  CANCELED: 'canceled',
+  INCOMPLETE: 'incomplete',
+  SUSPENDED: 'suspended',
+  EXPIRED: 'expired',
+} as const;
+
+// Estados operativos (usuario puede usar el servicio)
+const OPERATIONAL_STATUSES = [SUBSCRIPTION_STATUSES.ACTIVE, SUBSCRIPTION_STATUSES.TRIALING];
+
+// Estados que requieren acción del usuario
+const REQUIRES_ACTION_STATUSES = [SUBSCRIPTION_STATUSES.PAST_DUE, SUBSCRIPTION_STATUSES.INCOMPLETE];
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 Deno.serve(withSentry(async (req) => {
-  const logger = createLogger('stripe-webhook');
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const logger = createLogger('stripe-webhook', { requestId });
   const startTime = Date.now();
+  
+  // Log de inicio con request ID para trazabilidad
+  logger.info('Webhook request received', { 
+    method: req.method,
+    url: req.url,
+    userAgent: req.headers.get('user-agent')?.slice(0, 50),
+  });
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });

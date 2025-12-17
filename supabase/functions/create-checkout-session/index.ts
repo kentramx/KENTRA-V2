@@ -354,6 +354,18 @@ Deno.serve(withSentry(async (req) => {
       );
     }
 
+    // VALIDACIÓN P2: Verificar que la moneda del plan coincida con MXN (moneda predeterminada)
+    const planCurrency = plan.currency?.toUpperCase() || 'MXN';
+    const expectedCurrency = 'MXN';
+    if (planCurrency !== expectedCurrency) {
+      logger.warn('Currency mismatch in plan', { 
+        planId: plan.id, 
+        planCurrency, 
+        expectedCurrency 
+      });
+      // Solo advertir, no bloquear - Stripe convertirá automáticamente
+    }
+
     // VALIDACIÓN 5: Verificar que el stripe_price_id del plan sea válido
     const isPlanPriceValid = await validateStripePriceId(priceId);
     if (!isPlanPriceValid) {
