@@ -104,7 +104,7 @@ const faqCategories: FAQCategory[] = [
     faqs: [
       {
         question: "¿Qué métodos de pago aceptan?",
-        answer: "Aceptamos tarjetas de crédito/débito (Visa, Mastercard, American Express), OXXO (pago en efectivo) y transferencia SPEI. Los pagos con OXXO y SPEI pueden tardar hasta 48 horas en procesarse."
+        answer: "Aceptamos tarjetas de crédito y débito (Visa, Mastercard, American Express). Todos los pagos se procesan de forma segura a través de Stripe."
       },
       {
         question: "¿Cómo cambio mi plan de suscripción?",

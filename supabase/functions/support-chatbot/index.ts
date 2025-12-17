@@ -78,10 +78,9 @@ PLANES Y PRECIOS:
 - Descuento del 16% (2 meses gratis) al pagar anualmente
 
 MÉTODOS DE PAGO:
-- Tarjetas de crédito/débito (Visa, Mastercard, American Express)
-- OXXO (pago en efectivo en tiendas) - tarda hasta 48 horas en procesarse
-- Transferencia SPEI - tarda hasta 48 horas en procesarse
-- Los pagos se procesan de forma segura con Stripe
+- Tarjetas de crédito y débito (Visa, Mastercard, American Express)
+- Todos los pagos se procesan de forma segura con Stripe
+- NO aceptamos pagos en efectivo ni transferencias bancarias
 
 PUBLICAR PROPIEDADES:
 - Registrarse como agente → Elegir plan → Ir a "Publicar Propiedad"
