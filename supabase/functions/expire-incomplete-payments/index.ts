@@ -9,14 +9,12 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
+import { MAX_PENDING_PAYMENT_HOURS } from '../_shared/subscriptionStates.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-// Tiempo máximo de espera para pagos pendientes (en horas)
-const MAX_PENDING_HOURS = 48;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -31,9 +29,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // Calcular fecha límite (48 horas atrás)
+    // Calcular fecha límite (MAX_PENDING_PAYMENT_HOURS horas atrás)
     const cutoffDate = new Date();
-    cutoffDate.setHours(cutoffDate.getHours() - MAX_PENDING_HOURS);
+    cutoffDate.setHours(cutoffDate.getHours() - MAX_PENDING_PAYMENT_HOURS);
     const cutoffISO = cutoffDate.toISOString();
 
     console.log(`Looking for incomplete subscriptions created before: ${cutoffISO}`);
@@ -74,7 +72,7 @@ Deno.serve(async (req) => {
             metadata: {
               expired_reason: 'payment_timeout',
               expired_at: new Date().toISOString(),
-              max_pending_hours: MAX_PENDING_HOURS,
+              max_pending_hours: MAX_PENDING_PAYMENT_HOURS,
             },
           })
           .eq('id', sub.id);
@@ -94,7 +92,7 @@ Deno.serve(async (req) => {
               metadata: {
                 planName: (sub.subscription_plans as any)?.display_name || 'Tu plan',
                 reason: 'El tiempo para completar tu pago ha expirado',
-                hours: MAX_PENDING_HOURS,
+                hours: MAX_PENDING_PAYMENT_HOURS,
               },
             },
           });

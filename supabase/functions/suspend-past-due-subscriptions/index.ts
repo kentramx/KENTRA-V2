@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
+import { GRACE_PERIOD_DAYS } from '../_shared/subscriptionStates.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,16 +12,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('Starting past_due suspension check...');
+    console.log(`Starting past_due suspension check (grace period: ${GRACE_PERIOD_DAYS} days)...`);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // Buscar suscripciones past_due que tengan más de 7 días en ese estado
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    // Buscar suscripciones past_due que tengan más de GRACE_PERIOD_DAYS días en ese estado
+    const gracePeriodAgo = new Date();
+    gracePeriodAgo.setDate(gracePeriodAgo.getDate() - GRACE_PERIOD_DAYS);
 
     const { data: pastDueSubs, error: subsError } = await supabaseClient
       .from('user_subscriptions')
@@ -62,8 +63,8 @@ Deno.serve(async (req) => {
 
         console.log(`Subscription ${sub.id}: ${daysSinceFailed} days since first failure`);
 
-        if (daysSinceFailed >= 7) {
-          console.log(`Suspending subscription ${sub.id} for user ${sub.user_id}`);
+        if (daysSinceFailed >= GRACE_PERIOD_DAYS) {
+          console.log(`Suspending subscription ${sub.id} for user ${sub.user_id} (exceeded ${GRACE_PERIOD_DAYS} days)`);
 
           // 1. Actualizar status a 'suspended'
           const { error: updateError } = await supabaseClient
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
 
           suspendedCount++;
         } else {
-          console.log(`Subscription ${sub.id} still in grace period (${7 - daysSinceFailed} days remaining)`);
+          console.log(`Subscription ${sub.id} still in grace period (${GRACE_PERIOD_DAYS - daysSinceFailed} days remaining)`);
         }
       } catch (error) {
         console.error(`Error processing subscription ${sub.id}:`, error);

@@ -98,6 +98,7 @@ export interface FeaturedLimitValidation {
 
 // ============================================================================
 // CONSTANTES DE NEGOCIO
+// Mantener sincronizado con supabase/functions/_shared/subscriptionStates.ts
 // ============================================================================
 
 /**
@@ -105,6 +106,16 @@ export interface FeaturedLimitValidation {
  * CENTRALIZADO: Usar esta constante en todos los lugares que manejen trials
  */
 export const TRIAL_DURATION_DAYS = 14;
+
+/**
+ * Días de gracia para pagos fallidos antes de suspensión
+ */
+export const GRACE_PERIOD_DAYS = 7;
+
+/**
+ * Horas máximas para pagos OXXO/SPEI antes de expirar
+ */
+export const MAX_PENDING_PAYMENT_HOURS = 48;
 
 /**
  * Límite para usuarios sin suscripción (role: buyer)
