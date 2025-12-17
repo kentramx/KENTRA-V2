@@ -83,9 +83,10 @@ const PricingInmobiliaria = () => {
 
     setProcessingPlan(planSlug);
     try {
-      // Verificar si ya tiene suscripción
+      // Verificar si ya tiene suscripción CON Stripe
+      // Usuarios Trial (sin stripe_subscription_id) pueden continuar a checkout
       const { subscription } = await getCurrentSubscription();
-      if (subscription) {
+      if (subscription && subscription.stripe_subscription_id) {
         toast.error('Ya tienes una suscripción activa. Ve a tu dashboard para gestionarla.');
         navigate('/panel-inmobiliaria');
         return;
