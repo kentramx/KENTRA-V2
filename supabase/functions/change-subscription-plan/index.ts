@@ -462,16 +462,21 @@ Deno.serve(withSentry(async (req) => {
         isDowngrade,
       });
 
+      // Return preview with structure matching ProrationPreviewData interface
       return new Response(
         JSON.stringify({ 
-          preview: true,
-          proratedAmount: upcomingInvoice.amount_due / 100, // Convert from cents
-          proratedCurrency: upcomingInvoice.currency.toUpperCase(),
+          preview: {
+            immediate_charge: upcomingInvoice.amount_due, // In cents (frontend divides by 100)
+            currency: upcomingInvoice.currency.toUpperCase(),
+            current_plan_credit: Math.round(creditForRemaining * 100), // Convert to cents
+            new_plan_price: Math.round(proportionalNewCost * 100), // Convert to cents
+            proration_date: new Date().toISOString(),
+          },
           isUpgrade,
           isDowngrade,
           currentPrice,
           newPrice,
-          nextBillingDate: new Date(upcomingInvoice.period_end * 1000).toISOString(),
+          currentPeriodEnd: new Date(upcomingInvoice.period_end * 1000).toISOString(),
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
