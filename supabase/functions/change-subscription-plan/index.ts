@@ -463,34 +463,51 @@ Deno.serve(withSentry(async (req) => {
       });
 
       // Extract real proration breakdown from Stripe invoice lines
+      // Filter by proration: true to separate upgrade cost from next cycle payment
       const invoiceLines = upcomingInvoice.lines?.data || [];
-      let stripeCredit = 0;  // Sum of negative lines (credit for unused time)
-      let stripeCharge = 0;  // Sum of positive lines (charge for new plan)
+      let prorationCredit = 0;  // Negative lines with proration: true (credit for unused time)
+      let prorationCharge = 0;  // Positive lines with proration: true (charge for new plan, current period)
+      let nextCycleCharge = 0;  // Positive lines with proration: false (next month's payment)
 
       invoiceLines.forEach((line: any) => {
-        if (line.amount < 0) {
-          stripeCredit += Math.abs(line.amount); // Convert to positive for display
+        if (line.proration === true) {
+          // Proration lines - the actual upgrade cost
+          if (line.amount < 0) {
+            prorationCredit += Math.abs(line.amount);
+          } else {
+            prorationCharge += line.amount;
+          }
         } else {
-          stripeCharge += line.amount;
+          // Normal subscription lines - next cycle payment
+          if (line.amount > 0) {
+            nextCycleCharge += line.amount;
+          }
         }
       });
 
+      // The REAL immediate charge is only the proration difference, not including next cycle
+      const immediateUpgradeCharge = prorationCharge - prorationCredit;
+
       console.log('Stripe invoice lines breakdown:', {
         linesCount: invoiceLines.length,
-        stripeCredit,
-        stripeCharge,
-        amountDue: upcomingInvoice.amount_due,
-        mathCheck: stripeCharge - stripeCredit === upcomingInvoice.amount_due,
+        prorationCredit,
+        prorationCharge,
+        nextCycleCharge,
+        immediateUpgradeCharge,
+        stripeAmountDue: upcomingInvoice.amount_due,
+        // This should match: prorationCharge - prorationCredit + nextCycleCharge = amount_due
+        mathCheck: (prorationCharge - prorationCredit + nextCycleCharge) === upcomingInvoice.amount_due,
       });
 
       // Return preview with structure matching ProrationPreviewData interface
       return new Response(
         JSON.stringify({ 
           preview: {
-            immediate_charge: upcomingInvoice.amount_due, // In cents (frontend divides by 100)
+            immediate_charge: immediateUpgradeCharge, // Only the upgrade cost, not next cycle
             currency: upcomingInvoice.currency.toUpperCase(),
-            current_plan_credit: stripeCredit, // Real credit from Stripe lines
-            new_plan_price: stripeCharge, // Real charge from Stripe lines
+            current_plan_credit: prorationCredit, // Real credit from proration lines
+            new_plan_price: prorationCharge, // Real charge from proration lines (current period only)
+            next_cycle_charge: nextCycleCharge, // Next month's payment (shown separately)
             proration_date: new Date().toISOString(),
           },
           isUpgrade,
