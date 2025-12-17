@@ -130,6 +130,32 @@ Deno.serve(async (req) => {
 
     console.log('Trial subscription created:', newSubscription.id);
 
+    // === ASIGNAR ROL DE AGENTE AUTOMÁTICAMENTE ===
+    // Verificar si ya tiene el rol de agente
+    const { data: existingRole } = await supabaseClient
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('role', 'agent')
+      .maybeSingle();
+
+    if (!existingRole) {
+      const { error: roleError } = await supabaseClient
+        .from('user_roles')
+        .insert({
+          user_id: user.id,
+          role: 'agent',
+        });
+
+      if (roleError) {
+        console.error('Error assigning agent role:', roleError);
+      } else {
+        console.log('Agent role assigned to user:', user.id);
+      }
+    } else {
+      console.log('User already has agent role:', user.id);
+    }
+
     // Registrar en trial_tracking para prevenir duplicados
     const { error: trackError } = await supabaseClient
       .from('trial_tracking')

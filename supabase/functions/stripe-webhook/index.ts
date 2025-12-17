@@ -220,6 +220,48 @@ Deno.serve(withSentry(async (req) => {
         } else {
           console.log('Subscription created successfully for user:', userId);
 
+          // === ASIGNAR ROL DE AGENTE SI ES PLAN DE AGENTE ===
+          const { data: planInfo } = await supabaseClient
+            .from('subscription_plans')
+            .select('name')
+            .eq('id', planId)
+            .single();
+
+          if (planInfo?.name?.startsWith('agente_') || planInfo?.name?.startsWith('inmobiliaria_') || planInfo?.name?.startsWith('desarrolladora_')) {
+            // Determinar el rol según el tipo de plan
+            let targetRole: 'agent' | 'agency' | 'developer' = 'agent';
+            if (planInfo.name.startsWith('inmobiliaria_')) {
+              targetRole = 'agency';
+            } else if (planInfo.name.startsWith('desarrolladora_')) {
+              targetRole = 'developer';
+            }
+
+            // Verificar si ya tiene el rol
+            const { data: existingRole } = await supabaseClient
+              .from('user_roles')
+              .select('id')
+              .eq('user_id', userId)
+              .eq('role', targetRole)
+              .maybeSingle();
+
+            if (!existingRole) {
+              const { error: roleError } = await supabaseClient
+                .from('user_roles')
+                .insert({
+                  user_id: userId,
+                  role: targetRole,
+                });
+
+              if (roleError) {
+                console.error(`Error assigning ${targetRole} role:`, roleError);
+              } else {
+                console.log(`${targetRole} role assigned to user:`, userId);
+              }
+            } else {
+              console.log(`User ${userId} already has ${targetRole} role`);
+            }
+          }
+
           // === REGISTRAR REDENCIÓN DE CUPÓN SI APLICA ===
           const couponCode = session.metadata?.coupon_code;
           if (couponCode) {
