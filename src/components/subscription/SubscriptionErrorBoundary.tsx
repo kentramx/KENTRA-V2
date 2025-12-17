@@ -33,7 +33,9 @@ export class SubscriptionErrorBoundary extends Component<Props, State> {
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+    // En algunos casos (HMR/Fast Refresh), React puede quedar en un estado inconsistente.
+    // Forzamos recarga completa para recuperar el árbol de hooks.
+    window.location.reload();
   };
 
   handleGoHome = () => {
