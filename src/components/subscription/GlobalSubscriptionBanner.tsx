@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { getPricingRoute } from '@/utils/getPricingRoute';
 import { getSubscriptionPanelRoute } from '@/utils/getPanelRoute';
-type BannerType = 'payment_failed' | 'trial_expiring' | 'subscription_expiring' | 'suspended' | 'at_limit' | 'near_limit';
+type BannerType = 'payment_failed' | 'trial_expiring' | 'subscription_expiring' | 'suspended' | 'incomplete' | 'at_limit' | 'near_limit';
 
 interface BannerConfig {
   type: BannerType;
@@ -62,6 +62,20 @@ export function GlobalSubscriptionBanner() {
         variant: 'destructive',
         dismissable: false,
         priority: 1,
+      });
+    }
+
+    // Incomplete payment (OXXO/SPEI pending) - high priority
+    if (subscription?.status === 'incomplete' && !dismissed.has('incomplete')) {
+      banners.push({
+        type: 'incomplete',
+        icon: Clock,
+        title: 'Pago Pendiente',
+        message: 'Tu pago con OXXO o SPEI está pendiente de confirmación. Puede tardar hasta 48 horas.',
+        action: { label: 'Ver Estado', href: subscriptionPanelRoute },
+        variant: 'warning',
+        dismissable: false,
+        priority: 1.5,
       });
     }
 

@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Calendar, CreditCard, TrendingUp, AlertCircle, Loader2, RefreshCcw, FileText, Package } from 'lucide-react';
+import { Calendar, CreditCard, TrendingUp, AlertCircle, Loader2, RefreshCcw, FileText, Package, AlertTriangle, Clock, Ban } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ChangePlanDialog } from './subscription/change-plan';
@@ -132,9 +132,128 @@ function SubscriptionManagementContent({ userId, userRole }: SubscriptionManagem
     return <SubscriptionCardSkeleton />;
   }
 
-  // Determine if subscription is active
+  // Determine subscription states
   const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+  const isPastDue = subscription?.status === 'past_due';
+  const isSuspended = subscription?.status === 'suspended';
+  const isIncomplete = subscription?.status === 'incomplete';
 
+  // Show suspended state UI
+  if (isSuspended && subscription) {
+    return (
+      <Card className="border-destructive">
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <Ban className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2 text-destructive">Cuenta Suspendida</h3>
+            <p className="text-muted-foreground mb-4">
+              Tu suscripción ha sido suspendida por falta de pago. Reactiva tu cuenta para continuar publicando propiedades.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button 
+                onClick={handleReactivateSubscription}
+                disabled={isReactivating}
+                className="gap-2"
+              >
+                {isReactivating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Reactivando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="h-4 w-4" />
+                    Reactivar Suscripción
+                  </>
+                )}
+              </Button>
+              <Button variant="outline" onClick={handleManagePayment} disabled={isOpeningPortal}>
+                <CreditCard className="h-4 w-4 mr-2" />
+                Actualizar Método de Pago
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show incomplete payment state (OXXO/SPEI pending)
+  if (isIncomplete && subscription) {
+    return (
+      <Card className="border-amber-500">
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <Clock className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2 text-amber-700 dark:text-amber-400">Pago Pendiente</h3>
+            <p className="text-muted-foreground mb-4">
+              Tu pago está pendiente de confirmación. Si pagaste con OXXO o SPEI, puede tardar hasta 48 horas en reflejarse.
+            </p>
+            <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 mb-4 text-left max-w-md mx-auto">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-amber-800 dark:text-amber-400 text-sm">Instrucciones:</h4>
+                  <ul className="text-sm text-amber-700 dark:text-amber-500 mt-1 space-y-1">
+                    <li>• <strong>OXXO:</strong> Presenta el voucher en cualquier tienda OXXO</li>
+                    <li>• <strong>SPEI:</strong> Realiza la transferencia con los datos proporcionados</li>
+                    <li>• El pago expira en 48 horas</li>
+                  </ul>
+                </div>
+              </div>
+            </Alert>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button variant="outline" onClick={() => navigate(pricingRoute)}>
+                Elegir Otro Método de Pago
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show past_due state UI
+  if (isPastDue && subscription) {
+    return (
+      <Card className="border-destructive">
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <CreditCard className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2 text-destructive">Problema con tu Pago</h3>
+            <p className="text-muted-foreground mb-4">
+              No pudimos procesar tu último pago. Actualiza tu método de pago para evitar la suspensión de tu cuenta.
+            </p>
+            <Alert className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 mb-4 text-left max-w-md mx-auto">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                <div className="text-sm text-red-700 dark:text-red-400">
+                  <strong>Importante:</strong> Si no actualizas tu método de pago en los próximos días, tu cuenta será suspendida y tus propiedades pausadas.
+                </div>
+              </div>
+            </Alert>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button onClick={handleManagePayment} disabled={isOpeningPortal} className="gap-2">
+                {isOpeningPortal ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Abriendo...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="h-4 w-4" />
+                    Actualizar Método de Pago
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // No subscription or not operational
   if (!subscription || !isActive) {
     return (
       <Card>
