@@ -1733,6 +1733,44 @@ export type Database = {
           },
         ]
       }
+      property_bump_log: {
+        Row: {
+          bump_type: string | null
+          bumped_at: string | null
+          created_at: string | null
+          id: string
+          previous_last_renewed_at: string | null
+          property_id: string | null
+          user_id: string
+        }
+        Insert: {
+          bump_type?: string | null
+          bumped_at?: string | null
+          created_at?: string | null
+          id?: string
+          previous_last_renewed_at?: string | null
+          property_id?: string | null
+          user_id: string
+        }
+        Update: {
+          bump_type?: string | null
+          bumped_at?: string | null
+          created_at?: string | null
+          id?: string
+          previous_last_renewed_at?: string | null
+          property_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_bump_log_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       property_expiration_log: {
         Row: {
           agent_id: string
@@ -2299,6 +2337,8 @@ export type Database = {
       user_subscriptions: {
         Row: {
           billing_cycle: string | null
+          bumps_reset_date: string | null
+          bumps_used_this_month: number | null
           cancel_at_period_end: boolean | null
           created_at: string | null
           current_period_end: string | null
@@ -2316,6 +2356,8 @@ export type Database = {
         }
         Insert: {
           billing_cycle?: string | null
+          bumps_reset_date?: string | null
+          bumps_used_this_month?: number | null
           cancel_at_period_end?: boolean | null
           created_at?: string | null
           current_period_end?: string | null
@@ -2333,6 +2375,8 @@ export type Database = {
         }
         Update: {
           billing_cycle?: string | null
+          bumps_reset_date?: string | null
+          bumps_used_this_month?: number | null
           cancel_at_period_end?: boolean | null
           created_at?: string | null
           current_period_end?: string | null
@@ -2619,6 +2663,7 @@ export type Database = {
             Returns: string
           }
       auto_assign_badges: { Args: { p_user_id: string }; Returns: undefined }
+      bump_property: { Args: { property_id: string }; Returns: Json }
       calculate_churn_rate: {
         Args: { p_days?: number }
         Returns: {
@@ -3091,6 +3136,7 @@ export type Database = {
       }
       reactivate_property: { Args: { property_id: string }; Returns: undefined }
       refresh_agent_stats: { Args: never; Returns: undefined }
+      refresh_all_active_properties: { Args: never; Returns: Json }
       renew_property: { Args: { property_id: string }; Returns: undefined }
       resubmit_property: { Args: { property_id: string }; Returns: Json }
       search_properties_fts: {

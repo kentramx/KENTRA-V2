@@ -125,3 +125,9 @@ verify_jwt = false
 
 [functions.support-chatbot]
 verify_jwt = false
+
+[functions.refresh-properties-monthly]
+verify_jwt = false
+
+[functions.bump-property]
+verify_jwt = true

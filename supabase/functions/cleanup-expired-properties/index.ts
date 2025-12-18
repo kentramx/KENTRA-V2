@@ -66,12 +66,16 @@ Deno.serve(async (req) => {
     while (hasMore) {
       console.log(`Processing batch starting at offset ${offset}...`);
 
-      // Fetch batch of expired properties - uses idx_properties_expires_at
+      // Fetch batch of expired properties with 3-day grace period
+      // Only pause properties where expires_at < NOW() - 3 days
+      const gracePeriodDate = new Date();
+      gracePeriodDate.setDate(gracePeriodDate.getDate() - 3);
+      
       const { data: expiredProperties, error: fetchError } = await supabaseAdmin
         .from('properties')
         .select('id, agent_id, title, last_renewed_at, created_at')
         .eq('status', 'activa')
-        .lt('expires_at', new Date().toISOString())
+        .lt('expires_at', gracePeriodDate.toISOString())
         .order('expires_at', { ascending: true })
         .range(offset, offset + BATCH_SIZE - 1);
 

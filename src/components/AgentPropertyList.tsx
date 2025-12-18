@@ -19,7 +19,8 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Zap
 } from 'lucide-react';
 import { FeaturePropertyDialog } from './FeaturePropertyDialog';
 import { PropertyCardAgent } from './PropertyCardAgent';
@@ -73,6 +74,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
   const [featuredProperties, setFeaturedProperties] = useState<Set<string>>(new Set());
   const [featureProperty, setFeatureProperty] = useState<any>(null);
   const [togglingFeaturedId, setTogglingFeaturedId] = useState<string | null>(null);
+  const [bumpingId, setBumpingId] = useState<string | null>(null);
   const { error: logError, warn, captureException } = useMonitoring();
 
   // Search and filter states
@@ -286,6 +288,40 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
     }
   };
 
+  const handleBumpProperty = async (propertyId: string) => {
+    setBumpingId(propertyId);
+    try {
+      const { data, error } = await supabase.functions.invoke('bump-property', {
+        body: { propertyId }
+      });
+      
+      if (error) throw error;
+      
+      if (!data?.success) {
+        toast({ 
+          title: 'Sin impulsos disponibles', 
+          description: data?.error || `Has usado todos tus impulsos este mes (${data?.bumps_used}/${data?.bumps_limit})`,
+          variant: 'destructive' 
+        });
+        return;
+      }
+      
+      const remaining = data.bumps_remaining === -1 ? '∞' : data.bumps_remaining;
+      toast({
+        title: '⚡ ¡Propiedad impulsada!',
+        description: `Tu propiedad ahora aparecerá al inicio. Impulsos restantes: ${remaining}`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['agent-properties', effectiveAgentId] });
+    } catch (error) {
+      logError('Error bumping property', { component: 'AgentPropertyList', propertyId, error });
+      captureException(error as Error, { component: 'AgentPropertyList', action: 'bumpProperty', propertyId });
+      toast({ title: 'Error', description: 'No se pudo impulsar la propiedad', variant: 'destructive' });
+    } finally {
+      setBumpingId(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
 
@@ -421,6 +457,14 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
               {counts.featured}/{subscriptionInfo?.featured_limit || 0}
             </strong>
           </span>
+          <Separator orientation="vertical" className="h-4 hidden sm:block" />
+          <span className="flex items-center gap-1">
+            <Zap className="h-3.5 w-3.5 text-blue-500" />
+            Impulsos: 
+            <strong className="text-foreground">
+              {subscriptionInfo?.bumps_used ?? 0}/{subscriptionInfo?.bumps_limit === -1 ? '∞' : (subscriptionInfo?.bumps_limit ?? 0)}
+            </strong>
+          </span>
           {counts.expiring > 0 && (
             <>
               <Separator orientation="vertical" className="h-4 hidden sm:block" />
@@ -481,6 +525,8 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                   : undefined
               }
               isTogglingFeatured={togglingFeaturedId === property.id}
+              onBump={property.status === 'activa' ? () => handleBumpProperty(property.id) : undefined}
+              isBumping={bumpingId === property.id}
             />
           ))}
         </div>

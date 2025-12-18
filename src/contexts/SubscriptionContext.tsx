@@ -41,6 +41,12 @@ interface SubscriptionLimits {
   usagePercent: number;
   isAtLimit: boolean;
   isNearLimit: boolean;
+  // Impulsos (bumps)
+  bumpsUsed: number;
+  bumpsLimit: number;
+  bumpsRemaining: number;
+  bumpsResetDate: Date | null;
+  canBump: boolean;
 }
 
 interface SubscriptionAlerts {
@@ -85,6 +91,11 @@ const defaultLimits: SubscriptionLimits = {
   usagePercent: 100,
   isAtLimit: true,
   isNearLimit: false,
+  bumpsUsed: 0,
+  bumpsLimit: 0,
+  bumpsRemaining: 0,
+  bumpsResetDate: null,
+  canBump: false,
 };
 
 const defaultAlerts: SubscriptionAlerts = {
@@ -162,10 +173,17 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const plan = sub.subscription_plans as SubscriptionPlan | null;
       const features = plan?.features || {};
       // Leer de estructura anidada (features.limits.max_properties) con fallback a estructura plana
-      const limits = features.limits || {};
-      const maxProps = limits.max_properties ?? (features.properties_limit as number) ?? 0;
+      const limitsData = features.limits || {};
+      const maxProps = limitsData.max_properties ?? (features.properties_limit as number) ?? 0;
       const remaining = Math.max(0, maxProps - currentCount);
       const usagePercent = maxProps > 0 ? (currentCount / maxProps) * 100 : 100;
+
+      // Leer datos de bumps
+      const bumpsLimit = (limitsData as any).bumps_per_month ?? 0;
+      const bumpsUsed = (sub as any).bumps_used_this_month ?? 0;
+      const bumpsResetDate = (sub as any).bumps_reset_date ? new Date((sub as any).bumps_reset_date) : null;
+      const bumpsRemaining = bumpsLimit === -1 ? Infinity : Math.max(0, bumpsLimit - bumpsUsed);
+      const canBump = bumpsLimit === -1 || bumpsUsed < bumpsLimit;
 
       const periodEnd = sub.current_period_end ? new Date(sub.current_period_end) : null;
       const now = new Date();
@@ -207,6 +225,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           usagePercent,
           isAtLimit: remaining <= 0,
           isNearLimit: usagePercent >= 80 && usagePercent < 100,
+          bumpsUsed,
+          bumpsLimit,
+          bumpsRemaining,
+          bumpsResetDate,
+          canBump,
         },
         alerts: {
           showPaymentFailed: isPastDue || isIncomplete,
