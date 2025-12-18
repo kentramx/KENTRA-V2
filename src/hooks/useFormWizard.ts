@@ -103,15 +103,13 @@ export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
         if (!formData.type) return false;
         return true;
       
-      case 2: // Ubicación
+      case 2: // Ubicación - lat/lng ya NO son obligatorios, el geocoding automático los obtendrá
         return !!(
           formData.state && 
           formData.municipality && 
           formData.address &&
           formData.colonia && 
-          formData.colonia.trim() !== '' &&
-          formData.lat &&
-          formData.lng
+          formData.colonia.trim() !== ''
         );
       
       case 3: // Características
