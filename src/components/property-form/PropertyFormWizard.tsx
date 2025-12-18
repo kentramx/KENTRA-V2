@@ -15,7 +15,7 @@ import { useImageUpload } from '@/hooks/useImageUpload';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Save } from 'lucide-react';
+import { Save, RotateCcw } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type PropertyInsert = Database['public']['Tables']['properties']['Insert'];
@@ -77,6 +77,13 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
       title: 'Borrador guardado',
       description: 'Tus cambios se han guardado localmente',
     });
+  };
+
+  const handleClearDraft = () => {
+    if (window.confirm('¿Estás seguro de que quieres empezar de nuevo? Se perderán todos los cambios.')) {
+      clearDraft();
+      window.location.reload();
+    }
   };
 
   const handleSubmit = async () => {
@@ -275,13 +282,28 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <Card className="p-6 md:p-8">
-        {/* Progress Bar */}
-        <FormProgressBar
-          currentStep={currentStep}
-          totalSteps={6}
-          isStepComplete={isStepComplete}
-          onStepClick={goToStep}
-        />
+        {/* Header con Progress Bar y botón limpiar */}
+        <div className="flex items-center justify-between gap-4 mb-2">
+          <div className="flex-1">
+            <FormProgressBar
+              currentStep={currentStep}
+              totalSteps={6}
+              isStepComplete={isStepComplete}
+              onStepClick={goToStep}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClearDraft}
+            className="text-muted-foreground hover:text-destructive shrink-0"
+            title="Empezar de nuevo"
+          >
+            <RotateCcw className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Reiniciar</span>
+          </Button>
+        </div>
 
         {/* Step Content */}
         <div className="mt-8 min-h-[500px]">
