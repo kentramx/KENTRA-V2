@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Home, Heart, User, Users, PlusCircle, LogOut, Search, Building, GitCompare, Settings, DollarSign } from "lucide-react";
+import { Home, Heart, User, Users, PlusCircle, LogOut, Search, Building, GitCompare, Settings, DollarSign, HelpCircle } from "lucide-react";
 import { MessageBadge } from "./MessageBadge";
 import { MobileMenu } from "./MobileMenu";
 import { PublishPropertyButton } from "./subscription/PublishPropertyButton";
@@ -360,6 +360,12 @@ const Navbar = () => {
                           </DropdownMenuItem>
                         </Link>
                       )}
+                      <Link to="/ayuda">
+                        <DropdownMenuItem className="cursor-pointer">
+                          <HelpCircle className="mr-2 h-4 w-4" />
+                          Soporte
+                        </DropdownMenuItem>
+                      </Link>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive">
                         <LogOut className="mr-2 h-4 w-4" />
@@ -575,8 +581,14 @@ const Navbar = () => {
                           </DropdownMenuItem>
                         </Link>
                       )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive">
+                      <Link to="/ayuda">
+                        <DropdownMenuItem className="cursor-pointer">
+                          <HelpCircle className="mr-2 h-4 w-4" />
+                          Soporte
+                        </DropdownMenuItem>
+                      </Link>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive">
                         <LogOut className="mr-2 h-4 w-4" />
                         Cerrar Sesión
                       </DropdownMenuItem>
