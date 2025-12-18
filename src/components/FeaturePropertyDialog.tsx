@@ -81,19 +81,8 @@ export const FeaturePropertyDialog = ({
 
       if (insertError) throw insertError;
 
-      // Incrementar el contador de destacadas usadas en la suscripción
-      const { error: updateError } = await supabase
-        .from('user_subscriptions')
-        .update({ 
-          featured_used_this_month: (subscriptionInfo?.featured_used || 0) + 1 
-        })
-        .eq('user_id', user.id)
-        .in('status', ['active', 'trialing']);
-
-      if (updateError) {
-        console.error('Error updating featured_used_this_month:', updateError);
-        // No lanzar error, la destacada ya se creó
-      }
+      // El contador se actualiza automáticamente al refrescar el contexto
+      // ya que featured_properties es la fuente de verdad
 
       toast({
         title: '✨ ¡Propiedad destacada!',

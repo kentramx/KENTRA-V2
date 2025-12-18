@@ -41,6 +41,11 @@ interface SubscriptionLimits {
   usagePercent: number;
   isAtLimit: boolean;
   isNearLimit: boolean;
+  // Destacadas (featured) - basado en featured_properties table
+  featuredUsed: number;
+  featuredLimit: number;
+  featuredRemaining: number;
+  canFeature: boolean;
   // Impulsos (bumps)
   bumpsUsed: number;
   bumpsLimit: number;
@@ -91,6 +96,10 @@ const defaultLimits: SubscriptionLimits = {
   usagePercent: 100,
   isAtLimit: true,
   isNearLimit: false,
+  featuredUsed: 0,
+  featuredLimit: 0,
+  featuredRemaining: 0,
+  canFeature: false,
   bumpsUsed: 0,
   bumpsLimit: 0,
   bumpsRemaining: 0,
@@ -154,6 +163,16 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
       const currentCount = propertyCount || 0;
 
+      // Fetch active featured properties count (source of truth)
+      const { count: featuredCount } = await supabase
+        .from('featured_properties')
+        .select('*', { count: 'exact', head: true })
+        .eq('agent_id', user.id)
+        .eq('status', 'active')
+        .gt('end_date', new Date().toISOString());
+
+      const featuredUsed = featuredCount || 0;
+
       if (!sub) {
         setState(prev => ({
           ...prev,
@@ -177,6 +196,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const maxProps = limitsData.max_properties ?? (features.properties_limit as number) ?? 0;
       const remaining = Math.max(0, maxProps - currentCount);
       const usagePercent = maxProps > 0 ? (currentCount / maxProps) * 100 : 100;
+
+      // Leer datos de featured (límite del plan, usado de featured_properties table)
+      const featuredLimit = limitsData.featured_per_month ?? (features.featured_limit as number) ?? 0;
+      const featuredRemaining = Math.max(0, featuredLimit - featuredUsed);
+      const canFeature = featuredUsed < featuredLimit;
 
       // Leer datos de bumps
       const bumpsLimit = (limitsData as any).bumps_per_month ?? 0;
@@ -225,6 +249,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           usagePercent,
           isAtLimit: remaining <= 0,
           isNearLimit: usagePercent >= 80 && usagePercent < 100,
+          featuredUsed,
+          featuredLimit,
+          featuredRemaining,
+          canFeature,
           bumpsUsed,
           bumpsLimit,
           bumpsRemaining,
@@ -296,6 +324,18 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           event: '*',
           schema: 'public',
           table: 'properties',
+          filter: `agent_id=eq.${user.id}`,
+        },
+        () => {
+          fetchSubscription();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'featured_properties',
           filter: `agent_id=eq.${user.id}`,
         },
         () => {
