@@ -469,8 +469,8 @@ const AgentDashboard = () => {
 
       if (error) throw error;
 
-      if (data?.url) {
-        window.location.href = data.url;
+      if (data?.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
       } else {
         throw new Error('No se recibió URL de checkout');
       }
