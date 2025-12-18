@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Star, 
@@ -11,44 +12,10 @@ import {
   RefreshCw, 
   MapPin,
   Loader2,
-  Share2
+  MessageCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useNativeFeatures } from '@/hooks/useNativeFeatures';
 import { toast } from 'sonner';
-
-const copyTextToClipboard = async (text: string): Promise<boolean> => {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // ignore and try legacy fallback
-  }
-
-  try {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', '');
-    textarea.style.position = 'fixed';
-    textarea.style.top = '0';
-    textarea.style.left = '0';
-    textarea.style.opacity = '0';
-
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-
-    const ok = document.execCommand('copy');
-    document.body.removeChild(textarea);
-    return ok;
-  } catch {
-    return false;
-  }
-};
-
-const buildWhatsAppShareUrl = (text: string) => `https://wa.me/?text=${encodeURIComponent(text)}`;
 
 interface RejectionRecord {
   date: string;
@@ -87,6 +54,10 @@ interface PropertyCardAgentProps {
   onResubmit?: () => void;
   onReactivate?: () => void;
   isTogglingFeatured?: boolean;
+  // Selection mode props
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: (id: string, selected: boolean) => void;
 }
 
 export const PropertyCardAgent = ({
@@ -101,9 +72,11 @@ export const PropertyCardAgent = ({
   onResubmit,
   onReactivate,
   isTogglingFeatured = false,
+  selectionMode = false,
+  isSelected = false,
+  onSelect,
 }: PropertyCardAgentProps) => {
   const [imageError, setImageError] = useState(false);
-  const { share } = useNativeFeatures();
 
   const getDaysUntilExpiration = (expiresAt: string | null) => {
     if (!expiresAt) return 0;
@@ -122,40 +95,23 @@ export const PropertyCardAgent = ({
     }).format(price);
   };
 
-  const handleShare = async (e: React.MouseEvent) => {
+  const handleWhatsAppShare = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    // Si esto aparece, el click SÍ está llegando al handler
-    toast('Preparando para compartir…');
 
     const propertyUrl = `${window.location.origin}/propiedad/${property.id}`;
     const location = property.colonia 
       ? `${property.colonia}, ${property.municipality}` 
       : property.municipality;
-    const shareText = `🏠 ${property.title}\n📍 ${location}\n💰 ${formatPrice(property.price)}`;
-    const message = `${shareText}\n${propertyUrl}`;
+    
+    const message = `🏠 *${property.title}*\n📍 ${location}\n💰 ${formatPrice(property.price)}\n\n👉 Ver más: ${propertyUrl}`;
+    
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    toast.success('Abriendo WhatsApp...');
+  };
 
-    // 1) Intentar hoja nativa / Web Share cuando esté disponible
-    const shareSuccess = await share({
-      title: property.title,
-      text: shareText,
-      url: propertyUrl,
-    });
-
-    if (shareSuccess) {
-      toast.success('Listo para compartir');
-      return;
-    }
-
-    // 2) Fallback robusto para el preview (iframes suelen bloquear navigator.share/clipboard)
-    const copied = await copyTextToClipboard(message);
-    if (copied) {
-      toast.success('Link copiado');
-      return;
-    }
-
-    toast.error('No se pudo copiar ni abrir el menú de compartir');
+  const handleCheckboxChange = (checked: boolean) => {
+    onSelect?.(property.id, checked);
   };
 
   const daysLeft = getDaysUntilExpiration(property.expires_at);
@@ -198,7 +154,8 @@ export const PropertyCardAgent = ({
     <Card className={cn(
       "group overflow-hidden transition-all duration-200 hover:shadow-lg",
       isFeatured && "ring-2 ring-primary/50",
-      isExpiringSoon && "ring-2 ring-destructive/30"
+      isExpiringSoon && "ring-2 ring-destructive/30",
+      isSelected && "ring-2 ring-green-500"
     )}>
       {/* Image container with overlays */}
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
@@ -215,10 +172,28 @@ export const PropertyCardAgent = ({
           </div>
         )}
 
-        {/* Status badge */}
+        {/* Selection checkbox */}
+        {selectionMode && (
+          <div 
+            className="absolute top-2 left-2 z-20"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={handleCheckboxChange}
+              className="h-6 w-6 bg-white border-2 border-primary data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+            />
+          </div>
+        )}
+
+        {/* Status badge - move right when selection mode */}
         <Badge 
           variant={statusInfo.variant} 
-          className={cn("absolute top-2 left-2", statusInfo.className)}
+          className={cn(
+            "absolute top-2",
+            selectionMode ? "left-10" : "left-2",
+            statusInfo.className
+          )}
         >
           {statusInfo.icon} {statusInfo.label}
         </Badge>
@@ -373,13 +348,13 @@ export const PropertyCardAgent = ({
                 type="button"
                 variant="ghost" 
                 size="icon" 
-                className="h-11 w-11 text-primary hover:text-primary/80"
-                onClick={handleShare}
+                className="h-11 w-11 text-green-600 hover:text-green-700 hover:bg-green-50"
+                onClick={handleWhatsAppShare}
               >
-                <Share2 className="h-5 w-5" />
+                <MessageCircle className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Compartir</TooltipContent>
+            <TooltipContent>Compartir por WhatsApp</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>

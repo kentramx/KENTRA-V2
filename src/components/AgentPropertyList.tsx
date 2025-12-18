@@ -19,8 +19,12 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  CheckSquare,
+  MessageCircle,
+  X
 } from 'lucide-react';
+import { toast as sonnerToast } from 'sonner';
 import { FeaturePropertyDialog } from './FeaturePropertyDialog';
 import { PropertyCardAgent } from './PropertyCardAgent';
 import { PropertyDetailSheet } from './PropertyDetailSheet';
@@ -82,6 +86,10 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
   // Property detail sheet state
   const [viewPropertyId, setViewPropertyId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Selection mode for batch sharing
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedProperties, setSelectedProperties] = useState<Set<string>>(new Set());
 
   // Fetch properties con React Query
   const effectiveAgentId = agentId || user?.id;
@@ -322,6 +330,61 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
     }).format(price);
   };
 
+  // Selection handlers for batch sharing
+  const handleSelectProperty = (id: string, selected: boolean) => {
+    setSelectedProperties(prev => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedProperties.size === filteredProperties.length) {
+      setSelectedProperties(new Set());
+    } else {
+      setSelectedProperties(new Set(filteredProperties.map(p => p.id)));
+    }
+  };
+
+  const handleCancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedProperties(new Set());
+  };
+
+  const handleBatchShare = () => {
+    const selected = filteredProperties.filter(p => selectedProperties.has(p.id));
+    
+    if (selected.length === 0) {
+      sonnerToast.error('Selecciona al menos una propiedad');
+      return;
+    }
+
+    let message = `🏠 *Te comparto ${selected.length} propiedad${selected.length > 1 ? 'es' : ''} de tu interés:*\n\n`;
+    
+    selected.forEach((p, i) => {
+      const url = `${window.location.origin}/propiedad/${p.id}`;
+      const location = (p as any).colonia ? `${(p as any).colonia}, ${p.municipality}` : p.municipality;
+      message += `${i + 1}. *${p.title}*\n`;
+      message += `   📍 ${location}\n`;
+      message += `   💰 ${formatPrice(p.price)}\n`;
+      message += `   👉 ${url}\n\n`;
+    });
+    
+    message += `\n¿Te interesa alguna? ¡Agenda una visita! 📅`;
+    
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    sonnerToast.success(`Compartiendo ${selected.length} propiedades por WhatsApp`);
+    
+    // Reset selection
+    setSelectionMode(false);
+    setSelectedProperties(new Set());
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -436,6 +499,62 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
         </div>
       </div>
 
+      {/* Selection bar for batch sharing */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-muted/50 rounded-lg px-4 py-3 mb-4">
+        <div className="flex items-center gap-3">
+          <Button 
+            variant={selectionMode ? "default" : "outline"} 
+            size="sm"
+            onClick={() => {
+              if (selectionMode) {
+                handleCancelSelection();
+              } else {
+                setSelectionMode(true);
+              }
+            }}
+            className="gap-2"
+          >
+            {selectionMode ? (
+              <>
+                <X className="h-4 w-4" />
+                Cancelar
+              </>
+            ) : (
+              <>
+                <CheckSquare className="h-4 w-4" />
+                Seleccionar
+              </>
+            )}
+          </Button>
+          
+          {selectionMode && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectAll}
+                className="gap-2"
+              >
+                {selectedProperties.size === filteredProperties.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                {selectedProperties.size} seleccionada{selectedProperties.size !== 1 ? 's' : ''}
+              </span>
+            </>
+          )}
+        </div>
+        
+        {selectionMode && selectedProperties.size > 0 && (
+          <Button 
+            className="gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+            onClick={handleBatchShare}
+          >
+            <MessageCircle className="h-4 w-4" />
+            Compartir {selectedProperties.size} por WhatsApp
+          </Button>
+        )}
+      </div>
+
       {/* Empty state for filtered results */}
       {filteredProperties.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
@@ -487,6 +606,9 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                   : undefined
               }
               isTogglingFeatured={togglingFeaturedId === property.id}
+              selectionMode={selectionMode}
+              isSelected={selectedProperties.has(property.id)}
+              onSelect={handleSelectProperty}
             />
           ))}
         </div>
