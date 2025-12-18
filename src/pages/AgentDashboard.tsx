@@ -138,11 +138,6 @@ const AgentDashboard = () => {
 
   // Determinar si el usuario puede comprar upsells (solo con suscripción activa)
   const canPurchaseUpsells = subscriptionInfo?.status === 'active';
-  const upsellBlockedReason = !canPurchaseUpsells 
-    ? subscriptionInfo?.status === 'trialing' 
-      ? 'Actualiza a un plan de pago'
-      : 'Requiere suscripción activa'
-    : undefined;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -537,12 +532,13 @@ const AgentDashboard = () => {
       badge: propertyCounts.reminders > 0 ? propertyCounts.reminders : null,
       badgeVariant: 'warning' as const,
     },
-    { 
+    // Solo mostrar "Servicios" si tiene suscripción activa
+    ...(canPurchaseUpsells ? [{ 
       value: 'services', 
       label: 'Servicios', 
       icon: Sparkles,
       badge: null,
-    },
+    }] : []),
     { 
       value: 'plan', 
       label: 'Mi Plan', 
@@ -715,11 +711,7 @@ const AgentDashboard = () => {
               </TabsContent>
 
               <TabsContent value="services" className="mt-0">
-                <AgentUpsells 
-                  onPurchase={handleUpsellPurchase} 
-                  canPurchase={canPurchaseUpsells}
-                  purchaseBlockedReason={upsellBlockedReason}
-                />
+                <AgentUpsells onPurchase={handleUpsellPurchase} />
               </TabsContent>
 
               <TabsContent value="plan" className="mt-0 space-y-6">
@@ -740,14 +732,12 @@ const AgentDashboard = () => {
                       activePropertiesCount={activePropertiesCount}
                       featuredCount={featuredCount}
                     />
-                    {subscriptionInfo && (
+                    {subscriptionInfo && canPurchaseUpsells && (
                       <QuickUpsells 
                         subscriptionInfo={subscriptionInfo}
                         activePropertiesCount={activePropertiesCount}
                         onPurchase={handleUpsellPurchase}
                         onViewAll={() => setActiveTab('services')}
-                        canPurchase={canPurchaseUpsells}
-                        purchaseBlockedReason={upsellBlockedReason}
                       />
                     )}
                   </div>
