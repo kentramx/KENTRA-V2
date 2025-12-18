@@ -137,21 +137,6 @@ export function GlobalSubscriptionBanner() {
         priority: 5,
       });
     }
-
-    // Near property limit
-    if (alerts.showNearPropertyLimit && !dismissed.has('near_limit') && !alerts.showAtPropertyLimit) {
-      banners.push({
-        type: 'near_limit',
-        icon: AlertCircle,
-        title: `${limits.remainingProperties} propiedades restantes`,
-        message: `Has usado ${limits.currentProperties}/${limits.maxProperties} propiedades de tu plan.`,
-        action: { label: 'Ver Opciones', href: subscriptionPanelRoute },
-        variant: 'info',
-        dismissable: true,
-        priority: 6,
-      });
-    }
-
     return banners.sort((a, b) => a.priority - b.priority);
   };
 
