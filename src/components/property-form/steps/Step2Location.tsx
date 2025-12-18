@@ -51,6 +51,20 @@ export const Step2Location = ({ formData, updateFormData }: Step2LocationProps) 
             </div>
           )}
 
+          {/* Alerta si hay dirección pero faltan coordenadas (borrador corrupto) */}
+          {formData.address && (!formData.lat || !formData.lng) && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-orange-900 text-sm">Coordenadas no detectadas</h4>
+                <p className="text-orange-700 text-sm mt-1">
+                  Por favor, vuelve a buscar y seleccionar la dirección para obtener las coordenadas correctas. 
+                  También puedes usar el botón "Reiniciar" para empezar de nuevo.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Vista previa de ubicación */}
           {formData.state && formData.municipality && (
             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
