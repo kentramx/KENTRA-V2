@@ -270,29 +270,61 @@ Deno.serve(withSentry(async (req) => {
 
       const customerId = activeSub.stripe_customer_id;
 
-      // VALIDACIÓN 5: Verificar que todos los stripe_price_id de upsells sean válidos
-      for (const upsell of upsells) {
-        if (upsell.stripePriceId) {
-          const isValid = await validateStripePriceId(upsell.stripePriceId);
-          if (!isValid) {
-            return new Response(
-              JSON.stringify({ 
-                error: `El servicio "${upsell.name || 'seleccionado'}" tiene una configuración de precio inválida. Contacta soporte.` 
-              }),
-              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
+      // Obtener IDs de upsells del frontend
+      const upsellIds = upsells.map((u: any) => u.id).filter(Boolean);
+      
+      if (upsellIds.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'No se proporcionaron servicios adicionales válidos' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Buscar detalles de upsells en la base de datos (incluido stripe_price_id)
+      const { data: upsellDetails, error: upsellFetchError } = await supabaseAdmin
+        .from('upsells')
+        .select('id, name, stripe_price_id, is_recurring')
+        .in('id', upsellIds);
+
+      if (upsellFetchError || !upsellDetails || upsellDetails.length === 0) {
+        console.error('Error fetching upsells:', upsellFetchError);
+        return new Response(
+          JSON.stringify({ error: 'Servicios adicionales no encontrados' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Validar que todos los upsells tengan stripe_price_id configurado
+      for (const upsell of upsellDetails) {
+        if (!upsell.stripe_price_id) {
+          return new Response(
+            JSON.stringify({ 
+              error: `El servicio "${upsell.name}" no tiene precio configurado en Stripe. Contacta soporte.` 
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // Verificar que el stripe_price_id sea válido en Stripe
+        const isValid = await validateStripePriceId(upsell.stripe_price_id);
+        if (!isValid) {
+          return new Response(
+            JSON.stringify({ 
+              error: `El servicio "${upsell.name}" tiene una configuración de precio inválida. Contacta soporte.` 
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
       }
 
-      // Line items solo con upsells
-      const lineItems = upsells.map((upsell: any) => ({
-        price: upsell.stripePriceId,
+      // Line items usando datos de la DB (no del cliente - más seguro)
+      const lineItems = upsellDetails.map((upsell) => ({
+        price: upsell.stripe_price_id,
         quantity: 1,
       }));
 
-      // Determinar mode según si hay recurrentes
-      const hasRecurring = upsells.some((u: any) => u.isRecurring);
+      // Determinar mode según si hay recurrentes (usando datos de la DB)
+      const hasRecurring = upsellDetails.some((u) => u.is_recurring);
       const mode = hasRecurring ? 'subscription' : 'payment';
 
       console.log('Creating upsell checkout with line items:', lineItems, 'mode:', mode);
@@ -309,7 +341,7 @@ Deno.serve(withSentry(async (req) => {
         metadata: {
           user_id: user.id,
           upsell_only: 'true',
-          upsell_ids: upsells.map((u: any) => u.id).join(','),
+          upsell_ids: upsellDetails.map((u) => u.id).join(','),
         },
       };
 
