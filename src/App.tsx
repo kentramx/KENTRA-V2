@@ -85,9 +85,12 @@ const AppContent = () => {
   const { trackPageView } = useTracking();
 
   useEffect(() => {
+    // Scroll al principio de la página en cada cambio de ruta
+    window.scrollTo(0, 0);
+    
     // Trackear pageview en cada cambio de ruta usando GTM
     trackPageView(location.pathname + location.search);
-  }, [location, trackPageView]);
+  }, [location.pathname, trackPageView]);
 
   return (
     <>
