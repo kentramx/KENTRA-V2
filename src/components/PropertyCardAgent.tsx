@@ -10,9 +10,12 @@ import {
   Trash2, 
   RefreshCw, 
   MapPin,
-  Loader2
+  Loader2,
+  Share2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNativeFeatures } from '@/hooks/useNativeFeatures';
+import { toast } from 'sonner';
 
 interface RejectionRecord {
   date: string;
@@ -67,6 +70,27 @@ export const PropertyCardAgent = ({
   isTogglingFeatured = false,
 }: PropertyCardAgentProps) => {
   const [imageError, setImageError] = useState(false);
+  const { share } = useNativeFeatures();
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const propertyUrl = `${window.location.origin}/propiedad/${property.id}`;
+    const location = property.colonia 
+      ? `${property.colonia}, ${property.municipality}` 
+      : property.municipality;
+    const shareText = `🏠 ${property.title}\n📍 ${location}\n💰 ${formatPrice(property.price)}`;
+    
+    const success = await share({
+      title: property.title,
+      text: shareText,
+      url: propertyUrl
+    });
+    
+    if (success) {
+      toast.success('Listo para compartir');
+    }
+  };
   
   const getDaysUntilExpiration = (expiresAt: string | null) => {
     if (!expiresAt) return 0;
@@ -293,6 +317,19 @@ export const PropertyCardAgent = ({
             <Edit className="h-3.5 w-3.5" />
             Editar
           </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-primary hover:text-primary/80"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Compartir</TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
