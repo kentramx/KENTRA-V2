@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,8 +31,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Plus, Eye, Edit, Building2, Home, Filter, MapPin } from 'lucide-react';
+import { Loader2, Plus, Eye, Edit, Building2, Home, Filter, MapPin, MessageCircle, CheckSquare, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -73,6 +75,10 @@ export const DeveloperProjectManagement = ({ developerId, subscriptionInfo }: De
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [saving, setSaving] = useState(false);
+  
+  // Estados para compartir rápido
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   
   // Form state
   const [formData, setFormData] = useState({
@@ -283,6 +289,76 @@ export const DeveloperProjectManagement = ({ developerId, subscriptionInfo }: De
 
   const canAddMore = maxProjects === -1 || projects.length < maxProjects;
 
+  // Funciones de selección para compartir
+  const handleSelectProject = (id: string, selected: boolean) => {
+    const newSelected = new Set(selectedProjects);
+    if (selected) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedProjects(newSelected);
+    if (newSelected.size > 0 && !selectionMode) {
+      setSelectionMode(true);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedProjects.size === filteredProjects.length) {
+      setSelectedProjects(new Set());
+    } else {
+      setSelectedProjects(new Set(filteredProjects.map(p => p.id)));
+    }
+  };
+
+  const handleCancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedProjects(new Set());
+  };
+
+  // WhatsApp individual para proyectos
+  const handleWhatsAppShare = (project: Project) => {
+    const url = `${window.location.origin}/proyecto/${project.id}`;
+    const location = [project.city, project.state].filter(Boolean).join(', ');
+    const deliveryDate = project.delivery_date 
+      ? new Date(project.delivery_date).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })
+      : null;
+    
+    let message = `🏗️ *Proyecto: ${project.name}*\n`;
+    if (location) message += `📍 ${location}\n`;
+    message += `🏠 ${project.available_units}/${project.total_units} unidades disponibles\n`;
+    if (deliveryDate) message += `📅 Entrega: ${deliveryDate}\n`;
+    message += `\n👉 Ver más: ${url}`;
+    
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  // Batch share para proyectos
+  const handleBatchShare = () => {
+    const selected = filteredProjects.filter(p => selectedProjects.has(p.id));
+    if (selected.length === 0) return;
+
+    let message = `🏗️ *Te comparto ${selected.length} proyecto${selected.length > 1 ? 's' : ''} de desarrollo:*\n\n`;
+    
+    selected.forEach((project, index) => {
+      const url = `${window.location.origin}/proyecto/${project.id}`;
+      const location = [project.city, project.state].filter(Boolean).join(', ');
+      const deliveryDate = project.delivery_date 
+        ? new Date(project.delivery_date).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })
+        : null;
+      
+      message += `${index + 1}. *${project.name}*\n`;
+      if (location) message += `   📍 ${location}\n`;
+      message += `   🏠 ${project.available_units}/${project.total_units} unidades\n`;
+      if (deliveryDate) message += `   📅 Entrega: ${deliveryDate}\n`;
+      message += `   👉 ${url}\n\n`;
+    });
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    sonnerToast.success(`Compartiendo ${selected.length} proyecto${selected.length > 1 ? 's' : ''}`);
+    handleCancelSelection();
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -376,6 +452,35 @@ export const DeveloperProjectManagement = ({ developerId, subscriptionInfo }: De
         </Select>
       </div>
 
+      {/* Barra de selección batch */}
+      {selectionMode && selectedProjects.size > 0 && (
+        <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-lg p-3">
+          <div className="flex items-center gap-3">
+            <CheckSquare className="h-5 w-5 text-primary" />
+            <span className="font-medium">
+              {selectedProjects.size} proyecto{selectedProjects.size > 1 ? 's' : ''} seleccionado{selectedProjects.size > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleBatchShare}
+              className="bg-green-600 hover:bg-green-700 gap-2"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Compartir por WhatsApp
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleCancelSelection}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Lista de proyectos */}
       {filteredProjects.length === 0 ? (
         <div className="text-center py-12 border rounded-lg">
@@ -397,6 +502,12 @@ export const DeveloperProjectManagement = ({ developerId, subscriptionInfo }: De
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={selectedProjects.size === filteredProjects.length && filteredProjects.length > 0}
+                    onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
                 <TableHead>Proyecto</TableHead>
                 <TableHead>Ubicación</TableHead>
                 <TableHead>Estado</TableHead>
@@ -408,6 +519,12 @@ export const DeveloperProjectManagement = ({ developerId, subscriptionInfo }: De
             <TableBody>
               {filteredProjects.map((project) => (
                 <TableRow key={project.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedProjects.has(project.id)}
+                      onCheckedChange={(checked) => handleSelectProject(project.id, checked as boolean)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {project.cover_image_url ? (
@@ -458,7 +575,16 @@ export const DeveloperProjectManagement = ({ developerId, subscriptionInfo }: De
                     }
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-center gap-2">
+                    <div className="flex justify-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleWhatsAppShare(project)}
+                        title="Compartir por WhatsApp"
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

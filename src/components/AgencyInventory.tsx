@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FeaturePropertyDialog } from './FeaturePropertyDialog';
 import { useMonitoring } from '@/lib/monitoring';
 import {
@@ -27,8 +28,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Eye, Filter, Users, UserCog, Star } from 'lucide-react';
+import { Loader2, Eye, Filter, Users, UserCog, Star, MessageCircle, CheckSquare, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -52,6 +54,10 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
   const [assigning, setAssigning] = useState(false);
   const [featuredProperties, setFeaturedProperties] = useState<Set<string>>(new Set());
   const [featureProperty, setFeatureProperty] = useState<any>(null);
+  
+  // Estados para compartir rápido
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedProperties, setSelectedProperties] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadData();
@@ -161,6 +167,71 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
       currency: 'MXN',
       minimumFractionDigits: 0,
     }).format(price);
+  };
+
+  // Funciones de selección para compartir
+  const handleSelectProperty = (id: string, selected: boolean) => {
+    const newSelected = new Set(selectedProperties);
+    if (selected) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedProperties(newSelected);
+    if (newSelected.size > 0 && !selectionMode) {
+      setSelectionMode(true);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedProperties.size === filteredProperties.length) {
+      setSelectedProperties(new Set());
+    } else {
+      setSelectedProperties(new Set(filteredProperties.map(p => p.id)));
+    }
+  };
+
+  const handleCancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedProperties(new Set());
+  };
+
+  // WhatsApp individual
+  const handleWhatsAppShare = (property: any) => {
+    const url = `${window.location.origin}/propiedad/${property.id}`;
+    const location = property.colonia 
+      ? `${property.colonia}, ${property.municipality}` 
+      : `${property.municipality}, ${property.state}`;
+    const agentName = property.profiles?.name || 'Nuestro equipo';
+    
+    const message = `🏠 *${property.title}*\n📍 ${location}\n💰 ${formatPrice(property.price)}\n👤 Agente: ${agentName}\n\n👉 Ver más: ${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  // Batch share
+  const handleBatchShare = () => {
+    const selected = filteredProperties.filter(p => selectedProperties.has(p.id));
+    if (selected.length === 0) return;
+
+    let message = `🏠 *Te comparto ${selected.length} propiedad${selected.length > 1 ? 'es' : ''} de tu interés:*\n\n`;
+    
+    selected.forEach((property, index) => {
+      const url = `${window.location.origin}/propiedad/${property.id}`;
+      const location = property.colonia 
+        ? `${property.colonia}, ${property.municipality}` 
+        : `${property.municipality}, ${property.state}`;
+      const agentName = property.profiles?.name || 'Nuestro equipo';
+      
+      message += `${index + 1}. *${property.title}*\n`;
+      message += `   📍 ${location}\n`;
+      message += `   💰 ${formatPrice(property.price)}\n`;
+      message += `   👤 Agente: ${agentName}\n`;
+      message += `   👉 ${url}\n\n`;
+    });
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    sonnerToast.success(`Compartiendo ${selected.length} propiedad${selected.length > 1 ? 'es' : ''}`);
+    handleCancelSelection();
   };
 
   const handleOpenAssignDialog = (property: any) => {
@@ -289,6 +360,35 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
         </Select>
       </div>
 
+      {/* Barra de selección batch */}
+      {selectionMode && selectedProperties.size > 0 && (
+        <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-lg p-3">
+          <div className="flex items-center gap-3">
+            <CheckSquare className="h-5 w-5 text-primary" />
+            <span className="font-medium">
+              {selectedProperties.size} propiedad{selectedProperties.size > 1 ? 'es' : ''} seleccionada{selectedProperties.size > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleBatchShare}
+              className="bg-green-600 hover:bg-green-700 gap-2"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Compartir por WhatsApp
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleCancelSelection}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Tabla de propiedades */}
       {filteredProperties.length === 0 ? (
         <div className="text-center py-12 border rounded-lg">
@@ -302,6 +402,12 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={selectedProperties.size === filteredProperties.length && filteredProperties.length > 0}
+                    onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
                 <TableHead>Propiedad</TableHead>
                 <TableHead>Agente</TableHead>
                 <TableHead>Tipo</TableHead>
@@ -315,6 +421,12 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
             <TableBody>
               {filteredProperties.map((property) => (
                 <TableRow key={property.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedProperties.has(property.id)}
+                      onCheckedChange={(checked) => handleSelectProperty(property.id, checked as boolean)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {property.images?.[0] && (
@@ -376,7 +488,16 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
                     {new Date(property.created_at).toLocaleDateString('es-MX')}
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-center gap-2">
+                    <div className="flex justify-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleWhatsAppShare(property)}
+                        title="Compartir por WhatsApp"
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
