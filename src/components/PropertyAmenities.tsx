@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Wifi,
   Tv,
@@ -22,7 +21,7 @@ interface Amenity {
 }
 
 interface PropertyAmenitiesProps {
-  amenities: Amenity[];
+  amenities: string[] | Amenity[];
 }
 
 const AMENITY_ICONS: Record<string, any> = {
@@ -50,10 +49,41 @@ const ITEM_ICONS: Record<string, any> = {
 };
 
 export const PropertyAmenities = ({ amenities }: PropertyAmenitiesProps) => {
-  if (!amenities || amenities.length === 0) {
+  if (!amenities || !Array.isArray(amenities) || amenities.length === 0) {
     return null;
   }
 
+  // Detectar si es array simple de strings
+  const isSimpleArray = typeof amenities[0] === 'string';
+
+  if (isSimpleArray) {
+    // Renderizar lista simple de amenidades
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Amenidades</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {(amenities as string[]).map((item, index) => {
+              const ItemIcon = ITEM_ICONS[item] || CheckCircle2;
+              return (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                >
+                  <ItemIcon className="h-4 w-4 text-primary flex-shrink-0" />
+                  <span className="text-sm">{item}</span>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Renderizar con categorías (formato estructurado)
   return (
     <Card className="mb-6">
       <CardHeader>
@@ -61,7 +91,12 @@ export const PropertyAmenities = ({ amenities }: PropertyAmenitiesProps) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {amenities.map((amenityGroup, index) => {
+          {(amenities as Amenity[]).map((amenityGroup, index) => {
+            // Validación defensiva
+            if (!amenityGroup?.items || !Array.isArray(amenityGroup.items)) {
+              return null;
+            }
+            
             const CategoryIcon = AMENITY_ICONS[amenityGroup.category] || CheckCircle2;
             
             return (
