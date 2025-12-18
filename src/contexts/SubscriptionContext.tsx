@@ -46,12 +46,6 @@ interface SubscriptionLimits {
   featuredLimit: number;
   featuredRemaining: number;
   canFeature: boolean;
-  // Impulsos (bumps)
-  bumpsUsed: number;
-  bumpsLimit: number;
-  bumpsRemaining: number;
-  bumpsResetDate: Date | null;
-  canBump: boolean;
 }
 
 interface SubscriptionAlerts {
@@ -100,11 +94,6 @@ const defaultLimits: SubscriptionLimits = {
   featuredLimit: 0,
   featuredRemaining: 0,
   canFeature: false,
-  bumpsUsed: 0,
-  bumpsLimit: 0,
-  bumpsRemaining: 0,
-  bumpsResetDate: null,
-  canBump: false,
 };
 
 const defaultAlerts: SubscriptionAlerts = {
@@ -202,12 +191,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const featuredRemaining = Math.max(0, featuredLimit - featuredUsed);
       const canFeature = featuredUsed < featuredLimit;
 
-      // Leer datos de bumps
-      const bumpsLimit = (limitsData as any).bumps_per_month ?? 0;
-      const bumpsUsed = (sub as any).bumps_used_this_month ?? 0;
-      const bumpsResetDate = (sub as any).bumps_reset_date ? new Date((sub as any).bumps_reset_date) : null;
-      const bumpsRemaining = bumpsLimit === -1 ? Infinity : Math.max(0, bumpsLimit - bumpsUsed);
-      const canBump = bumpsLimit === -1 || bumpsUsed < bumpsLimit;
 
       const periodEnd = sub.current_period_end ? new Date(sub.current_period_end) : null;
       const now = new Date();
@@ -253,11 +236,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           featuredLimit,
           featuredRemaining,
           canFeature,
-          bumpsUsed,
-          bumpsLimit,
-          bumpsRemaining,
-          bumpsResetDate,
-          canBump,
         },
         alerts: {
           showPaymentFailed: isPastDue || isIncomplete,

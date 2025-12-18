@@ -9,10 +9,8 @@ import {
   Edit, 
   Trash2, 
   RefreshCw, 
-  Clock, 
   MapPin,
-  Loader2,
-  Zap
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -44,20 +42,15 @@ interface PropertyCardAgentProps {
   subscriptionInfo?: {
     featured_used: number;
     featured_limit: number;
-    bumps_used?: number;
-    bumps_limit?: number;
-    can_bump?: boolean;
   } | null;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onToggleFeatured: () => void;
   onRenew: () => void;
-  onBump?: () => void;
   onResubmit?: () => void;
   onReactivate?: () => void;
   isTogglingFeatured?: boolean;
-  isBumping?: boolean;
 }
 
 export const PropertyCardAgent = ({
@@ -69,11 +62,9 @@ export const PropertyCardAgent = ({
   onDelete,
   onToggleFeatured,
   onRenew,
-  onBump,
   onResubmit,
   onReactivate,
   isTogglingFeatured = false,
-  isBumping = false,
 }: PropertyCardAgentProps) => {
   const [imageError, setImageError] = useState(false);
   
@@ -101,7 +92,6 @@ export const PropertyCardAgent = ({
   const canFeature = subscriptionInfo 
     ? subscriptionInfo.featured_used < subscriptionInfo.featured_limit
     : false;
-  const canBump = subscriptionInfo?.can_bump ?? false;
 
   // Circular progress for days remaining
   const maxDays = 30;
@@ -330,39 +320,6 @@ export const PropertyCardAgent = ({
             <RefreshCw className="h-3.5 w-3.5" />
             {daysLeft <= 3 ? '¡Renovar ahora!' : 'Renovar (+30 días)'}
           </Button>
-        )}
-
-        {/* Bump button - visible when not expiring soon */}
-        {property.status === 'activa' && !isExpiringSoon && onBump && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full mt-2 gap-1 border-blue-500/50 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                onClick={onBump}
-                disabled={isBumping || !canBump}
-              >
-                {isBumping ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Zap className="h-3.5 w-3.5" />
-                )}
-                Impulsar
-                {subscriptionInfo && subscriptionInfo.bumps_limit !== -1 && (
-                  <span className="ml-1 text-xs opacity-70">
-                    ({subscriptionInfo.bumps_used}/{subscriptionInfo.bumps_limit})
-                  </span>
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {canBump 
-                ? 'Impulsa tu propiedad al tope de las búsquedas'
-                : `Sin impulsos disponibles (${subscriptionInfo?.bumps_used}/${subscriptionInfo?.bumps_limit})`
-              }
-            </TooltipContent>
-          </Tooltip>
         )}
 
         {isRejected && onResubmit && (property.resubmission_count || 0) < 3 && (
