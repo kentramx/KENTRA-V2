@@ -64,7 +64,7 @@ import Terminos from "./pages/Terminos";
 import Ayuda from "./pages/Ayuda";
 import { Footer } from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
-import { SupportChatButton } from "@/components/SupportChatButton";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -142,7 +142,6 @@ const AppContent = () => {
             </Routes>
             <Footer />
             <BottomNav />
-            <SupportChatButton />
     </>
   );
 };
