@@ -378,7 +378,7 @@ const DeveloperDashboard = () => {
             status: subscriptionInfo?.status,
             planName: subscriptionInfo?.name,
             currentPeriodEnd: subscriptionInfo?.current_period_end,
-            maxProjects: subscriptionInfo?.max_projects || 5,
+            maxProjects: subscriptionInfo?.projects_limit || 5,
             maxAgents: subscriptionInfo?.max_agents || 10,
           }}
         />
