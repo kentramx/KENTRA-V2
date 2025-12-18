@@ -36,7 +36,7 @@ export const FormProgressBar = ({
         {/* Steps */}
         {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => {
           const isActive = step === currentStep;
-          const isCompleted = step < currentStep || isStepComplete(step);
+          const isCompleted = step < currentStep && isStepComplete(step);
           
           return (
             <div
