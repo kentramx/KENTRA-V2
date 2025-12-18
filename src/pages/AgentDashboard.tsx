@@ -136,6 +136,14 @@ const AgentDashboard = () => {
     return { pending, reminders, total: allProperties.length };
   }, [allProperties]);
 
+  // Determinar si el usuario puede comprar upsells (solo con suscripción activa)
+  const canPurchaseUpsells = subscriptionInfo?.status === 'active';
+  const upsellBlockedReason = !canPurchaseUpsells 
+    ? subscriptionInfo?.status === 'trialing' 
+      ? 'Actualiza a un plan de pago'
+      : 'Requiere suscripción activa'
+    : undefined;
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
@@ -707,7 +715,11 @@ const AgentDashboard = () => {
               </TabsContent>
 
               <TabsContent value="services" className="mt-0">
-                <AgentUpsells onPurchase={handleUpsellPurchase} />
+                <AgentUpsells 
+                  onPurchase={handleUpsellPurchase} 
+                  canPurchase={canPurchaseUpsells}
+                  purchaseBlockedReason={upsellBlockedReason}
+                />
               </TabsContent>
 
               <TabsContent value="plan" className="mt-0 space-y-6">
@@ -734,6 +746,8 @@ const AgentDashboard = () => {
                         activePropertiesCount={activePropertiesCount}
                         onPurchase={handleUpsellPurchase}
                         onViewAll={() => setActiveTab('services')}
+                        canPurchase={canPurchaseUpsells}
+                        purchaseBlockedReason={upsellBlockedReason}
                       />
                     )}
                   </div>

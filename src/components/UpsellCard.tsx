@@ -27,6 +27,8 @@ interface UpsellCardProps {
   compact?: boolean;
   loading?: boolean;
   maxQuantity?: number;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 export const UpsellCard = ({ 
@@ -34,14 +36,14 @@ export const UpsellCard = ({
   onPurchase, 
   compact = false, 
   loading = false,
-  maxQuantity = 10 
+  maxQuantity = 10,
+  disabled = false,
+  disabledReason
 }: UpsellCardProps) => {
   const Icon = iconMap[upsell.icon_name as keyof typeof iconMap] || Plus;
   
-  // Solo mostrar selector de cantidad para slots y paquetes (recurrentes)
-  const showQuantitySelector = upsell.is_recurring || 
-    upsell.name.toLowerCase().includes('slot') || 
-    upsell.name.toLowerCase().includes('paquete');
+  // Mostrar selector de cantidad para TODOS los upsells
+  const showQuantitySelector = true;
   
   const [quantity, setQuantity] = useState(1);
 
@@ -60,7 +62,7 @@ export const UpsellCard = ({
   const totalPrice = upsell.price * quantity;
   
   return (
-    <Card className={`relative overflow-hidden hover:shadow-lg transition-shadow ${compact ? '' : 'h-full'}`}>
+    <Card className={`relative overflow-hidden transition-shadow ${compact ? '' : 'h-full'} ${disabled ? 'opacity-60' : 'hover:shadow-lg'}`}>
       {upsell.badge && (
         <Badge className="absolute top-4 right-4 z-10" variant="secondary">
           {upsell.badge}
@@ -129,13 +131,21 @@ export const UpsellCard = ({
               </Badge>
             </div>
             
-            <Button 
-              onClick={() => onPurchase(upsell.id, quantity)}
-              disabled={loading}
-              size={compact ? 'sm' : 'default'}
-            >
-              {loading ? 'Procesando...' : 'Comprar'}
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <Button 
+                onClick={() => onPurchase(upsell.id, quantity)}
+                disabled={loading || disabled}
+                size={compact ? 'sm' : 'default'}
+                title={disabled ? disabledReason : undefined}
+              >
+                {loading ? 'Procesando...' : 'Comprar'}
+              </Button>
+              {disabled && disabledReason && (
+                <span className="text-xs text-muted-foreground max-w-[120px] text-right">
+                  {disabledReason}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>

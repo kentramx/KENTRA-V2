@@ -12,15 +12,19 @@ import { Badge } from './ui/badge';
 interface QuickUpsellsProps {
   subscriptionInfo: any;
   activePropertiesCount: number;
-  onPurchase: (upsellId: string) => void;
+  onPurchase: (upsellId: string, quantity: number) => void;
   onViewAll: () => void;
+  canPurchase?: boolean;
+  purchaseBlockedReason?: string;
 }
 
 export const QuickUpsells = ({ 
   subscriptionInfo, 
   activePropertiesCount,
   onPurchase,
-  onViewAll
+  onViewAll,
+  canPurchase = true,
+  purchaseBlockedReason
 }: QuickUpsellsProps) => {
   const { toast } = useToast();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
@@ -40,7 +44,7 @@ export const QuickUpsells = ({
     },
   });
 
-  const handlePurchase = async (upsellId: string) => {
+  const handlePurchase = async (upsellId: string, quantity: number = 1) => {
     if (isImpersonating) {
       toast({
         title: 'Acción no disponible',
@@ -50,9 +54,18 @@ export const QuickUpsells = ({
       return;
     }
 
+    if (!canPurchase) {
+      toast({
+        title: 'Acción no disponible',
+        description: purchaseBlockedReason || 'No puedes comprar upsells en este momento',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setPurchasingId(upsellId);
     try {
-      await onPurchase(upsellId);
+      await onPurchase(upsellId, quantity);
     } finally {
       setPurchasingId(null);
     }
@@ -192,22 +205,30 @@ export const QuickUpsells = ({
                   </span>
                   <span className="text-sm text-muted-foreground ml-1">MXN</span>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => handlePurchase(upsell.id)}
-                  disabled={purchasingId === upsell.id}
-                  className={`font-semibold ${
-                    upsell.recommended 
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white' 
-                      : ''
-                  }`}
-                >
-                  {purchasingId === upsell.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Comprar'
+                <div className="flex flex-col items-end gap-1">
+                  <Button
+                    size="sm"
+                    onClick={() => handlePurchase(upsell.id, 1)}
+                    disabled={purchasingId === upsell.id || !canPurchase}
+                    title={!canPurchase ? purchaseBlockedReason : undefined}
+                    className={`font-semibold ${
+                      upsell.recommended 
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white' 
+                        : ''
+                    }`}
+                  >
+                    {purchasingId === upsell.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Comprar'
+                    )}
+                  </Button>
+                  {!canPurchase && purchaseBlockedReason && (
+                    <span className="text-xs text-muted-foreground max-w-[100px] text-right">
+                      {purchaseBlockedReason}
+                    </span>
                   )}
-                </Button>
+                </div>
               </div>
             </div>
           ))}

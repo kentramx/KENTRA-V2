@@ -8,9 +8,11 @@ import { useRoleImpersonation } from '@/hooks/useRoleImpersonation';
 
 interface AgentUpsellsProps {
   onPurchase: (upsellId: string, quantity: number) => void;
+  canPurchase?: boolean;
+  purchaseBlockedReason?: string;
 }
 
-export const AgentUpsells = ({ onPurchase }: AgentUpsellsProps) => {
+export const AgentUpsells = ({ onPurchase, canPurchase = true, purchaseBlockedReason }: AgentUpsellsProps) => {
   const { toast } = useToast();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const { isImpersonating } = useRoleImpersonation();
@@ -61,6 +63,13 @@ export const AgentUpsells = ({ onPurchase }: AgentUpsellsProps) => {
 
   return (
     <div className="space-y-8">
+      {/* Banner de bloqueo si no puede comprar */}
+      {!canPurchase && purchaseBlockedReason && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800">
+          <p className="text-sm font-medium">{purchaseBlockedReason}</p>
+        </div>
+      )}
+      
       {/* Sección: Publica Más Propiedades */}
       {propertySlots.length > 0 && (
         <div>
@@ -72,6 +81,8 @@ export const AgentUpsells = ({ onPurchase }: AgentUpsellsProps) => {
                 upsell={upsell}
                 onPurchase={handlePurchase}
                 loading={purchasingId === upsell.id}
+                disabled={!canPurchase}
+                disabledReason={purchaseBlockedReason}
               />
             ))}
           </div>
@@ -88,6 +99,8 @@ export const AgentUpsells = ({ onPurchase }: AgentUpsellsProps) => {
                 key={upsell.id}
                 upsell={upsell}
                 onPurchase={handlePurchase}
+                disabled={!canPurchase}
+                disabledReason={purchaseBlockedReason}
                 loading={purchasingId === upsell.id}
               />
             ))}
