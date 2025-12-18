@@ -86,6 +86,10 @@ export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
   };
 
+  const saveDraft = () => {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+  };
+
   const clearDraft = () => {
     localStorage.removeItem(DRAFT_KEY);
   };
@@ -166,6 +170,7 @@ export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
     goToStep,
     validateStep,
     isStepComplete,
+    saveDraft,
     clearDraft,
   };
 };

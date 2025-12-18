@@ -42,6 +42,7 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
     goToStep,
     validateStep,
     isStepComplete,
+    saveDraft,
     clearDraft,
   } = useFormWizard(property ? {
     for_sale: property.listing_type === 'venta' || property.for_sale,
@@ -71,6 +72,7 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
   const { uploadImages } = useImageUpload();
 
   const handleSaveDraft = () => {
+    saveDraft();
     toast({
       title: 'Borrador guardado',
       description: 'Tus cambios se han guardado localmente',
