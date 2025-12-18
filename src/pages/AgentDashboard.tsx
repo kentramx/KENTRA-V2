@@ -510,7 +510,7 @@ const AgentDashboard = () => {
       value: 'list', 
       label: 'Propiedades', 
       icon: Home,
-      badge: propertyCounts.total > 0 ? propertyCounts.total : null,
+      badge: null,
     },
     { 
       value: 'form', 
