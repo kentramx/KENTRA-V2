@@ -61,6 +61,16 @@ export const Step2Location = ({ formData, updateFormData }: Step2LocationProps) 
                 <p><span className="text-muted-foreground">Estado:</span> {formData.state}</p>
                 {formData.address && <p><span className="text-muted-foreground">Dirección:</span> {formData.address}</p>}
               </div>
+              
+              {/* Debug: Estado de validación */}
+              <div className="text-xs text-muted-foreground pt-2 border-t border-border/50 mt-2">
+                <span className="font-medium">Validación:</span>{' '}
+                Estado: {formData.state ? '✓' : '✗'} | 
+                Municipio: {formData.municipality ? '✓' : '✗'} | 
+                Colonia: {formData.colonia ? '✓' : '✗'} | 
+                Lat: {formData.lat ? '✓' : '✗'} | 
+                Lng: {formData.lng ? '✓' : '✗'}
+              </div>
             </div>
           )}
         </CardContent>
