@@ -175,6 +175,38 @@ const MEXICAN_STATES = new Set([
   'Sonora', 'Tabasco', 'Tamaulipas', 'Tlaxcala', 'Veracruz', 'Yucatán', 'Zacatecas'
 ]);
 
+// Las 16 alcaldías de CDMX para extracción del formatted_address
+const CDMX_ALCALDIAS = new Set([
+  'Álvaro Obregón', 'Azcapotzalco', 'Benito Juárez', 'Coyoacán',
+  'Cuajimalpa de Morelos', 'Cuajimalpa', 'Cuauhtémoc', 'Gustavo A. Madero',
+  'Iztacalco', 'Iztapalapa', 'La Magdalena Contreras', 'Magdalena Contreras',
+  'Miguel Hidalgo', 'Milpa Alta', 'Tláhuac', 'Tlalpan',
+  'Venustiano Carranza', 'Xochimilco'
+]);
+
+// Extraer alcaldía de CDMX del formatted_address cuando Google Places no la proporciona
+const extractAlcaldiaFromAddress = (formattedAddress: string): string => {
+  if (!formattedAddress) return '';
+  
+  const parts = formattedAddress.split(',').map(p => p.trim());
+  
+  for (const part of parts) {
+    // Limpiar código postal si está presente (ej: "11550 Miguel Hidalgo")
+    const cleaned = part.replace(/^\d{5}\s*/, '').trim();
+    
+    if (CDMX_ALCALDIAS.has(cleaned)) {
+      return cleaned;
+    }
+    
+    // También revisar si la parte original (sin limpiar) coincide
+    if (CDMX_ALCALDIAS.has(part)) {
+      return part;
+    }
+  }
+  
+  return '';
+};
+
 const normalizeStateName = (name: string): string => {
   return STATE_NAME_MAP[name] || name;
 };
@@ -298,8 +330,8 @@ const PlaceAutocomplete = ({
         // Municipio: manejo especial para CDMX
         let municipality = '';
         if (isCDMX(adminLevel1)) {
-          // En CDMX: solo usar adminLevel2 (alcaldía), NO locality (que es "Mexico City")
-          municipality = adminLevel2 || '';
+          // En CDMX: adminLevel2 (alcaldía) > fallback a formatted_address
+          municipality = adminLevel2 || extractAlcaldiaFromAddress(place.formatted_address || '');
         } else {
           // Resto de México: adminLevel2 > locality
           municipality = adminLevel2 || locality || '';
@@ -434,7 +466,8 @@ const PlaceAutocomplete = ({
             // Municipio: manejo especial para CDMX
             let municipality = '';
             if (isCDMX(adminLevel1)) {
-              municipality = adminLevel2 || '';
+              // En CDMX: adminLevel2 (alcaldía) > fallback a formatted_address
+              municipality = adminLevel2 || extractAlcaldiaFromAddress(place.formatted_address || '');
             } else {
               municipality = adminLevel2 || locality || '';
             }
