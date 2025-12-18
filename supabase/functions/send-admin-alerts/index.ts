@@ -1,12 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
-import { Resend } from 'https://esm.sh/resend@2.0.0';
+import { sendEmail, getAntiSpamFooter, EMAIL_CONFIG } from '../_shared/emailHelper.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 interface AlertConditions {
   spike_in_failed_payments: boolean;
@@ -110,7 +108,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Construir HTML del email
+    // Construir mensajes de alerta
     const alertMessages = [];
     if (alerts.spike_in_failed_payments) {
       alertMessages.push(`🔴 <strong>Spike en Pagos Fallidos:</strong> ${failedPaymentsCount} pagos fallaron en la última hora`);
@@ -118,68 +116,68 @@ Deno.serve(async (req) => {
     if (alerts.spike_in_cancellations) {
       alertMessages.push(`🟠 <strong>Spike en Cancelaciones:</strong> ${cancellationsCount} cancelaciones en la última hora`);
     }
-    if (alerts.webhook_failures) {
-      alertMessages.push(`⚠️ <strong>Webhook de Stripe Caído:</strong> No se han recibido eventos en las últimas 2 horas`);
-    }
-    if (alerts.cron_job_failures) {
-      alertMessages.push(`⚠️ <strong>Cron Jobs Fallando:</strong> Detectados fallos en jobs automáticos`);
-    }
 
     const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #ef4444; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-          .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
-          .alert { background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 15px 0; border-radius: 4px; }
-          .button { display: inline-block; background: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 style="margin: 0;">🚨 Alerta Crítica del Sistema</h1>
-          </div>
-          <div class="content">
-            <p>Se han detectado condiciones críticas en el sistema de monetización que requieren tu atención inmediata:</p>
-            
-            ${alertMessages.map(msg => `<div class="alert">${msg}</div>`).join('')}
-            
-            <p style="margin-top: 30px;">
-              <strong>Acciones recomendadas:</strong>
-            </p>
-            <ul>
-              <li>Revisa el panel de Salud del Sistema</li>
-              <li>Verifica el estado de los webhooks de Stripe</li>
-              <li>Contacta a usuarios afectados si es necesario</li>
-            </ul>
-            
-            <a href="https://kentra.com.mx/admin/system-health" class="button">
-              Ver Panel de Salud del Sistema
-            </a>
-            
-            <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
-              Este es un email automático del sistema de monitoreo de Kentra.<br>
-              Fecha: ${now.toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}
-            </p>
-          </div>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background-color: #f3f4f6;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center;">
+      <h1 style="color: white; margin: 0; font-size: 24px;">🚨 Alerta Crítica del Sistema</h1>
+    </div>
+    <div style="padding: 30px;">
+      <p style="color: #374151; font-size: 16px;">Se han detectado condiciones críticas en el sistema de monetización:</p>
+      
+      ${alertMessages.map(msg => `
+        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 15px 0; border-radius: 4px;">
+          ${msg}
         </div>
-      </body>
-      </html>
+      `).join('')}
+      
+      <div style="margin-top: 24px;">
+        <p style="color: #374151; font-weight: bold;">Acciones recomendadas:</p>
+        <ul style="color: #374151;">
+          <li>Revisa el panel de Salud del Sistema</li>
+          <li>Verifica el estado de los webhooks de Stripe</li>
+          <li>Contacta a usuarios afectados si es necesario</li>
+        </ul>
+      </div>
+      
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${EMAIL_CONFIG.baseUrl}/admin/system-health" style="background: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Ver Panel de Salud del Sistema</a>
+      </div>
+      
+      <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+        Este es un email automático del sistema de monitoreo de Kentra.<br>
+        Fecha: ${now.toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}
+      </p>
+    </div>
+    ${getAntiSpamFooter()}
+  </div>
+</body>
+</html>
     `;
 
     // Enviar email a todos los super admins
     for (const email of adminEmails) {
-      await resend.emails.send({
-        from: 'Kentra Alerts <noreply@updates.kentra.com.mx>',
-        to: [email],
+      const result = await sendEmail({
+        to: email,
         subject: '🚨 Alerta Crítica - Sistema de Monetización',
-        html: html,
+        htmlContent: html,
+        category: 'transactional',
+        fromName: 'Kentra Alertas',
+        tags: [{ name: 'alert_type', value: 'system_critical' }],
       });
-      console.log(`✅ Email de alerta enviado a ${email}`);
+
+      if (result.success) {
+        console.log(`✅ Email de alerta enviado a ${email}`);
+      } else {
+        console.error(`❌ Error enviando a ${email}:`, result.error);
+      }
     }
 
     return new Response(

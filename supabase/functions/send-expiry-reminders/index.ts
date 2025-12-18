@@ -1,8 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from 'https://esm.sh/resend@2.0.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { sendEmail, getAntiSpamFooter, EMAIL_CONFIG } from '../_shared/emailHelper.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +15,6 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("🔔 Starting expiry reminders check");
 
-    // Initialize Supabase client with service role
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -35,22 +32,9 @@ const handler = async (req: Request): Promise<Response> => {
     for (const reminder of remindersToSend) {
       console.log(`📅 Checking for ${reminder.days}-day reminders...`);
 
-      // Find properties expiring in this timeframe
       const { data: properties, error: propertiesError } = await supabase
         .from('properties')
-        .select(`
-          id,
-          title,
-          agent_id,
-          expires_at,
-          profiles:agent_id (
-            id,
-            name,
-            email:id (
-              email
-            )
-          )
-        `)
+        .select(`id, title, agent_id, expires_at, profiles:agent_id (id, name)`)
         .eq('status', 'activa')
         .gte('expires_at', reminder.startDate.toISOString())
         .lt('expires_at', reminder.endDate.toISOString());
@@ -77,11 +61,10 @@ const handler = async (req: Request): Promise<Response> => {
           .single();
 
         if (existingReminder) {
-          console.log(`⏭️ Reminder already sent for property ${property.id} (${reminder.days} days)`);
+          console.log(`⏭️ Reminder already sent for property ${property.id}`);
           continue;
         }
 
-        // Get agent email from auth.users
         const { data: userData, error: userError } = await supabase.auth.admin.getUserById(property.agent_id);
         
         if (userError || !userData?.user?.email) {
@@ -94,9 +77,8 @@ const handler = async (req: Request): Promise<Response> => {
         const agentName = agentProfile?.name || 'Agente';
         const expiryDate = new Date(property.expires_at);
 
-        console.log(`📤 Sending ${reminder.days}-day reminder to ${agentEmail} for property: ${property.title}`);
+        console.log(`📤 Sending ${reminder.days}-day reminder to ${agentEmail}`);
 
-        // Build HTML email manually
         const urgencyColor = reminder.days === 1 ? '#ef4444' : reminder.days === 3 ? '#f97316' : '#eab308';
         const urgencyText = reminder.days === 1 ? 'URGENTE' : reminder.days === 3 ? 'Importante' : 'Recordatorio';
         
@@ -109,106 +91,67 @@ const handler = async (req: Request): Promise<Response> => {
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background-color: #f3f4f6;">
   <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    
-    <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px 20px; text-align: center;">
-      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Kentra</h1>
+    <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); padding: 30px; text-align: center;">
+      <h1 style="color: white; margin: 0; font-size: 24px;">Kentra</h1>
     </div>
-
-    <div style="padding: 40px 30px;">
+    <div style="padding: 30px;">
       <div style="background-color: ${urgencyColor}; color: white; padding: 12px 20px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 24px;">
         ${urgencyText}: Tu propiedad expira en ${reminder.days} día${reminder.days > 1 ? 's' : ''}
       </div>
-
-      <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
-        Hola <strong>${agentName}</strong>,
+      <p style="color: #374151; font-size: 16px;">Hola <strong>${agentName}</strong>,</p>
+      <p style="color: #374151; font-size: 16px;">
+        Tu propiedad <strong>"${property.title}"</strong> expirará el 
+        <strong>${expiryDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>.
       </p>
-
-      <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
-        Tu propiedad <strong>"${property.title}"</strong> expirará el <strong>${expiryDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>.
-      </p>
-
-      <div style="background-color: #f9fafb; border-left: 4px solid ${urgencyColor}; padding: 16px; border-radius: 4px; margin: 24px 0;">
-        <p style="color: #374151; font-size: 14px; line-height: 1.6; margin: 0;">
-          <strong>⚠️ Importante:</strong> Si no renuevas tu propiedad antes de la fecha de expiración, se pausará automáticamente y dejará de ser visible en búsquedas. Podrás reactivarla con un clic cuando lo necesites.
+      <div style="background: #fef3c7; border-left: 4px solid ${urgencyColor}; padding: 16px; border-radius: 4px; margin: 20px 0;">
+        <p style="color: #78350f; margin: 0;">
+          <strong>⚠️ Importante:</strong> Si no renuevas tu propiedad, se pausará automáticamente y dejará de ser visible.
         </p>
       </div>
-
-      <div style="text-align: center; margin: 32px 0;">
-        <a href="https://kentra.com.mx/agent/dashboard" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">
-          Renovar Propiedad Ahora
-        </a>
-      </div>
-
-      <div style="border-top: 1px solid #e5e7eb; padding-top: 24px; margin-top: 32px;">
-        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-bottom: 8px;">
-          <strong>¿Necesitas ayuda?</strong>
-        </p>
-        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0;">
-          Contáctanos en <a href="mailto:contact@kentra.com.mx" style="color: #6366f1; text-decoration: none;">contact@kentra.com.mx</a>
-        </p>
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${EMAIL_CONFIG.baseUrl}/panel-agente" style="background: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Renovar Propiedad</a>
       </div>
     </div>
-
-    <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
-      <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px 0;">
-        © ${new Date().getFullYear()} Kentra. Todos los derechos reservados.
-      </p>
-      <div style="margin-top: 12px;">
-        <a href="https://www.instagram.com/kentra.mx" style="color: #6366f1; text-decoration: none; margin: 0 8px; font-size: 12px;">Instagram</a>
-        <a href="https://www.facebook.com/profile.php?id=61583478575484" style="color: #6366f1; text-decoration: none; margin: 0 8px; font-size: 12px;">Facebook</a>
-      </div>
-    </div>
-
+    ${getAntiSpamFooter()}
   </div>
 </body>
 </html>
         `;
 
-        // Send email via Resend
-        const emailResponse = await resend.emails.send({
-          from: "Kentra <noreply@updates.kentra.com.mx>",
-          to: [agentEmail],
+        const result = await sendEmail({
+          to: agentEmail,
           subject: `⏰ Tu propiedad "${property.title}" expira en ${reminder.days} día${reminder.days > 1 ? 's' : ''}`,
-          html: html,
+          htmlContent: html,
+          category: 'transactional',
+          tags: [
+            { name: 'notification_type', value: 'expiry_reminder' },
+            { name: 'days_before', value: reminder.days.toString() },
+          ],
         });
 
-        if (emailResponse.error) {
-          console.error(`❌ Error sending email:`, emailResponse.error);
+        if (!result.success) {
+          console.error(`❌ Error sending email:`, result.error);
           continue;
         }
 
-        console.log(`✅ Email sent successfully:`, emailResponse);
+        console.log(`✅ Email sent successfully:`, result.data);
 
         // Record reminder sent
-        const { error: reminderError } = await supabase
-          .from('property_expiry_reminders')
-          .insert({
-            property_id: property.id,
-            agent_id: property.agent_id,
-            days_before: reminder.days
-          });
+        await supabase.from('property_expiry_reminders').insert({
+          property_id: property.id,
+          agent_id: property.agent_id,
+          days_before: reminder.days
+        });
 
-        if (reminderError) {
-          console.error(`❌ Error recording reminder:`, reminderError);
-        } else {
-          totalSent++;
-          console.log(`✅ Reminder recorded for property ${property.id}`);
-        }
+        totalSent++;
       }
     }
 
-    console.log(`🎉 Expiry reminders process completed. Total sent: ${totalSent}`);
+    console.log(`🎉 Expiry reminders completed. Total sent: ${totalSent}`);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        remindersSent: totalSent,
-        message: `Successfully sent ${totalSent} expiry reminders`
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ success: true, remindersSent: totalSent }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
     console.error("❌ Error in send-expiry-reminders:", error);

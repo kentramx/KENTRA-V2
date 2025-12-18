@@ -1,12 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { sendEmail, getAntiSpamFooter, EMAIL_CONFIG } from '../_shared/emailHelper.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface RoleChangeNotificationRequest {
@@ -19,19 +16,16 @@ interface RoleChangeNotificationRequest {
 const handler = async (req: Request): Promise<Response> => {
   console.log('send-role-change-notification invoked');
 
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Security: Verify internal service token to prevent unauthorized calls
+    // Security: Verify internal service token
     const authHeader = req.headers.get('Authorization');
     const internalToken = Deno.env.get('INTERNAL_SERVICE_TOKEN');
     
-    // If internal token is configured, require it for non-authenticated calls
     if (internalToken && authHeader !== `Bearer ${internalToken}`) {
-      // Fall back to checking if this is a legitimate Supabase service call
       const apiKey = req.headers.get('apikey');
       const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
       
@@ -57,7 +51,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Sending role change notification:', { userEmail, previousRole, newRole });
 
-    // Format date
     const changeDate = new Date().toLocaleDateString('es-MX', {
       year: 'numeric',
       month: 'long',
@@ -71,6 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
         'buyer': 'Particular',
         'agent': 'Agente Independiente',
         'agency': 'Inmobiliaria',
+        'developer': 'Desarrolladora',
       };
       return roleNames[role] || role;
     };
@@ -90,6 +84,13 @@ const handler = async (req: Request): Promise<Response> => {
           'Visualiza reportes consolidados',
           'Asigna propiedades a agentes específicos',
         ];
+      } else if (role === 'developer') {
+        return [
+          'Gestiona proyectos de desarrollo inmobiliario',
+          'Administra unidades y disponibilidad',
+          'Accede a reportes y analíticos avanzados',
+          'Colabora con tu equipo de ventas',
+        ];
       }
       return [];
     };
@@ -97,109 +98,77 @@ const handler = async (req: Request): Promise<Response> => {
     const features = getRoleFeatures(newRole);
     const featuresHtml = features.length > 0 
       ? `
-        <p style="color: #4a4a4a; font-size: 16px; line-height: 26px; margin: 16px 40px;">
-          Como <strong>${getRoleDisplayName(newRole)}</strong>, ahora tienes acceso a:
-        </p>
-        <div style="margin: 16px 40px;">
-          ${features.map(f => `<p style="color: #4a4a4a; font-size: 15px; line-height: 24px; margin: 8px 0;">✓ ${f}</p>`).join('')}
+        <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="color: #065f46; font-weight: bold; margin: 0 0 12px 0;">Como ${getRoleDisplayName(newRole)}, ahora tienes acceso a:</p>
+          ${features.map(f => `<p style="color: #374151; margin: 8px 0;">✓ ${f}</p>`).join('')}
         </div>
       `
       : '';
 
-    // Build HTML directly
     const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="background-color: #f6f9fc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;">
-          <div style="background-color: #ffffff; margin: 0 auto; padding: 20px 0 48px; margin-bottom: 64px; border-radius: 8px; max-width: 600px;">
-            <h1 style="color: #1a1a1a; font-size: 28px; font-weight: bold; margin: 40px 0 20px; padding: 0 40px; line-height: 1.3;">
-              ¡Tu cuenta ha sido actualizada!
-            </h1>
-            
-            <p style="color: #4a4a4a; font-size: 16px; line-height: 26px; margin: 16px 40px;">
-              Hola ${userName},
-            </p>
-            
-            <p style="color: #4a4a4a; font-size: 16px; line-height: 26px; margin: 16px 40px;">
-              Tu tipo de cuenta en Kentra ha sido cambiado exitosamente.
-            </p>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background-color: #f3f4f6;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); padding: 30px; text-align: center;">
+      <h1 style="color: white; margin: 0; font-size: 24px;">¡Tu cuenta ha sido actualizada!</h1>
+    </div>
+    <div style="padding: 30px;">
+      <p style="color: #374151; font-size: 16px;">Hola ${userName},</p>
+      <p style="color: #374151; font-size: 16px;">Tu tipo de cuenta en Kentra ha sido cambiado exitosamente.</p>
 
-            <div style="background-color: #f0f4f8; border-radius: 8px; padding: 20px; margin: 24px 40px;">
-              <p style="color: #1a1a1a; font-size: 14px; line-height: 24px; margin: 8px 0;">
-                <strong>Tipo anterior:</strong> ${getRoleDisplayName(previousRole)}
-              </p>
-              <p style="color: #1a1a1a; font-size: 14px; line-height: 24px; margin: 8px 0;">
-                <strong>Nuevo tipo:</strong> ${getRoleDisplayName(newRole)}
-              </p>
-              <p style="color: #1a1a1a; font-size: 14px; line-height: 24px; margin: 8px 0;">
-                <strong>Fecha del cambio:</strong> ${changeDate}
-              </p>
-            </div>
+      <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 24px 0;">
+        <p style="margin: 8px 0;"><strong>Tipo anterior:</strong> ${getRoleDisplayName(previousRole)}</p>
+        <p style="margin: 8px 0;"><strong>Nuevo tipo:</strong> ${getRoleDisplayName(newRole)}</p>
+        <p style="margin: 8px 0;"><strong>Fecha del cambio:</strong> ${changeDate}</p>
+      </div>
 
-            ${featuresHtml}
+      ${featuresHtml}
 
-            <hr style="border-color: #e6ebf1; margin: 24px 40px;">
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${EMAIL_CONFIG.baseUrl}/panel-agente" style="background: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Ir a Mi Dashboard</a>
+      </div>
 
-            <div style="text-align: center; margin: 32px 0;">
-              <a href="https://kentramx.lovable.app/panel-agente" 
-                 style="background-color: #2563eb; border-radius: 6px; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; text-align: center; display: inline-block; padding: 12px 32px;">
-                Ir a Mi Dashboard
-              </a>
-            </div>
-
-            <p style="color: #8898aa; font-size: 14px; line-height: 24px; margin: 24px 40px;">
-              Si no realizaste este cambio o tienes alguna pregunta, por favor contáctanos de inmediato.
-            </p>
-
-            <hr style="border-color: #e6ebf1; margin: 24px 40px;">
-
-            <p style="color: #8898aa; font-size: 12px; line-height: 20px; margin: 32px 40px; text-align: center;">
-              <a href="https://kentra.com.mx" target="_blank" style="color: #2563eb; text-decoration: underline;">
-                Kentra
-              </a>
-              <br>
-              Tu plataforma inmobiliaria de confianza
-            </p>
-          </div>
-        </body>
-      </html>
+      <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+        Si no realizaste este cambio o tienes alguna pregunta, por favor contáctanos de inmediato.
+      </p>
+    </div>
+    ${getAntiSpamFooter()}
+  </div>
+</body>
+</html>
     `;
 
-    // Send email using Resend
-    const emailResponse = await resend.emails.send({
-      from: "Kentra <noreply@updates.kentra.com.mx>",
-      to: [userEmail],
-      subject: "Tu tipo de cuenta en Kentra ha sido actualizado",
-      html,
+    const result = await sendEmail({
+      to: userEmail,
+      subject: 'Tu tipo de cuenta en Kentra ha sido actualizado',
+      htmlContent: html,
+      category: 'transactional',
+      tags: [
+        { name: 'notification_type', value: 'role_change' },
+        { name: 'new_role', value: newRole },
+      ],
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    if (!result.success) {
+      throw new Error(result.error);
+    }
 
-    return new Response(JSON.stringify({ 
-      success: true,
-      emailResponse 
-    }), {
+    console.log("Email sent successfully:", result.data);
+
+    return new Response(JSON.stringify({ success: true, emailResponse: result.data }), {
       status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
-      },
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
-    console.error("Error in send-role-change-notification function:", error);
+    console.error("Error in send-role-change-notification:", error);
     return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: error.message 
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };
