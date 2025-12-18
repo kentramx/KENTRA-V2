@@ -570,8 +570,8 @@ const AgentDashboard = () => {
             status: subscriptionInfo?.status,
             planName: subscriptionInfo?.name,
             currentPeriodEnd: subscriptionInfo?.current_period_end,
-            maxProperties: subscriptionInfo?.max_properties || 5,
-            featuredPerMonth: subscriptionInfo?.featured_per_month || 1,
+            maxProperties: subscriptionInfo?.properties_limit || 5,
+            featuredPerMonth: subscriptionInfo?.featured_limit || 1,
           }}
           featuredCount={featuredCount}
         />

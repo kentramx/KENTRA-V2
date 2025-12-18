@@ -367,7 +367,7 @@ const AgencyDashboard = () => {
             status: subscriptionInfo?.status,
             planName: subscriptionInfo?.name,
             currentPeriodEnd: subscriptionInfo?.current_period_end,
-            maxProperties: subscriptionInfo?.max_properties || 20,
+            maxProperties: subscriptionInfo?.properties_limit || 20,
             maxAgents: subscriptionInfo?.max_agents || 5,
           }}
         />
