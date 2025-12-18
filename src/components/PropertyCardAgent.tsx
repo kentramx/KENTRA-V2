@@ -72,6 +72,23 @@ export const PropertyCardAgent = ({
   const [imageError, setImageError] = useState(false);
   const { share } = useNativeFeatures();
 
+  const getDaysUntilExpiration = (expiresAt: string | null) => {
+    if (!expiresAt) return 0;
+    const expires = new Date(expiresAt);
+    const now = new Date();
+    const diffTime = expires.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -90,23 +107,6 @@ export const PropertyCardAgent = ({
     if (success) {
       toast.success('Listo para compartir');
     }
-  };
-  
-  const getDaysUntilExpiration = (expiresAt: string | null) => {
-    if (!expiresAt) return 0;
-    const expires = new Date(expiresAt);
-    const now = new Date();
-    const diffTime = expires.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-      minimumFractionDigits: 0,
-    }).format(price);
   };
 
   const daysLeft = getDaysUntilExpiration(property.expires_at);
