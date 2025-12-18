@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -44,14 +44,44 @@ export const FeaturePropertyDialog = ({
   const { toast } = useToast();
   const { error: logError, captureException } = useMonitoring();
   const [loading, setLoading] = useState(false);
+  const [featuredUsedLive, setFeaturedUsedLive] = useState<number | null>(null);
 
-  const canFeature = subscriptionInfo 
-    ? subscriptionInfo.featured_used < subscriptionInfo.featured_limit
-    : false;
+  useEffect(() => {
+    let cancelled = false;
 
-  const availableSlots = subscriptionInfo 
-    ? subscriptionInfo.featured_limit - subscriptionInfo.featured_used
-    : 0;
+    const loadFeaturedUsed = async () => {
+      if (!open || !subscriptionInfo) return;
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { count } = await supabase
+          .from('featured_properties')
+          .select('*', { count: 'exact', head: true })
+          .eq('agent_id', user.id)
+          .eq('status', 'active')
+          .gt('end_date', new Date().toISOString());
+
+        if (!cancelled) setFeaturedUsedLive(count || 0);
+      } catch {
+        // Si falla, mantenemos el valor legacy del RPC
+      }
+    };
+
+    loadFeaturedUsed();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, subscriptionInfo]);
+
+  const featuredUsed = featuredUsedLive ?? subscriptionInfo?.featured_used ?? 0;
+  const featuredLimit = subscriptionInfo?.featured_limit ?? 0;
+
+  const canFeature = featuredLimit > 0 ? featuredUsed < featuredLimit : false;
+
+  const availableSlots = featuredLimit > 0 ? featuredLimit - featuredUsed : 0;
 
   // Si tiene slots disponibles, es gratis. Si no, cobra $500
   const actualCost = canFeature ? 0 : FEATURED_COST;
@@ -188,7 +218,7 @@ export const FeaturePropertyDialog = ({
                   {availableSlots}
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  de {subscriptionInfo.featured_limit} destacadas disponibles
+                  de {featuredLimit} destacadas disponibles
                 </span>
               </div>
             </div>
@@ -199,7 +229,7 @@ export const FeaturePropertyDialog = ({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Has usado tus {subscriptionInfo.featured_limit} destacadas de este mes ({subscriptionInfo.featured_used}/{subscriptionInfo.featured_limit}).
+                Has usado tus {featuredLimit} destacadas de este mes ({featuredUsed}/{featuredLimit}).
                 {' '}
                 El contador se resetea el 1ro del próximo mes.
                 {' '}

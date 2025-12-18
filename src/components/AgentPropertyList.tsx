@@ -662,7 +662,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
           queryClient.invalidateQueries({ queryKey: ['agent-properties', effectiveAgentId] });
           fetchFeaturedProperties();
         }}
-        subscriptionInfo={subscriptionInfo}
+        subscriptionInfo={subscriptionInfo ? { ...subscriptionInfo, featured_used: featuredProperties.size } : null}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
