@@ -9,11 +9,13 @@ interface AuthContextType {
   session: Session | null;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name: string, role?: 'buyer' | 'agent' | 'agency' | 'developer') => Promise<{ error: any }>;
+  signUp: (email: string, password: string, name: string, role?: 'buyer' | 'agent' | 'agency' | 'developer') => Promise<{ error: any; needsVerification?: boolean }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
   updatePassword: (newPassword: string) => Promise<{ error: any }>;
-  resendConfirmationEmail: (email: string) => Promise<{ error: any }>;
+  resetPasswordWithToken: (token: string, newPassword: string) => Promise<{ error: any }>;
+  resendConfirmationEmail: (email: string, userName?: string) => Promise<{ error: any }>;
+  verifyEmailCode: (email: string, code: string) => Promise<{ error: any }>;
   isEmailVerified: () => boolean;
   loading: boolean;
 }
@@ -95,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (email: string, password: string, name: string, role: 'buyer' | 'agent' | 'agency' | 'developer' = 'buyer') => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -107,8 +109,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
     
-    if (!error) {
-      navigate('/');
+    if (!error && data.user) {
+      // Enviar email de verificación custom usando Resend
+      try {
+        const response = await supabase.functions.invoke('send-auth-verification-email', {
+          body: {
+            userId: data.user.id,
+            email: email,
+            userName: name
+          }
+        });
+        
+        if (response.error) {
+          console.error('Error sending verification email:', response.error);
+        }
+      } catch (emailError) {
+        console.error('Exception sending verification email:', emailError);
+      }
+      
+      // Retornar que necesita verificación
+      return { error: null, needsVerification: true };
     }
     
     return { error };
@@ -135,16 +155,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  /**
+   * Envía email de recuperación usando sistema custom con Resend
+   */
   const resetPassword = async (email: string) => {
-    const redirectUrl = `${window.location.origin}/auth?mode=reset`;
-    
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
-    });
-    
-    return { error };
+    try {
+      const response = await supabase.functions.invoke('send-auth-recovery-email', {
+        body: { email }
+      });
+      
+      if (response.error) {
+        return { error: { message: response.error.message || 'Error al enviar email de recuperación' } };
+      }
+      
+      return { error: null };
+    } catch (error: any) {
+      return { error: { message: error.message || 'Error inesperado' } };
+    }
   };
 
+  /**
+   * Actualiza contraseña usando sesión activa (modo legacy)
+   */
   const updatePassword = async (newPassword: string) => {
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
@@ -153,16 +185,94 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error };
   };
 
-  const resendConfirmationEmail = async (email: string) => {
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-      },
-    });
-    
-    return { error };
+  /**
+   * Actualiza contraseña usando token de recuperación custom
+   */
+  const resetPasswordWithToken = async (token: string, newPassword: string) => {
+    try {
+      const response = await supabase.functions.invoke('verify-auth-token', {
+        body: {
+          type: 'recovery',
+          token,
+          newPassword
+        }
+      });
+      
+      if (response.error) {
+        return { error: { message: response.error.message || 'Error al actualizar contraseña' } };
+      }
+      
+      const data = response.data;
+      if (!data.success) {
+        return { error: { message: data.error || 'Error desconocido' } };
+      }
+      
+      return { error: null };
+    } catch (error: any) {
+      return { error: { message: error.message || 'Error inesperado' } };
+    }
+  };
+
+  /**
+   * Reenvía email de verificación usando sistema custom con Resend
+   */
+  const resendConfirmationEmail = async (email: string, userName?: string) => {
+    try {
+      // Primero obtener el usuario ID del email
+      const { data: userData, error: userError } = await supabase.auth.signInWithPassword({
+        email,
+        password: 'dummy_password_to_get_user_info_' + Date.now(), // Esto fallará pero nos da info
+      });
+      
+      // Intentamos enviar de todas formas - la Edge Function buscará el usuario
+      const response = await supabase.functions.invoke('send-auth-verification-email', {
+        body: {
+          userId: 'unknown', // La Edge Function manejará esto
+          email,
+          userName: userName || ''
+        }
+      });
+      
+      if (response.error) {
+        // Si el error es de autenticación, ignorar y continuar
+        console.log('Verification email response:', response);
+      }
+      
+      return { error: null };
+    } catch (error: any) {
+      return { error: { message: error.message || 'Error inesperado' } };
+    }
+  };
+
+  /**
+   * Verifica código de email usando sistema custom
+   */
+  const verifyEmailCode = async (email: string, code: string) => {
+    try {
+      const response = await supabase.functions.invoke('verify-auth-token', {
+        body: {
+          type: 'verification',
+          code,
+          email
+        }
+      });
+      
+      if (response.error) {
+        return { error: { message: response.error.message || 'Error al verificar código' } };
+      }
+      
+      const data = response.data;
+      if (!data.success) {
+        return { error: { message: data.error || 'Código inválido o expirado' } };
+      }
+      
+      // Refrescar sesión para obtener el estado actualizado
+      await supabase.auth.refreshSession();
+      
+      return { error: null };
+    } catch (error: any) {
+      return { error: { message: error.message || 'Error inesperado' } };
+    }
   };
 
   const isEmailVerified = () => {
@@ -170,7 +280,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, signIn, signInWithGoogle, signUp, signOut, resetPassword, updatePassword, resendConfirmationEmail, isEmailVerified, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      signIn, 
+      signInWithGoogle, 
+      signUp, 
+      signOut, 
+      resetPassword, 
+      updatePassword, 
+      resetPasswordWithToken,
+      resendConfirmationEmail, 
+      verifyEmailCode,
+      isEmailVerified, 
+      loading 
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,0 +1,273 @@
+/**
+ * Edge Function: verify-auth-token
+ * 
+ * Verifica tokens de verificación de email y recuperación de contraseña
+ */
+
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "https://esm.sh/resend@2.0.0";
+import { 
+  getPasswordChangedEmailHtml, 
+  getPasswordChangedEmailText 
+} from "../_shared/authEmailTemplates.ts";
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const FROM_EMAIL = "Kentra <noreply@updates.kentra.com.mx>";
+const REPLY_TO = "soporte@kentra.com.mx";
+
+/**
+ * Hash SHA-256 del token para comparación
+ */
+async function hashToken(token: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(token);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+interface VerifyVerificationRequest {
+  type: "verification";
+  code: string;
+  email: string;
+}
+
+interface VerifyRecoveryRequest {
+  type: "recovery";
+  token: string;
+  newPassword: string;
+}
+
+type RequestBody = VerifyVerificationRequest | VerifyRecoveryRequest;
+
+serve(async (req: Request): Promise<Response> => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const body = await req.json() as RequestBody;
+
+    // Crear cliente Supabase con service role
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    if (body.type === "verification") {
+      return await handleVerification(supabaseAdmin, body);
+    } else if (body.type === "recovery") {
+      return await handleRecovery(supabaseAdmin, body);
+    } else {
+      return new Response(
+        JSON.stringify({ error: "Invalid token type" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+  } catch (error: any) {
+    console.error("❌ Unexpected error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error", details: error.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
+
+/**
+ * Maneja la verificación de código de email
+ */
+async function handleVerification(
+  supabaseAdmin: any,
+  { code, email }: VerifyVerificationRequest
+): Promise<Response> {
+  if (!code || !email) {
+    return new Response(
+      JSON.stringify({ error: "code and email are required" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const codeHash = await hashToken(code);
+
+  console.log(`🔍 Verifying code for email: ${normalizedEmail}`);
+
+  // Buscar token válido
+  const { data: tokenData, error: tokenError } = await supabaseAdmin
+    .from("auth_tokens")
+    .select("*")
+    .eq("email", normalizedEmail)
+    .eq("token_hash", codeHash)
+    .eq("token_type", "verification")
+    .is("used_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (tokenError || !tokenData) {
+    console.log("❌ Invalid or expired verification code");
+    return new Response(
+      JSON.stringify({ error: "Código inválido o expirado" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Marcar token como usado
+  await supabaseAdmin
+    .from("auth_tokens")
+    .update({ used_at: new Date().toISOString() })
+    .eq("id", tokenData.id);
+
+  // Marcar email como verificado en auth.users
+  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+    tokenData.user_id,
+    { email_confirm: true }
+  );
+
+  if (updateError) {
+    console.error("❌ Error confirming email:", updateError);
+    return new Response(
+      JSON.stringify({ error: "Error al verificar email" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  console.log(`✅ Email verified successfully for user: ${tokenData.user_id}`);
+
+  return new Response(
+    JSON.stringify({ 
+      success: true, 
+      message: "Email verificado correctamente",
+      userId: tokenData.user_id
+    }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+/**
+ * Maneja la recuperación de contraseña
+ */
+async function handleRecovery(
+  supabaseAdmin: any,
+  { token, newPassword }: VerifyRecoveryRequest
+): Promise<Response> {
+  if (!token || !newPassword) {
+    return new Response(
+      JSON.stringify({ error: "token and newPassword are required" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Validar contraseña
+  if (newPassword.length < 6) {
+    return new Response(
+      JSON.stringify({ error: "La contraseña debe tener al menos 6 caracteres" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const tokenHash = await hashToken(token);
+
+  console.log(`🔍 Verifying recovery token`);
+
+  // Buscar token válido
+  const { data: tokenData, error: tokenError } = await supabaseAdmin
+    .from("auth_tokens")
+    .select("*")
+    .eq("token_hash", tokenHash)
+    .eq("token_type", "recovery")
+    .is("used_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (tokenError || !tokenData) {
+    console.log("❌ Invalid or expired recovery token");
+    return new Response(
+      JSON.stringify({ error: "Enlace inválido o expirado. Solicita un nuevo enlace de recuperación." }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Marcar token como usado
+  await supabaseAdmin
+    .from("auth_tokens")
+    .update({ used_at: new Date().toISOString() })
+    .eq("id", tokenData.id);
+
+  // Actualizar contraseña
+  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+    tokenData.user_id,
+    { password: newPassword }
+  );
+
+  if (updateError) {
+    console.error("❌ Error updating password:", updateError);
+    return new Response(
+      JSON.stringify({ error: "Error al actualizar contraseña" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  console.log(`✅ Password updated successfully for user: ${tokenData.user_id}`);
+
+  // Obtener nombre del usuario para el email de confirmación
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("name")
+    .eq("id", tokenData.user_id)
+    .single();
+
+  // Enviar email de confirmación de cambio de contraseña
+  try {
+    const htmlContent = getPasswordChangedEmailHtml({
+      userName: profile?.name || ""
+    });
+
+    const textContent = getPasswordChangedEmailText({
+      userName: profile?.name || ""
+    });
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      reply_to: REPLY_TO,
+      to: [tokenData.email],
+      subject: "Tu contraseña de Kentra ha sido actualizada",
+      html: htmlContent,
+      text: textContent,
+      headers: {
+        "X-Entity-Ref-ID": crypto.randomUUID(),
+      },
+      tags: [
+        { name: "category", value: "transactional" },
+        { name: "type", value: "password_changed" },
+        { name: "app", value: "kentra" }
+      ]
+    });
+
+    console.log("✅ Password change confirmation email sent");
+  } catch (emailError) {
+    // No fallar si el email de confirmación no se envía
+    console.error("⚠️ Error sending password change confirmation:", emailError);
+  }
+
+  return new Response(
+    JSON.stringify({ 
+      success: true, 
+      message: "Contraseña actualizada correctamente"
+    }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
