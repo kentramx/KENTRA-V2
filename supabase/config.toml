@@ -128,3 +128,12 @@ verify_jwt = false
 
 [functions.refresh-properties-monthly]
 verify_jwt = false
+
+[functions.send-auth-verification-email]
+verify_jwt = false
+
+[functions.send-auth-recovery-email]
+verify_jwt = false
+
+[functions.verify-auth-token]
+verify_jwt = false

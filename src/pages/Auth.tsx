@@ -4,11 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { Home } from 'lucide-react';
+import { Home, Mail, KeyRound, CheckCircle2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useTracking } from '@/hooks/useTracking';
 import kentraLogo from '@/assets/kentra-logo.png';
@@ -44,25 +44,40 @@ const signupSchema = z.object({
 });
 
 const Auth = () => {
-  const { signIn, signInWithGoogle, signUp, resetPassword, updatePassword, resendConfirmationEmail, user } = useAuth();
+  const { 
+    signIn, 
+    signInWithGoogle, 
+    signUp, 
+    resetPassword, 
+    updatePassword, 
+    resetPasswordWithToken,
+    resendConfirmationEmail, 
+    verifyEmailCode,
+    user 
+  } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<'auth' | 'forgot' | 'reset' | 'verify'>('auth');
   const [unverifiedEmail, setUnverifiedEmail] = useState<string>('');
+  const [unverifiedUserName, setUnverifiedUserName] = useState<string>('');
+  const [verificationCode, setVerificationCode] = useState<string>('');
   const { trackEvent } = useTracking();
 
   const redirect = searchParams.get('redirect');
   const pendingRole = searchParams.get('role');
   const mode = searchParams.get('mode');
+  const recoveryToken = searchParams.get('token');
 
   // Detectar si venimos del email de reseteo
   useEffect(() => {
-    if (mode === 'reset') {
+    if (mode === 'reset' && recoveryToken) {
+      setView('reset');
+    } else if (mode === 'reset') {
       setView('reset');
     }
-  }, [mode]);
+  }, [mode, recoveryToken]);
 
   // Redirect after successful auth (pero NO si estamos en modo reset)
   useEffect(() => {
@@ -73,12 +88,12 @@ const Auth = () => {
     
     if (user && redirect) {
       navigate(redirect);
-    } else if (user && view !== 'reset') {
+    } else if (user && view !== 'reset' && view !== 'verify') {
       navigate('/');
     }
   }, [user, redirect, navigate, mode, view]);
 
-  if (user && view !== 'reset') {
+  if (user && view !== 'reset' && view !== 'verify') {
     return null;
   }
 
@@ -162,7 +177,7 @@ const Auth = () => {
         return;
       }
 
-      const { error } = await signUp(email, password, name, role as 'buyer' | 'agent' | 'agency' | 'developer');
+      const { error, needsVerification } = await signUp(email, password, name, role as 'buyer' | 'agent' | 'agency' | 'developer');
 
       if (error) {
         let errorMessage = 'Error al crear la cuenta';
@@ -175,18 +190,27 @@ const Auth = () => {
           description: errorMessage,
           variant: 'destructive',
         });
-      } else {
+      } else if (needsVerification) {
         // Track Facebook Pixel: CompleteRegistration
         trackEvent('CompleteRegistration', {
           content_name: role === 'agent' ? 'Agente' : role === 'agency' ? 'Agencia' : role === 'developer' ? 'Desarrolladora' : 'Comprador',
           content_category: 'signup',
         });
 
-        const roleText = role === 'agent' ? 'agente inmobiliario' : role === 'agency' ? 'agencia inmobiliaria' : role === 'developer' ? 'desarrolladora inmobiliaria' : 'comprador';
-        const actionText = pendingRole ? 'Continuemos con tu publicación' : 'Tu cuenta ha sido creada exitosamente';
+        // Mostrar pantalla de verificación de código
+        setUnverifiedEmail(email);
+        setUnverifiedUserName(name);
+        setView('verify');
+        
         toast({
           title: '¡Cuenta creada!',
-          description: `${roleText} - ${actionText}`,
+          description: 'Te hemos enviado un código de verificación a tu correo',
+        });
+      } else {
+        const roleText = role === 'agent' ? 'agente inmobiliario' : role === 'agency' ? 'agencia inmobiliaria' : role === 'developer' ? 'desarrolladora inmobiliaria' : 'comprador';
+        toast({
+          title: '¡Cuenta creada!',
+          description: `${roleText} - Tu cuenta ha sido creada exitosamente`,
         });
       }
     } catch (error) {
@@ -254,7 +278,7 @@ const Auth = () => {
       } else {
         toast({
           title: 'Correo enviado',
-          description: 'Revisa tu bandeja de entrada para restablecer tu contraseña',
+          description: 'Si existe una cuenta con ese correo, recibirás un enlace para restablecer tu contraseña',
         });
         setView('auth');
       }
@@ -290,12 +314,22 @@ const Auth = () => {
         return;
       }
 
-      const { error } = await updatePassword(password);
+      let error;
+      
+      // Si tenemos token de recuperación, usar el sistema custom
+      if (recoveryToken) {
+        const result = await resetPasswordWithToken(recoveryToken, password);
+        error = result.error;
+      } else {
+        // Usar el método legacy de Supabase si hay sesión activa
+        const result = await updatePassword(password);
+        error = result.error;
+      }
 
       if (error) {
         toast({
           title: 'Error',
-          description: 'No se pudo actualizar la contraseña',
+          description: error.message || 'No se pudo actualizar la contraseña',
           variant: 'destructive',
         });
       } else {
@@ -303,6 +337,48 @@ const Auth = () => {
           title: 'Contraseña actualizada',
           description: 'Tu contraseña ha sido cambiada exitosamente',
         });
+        navigate('/auth');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Ocurrió un error inesperado',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (!verificationCode || verificationCode.length !== 6) {
+        toast({
+          title: 'Error',
+          description: 'Ingresa el código de 6 dígitos',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await verifyEmailCode(unverifiedEmail, verificationCode);
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message || 'Código inválido o expirado',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: '¡Email verificado!',
+          description: 'Tu cuenta ha sido verificada correctamente',
+        });
+        // Redirigir al inicio
         navigate('/');
       }
     } catch (error) {
@@ -321,18 +397,18 @@ const Auth = () => {
     
     setLoading(true);
     try {
-      const { error } = await resendConfirmationEmail(unverifiedEmail);
+      const { error } = await resendConfirmationEmail(unverifiedEmail, unverifiedUserName);
 
       if (error) {
         toast({
           title: 'Error',
-          description: 'No se pudo reenviar el correo de confirmación',
+          description: 'No se pudo reenviar el código de verificación',
           variant: 'destructive',
         });
       } else {
         toast({
-          title: 'Correo enviado',
-          description: 'Revisa tu bandeja de entrada para confirmar tu cuenta',
+          title: 'Código reenviado',
+          description: 'Revisa tu bandeja de entrada para obtener el nuevo código',
         });
       }
     } catch (error) {
@@ -404,6 +480,14 @@ const Auth = () => {
 
             {view === 'reset' && (
               <div>
+                <div className="mb-6 text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-3">
+                    <KeyRound className="h-6 w-6 text-primary" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Ingresa tu nueva contraseña
+                  </p>
+                </div>
                 <form onSubmit={handleResetPassword} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="new-password">Nueva contraseña</Label>
@@ -435,27 +519,62 @@ const Auth = () => {
             )}
 
             {view === 'verify' && (
-              <div className="space-y-4">
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                  <h3 className="font-semibold text-amber-900 mb-2">
-                    Correo no verificado
+              <div className="space-y-6">
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                    <Mail className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2">
+                    Verifica tu correo
                   </h3>
-                  <p className="text-sm text-amber-800">
-                    Tu cuenta aún no ha sido verificada. Por favor revisa tu correo electrónico <strong>{unverifiedEmail}</strong> y haz clic en el enlace de confirmación.
+                  <p className="text-sm text-muted-foreground">
+                    Enviamos un código de 6 dígitos a
+                  </p>
+                  <p className="font-medium text-foreground">
+                    {unverifiedEmail}
                   </p>
                 </div>
                 
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground text-center">
-                    ¿No recibiste el correo?
+                <form onSubmit={handleVerifyCode} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="verification-code" className="sr-only">
+                      Código de verificación
+                    </Label>
+                    <Input
+                      id="verification-code"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="text-center text-2xl tracking-[0.5em] font-mono"
+                      disabled={loading}
+                      autoComplete="one-time-code"
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={loading || verificationCode.length !== 6}
+                  >
+                    {loading ? 'Verificando...' : 'Verificar código'}
+                  </Button>
+                </form>
+                
+                <div className="space-y-2 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    ¿No recibiste el código?
                   </p>
                   <Button
                     type="button"
+                    variant="outline"
                     className="w-full"
                     onClick={handleResendConfirmation}
                     disabled={loading}
                   >
-                    {loading ? 'Enviando...' : 'Reenviar correo de confirmación'}
+                    {loading ? 'Enviando...' : 'Reenviar código'}
                   </Button>
                 </div>
 
@@ -465,6 +584,7 @@ const Auth = () => {
                   onClick={() => {
                     setView('auth');
                     setUnverifiedEmail('');
+                    setVerificationCode('');
                   }}
                   disabled={loading}
                 >

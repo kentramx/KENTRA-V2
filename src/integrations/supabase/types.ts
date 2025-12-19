@@ -271,6 +271,42 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_tokens: {
+        Row: {
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          metadata: Json | null
+          token_hash: string
+          token_type: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          metadata?: Json | null
+          token_hash: string
+          token_type: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          metadata?: Json | null
+          token_hash?: string
+          token_type?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       badge_definitions: {
         Row: {
           code: string
@@ -2687,6 +2723,7 @@ export type Database = {
         Args: { new_role: Database["public"]["Enums"]["app_role"] }
         Returns: Json
       }
+      cleanup_expired_auth_tokens: { Args: never; Returns: number }
       cleanup_old_data: { Args: never; Returns: undefined }
       cleanup_old_webhook_events: { Args: never; Returns: number }
       database_health_check: {
