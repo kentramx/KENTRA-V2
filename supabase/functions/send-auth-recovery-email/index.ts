@@ -78,25 +78,37 @@ serve(async (req: Request): Promise<Response> => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Buscar usuario por email usando Admin API
-    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
-    
+    // Buscar usuario por email directamente en auth.users via SQL
+    let userId: string | null = null;
+    let userName: string | null = null;
+
+    // Usar la función SQL personalizada para buscar el usuario
+    const { data: userResult, error: userError } = await supabaseAdmin
+      .rpc("get_user_id_by_email", { user_email: normalizedEmail });
+
     if (userError) {
-      console.error("❌ Error fetching users:", userError);
-      // No revelamos si el usuario existe o no por seguridad
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "If an account exists with this email, a recovery link will be sent" 
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.log("RPC error (may not exist):", userError.message);
+      
+      // Fallback: buscar en profiles si tiene el email relacionado
+      // Como no tenemos acceso directo, usamos el approach de verificar si existe un token previo
+      const { data: existingToken } = await supabaseAdmin
+        .from("auth_tokens")
+        .select("user_id")
+        .eq("email", normalizedEmail)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (existingToken?.user_id) {
+        userId = existingToken.user_id;
+        console.log(`✅ Found user via previous token: ${userId}`);
+      }
+    } else if (userResult) {
+      userId = userResult;
+      console.log(`✅ Found user via RPC: ${userId}`);
     }
 
-    // Buscar el usuario específico
-    const user = userData.users.find(u => u.email?.toLowerCase() === normalizedEmail);
-
-    if (!user) {
+    if (!userId) {
       console.log(`ℹ️ No user found for email: ${normalizedEmail}`);
       // No revelamos si el usuario existe o no por seguridad
       return new Response(
@@ -108,12 +120,14 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Obtener nombre del usuario si tiene perfil
+    // Obtener nombre del usuario desde profiles
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("name")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single();
+    
+    userName = profile?.name || null;
 
     // Generar token de recuperación
     const recoveryToken = generateSecureToken(TOKEN_LENGTH);
@@ -127,7 +141,7 @@ serve(async (req: Request): Promise<Response> => {
     await supabaseAdmin
       .from("auth_tokens")
       .update({ used_at: new Date().toISOString() })
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("token_type", "recovery")
       .is("used_at", null);
 
@@ -135,7 +149,7 @@ serve(async (req: Request): Promise<Response> => {
     const { error: insertError } = await supabaseAdmin
       .from("auth_tokens")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         email: normalizedEmail,
         token_hash: tokenHash,
         token_type: "recovery",
@@ -156,13 +170,13 @@ serve(async (req: Request): Promise<Response> => {
 
     // Generar contenido del email
     const htmlContent = getRecoveryEmailHtml({
-      userName: profile?.name || "",
+      userName: userName || "",
       recoveryLink,
       expiresInMinutes: RECOVERY_EXPIRY_MINUTES
     });
 
     const textContent = getRecoveryEmailText({
-      userName: profile?.name || "",
+      userName: userName || "",
       recoveryLink,
       expiresInMinutes: RECOVERY_EXPIRY_MINUTES
     });
