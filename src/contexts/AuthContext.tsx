@@ -159,17 +159,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    * Envía email de recuperación usando sistema custom con Resend
    */
   const resetPassword = async (email: string) => {
+    console.log('🔑 [resetPassword] Iniciando recuperación para:', email);
+    console.log('🔑 [resetPassword] Timestamp:', new Date().toISOString());
+    
     try {
+      console.log('📤 [resetPassword] Invocando Edge Function: send-auth-recovery-email...');
+      
       const response = await supabase.functions.invoke('send-auth-recovery-email', {
         body: { email }
       });
       
+      console.log('📥 [resetPassword] Respuesta completa:', JSON.stringify(response, null, 2));
+      console.log('📥 [resetPassword] response.data:', response.data);
+      console.log('📥 [resetPassword] response.error:', response.error);
+      
       if (response.error) {
+        console.error('❌ [resetPassword] Error de Edge Function:', response.error);
         return { error: { message: response.error.message || 'Error al enviar email de recuperación' } };
       }
       
+      console.log('✅ [resetPassword] Email enviado exitosamente via Edge Function');
       return { error: null };
     } catch (error: any) {
+      console.error('❌ [resetPassword] Excepción capturada:', error);
+      console.error('❌ [resetPassword] Error stack:', error.stack);
       return { error: { message: error.message || 'Error inesperado' } };
     }
   };
