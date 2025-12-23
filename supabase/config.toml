@@ -137,3 +137,6 @@ verify_jwt = false
 
 [functions.verify-auth-token]
 verify_jwt = false
+
+[functions.check-resend-domains]
+verify_jwt = false

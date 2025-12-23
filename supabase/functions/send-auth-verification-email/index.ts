@@ -23,7 +23,7 @@ const corsHeaders = {
 // Configuración
 const VERIFICATION_CODE_LENGTH = 6;
 const VERIFICATION_EXPIRY_HOURS = 24;
-const FROM_EMAIL = "Kentra <noreply@updates.kentra.com.mx>";
+const FROM_EMAIL = "Kentra <no-reply@updates.kentra.com.mx>"; // Estandarizado con guión
 const REPLY_TO = "soporte@kentra.com.mx";
 
 /**

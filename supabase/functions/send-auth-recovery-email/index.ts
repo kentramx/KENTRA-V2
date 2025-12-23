@@ -3,6 +3,8 @@
  * 
  * Envía email de recuperación de contraseña usando Resend con dominio custom
  * Se llama cuando un usuario solicita restablecer su contraseña
+ * 
+ * DIAGNÓSTICO: Incluye headers y logging para verificar origen del email
  */
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
@@ -20,11 +22,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Configuración
+// Configuración - ESTANDARIZADO
 const TOKEN_LENGTH = 64;
 const RECOVERY_EXPIRY_MINUTES = 60;
 const BASE_URL = "https://kentra.com.mx";
-const FROM_EMAIL = "Kentra <noreply@updates.kentra.com.mx>";
+const FROM_EMAIL = "Kentra <no-reply@updates.kentra.com.mx>"; // Estandarizado con guión
 const REPLY_TO = "soporte@kentra.com.mx";
 
 /**
@@ -184,7 +186,12 @@ serve(async (req: Request): Promise<Response> => {
     // Generar ID único para anti-spam
     const entityRefId = crypto.randomUUID();
 
-    // Enviar email con Resend
+    // 🔍 DIAGNÓSTICO: Log del remitente ANTES de enviar
+    console.log(`📧 [DIAGNÓSTICO] FROM_EMAIL configurado: "${FROM_EMAIL}"`);
+    console.log(`📧 [DIAGNÓSTICO] Enviando a: ${normalizedEmail}`);
+    console.log(`📧 [DIAGNÓSTICO] Entity-Ref-ID: ${entityRefId}`);
+
+    // Enviar email con Resend - CON HEADER DE DIAGNÓSTICO
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: FROM_EMAIL,
       reply_to: REPLY_TO,
@@ -194,30 +201,56 @@ serve(async (req: Request): Promise<Response> => {
       text: textContent,
       headers: {
         "X-Entity-Ref-ID": entityRefId,
+        "X-Kentra-Mailer": "resend-custom-recovery", // Header de diagnóstico
+        "X-Kentra-From": FROM_EMAIL, // Confirmar el from en headers
         "List-Unsubscribe": "<https://kentra.com.mx/configuracion-notificaciones>",
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
       tags: [
         { name: "category", value: "transactional" },
         { name: "type", value: "recovery" },
-        { name: "app", value: "kentra" }
+        { name: "app", value: "kentra" },
+        { name: "mailer", value: "edge-function" } // Tag de diagnóstico
       ]
     });
 
     if (emailError) {
       console.error("❌ Resend error:", emailError);
+      console.error("❌ [DIAGNÓSTICO] Error details:", JSON.stringify(emailError, null, 2));
       return new Response(
         JSON.stringify({ error: "Failed to send recovery email", details: emailError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`✅ Recovery email sent successfully. Resend ID: ${emailData?.id}`);
+    // 🔍 DIAGNÓSTICO: Verificar qué registró Resend
+    console.log(`✅ Recovery email sent. Resend ID: ${emailData?.id}`);
+    console.log(`📧 [DIAGNÓSTICO] Resend response data:`, JSON.stringify(emailData, null, 2));
+
+    // Intentar obtener detalles del email enviado para verificar el "from" real
+    if (emailData?.id) {
+      try {
+        const emailDetails = await resend.emails.get(emailData.id);
+        console.log(`📧 [DIAGNÓSTICO] Email registrado en Resend:`);
+        console.log(`   - ID: ${emailDetails?.data?.id}`);
+        console.log(`   - From: ${emailDetails?.data?.from}`);
+        console.log(`   - To: ${JSON.stringify(emailDetails?.data?.to)}`);
+        console.log(`   - Subject: ${emailDetails?.data?.subject}`);
+      } catch (getError) {
+        console.log(`⚠️ [DIAGNÓSTICO] No se pudo obtener detalles del email:`, getError);
+      }
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "If an account exists with this email, a recovery link will be sent"
+        message: "If an account exists with this email, a recovery link will be sent",
+        // Solo para diagnóstico - remover en producción
+        _debug: {
+          resendId: emailData?.id,
+          fromUsed: FROM_EMAIL,
+          mailerHeader: "resend-custom-recovery"
+        }
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
