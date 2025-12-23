@@ -2401,7 +2401,8 @@ export type Database = {
           id: string
           interaction_type: string
           property_id: string | null
-          user_id: string
+          session_id: string | null
+          user_id: string | null
         }
         Insert: {
           agent_id: string
@@ -2409,7 +2410,8 @@ export type Database = {
           id?: string
           interaction_type: string
           property_id?: string | null
-          user_id: string
+          session_id?: string | null
+          user_id?: string | null
         }
         Update: {
           agent_id?: string
@@ -2417,7 +2419,8 @@ export type Database = {
           id?: string
           interaction_type?: string
           property_id?: string | null
-          user_id?: string
+          session_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
