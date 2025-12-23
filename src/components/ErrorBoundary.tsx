@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { monitoring } from '@/lib/monitoring';
+import { Sentry } from '@/lib/sentry';
 
 interface Props {
   children: ReactNode;
@@ -35,9 +36,8 @@ export class ErrorBoundary extends Component<Props, State> {
     // Llamar callback personalizado si existe
     this.props.onError?.(error, errorInfo);
 
-    // Enviar a Sentry con contexto de React
+    // Enviar a Sentry con contexto de React (solo en producción)
     if (import.meta.env.PROD) {
-      const { Sentry } = require('@/lib/sentry');
       Sentry.captureException(error, {
         contexts: {
           react: {
