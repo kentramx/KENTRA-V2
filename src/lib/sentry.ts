@@ -4,37 +4,65 @@
  */
 
 import * as Sentry from '@sentry/react';
-import { browserTracingIntegration, replayIntegration } from '@sentry/react';
+import { 
+  browserTracingIntegration, 
+  replayIntegration,
+  reactRouterV6BrowserTracingIntegration 
+} from '@sentry/react';
+import { useEffect } from 'react';
+import { 
+  useLocation, 
+  useNavigationType, 
+  createRoutesFromChildren, 
+  matchRoutes 
+} from 'react-router-dom';
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 const IS_PRODUCTION = import.meta.env.PROD;
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.0';
 
+// Diagnóstico de carga del DSN
+console.log('🔍 Sentry DSN loaded:', SENTRY_DSN ? 'YES' : 'NO');
+if (SENTRY_DSN) {
+  console.log('🔍 Sentry DSN value:', SENTRY_DSN.substring(0, 30) + '...');
+}
+
 export const initSentry = () => {
   if (!SENTRY_DSN) {
-    console.warn('Sentry DSN no configurado. Monitoring deshabilitado.');
+    console.warn('⚠️ Sentry DSN no configurado. Monitoring deshabilitado.');
+    console.warn('💡 Configura VITE_SENTRY_DSN en las variables de entorno.');
     return;
   }
 
-    Sentry.init({
-      dsn: SENTRY_DSN,
-      environment: IS_PRODUCTION ? 'production' : 'preview',
-      release: `kentra@${APP_VERSION}`,
-      
-      // Sampling: capturar 100% de errores, 10% de transacciones en producción
-      tracesSampleRate: IS_PRODUCTION ? 0.1 : 1.0,
-      
-      // Capturar replays de sesión en caso de error
-      replaysSessionSampleRate: 0.1,
-      replaysOnErrorSampleRate: 1.0,
+  console.log('✅ Inicializando Sentry...');
 
-      integrations: [
-        browserTracingIntegration(),
-        replayIntegration({
-          maskAllText: false,
-          blockAllMedia: false,
-        }),
-      ],
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: IS_PRODUCTION ? 'production' : 'preview',
+    release: `kentra@${APP_VERSION}`,
+    
+    // Sampling: capturar 100% de errores, 10% de transacciones en producción
+    tracesSampleRate: IS_PRODUCTION ? 0.1 : 1.0,
+    
+    // Capturar replays de sesión en caso de error
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+
+    integrations: [
+      browserTracingIntegration(),
+      replayIntegration({
+        maskAllText: false,
+        blockAllMedia: false,
+      }),
+      // Integración con React Router v6 para trackear navegación
+      reactRouterV6BrowserTracingIntegration({
+        useEffect,
+        useLocation,
+        useNavigationType,
+        createRoutesFromChildren,
+        matchRoutes,
+      }),
+    ],
 
     // Filtrar información sensible
     beforeSend(event, hint) {
@@ -54,6 +82,8 @@ export const initSentry = () => {
       'ChunkLoadError',
     ],
   });
+
+  console.log('✅ Sentry inicializado correctamente');
 };
 
 // Helpers para capturar excepciones con contexto
