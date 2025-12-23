@@ -16,7 +16,7 @@ const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 // Configuración centralizada
 const EMAIL_CONFIG = {
-  fromAddress: 'Kentra <noreply@updates.kentra.com.mx>',
+  fromAddress: 'Kentra <no-reply@updates.kentra.com.mx>', // Estandarizado con guión
   replyTo: 'soporte@kentra.com.mx',
   baseUrl: 'https://kentra.com.mx',
   companyName: 'Kentra',
@@ -119,9 +119,9 @@ export async function sendEmail({
     // Generar versión texto plano
     const textContent = htmlToText(htmlContent);
     
-    // Construir from address
+    // Construir from address - siempre usar dominio verificado
     const fromAddress = fromName 
-      ? `${fromName} <noreply@updates.kentra.com.mx>`
+      ? `${fromName} <no-reply@updates.kentra.com.mx>`
       : EMAIL_CONFIG.fromAddress;
     
     // Generar ID único para el email
