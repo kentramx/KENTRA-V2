@@ -130,6 +130,79 @@ const PropertyDetail = () => {
     4
   );
 
+  // IMPORTANTE: Todos los useMemo DEBEN estar antes de cualquier early return
+  // para cumplir con las reglas de hooks de React
+  const propertyUrl = useMemo(
+    () => id ? `${window.location.origin}/propiedad/${id}` : '',
+    [id]
+  );
+
+  const seoTitle = useMemo(
+    () => {
+      if (!property) return '';
+      return generatePropertyTitle({
+        type: property.type,
+        municipality: property.municipality,
+        state: property.state,
+        price: property.price,
+        bedrooms: property.bedrooms || undefined,
+        listingType: property.listing_type,
+        colonia: property.colonia,
+      });
+    },
+    [property]
+  );
+
+  const seoDescription = useMemo(
+    () => {
+      if (!property) return '';
+      return generatePropertyDescription({
+        type: property.type,
+        municipality: property.municipality,
+        state: property.state,
+        price: property.price,
+        bedrooms: property.bedrooms || undefined,
+        bathrooms: property.bathrooms || undefined,
+        sqft: property.sqft || undefined,
+        parking: property.parking || undefined,
+        listingType: property.listing_type,
+        description: property.description || undefined,
+        colonia: property.colonia,
+      });
+    },
+    [property]
+  );
+
+  const structuredData = useMemo(
+    () => {
+      if (!property) return null;
+      return generatePropertyStructuredData({
+        property,
+        url: propertyUrl,
+        agentName: agent?.name,
+        agentPhone: agent?.phone || undefined,
+      });
+    },
+    [property, propertyUrl, agent]
+  );
+
+  const breadcrumbStructuredData = useMemo(
+    () => {
+      if (!property || !id) return null;
+      return generateBreadcrumbStructuredData([
+        { name: 'Inicio', href: '/' },
+        { name: 'Buscar', href: '/buscar' },
+        { name: property.state, href: `/buscar?estado=${property.state}` },
+        { 
+          name: property.municipality, 
+          href: `/buscar?estado=${property.state}&municipio=${property.municipality}` 
+        },
+        { name: property.title, href: `/propiedad/${id}` }
+      ]);
+    },
+    [property, id]
+  );
+
   const handleReviewSubmitted = () => {
     setReviewsKey(prev => prev + 1);
   };
@@ -544,63 +617,8 @@ const PropertyDetail = () => {
     );
   }
 
-  // Memoizar cálculos pesados para evitar recomputación en cada render
-  const propertyUrl = `${window.location.origin}/propiedad/${id}`;
+  // mainImage solo se usa después de verificar que property existe
   const mainImage = property.images?.[0]?.url || propertyPlaceholder;
-
-  const seoTitle = useMemo(
-    () => generatePropertyTitle({
-      type: property.type,
-      municipality: property.municipality,
-      state: property.state,
-      price: property.price,
-      bedrooms: property.bedrooms || undefined,
-      listingType: property.listing_type,
-      colonia: property.colonia,
-    }),
-    [property]
-  );
-
-  const seoDescription = useMemo(
-    () => generatePropertyDescription({
-      type: property.type,
-      municipality: property.municipality,
-      state: property.state,
-      price: property.price,
-      bedrooms: property.bedrooms || undefined,
-      bathrooms: property.bathrooms || undefined,
-      sqft: property.sqft || undefined,
-      parking: property.parking || undefined,
-      listingType: property.listing_type,
-      description: property.description || undefined,
-      colonia: property.colonia,
-    }),
-    [property]
-  );
-
-  const structuredData = useMemo(
-    () => generatePropertyStructuredData({
-      property,
-      url: propertyUrl,
-      agentName: agent?.name,
-      agentPhone: agent?.phone || undefined,
-    }),
-    [property, propertyUrl, agent]
-  );
-
-  const breadcrumbStructuredData = useMemo(
-    () => generateBreadcrumbStructuredData([
-      { name: 'Inicio', href: '/' },
-      { name: 'Buscar', href: '/buscar' },
-      { name: property.state, href: `/buscar?estado=${property.state}` },
-      { 
-        name: property.municipality, 
-        href: `/buscar?estado=${property.state}&municipio=${property.municipality}` 
-      },
-      { name: property.title, href: `/propiedad/${id}` }
-    ]),
-    [property, id]
-  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -611,7 +629,7 @@ const PropertyDetail = () => {
         ogType="product"
         ogImage={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/og-image?type=property&id=${id}`}
         ogUrl={propertyUrl}
-        structuredData={[structuredData, breadcrumbStructuredData]}
+        structuredData={[structuredData, breadcrumbStructuredData].filter(Boolean)}
       />
       <Navbar />
 
