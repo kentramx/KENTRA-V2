@@ -5,10 +5,10 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMapData } from '@/hooks/useMapData';
-import { usePropertiesInfinite } from '@/hooks/usePropertiesInfinite';
+// usePropertiesInfinite ya no se usa - arquitectura Zillow unificada
 import { useFavorites } from '@/hooks/useFavorites';
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete';
-import type { PropertySummary } from '@/types/property';
+import type { PropertySummary, PropertyType, ListingType } from '@/types/property';
 import Navbar from '@/components/Navbar';
 import PropertyCard from '@/components/PropertyCard';
 import { PropertyImageGallery } from '@/components/PropertyImageGallery';
@@ -254,64 +254,70 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
   const isClustered = mapData?.is_clustered || false;
   const searchError = mapError;
 
-  // ✅ LISTA INDEPENDIENTE: Usar usePropertiesInfinite para la lista (NO depende del zoom)
-  // Obtener coordenadas directamente de URL para evitar dependencia de orden
-  const urlLat = searchParams.get('lat');
-  const urlLng = searchParams.get('lng');
-  
-  const listFilters = useMemo(() => ({
-    estado: filters.estado || undefined,
-    municipio: filters.municipio || undefined,
-    colonia: filters.colonia || undefined,
-    tipo: filters.tipo || undefined,
-    listingType: filters.listingType || undefined,
-    precioMin: filters.precioMin ? Number(filters.precioMin) : undefined,
-    precioMax: filters.precioMax ? Number(filters.precioMax) : undefined,
-    recamaras: filters.recamaras || undefined,
-    banos: filters.banos || undefined,
-    orden: filters.orden || undefined,
-    // ✅ Usar coordenadas para filtrar geográficamente (evita problemas de acentos)
-    lat: urlLat ? Number(urlLat) : undefined,
-    lng: urlLng ? Number(urlLng) : undefined,
-  }), [filters, urlLat, urlLng]);
+  // ✅ ARQUITECTURA ZILLOW: Lista usa mismos datos que el mapa (fuente única)
+  // Convertir PropertyMarker[] a PropertySummary[] para compatibilidad
+  const listProperties: PropertySummary[] = useMemo(() => {
+    if (!mapData?.properties) return [];
+    
+    return mapData.properties.map((marker): PropertySummary => ({
+      id: marker.id,
+      title: marker.title,
+      price: marker.price,
+      currency: marker.currency,
+      type: marker.type as PropertyType,
+      listing_type: marker.listing_type as ListingType,
+      for_sale: marker.for_sale,
+      for_rent: marker.for_rent,
+      sale_price: marker.sale_price,
+      rent_price: marker.rent_price,
+      address: marker.address,
+      colonia: marker.colonia,
+      municipality: marker.municipality,
+      state: marker.state,
+      lat: marker.lat,
+      lng: marker.lng,
+      bedrooms: marker.bedrooms,
+      bathrooms: marker.bathrooms,
+      parking: marker.parking,
+      sqft: marker.sqft,
+      images: marker.images.map(img => ({
+        url: img.url,
+        position: img.position ?? 0,
+      })),
+      agent_id: marker.agent_id,
+      is_featured: marker.is_featured,
+      created_at: marker.created_at,
+    }));
+  }, [mapData?.properties]);
 
-  const {
-    properties: listPropertiesRaw,
-    totalCount,
-    isLoading: listLoading,
-    isFetching: listFetching,
-    fetchNextPage,
-    hasNextPage,
-  } = usePropertiesInfinite(listFilters);
+  // ✅ Variables derivadas de mapData (fuente única)
+  const totalCount = mapData?.total_in_viewport || 0;
+  const hasNextPage = false;  // El mapa ya trae todas las propiedades del viewport
+  const fetchNextPage = useCallback(() => {}, []); // No necesario con arquitectura unificada
 
   // Alias para compatibilidad con código existente
-  const properties = listPropertiesRaw;
-  const hasTooManyResults = false; // Ya no hay límite de resultados en la lista
+  const properties = listProperties;
+  const hasTooManyResults = false;
   const actualTotal = totalCount;
 
-  // Ordenar propiedades según criterio seleccionado
-  // PRIORIDAD: Destacadas primero, luego aplicar orden seleccionado
-  // NOTA: El ordenamiento ya se aplica en el backend (usePropertiesInfinite),
-  // pero añadimos ordenamiento de destacadas en frontend
+  // Ordenar propiedades: Destacadas primero
   const sortedProperties = useMemo(() => {
-    const sorted = [...properties];
-    
+    const sorted = [...listProperties];
     sorted.sort((a, b) => {
-      // Prioridad principal: Destacadas primero
       const aFeatured = a.is_featured ? 1 : 0;
       const bFeatured = b.is_featured ? 1 : 0;
       return bFeatured - aFeatured;
     });
-    
     return sorted;
-  }, [properties]);
+  }, [listProperties]);
 
   const filteredProperties = sortedProperties;
-  const listProperties = sortedProperties;
   
-  // Variables de loading para la lista
-  const loading = listLoading;
-  const isFetching = listFetching;
+  // Variables de loading para la lista (derivadas del mapa)
+  const loading = mapLoading;
+  const isFetching = mapIsFetching;
+  const listLoading = mapLoading;
+  const listFetching = mapIsFetching;
   
   // Estado para guardar coordenadas de la ubicación buscada
   // ✅ Inicializar desde URL inmediatamente para evitar flash
