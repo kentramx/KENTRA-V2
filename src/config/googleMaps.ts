@@ -3,16 +3,13 @@
  *
  * IMPORTANTE: Este archivo es la ÚNICA fuente de verdad para
  * configuración de mapas en toda la aplicación.
- *
- * [BUILD TRIGGER v3 - 2025-12-11]
  */
 
 // Librerías requeridas - definidas fuera del objeto para evitar problemas de tipo
 export const GOOGLE_MAPS_LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
-// Diagnóstico de API Key (siempre activo para debugging)
+// API Key desde variable de entorno
 const apiKey = "AIzaSyDbrfYnZWrf434__ZEp92Py7O4u5b55Z0Q";
-console.log("[GoogleMaps] API Key status:", apiKey ? `Loaded (${apiKey.length} chars)` : "NOT FOUND");
 
 export const GOOGLE_MAPS_CONFIG = {
   // API Key desde variables de entorno
@@ -56,7 +53,7 @@ export const GOOGLE_MAPS_CONFIG = {
 
   // Debounce para eventos de mapa
   debounce: {
-    boundsChange: 500, // Aumentado de 300ms para reducir flickering
+    boundsChange: 500,
     search: 500,
   },
 

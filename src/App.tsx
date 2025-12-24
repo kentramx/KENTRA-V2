@@ -1,5 +1,5 @@
 import './App.css';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -10,67 +10,77 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useTracking } from "@/hooks/useTracking";
-import { monitoring } from "@/lib/monitoring";
 import { GlobalSubscriptionBanner } from "@/components/subscription/GlobalSubscriptionBanner";
-import Home from "./pages/Home";
-import PropertyDetail from "./pages/PropertyDetail";
-import Favorites from "./pages/Favorites";
-import ComparePage from "./pages/ComparePage";
-import AgentDashboard from "./pages/AgentDashboard";
-import AgencyDashboard from "./pages/AgencyDashboard";
-import DeveloperDashboard from "./pages/DeveloperDashboard";
-import AgentProfile from "./pages/AgentProfile";
-import UserProfile from "./pages/UserProfile";
-import NotificationSettings from "./pages/NotificationSettings";
-import Settings from "./pages/Settings";
-import Auth from "./pages/Auth";
-import Buscar from "./pages/Buscar";
-import MessagesPage from "./pages/MessagesPage";
-import NotFound from "./pages/NotFound";
-// MapPreloader eliminado - ahora usamos @react-google-maps/api con carga automática
-import Publicar from "./pages/Publicar";
-import PricingAgente from "./pages/PricingAgente";
-import PricingInmobiliaria from "./pages/PricingInmobiliaria";
-import PricingDesarrolladora from "./pages/PricingDesarrolladora";
-import DirectorioAgentes from "./pages/DirectorioAgentes";
-import Leaderboard from "./pages/Leaderboard";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import PaymentCanceled from "./pages/PaymentCanceled";
-import AdminRoles from "./pages/AdminRoles";
-import AdminRoleAudit from "./pages/AdminRoleAudit";
-import AdminNotificationSettings from "./pages/AdminNotificationSettings";
-import AdminSubscriptionChanges from "./pages/AdminSubscriptionChanges";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminFinancial from "./pages/AdminFinancial";
-import AdminSystemHealth from "./pages/AdminSystemHealth";
-import AdminKPIs from "./pages/AdminKPIs";
-import AdminMarketing from "./pages/AdminMarketing";
-import AdminUpsells from "./pages/AdminUpsells";
-import AdminKYC from "./pages/AdminKYC";
-import AdminSubscriptions from "./pages/AdminSubscriptions";
-import AdminChurn from "./pages/AdminChurn";
-import AdminGeocoding from "./pages/AdminGeocoding";
-import AdminCoupons from "./pages/AdminCoupons";
-import AdminPlans from "./pages/AdminPlans";
-import AdminSettings from "./pages/AdminSettings";
-import AdminUsers from "./pages/AdminUsers";
-import UnirseEquipo from "./pages/UnirseEquipo";
-import Privacidad from "./pages/Privacidad";
-import Terminos from "./pages/Terminos";
-import Ayuda from "./pages/Ayuda";
 import { Footer } from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
+import { Loader2 } from "lucide-react";
 
+// ✅ Lazy loading para todas las páginas (reduce bundle inicial)
+const Home = lazy(() => import("./pages/Home"));
+const PropertyDetail = lazy(() => import("./pages/PropertyDetail"));
+const Favorites = lazy(() => import("./pages/Favorites"));
+const ComparePage = lazy(() => import("./pages/ComparePage"));
+const AgentDashboard = lazy(() => import("./pages/AgentDashboard"));
+const AgencyDashboard = lazy(() => import("./pages/AgencyDashboard"));
+const DeveloperDashboard = lazy(() => import("./pages/DeveloperDashboard"));
+const AgentProfile = lazy(() => import("./pages/AgentProfile"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
+const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Buscar = lazy(() => import("./pages/Buscar"));
+const MessagesPage = lazy(() => import("./pages/MessagesPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Publicar = lazy(() => import("./pages/Publicar"));
+const PricingAgente = lazy(() => import("./pages/PricingAgente"));
+const PricingInmobiliaria = lazy(() => import("./pages/PricingInmobiliaria"));
+const PricingDesarrolladora = lazy(() => import("./pages/PricingDesarrolladora"));
+const DirectorioAgentes = lazy(() => import("./pages/DirectorioAgentes"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const PaymentCanceled = lazy(() => import("./pages/PaymentCanceled"));
+const AdminRoles = lazy(() => import("./pages/AdminRoles"));
+const AdminRoleAudit = lazy(() => import("./pages/AdminRoleAudit"));
+const AdminNotificationSettings = lazy(() => import("./pages/AdminNotificationSettings"));
+const AdminSubscriptionChanges = lazy(() => import("./pages/AdminSubscriptionChanges"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminFinancial = lazy(() => import("./pages/AdminFinancial"));
+const AdminSystemHealth = lazy(() => import("./pages/AdminSystemHealth"));
+const AdminKPIs = lazy(() => import("./pages/AdminKPIs"));
+const AdminMarketing = lazy(() => import("./pages/AdminMarketing"));
+const AdminUpsells = lazy(() => import("./pages/AdminUpsells"));
+const AdminKYC = lazy(() => import("./pages/AdminKYC"));
+const AdminSubscriptions = lazy(() => import("./pages/AdminSubscriptions"));
+const AdminChurn = lazy(() => import("./pages/AdminChurn"));
+const AdminGeocoding = lazy(() => import("./pages/AdminGeocoding"));
+const AdminCoupons = lazy(() => import("./pages/AdminCoupons"));
+const AdminPlans = lazy(() => import("./pages/AdminPlans"));
+const AdminSettings = lazy(() => import("./pages/AdminSettings"));
+const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const UnirseEquipo = lazy(() => import("./pages/UnirseEquipo"));
+const Privacidad = lazy(() => import("./pages/Privacidad"));
+const Terminos = lazy(() => import("./pages/Terminos"));
+const Ayuda = lazy(() => import("./pages/Ayuda"));
+
+// Spinner de carga para Suspense
+const PageLoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex flex-col items-center gap-4">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <p className="text-sm text-muted-foreground">Cargando...</p>
+    </div>
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutos - datos considerados frescos
-      gcTime: 30 * 60 * 1000, // 30 minutos - mantener en caché (antes cacheTime)
-      retry: 1, // Solo 1 reintento en caso de fallo
-      refetchOnWindowFocus: false, // No refetch al cambiar de ventana
-      refetchOnMount: false, // No refetch al montar si hay datos en caché
-      refetchOnReconnect: false, // No refetch al reconectar internet
+      staleTime: 5 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
     },
   },
 });
@@ -81,66 +91,64 @@ const AppContent = () => {
   const { trackPageView } = useTracking();
 
   useEffect(() => {
-    // Scroll al principio de la página en cada cambio de ruta
     window.scrollTo(0, 0);
-    
-    // Trackear pageview en cada cambio de ruta usando GTM
     trackPageView(location.pathname + location.search);
   }, [location.pathname, trackPageView]);
 
   return (
     <>
       <GlobalSubscriptionBanner />
-      <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/propiedad/:id" element={<PropertyDetail />} />
-              <Route path="/agente/:id" element={<AgentProfile />} />
-              <Route path="/perfil" element={<UserProfile />} />
-              <Route path="/notificaciones" element={<NotificationSettings />} />
-              <Route path="/configuracion" element={<Settings />} />
-              <Route path="/buscar" element={<Buscar />} />
-              <Route path="/favoritos" element={<Favorites />} />
-              <Route path="/comparar" element={<ComparePage />} />
-              <Route path="/panel-agente" element={<AgentDashboard />} />
-              <Route path="/panel-inmobiliaria" element={<AgencyDashboard />} />
-              <Route path="/panel-desarrolladora" element={<DeveloperDashboard />} />
-              <Route path="/mensajes" element={<MessagesPage />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/publicar" element={<Publicar />} />
-              <Route path="/pricing-agente" element={<PricingAgente />} />
-              <Route path="/pricing-inmobiliaria" element={<PricingInmobiliaria />} />
-              <Route path="/pricing-desarrolladora" element={<PricingDesarrolladora />} />
-              <Route path="/agentes" element={<DirectorioAgentes />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/payment-success" element={<PaymentSuccess />} />
-              <Route path="/payment-canceled" element={<PaymentCanceled />} />
-              <Route path="/unirse-equipo" element={<UnirseEquipo />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/financiero" element={<AdminFinancial />} />
-              <Route path="/admin/system-health" element={<AdminSystemHealth />} />
-              <Route path="/admin/kpis" element={<AdminKPIs />} />
-              <Route path="/admin/marketing" element={<AdminMarketing />} />
-              <Route path="/admin/roles" element={<AdminRoles />} />
-              <Route path="/admin/role-audit" element={<AdminRoleAudit />} />
-              <Route path="/admin/subscription-changes" element={<AdminSubscriptionChanges />} />
-              <Route path="/admin/notification-settings" element={<AdminNotificationSettings />} />
-              <Route path="/admin/upsells" element={<AdminUpsells />} />
-              <Route path="/admin/kyc" element={<AdminKYC />} />
-              <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
-              <Route path="/admin/churn" element={<AdminChurn />} />
-              <Route path="/admin/geocoding" element={<AdminGeocoding />} />
-              <Route path="/admin/coupons" element={<AdminCoupons />} />
-              <Route path="/admin/plans" element={<AdminPlans />} />
-              <Route path="/admin/settings" element={<AdminSettings />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/privacidad" element={<Privacidad />} />
-              <Route path="/terminos" element={<Terminos />} />
-              <Route path="/ayuda" element={<Ayuda />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Footer />
-            <BottomNav />
+      <Suspense fallback={<PageLoadingSpinner />}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/propiedad/:id" element={<PropertyDetail />} />
+          <Route path="/agente/:id" element={<AgentProfile />} />
+          <Route path="/perfil" element={<UserProfile />} />
+          <Route path="/notificaciones" element={<NotificationSettings />} />
+          <Route path="/configuracion" element={<Settings />} />
+          <Route path="/buscar" element={<Buscar />} />
+          <Route path="/favoritos" element={<Favorites />} />
+          <Route path="/comparar" element={<ComparePage />} />
+          <Route path="/panel-agente" element={<AgentDashboard />} />
+          <Route path="/panel-inmobiliaria" element={<AgencyDashboard />} />
+          <Route path="/panel-desarrolladora" element={<DeveloperDashboard />} />
+          <Route path="/mensajes" element={<MessagesPage />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/publicar" element={<Publicar />} />
+          <Route path="/pricing-agente" element={<PricingAgente />} />
+          <Route path="/pricing-inmobiliaria" element={<PricingInmobiliaria />} />
+          <Route path="/pricing-desarrolladora" element={<PricingDesarrolladora />} />
+          <Route path="/agentes" element={<DirectorioAgentes />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/payment-canceled" element={<PaymentCanceled />} />
+          <Route path="/unirse-equipo" element={<UnirseEquipo />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/financiero" element={<AdminFinancial />} />
+          <Route path="/admin/system-health" element={<AdminSystemHealth />} />
+          <Route path="/admin/kpis" element={<AdminKPIs />} />
+          <Route path="/admin/marketing" element={<AdminMarketing />} />
+          <Route path="/admin/roles" element={<AdminRoles />} />
+          <Route path="/admin/role-audit" element={<AdminRoleAudit />} />
+          <Route path="/admin/subscription-changes" element={<AdminSubscriptionChanges />} />
+          <Route path="/admin/notification-settings" element={<AdminNotificationSettings />} />
+          <Route path="/admin/upsells" element={<AdminUpsells />} />
+          <Route path="/admin/kyc" element={<AdminKYC />} />
+          <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+          <Route path="/admin/churn" element={<AdminChurn />} />
+          <Route path="/admin/geocoding" element={<AdminGeocoding />} />
+          <Route path="/admin/coupons" element={<AdminCoupons />} />
+          <Route path="/admin/plans" element={<AdminPlans />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/privacidad" element={<Privacidad />} />
+          <Route path="/terminos" element={<Terminos />} />
+          <Route path="/ayuda" element={<Ayuda />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+      <Footer />
+      <BottomNav />
     </>
   );
 };

@@ -325,6 +325,7 @@ export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: 
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Cerrar visor de imágenes"
             onClick={onClose}
             className="absolute top-4 right-4 z-50 bg-background/10 hover:bg-background/20 text-white rounded-full backdrop-blur-sm"
           >
@@ -346,6 +347,7 @@ export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: 
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Reducir zoom"
               onClick={handleZoomOut}
               disabled={zoom <= 0.5}
               className="bg-background/10 hover:bg-background/20 text-white rounded-full backdrop-blur-sm"
@@ -358,6 +360,7 @@ export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: 
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Aumentar zoom"
               onClick={handleZoomIn}
               disabled={zoom >= 3}
               className="bg-background/10 hover:bg-background/20 text-white rounded-full backdrop-blur-sm"
@@ -444,6 +447,7 @@ export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: 
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Imagen anterior"
                 onClick={handlePrevious}
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/10 hover:bg-background/20 text-white rounded-full backdrop-blur-sm h-12 w-12"
               >
@@ -452,6 +456,7 @@ export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: 
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Siguiente imagen"
                 onClick={handleNext}
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/10 hover:bg-background/20 text-white rounded-full backdrop-blur-sm h-12 w-12"
               >
