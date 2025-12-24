@@ -21,20 +21,13 @@ const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 const IS_PRODUCTION = import.meta.env.PROD;
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.0';
 
-// Diagnóstico de carga del DSN
-console.log('🔍 Sentry DSN loaded:', SENTRY_DSN ? 'YES' : 'NO');
-if (SENTRY_DSN) {
-  console.log('🔍 Sentry DSN value:', SENTRY_DSN.substring(0, 30) + '...');
-}
-
 export const initSentry = () => {
   if (!SENTRY_DSN) {
-    console.warn('⚠️ Sentry DSN no configurado. Monitoring deshabilitado.');
-    console.warn('💡 Configura VITE_SENTRY_DSN en las variables de entorno.');
+    if (!IS_PRODUCTION) {
+      console.warn('⚠️ Sentry DSN no configurado. Monitoring deshabilitado.');
+    }
     return;
   }
-
-  console.log('✅ Inicializando Sentry...');
 
   Sentry.init({
     dsn: SENTRY_DSN,
@@ -82,8 +75,6 @@ export const initSentry = () => {
       'ChunkLoadError',
     ],
   });
-
-  console.log('✅ Sentry inicializado correctamente');
 };
 
 // Helpers para capturar excepciones con contexto

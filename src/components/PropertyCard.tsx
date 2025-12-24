@@ -217,6 +217,7 @@ const PropertyCardComponent = ({
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Imagen anterior"
                 className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity z-10"
                 onClick={handlePrevImage}
               >
@@ -225,6 +226,7 @@ const PropertyCardComponent = ({
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Siguiente imagen"
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity z-10"
                 onClick={handleNextImage}
               >
@@ -275,6 +277,7 @@ const PropertyCardComponent = ({
             <Button
               variant="ghost"
               size="icon"
+              aria-label={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
               className="absolute right-3 top-3 bg-background/80 hover:bg-background z-20"
               onClick={(e) => {
                 e.preventDefault();

@@ -18,7 +18,7 @@ export function MobileMenu() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
+        <Button variant="ghost" size="icon" aria-label="Abrir menú de navegación" className="md:hidden">
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>

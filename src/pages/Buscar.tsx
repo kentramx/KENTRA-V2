@@ -170,14 +170,7 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
     orden: (searchParams.get('orden') as any) || 'price_desc',
   });
   
-  // ✅ DEBUG: Logs temporales para rastrear cambios de listingType
-  useEffect(() => {
-    console.log('[Buscar Debug] filters.listingType changed to:', filters.listingType);
-  }, [filters.listingType]);
-
-  useEffect(() => {
-    console.log('[Buscar Debug] URL listingType changed to:', searchParams.get('listingType'));
-  }, [searchParams]);
+  // Efecto de debug eliminado para producción
   
   // ✅ ELIMINADO: Efecto duplicado que causaba loops infinitos
   // Este efecto está ahora consolidado en las líneas 543-579
@@ -590,7 +583,6 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
   useEffect(() => {
     // 🚫 Si estamos sincronizando desde URL, no sobrescribir
     if (syncingFromUrl.current) {
-      console.log('[Buscar] Sincronización bloqueada: syncingFromUrl activo');
       return;
     }
     
@@ -598,7 +590,7 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
     
     if (filters.estado) params.set('estado', filters.estado);
     if (filters.municipio) params.set('municipio', filters.municipio);
-    if (filters.colonia) params.set('colonia', filters.colonia); // ✅ Agregado
+    if (filters.colonia) params.set('colonia', filters.colonia);
     if (filters.precioMin) params.set('precioMin', filters.precioMin);
     if (filters.precioMax) params.set('precioMax', filters.precioMax);
     if (filters.tipo) params.set('tipo', filters.tipo);
@@ -627,12 +619,9 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
     const current = searchParams.toString();
     
     if (next !== current) {
-      console.log('[Buscar] Actualizando URL:', { next, current });
       setSearchParams(params, { replace: true });
-    } else {
-      console.log('[Buscar] URL sin cambios, skip update');
     }
-  }, [filters, searchCoordinates]); // ✅ Removidas dependencias circulares searchParams y setSearchParams
+  }, [filters, searchCoordinates]);
 
   useEffect(() => {
     if (filters.estado) {
