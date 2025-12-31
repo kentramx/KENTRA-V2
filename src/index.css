@@ -70,7 +70,8 @@
   }
 
   h1, h2, .font-display {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 700;
   }
 }
 
@@ -80,12 +81,12 @@
 
 @layer components {
   .heading-display {
-    @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight font-serif;
+    @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight;
     letter-spacing: -0.025em;
   }
 
   .heading-section {
-    @apply text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight font-serif;
+    @apply text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight;
     letter-spacing: -0.02em;
   }
 
