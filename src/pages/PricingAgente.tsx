@@ -250,14 +250,14 @@ const PricingAgente = () => {
       />
       <Navbar />
       
-      <div className="container mx-auto px-4 py-16 md:py-24">
-        {/* Hero Section */}
-        <div className="max-w-4xl mx-auto text-center mb-16">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Planes para Agentes</h1>
-          <p className="text-xl text-muted-foreground mb-8">
-            Publica tus propiedades, recibe leads directos y haz crecer tu negocio inmobiliario con Kentra.
+      <div className="container mx-auto px-4 py-20 md:py-28">
+        {/* Hero Section - TIER S */}
+        <div className="max-w-4xl mx-auto text-center mb-20">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6" style={{ letterSpacing: '-0.025em' }}>Planes para Agentes</h1>
+          <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto">
+            Publica tus propiedades, recibe leads directos y haz crecer tu negocio inmobiliario.
           </p>
-          <Button size="lg" onClick={scrollToPlans} className="group">
+          <Button size="lg" onClick={scrollToPlans} className="group h-14 px-8 text-lg">
             Comenzar ahora
             <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Button>
@@ -301,10 +301,10 @@ const PricingAgente = () => {
           </Card>
         </div>
 
-        {/* Plans Section */}
-        <div id="planes" className="max-w-7xl mx-auto mb-20">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Elige tu plan</h2>
+        {/* Plans Section - TIER S */}
+        <div id="planes" className="max-w-7xl mx-auto mb-24 scroll-mt-20">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6" style={{ letterSpacing: '-0.02em' }}>Elige tu plan</h2>
             
             <div className="max-w-md mx-auto mb-6">
               <CouponInput 
@@ -355,62 +355,62 @@ const PricingAgente = () => {
               return (
                 <Card 
                   key={plan.slug}
-                  className={`relative ${plan.popular ? 'border-primary border-2 shadow-lg' : ''}`}
+                  className={`relative transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${plan.popular ? 'border-primary border-2 shadow-lg ring-2 ring-primary/20' : 'hover:border-primary/30'}`}
                 >
                   {plan.popular && (
-                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 text-sm font-semibold shadow-lg">
                       Más elegido
                     </Badge>
                   )}
-                  <CardHeader>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Icon className="h-5 w-5 text-primary" />
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-3 rounded-xl bg-primary/10">
+                        <Icon className="h-6 w-6 text-primary" />
                       </div>
                     </div>
-                    <CardTitle className="text-xl">{plan.name}</CardTitle>
-                    <div className="mt-4">
+                    <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
+                    <div className="mt-6">
                       {plan.isFree ? (
-                        <div className="text-3xl font-bold">Gratis</div>
+                        <div className="text-4xl md:text-5xl font-extrabold">Gratis</div>
                       ) : (
                         <>
                           {original && original !== final && (
-                            <div className="flex items-center justify-center gap-2 mb-1">
-                              <span className="text-lg text-muted-foreground line-through">
+                            <div className="flex items-center justify-center gap-2 mb-2">
+                              <span className="text-xl text-muted-foreground line-through">
                                 ${original.toLocaleString('es-MX')}
                               </span>
-                              <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs dark:bg-green-900 dark:text-green-100">
-                                Ahorras ${savings.toLocaleString('es-MX')}
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 text-sm font-semibold dark:bg-green-900 dark:text-green-100">
+                                -${savings.toLocaleString('es-MX')}
                               </Badge>
                             </div>
                           )}
-                          <div className="text-3xl font-bold">${final.toLocaleString('es-MX')}</div>
+                          <div className="text-4xl md:text-5xl font-extrabold">${final.toLocaleString('es-MX')}</div>
                           {pricingPeriod === 'annual' && plan.annualMonthlyEquivalent && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              equivale a ${plan.annualMonthlyEquivalent.toFixed(2)}/mes
+                            <p className="text-base text-muted-foreground mt-2">
+                              equivale a ${plan.annualMonthlyEquivalent.toFixed(0)}/mes
                             </p>
                           )}
                           {pricingPeriod === 'monthly' && (
-                            <p className="text-sm text-muted-foreground mt-1">por mes</p>
+                            <p className="text-base text-muted-foreground mt-2">por mes</p>
                           )}
                           {pricingPeriod === 'annual' && (
-                            <p className="text-sm text-muted-foreground mt-1">pago anual</p>
+                            <p className="text-base text-muted-foreground mt-2">pago anual</p>
                           )}
                         </>
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3 mb-6">
+                  <CardContent className="pt-6">
+                    <ul className="space-y-4 mb-8">
                       {plan.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm">
-                          <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                          <span>{feature}</span>
+                        <li key={idx} className="flex items-start gap-3 text-sm">
+                          <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                          <span className="text-foreground">{feature}</span>
                         </li>
                       ))}
                     </ul>
                     <Button 
-                      className="w-full"
+                      className="w-full h-12 text-base font-semibold"
                       variant={plan.popular ? 'default' : 'outline'}
                       onClick={() => handleSelectPlan(plan.slug)}
                       disabled={processingPlan !== null}

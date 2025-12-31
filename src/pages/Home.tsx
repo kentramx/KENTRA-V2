@@ -97,14 +97,14 @@ const Home = () => {
       <Navbar />
 
       {/* TIER S: Hero Section - Immersive Design */}
-      <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
         {/* Background mesh gradient */}
         <div className="absolute inset-0 gradient-mesh-olive" />
         
         {/* Background image with refined overlay */}
         <div className="absolute inset-0">
           <img src={heroBackground} alt="" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-foreground/75 via-foreground/60 to-foreground/40" />
+          <div className="absolute inset-0 bg-gradient-to-r from-foreground/80 via-foreground/65 to-foreground/50" />
         </div>
 
         {/* Subtle pattern overlay */}
@@ -112,34 +112,37 @@ const Home = () => {
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }} />
 
-        <div className="container relative z-10 text-center text-white px-4 pt-20 md:pt-24">
+        <div className="container relative z-10 text-center text-white px-4 pt-24 md:pt-32">
           {/* Trust badge */}
-          <div className="opacity-0 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-sm font-medium mb-6 md:mb-8 animate-fade-in-up">
+          <div className="opacity-0 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-sm font-medium mb-8 md:mb-10 animate-fade-in-up">
             <Sparkles className="w-4 h-4" />
             Plataforma inmobiliaria #1 en México
           </div>
           
-          {/* TIER S: Display heading */}
-          <h1 className="opacity-0 heading-display text-white text-balance max-w-4xl mx-auto mb-4 md:mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-            Encuentra tu hogar ideal
-            <span className="block text-white/80">en minutos</span>
+          {/* TIER S: Display heading - STRIPE STYLE */}
+          <h1 
+            className="opacity-0 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white text-balance max-w-4xl mx-auto mb-5 md:mb-6 animate-fade-in-up drop-shadow-lg" 
+            style={{ animationDelay: '100ms', letterSpacing: '-0.025em' }}
+          >
+            Tu próximo hogar,
+            <span className="block bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">a un clic</span>
           </h1>
           
-          {/* Subtitle */}
-          <p className="opacity-0 text-lg md:text-xl text-white/70 max-w-2xl mx-auto mb-8 md:mb-12 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-            Miles de propiedades verificadas en todo México. Compra, vende o renta con tecnología de vanguardia.
+          {/* Subtitle - More visible */}
+          <p className="opacity-0 text-lg md:text-xl lg:text-2xl text-white/80 max-w-2xl mx-auto mb-10 md:mb-14 animate-fade-in-up font-medium" style={{ animationDelay: '200ms' }}>
+            Miles de propiedades verificadas en todo México. Compra, vende o renta con confianza.
           </p>
           
-          {/* TIER S: Glass Search Card - Improved Visibility */}
-          <div className="opacity-0 max-w-3xl mx-auto mb-16 md:mb-20 animate-scale-in" style={{ animationDelay: '300ms' }}>
-            <div className="bg-white/20 backdrop-blur-lg rounded-2xl shadow-2xl shadow-black/20 border border-white/30 p-5 md:p-6">
-              {/* Listing Type Toggle - More prominent */}
-              <div className="inline-flex p-1.5 bg-black/30 rounded-xl mb-5">
+          {/* TIER S: Glass Search Card - MUCH MORE VISIBLE */}
+          <div className="opacity-0 max-w-3xl mx-auto mb-20 md:mb-28 animate-scale-in" style={{ animationDelay: '300ms' }}>
+            <div className="bg-white/30 backdrop-blur-xl rounded-3xl shadow-2xl shadow-black/30 border-2 border-white/40 p-6 md:p-8">
+              {/* Listing Type Toggle - TIER S prominent */}
+              <div className="inline-flex p-2 bg-black/40 rounded-2xl mb-6 backdrop-blur-sm">
                 <Button 
                   type="button" 
                   variant={listingType === "venta" ? "default" : "ghost"} 
                   onClick={() => setListingType("venta")}
-                  className={`px-6 rounded-lg font-semibold ${listingType !== "venta" ? "text-white/80 hover:text-white hover:bg-white/15" : "bg-white text-gray-900"}`}
+                  className={`px-8 py-3 rounded-xl font-bold text-base transition-all ${listingType !== "venta" ? "text-white/90 hover:text-white hover:bg-white/20" : "bg-white text-gray-900 shadow-lg"}`}
                 >
                   Venta
                 </Button>
@@ -147,16 +150,16 @@ const Home = () => {
                   type="button" 
                   variant={listingType === "renta" ? "default" : "ghost"} 
                   onClick={() => setListingType("renta")}
-                  className={`px-6 rounded-lg font-semibold ${listingType !== "renta" ? "text-white/80 hover:text-white hover:bg-white/15" : "bg-white text-gray-900"}`}
+                  className={`px-8 py-3 rounded-xl font-bold text-base transition-all ${listingType !== "renta" ? "text-white/90 hover:text-white hover:bg-white/20" : "bg-white text-gray-900 shadow-lg"}`}
                 >
                   Renta
                 </Button>
               </div>
 
               {/* Property Type - Glass style with visible text */}
-              <div className="flex justify-center mb-4">
+              <div className="flex justify-center mb-5">
                 <Select value={propertyType} onValueChange={setPropertyType}>
-                  <SelectTrigger className="w-full max-w-xs bg-white/25 border-white/40 text-white [&>span]:text-white">
+                  <SelectTrigger className="w-full max-w-xs h-12 bg-white/30 border-2 border-white/50 text-white font-medium [&>span]:text-white rounded-xl">
                     <SelectValue placeholder="Tipo de propiedad" className="text-white" />
                   </SelectTrigger>
                   <SelectContent>
@@ -176,26 +179,26 @@ const Home = () => {
               {/* Advanced Filters */}
               <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
                 <CollapsibleTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm" className="mx-auto mb-4 text-white/70 hover:text-white hover:bg-white/10">
-                    <SlidersHorizontal className="mr-1.5 h-4 w-4" />
+                  <Button type="button" variant="ghost" size="sm" className="mx-auto mb-5 text-white/80 hover:text-white hover:bg-white/15 font-medium">
+                    <SlidersHorizontal className="mr-2 h-4 w-4" />
                     Más filtros
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mb-4">
-                  <div className="bg-white/15 rounded-xl p-4 space-y-4 text-left border border-white/20">
+                <CollapsibleContent className="mb-5">
+                  <div className="bg-white/20 rounded-2xl p-5 space-y-4 text-left border border-white/30 backdrop-blur-sm">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="priceMin" className="text-sm font-medium text-white">Precio Mínimo</Label>
-                        <Input id="priceMin" type="number" placeholder="$0" value={priceMin} onChange={e => setPriceMin(e.target.value)} className="bg-white/25 border-white/40 text-white placeholder:text-white/70" />
+                        <Label htmlFor="priceMin" className="text-sm font-semibold text-white">Precio Mínimo</Label>
+                        <Input id="priceMin" type="number" placeholder="$0" value={priceMin} onChange={e => setPriceMin(e.target.value)} className="h-12 bg-white/30 border-2 border-white/50 text-white placeholder:text-white/60 rounded-xl font-medium" />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="priceMax" className="text-sm font-medium text-white">Precio Máximo</Label>
-                        <Input id="priceMax" type="number" placeholder="Sin límite" value={priceMax} onChange={e => setPriceMax(e.target.value)} className="bg-white/25 border-white/40 text-white placeholder:text-white/70" />
+                        <Label htmlFor="priceMax" className="text-sm font-semibold text-white">Precio Máximo</Label>
+                        <Input id="priceMax" type="number" placeholder="Sin límite" value={priceMax} onChange={e => setPriceMax(e.target.value)} className="h-12 bg-white/30 border-2 border-white/50 text-white placeholder:text-white/60 rounded-xl font-medium" />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <Select value={bedrooms} onValueChange={setBedrooms}>
-                        <SelectTrigger className="bg-white/25 border-white/40 text-white [&>span]:text-white"><SelectValue placeholder="Recámaras" /></SelectTrigger>
+                        <SelectTrigger className="h-12 bg-white/30 border-2 border-white/50 text-white [&>span]:text-white rounded-xl font-medium"><SelectValue placeholder="Recámaras" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Cualquiera</SelectItem>
                           <SelectItem value="1">1+</SelectItem>
@@ -205,7 +208,7 @@ const Home = () => {
                         </SelectContent>
                       </Select>
                       <Select value={bathrooms} onValueChange={setBathrooms}>
-                        <SelectTrigger className="bg-white/25 border-white/40 text-white [&>span]:text-white"><SelectValue placeholder="Baños" /></SelectTrigger>
+                        <SelectTrigger className="h-12 bg-white/30 border-2 border-white/50 text-white [&>span]:text-white rounded-xl font-medium"><SelectValue placeholder="Baños" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Cualquiera</SelectItem>
                           <SelectItem value="1">1+</SelectItem>
@@ -214,7 +217,7 @@ const Home = () => {
                         </SelectContent>
                       </Select>
                       <Select value={parking} onValueChange={setParking}>
-                        <SelectTrigger className="bg-white/25 border-white/40 text-white [&>span]:text-white"><SelectValue placeholder="Estacionamiento" /></SelectTrigger>
+                        <SelectTrigger className="h-12 bg-white/30 border-2 border-white/50 text-white [&>span]:text-white rounded-xl font-medium"><SelectValue placeholder="Estacionamiento" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Cualquiera</SelectItem>
                           <SelectItem value="1">1+</SelectItem>
@@ -247,15 +250,15 @@ const Home = () => {
 
       {/* TIER S: Featured Properties */}
       {featuredProperties.length > 0 && (
-        <section className="section-padding bg-background">
+        <section className="py-20 md:py-28 lg:py-32 bg-background">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-3 mb-4">
               <div className="decorative-line" />
               <span className="section-badge">Destacadas</span>
             </div>
-            <div className="flex items-end justify-between mb-10">
+            <div className="flex items-end justify-between mb-12">
               <div>
-                <h2 className="heading-section">Propiedades Destacadas</h2>
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>Propiedades Destacadas</h2>
                 <p className="mt-3 text-lg text-muted-foreground max-w-xl">
                   Selección curada de las mejores propiedades del mercado
                 </p>
@@ -291,16 +294,16 @@ const Home = () => {
       )}
 
       {/* TIER S: Recent Properties */}
-      <section className="section-padding bg-muted/30">
+      <section className="py-20 md:py-28 lg:py-32 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-3 mb-4">
             <div className="decorative-line" />
             <span className="section-badge">Recientes</span>
           </div>
-          <div className="flex items-end justify-between mb-10">
+          <div className="flex items-end justify-between mb-12">
             <div>
-              <h2 className="heading-section">Propiedades Recientes</h2>
-              <p className="mt-3 text-lg text-muted-foreground max-w-xl">
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>Propiedades Recientes</h2>
+              <p className="mt-4 text-lg text-muted-foreground max-w-xl">
                 Últimas propiedades agregadas a la plataforma
               </p>
             </div>

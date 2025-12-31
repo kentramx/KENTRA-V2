@@ -166,13 +166,13 @@ const PricingDesarrolladora = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-24 text-center">
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Planes para Desarrolladoras</h1>
-        <p className="text-muted-foreground text-lg md:text-xl max-w-3xl mx-auto mb-8">
-          Promociona tus proyectos, genera leads calificados y posiciona tu marca con la visibilidad que solo Kentra ofrece.
+      {/* Hero Section - TIER S */}
+      <section className="container mx-auto px-4 py-20 md:py-28 text-center">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6" style={{ letterSpacing: '-0.025em' }}>Planes para Desarrolladoras</h1>
+        <p className="text-muted-foreground text-xl md:text-2xl max-w-3xl mx-auto mb-10">
+          Promociona tus proyectos, genera leads calificados y posiciona tu marca con Kentra.
         </p>
-        <Button size="lg" onClick={scrollToPlans}>
+        <Button size="lg" onClick={scrollToPlans} className="h-14 px-8 text-lg">
           Comenzar ahora
         </Button>
       </section>
@@ -211,10 +211,10 @@ const PricingDesarrolladora = () => {
         </div>
       </section>
 
-      {/* Plans Section */}
-      <section id="planes" className="container mx-auto px-4 py-16 scroll-mt-20">
+      {/* Plans Section - TIER S */}
+      <section id="planes" className="container mx-auto px-4 py-20 scroll-mt-20">
         <div className="max-w-6xl mx-auto">
-          <div className="max-w-md mx-auto mb-8">
+          <div className="max-w-md mx-auto mb-10">
             <CouponInput 
               onCouponApplied={setAppliedCoupon}
               onDiscountDetails={setCouponDiscount}
@@ -222,12 +222,12 @@ const PricingDesarrolladora = () => {
             />
           </div>
           
-          {/* Billing Toggle - Enhanced */}
-          <div className="flex justify-center items-center gap-4 mb-12">
-            <div className="inline-flex items-center gap-1 p-1.5 rounded-xl bg-muted/80 border border-border">
+          {/* Billing Toggle - Enhanced TIER S */}
+          <div className="flex justify-center items-center gap-4 mb-14">
+            <div className="inline-flex items-center gap-1 p-2 rounded-2xl bg-muted/80 border border-border">
               <button
                 onClick={() => setBillingCycle('monthly')}
-                className={`px-6 py-2.5 rounded-lg transition-all duration-200 font-medium ${
+                className={`px-8 py-3 rounded-xl transition-all duration-200 font-semibold text-base ${
                   billingCycle === 'monthly' 
                     ? 'bg-background text-foreground shadow-md' 
                     : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
@@ -237,22 +237,22 @@ const PricingDesarrolladora = () => {
               </button>
               <button
                 onClick={() => setBillingCycle('annual')}
-                className={`px-6 py-2.5 rounded-lg transition-all duration-200 font-medium flex items-center gap-2 ${
+                className={`px-8 py-3 rounded-xl transition-all duration-200 font-semibold text-base flex items-center gap-2 ${
                   billingCycle === 'annual' 
                     ? 'bg-background text-foreground shadow-md' 
                     : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                 }`}
               >
                 Anual
-                <Badge className="bg-green-100 text-green-700 border-0 text-xs font-semibold dark:bg-green-900 dark:text-green-100">
+                <Badge className="bg-green-100 text-green-700 border-0 text-sm font-semibold dark:bg-green-900 dark:text-green-100">
                   Ahorra 17%
                 </Badge>
               </button>
             </div>
           </div>
 
-          {/* Plan Cards */}
-          <div className="grid md:grid-cols-3 gap-8">
+          {/* Plan Cards - TIER S */}
+          <div className="grid md:grid-cols-3 gap-8 lg:gap-10">
             {/* Start Plan */}
             {(() => {
               const basePrice = billingCycle === 'monthly' 
@@ -260,24 +260,24 @@ const PricingDesarrolladora = () => {
                 : (startPlan?.price_yearly || 59900);
               const { original, final, savings } = getDiscountedPrice(basePrice);
               return (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Desarrolladora Start</CardTitle>
+                <Card className="transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-2xl font-bold">Desarrolladora Start</CardTitle>
                     <CardDescription>
                       {original && original !== final && (
-                        <div className="flex items-center justify-center gap-2 mb-1">
-                          <span className="text-lg text-muted-foreground line-through">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <span className="text-xl text-muted-foreground line-through">
                             ${original.toLocaleString('es-MX')}
                           </span>
-                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs dark:bg-green-900 dark:text-green-100">
-                            Ahorras ${savings.toLocaleString('es-MX')}
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-sm font-semibold dark:bg-green-900 dark:text-green-100">
+                            -${savings.toLocaleString('es-MX')}
                           </Badge>
                         </div>
                       )}
-                      <span className="text-3xl font-bold text-foreground">
+                      <span className="text-4xl md:text-5xl font-extrabold text-foreground">
                         ${final.toLocaleString('es-MX')}
                       </span>
-                      <span className="text-muted-foreground"> MXN</span>
+                      <span className="text-muted-foreground text-base"> MXN</span>
                       {billingCycle === 'annual' && startPlan?.price_yearly && (
                         <span className="block text-sm mt-1">
                           equivale a ${Math.round(startPlan.price_yearly / 12).toLocaleString('es-MX')}/mes
@@ -288,19 +288,19 @@ const PricingDesarrolladora = () => {
                       </span>
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3">
+                  <CardContent className="pt-4">
+                    <ul className="space-y-4 mb-8">
                       {getFeatureList(startPlan).map((feature, index) => (
-                        <li key={index} className="flex gap-2">
-                          <Check className="w-5 h-5 text-primary flex-shrink-0" />
-                          <span className="text-sm">{feature}</span>
+                        <li key={index} className="flex gap-3">
+                          <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                          <span className="text-sm text-foreground">{feature}</span>
                         </li>
                       ))}
                     </ul>
                   </CardContent>
                   <CardFooter>
                     <Button 
-                      className="w-full" 
+                      className="w-full h-12 text-base font-semibold" 
                       variant="outline"
                       onClick={() => handleSelectPlan('start')}
                       disabled={processingPlan !== null}

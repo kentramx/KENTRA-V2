@@ -165,13 +165,13 @@ const PricingInmobiliaria = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-24 text-center">
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Planes para Inmobiliarias</h1>
-        <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-8">
-          Gestiona tu equipo, administra tus propiedades y obtén mayor visibilidad con Kentra Inmobiliarias.
+      {/* Hero Section - TIER S */}
+      <section className="container mx-auto px-4 py-20 md:py-28 text-center">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6" style={{ letterSpacing: '-0.025em' }}>Planes para Inmobiliarias</h1>
+        <p className="text-muted-foreground text-xl md:text-2xl max-w-3xl mx-auto mb-10">
+          Gestiona tu equipo, administra tus propiedades y obtén mayor visibilidad con Kentra.
         </p>
-        <Button size="lg" onClick={scrollToPlans}>
+        <Button size="lg" onClick={scrollToPlans} className="h-14 px-8 text-lg">
           Comenzar ahora
         </Button>
       </section>
@@ -210,11 +210,11 @@ const PricingInmobiliaria = () => {
         </div>
       </section>
 
-      {/* Plans Section */}
-      <section id="planes" className="container mx-auto px-4 py-16">
+      {/* Plans Section - TIER S */}
+      <section id="planes" className="container mx-auto px-4 py-20 scroll-mt-20">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-6">Elige el plan perfecto para tu inmobiliaria</h2>
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold mb-8" style={{ letterSpacing: '-0.02em' }}>Elige el plan perfecto para tu inmobiliaria</h2>
             
             <div className="max-w-md mx-auto mb-6">
               <CouponInput 
@@ -252,32 +252,32 @@ const PricingInmobiliaria = () => {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Plan Start */}
+          <div className="grid md:grid-cols-3 gap-8 lg:gap-10">
+            {/* Plan Start - TIER S */}
             {(() => {
               const basePrice = billingPeriod === 'monthly' 
                 ? (startPlan?.price_monthly || 1999) 
                 : (startPlan?.price_yearly || 19990);
               const { original, final, savings } = getDiscountedPrice(basePrice);
               return (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Inmobiliaria Start</CardTitle>
-                    <div className="mt-4">
+                <Card className="transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-2xl font-bold">Inmobiliaria Start</CardTitle>
+                    <div className="mt-6">
                       {original && original !== final && (
-                        <div className="flex items-center justify-center gap-2 mb-1">
-                          <span className="text-lg text-muted-foreground line-through">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <span className="text-xl text-muted-foreground line-through">
                             ${original.toLocaleString('es-MX')}
                           </span>
-                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs dark:bg-green-900 dark:text-green-100">
-                            Ahorras ${savings.toLocaleString('es-MX')}
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-sm font-semibold dark:bg-green-900 dark:text-green-100">
+                            -${savings.toLocaleString('es-MX')}
                           </Badge>
                         </div>
                       )}
-                      <div className="text-4xl font-bold">
+                      <div className="text-4xl md:text-5xl font-extrabold">
                         ${final.toLocaleString('es-MX')}
                       </div>
-                      <div className="text-muted-foreground">
+                      <div className="text-base text-muted-foreground mt-2">
                         MXN / {billingPeriod === 'monthly' ? 'mes' : 'año'}
                       </div>
                       {billingPeriod === 'annual' && startPlan?.price_yearly && (
@@ -287,17 +287,18 @@ const PricingInmobiliaria = () => {
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
+                  <CardContent className="space-y-6 pt-4">
+                    <div className="space-y-4">
                       {getFeatureList(startPlan).map((feature, index) => (
-                        <div key={index} className="flex items-start gap-2">
-                          <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                          <span>{feature}</span>
+                        <div key={index} className="flex items-start gap-3">
+                          <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-foreground">{feature}</span>
                         </div>
                       ))}
                     </div>
                     <Button 
-                      className="w-full" 
+                      className="w-full h-12 text-base font-semibold" 
+                      variant="outline"
                       onClick={() => handleSelectPlan('start')}
                       disabled={processingPlan !== null}
                     >
@@ -315,36 +316,36 @@ const PricingInmobiliaria = () => {
               );
             })()}
 
-            {/* Plan Grow */}
+            {/* Plan Grow - TIER S Highlighted */}
             {(() => {
               const basePrice = billingPeriod === 'monthly' 
                 ? (growPlan?.price_monthly || 4499) 
                 : (growPlan?.price_yearly || 44990);
               const { original, final, savings } = getDiscountedPrice(basePrice);
               return (
-                <Card className={`relative ${growPlan?.features?.display?.highlight ? 'border-primary shadow-lg' : ''}`}>
+                <Card className={`relative transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${growPlan?.features?.display?.highlight ? 'border-primary border-2 shadow-lg ring-2 ring-primary/20' : ''}`}>
                   {growPlan?.features?.display?.badge && (
-                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 text-sm font-semibold shadow-lg">
                       {growPlan.features.display.badge === 'popular' ? 'Más elegido' : growPlan.features.display.badge}
                     </Badge>
                   )}
-                  <CardHeader>
-                    <CardTitle>Inmobiliaria Grow</CardTitle>
-                    <div className="mt-4">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-2xl font-bold">Inmobiliaria Grow</CardTitle>
+                    <div className="mt-6">
                       {original && original !== final && (
-                        <div className="flex items-center justify-center gap-2 mb-1">
-                          <span className="text-lg text-muted-foreground line-through">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <span className="text-xl text-muted-foreground line-through">
                             ${original.toLocaleString('es-MX')}
                           </span>
-                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs dark:bg-green-900 dark:text-green-100">
-                            Ahorras ${savings.toLocaleString('es-MX')}
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-sm font-semibold dark:bg-green-900 dark:text-green-100">
+                            -${savings.toLocaleString('es-MX')}
                           </Badge>
                         </div>
                       )}
-                      <div className="text-4xl font-bold">
+                      <div className="text-4xl md:text-5xl font-extrabold">
                         ${final.toLocaleString('es-MX')}
                       </div>
-                      <div className="text-muted-foreground">
+                      <div className="text-base text-muted-foreground mt-2">
                         MXN / {billingPeriod === 'monthly' ? 'mes' : 'año'}
                       </div>
                       {billingPeriod === 'annual' && growPlan?.price_yearly && (
@@ -354,17 +355,17 @@ const PricingInmobiliaria = () => {
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
+                  <CardContent className="space-y-6 pt-4">
+                    <div className="space-y-4">
                       {getFeatureList(growPlan).map((feature, index) => (
-                        <div key={index} className="flex items-start gap-2">
-                          <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                          <span>{feature}</span>
+                        <div key={index} className="flex items-start gap-3">
+                          <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-foreground">{feature}</span>
                         </div>
                       ))}
                     </div>
                     <Button 
-                      className="w-full" 
+                      className="w-full h-12 text-base font-semibold" 
                       onClick={() => handleSelectPlan('grow')}
                       disabled={processingPlan !== null}
                     >
