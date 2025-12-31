@@ -122,7 +122,7 @@ const Home = () => {
           {/* TIER S: Display heading */}
           <h1 className="heading-display text-white text-balance max-w-4xl mx-auto mb-4 md:mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
             Encuentra tu hogar ideal
-            <span className="block text-accent">en minutos</span>
+            <span className="block text-white/90">en minutos</span>
           </h1>
           
           {/* Subtitle */}
@@ -132,14 +132,14 @@ const Home = () => {
           
           {/* TIER S: Elevated Search Card */}
           <div className="max-w-3xl mx-auto animate-scale-in" style={{ animationDelay: '300ms' }}>
-            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-4 md:p-6">
+            <div className="bg-white rounded-2xl shadow-xl p-4 md:p-5">
               {/* Listing Type Toggle */}
               <div className="flex justify-center gap-2 mb-4">
                 <Button 
                   type="button" 
                   variant={listingType === "venta" ? "default" : "outline"} 
                   onClick={() => setListingType("venta")}
-                  className="px-6"
+                  className={listingType !== "venta" ? "px-6 text-foreground border-border bg-white hover:bg-muted" : "px-6"}
                 >
                   Venta
                 </Button>
@@ -147,7 +147,7 @@ const Home = () => {
                   type="button" 
                   variant={listingType === "renta" ? "default" : "outline"} 
                   onClick={() => setListingType("renta")}
-                  className="px-6"
+                  className={listingType !== "renta" ? "px-6 text-foreground border-border bg-white hover:bg-muted" : "px-6"}
                 >
                   Renta
                 </Button>
@@ -416,8 +416,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <Footer />
 
       {/* Property Detail Sheet */}
       <PropertyDetailSheet propertyId={selectedPropertyId} open={sheetOpen} onClose={() => setSheetOpen(false)} />
