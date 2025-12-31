@@ -1,12 +1,11 @@
 /// <reference types="google.maps" />
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal, Briefcase, Store, Warehouse, Building, Tractor, Loader2 } from "lucide-react";
+import { Search, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal, Briefcase, Store, Warehouse, Building, Tractor, Sparkles, ChevronDown } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
-import { PlaceAutocomplete } from "@/components/PlaceAutocomplete";
 import { SearchBar } from "@/components/SearchBar";
 import { VirtualizedPropertyGrid } from '@/components/VirtualizedPropertyGrid';
 import { PropertyDetailSheet } from "@/components/PropertyDetailSheet";
@@ -16,45 +15,18 @@ import { NewsletterForm } from "@/components/NewsletterForm";
 import { SEOHead } from "@/components/SEOHead";
 import { generateWebsiteStructuredData, generateOrganizationStructuredData } from "@/utils/structuredData";
 import { usePropertiesInfinite } from "@/hooks/usePropertiesInfinite";
-import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
-import { LazyImage } from "@/components/LazyImage";
 import type { PropertySummary } from '@/types/property';
 import StatsCounter from '@/components/home/StatsCounter';
 import Testimonials from '@/components/home/Testimonials';
 import TrustedBy from '@/components/home/TrustedBy';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Footer } from "@/components/Footer";
+
 const Home = () => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [listingType, setListingType] = useState<"venta" | "renta">("venta");
   const [propertyType, setPropertyType] = useState<string>("all");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-
-  // Usar infinite scroll para propiedades destacadas y recientes
-  const {
-    data: featuredData,
-    fetchNextPage: fetchNextFeatured,
-    hasNextPage: hasNextFeatured,
-    isFetchingNextPage: isFetchingNextFeatured,
-    isLoading: isLoadingFeatured
-  } = usePropertiesInfinite({
-    status: ['activa']
-    // Filtrar solo featured en el futuro, por ahora mostramos activas
-  });
-  const {
-    data: recentData,
-    fetchNextPage: fetchNextRecent,
-    hasNextPage: hasNextRecent,
-    isFetchingNextPage: isFetchingNextRecent,
-    isLoading: isLoadingRecent
-  } = usePropertiesInfinite({
-    status: ['activa']
-  });
-  const featuredProperties = (featuredData?.pages.flatMap(page => page.properties) || []).filter(p => p.is_featured === true) as PropertySummary[];
-  const recentProperties = recentData?.pages.flatMap(page => page.properties) || [] as PropertySummary[];
-  const isLoadingProperties = isLoadingFeatured || isLoadingRecent;
-
-  // Estado para almacenar la ubicación seleccionada del autocomplete
   const [selectedLocation, setSelectedLocation] = useState<{
     address: string;
     municipality: string;
@@ -62,8 +34,6 @@ const Home = () => {
     lat?: number;
     lng?: number;
   } | null>(null);
-
-  // Advanced filters
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [bedrooms, setBedrooms] = useState("all");
@@ -72,25 +42,26 @@ const Home = () => {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const navigate = useNavigate();
+
+  const { data: featuredData, isLoading: isLoadingFeatured } = usePropertiesInfinite({ status: ['activa'] });
+  const { data: recentData, isLoading: isLoadingRecent } = usePropertiesInfinite({ status: ['activa'] });
+  
+  const featuredProperties = (featuredData?.pages.flatMap(page => page.properties) || []).filter(p => p.is_featured === true) as PropertySummary[];
+  const recentProperties = recentData?.pages.flatMap(page => page.properties) || [] as PropertySummary[];
+  const isLoadingProperties = isLoadingFeatured || isLoadingRecent;
+
   const handleSearch = () => {
     const params = new URLSearchParams();
     const hasLocation = selectedLocation?.state || selectedLocation?.municipality;
     const hasPropertyType = propertyType && propertyType !== 'all';
-    const hasAdvancedFilters = priceMin || priceMax || bedrooms && bedrooms !== 'all' || bathrooms && bathrooms !== 'all' || parking && parking !== 'all';
+    const hasAdvancedFilters = priceMin || priceMax || (bedrooms && bedrooms !== 'all') || (bathrooms && bathrooms !== 'all') || (parking && parking !== 'all');
     const hasAnyFilter = hasLocation || hasPropertyType || hasAdvancedFilters;
 
-    // Solo agregar listingType si hay filtros activos
-    if (hasAnyFilter) {
-      params.set('listingType', listingType);
-    }
+    if (hasAnyFilter) params.set('listingType', listingType);
     if (propertyType && propertyType !== 'all') params.set('tipo', propertyType);
-
-    // Usar la ubicación seleccionada del autocomplete si existe
     if (selectedLocation) {
       if (selectedLocation.state) params.set('estado', selectedLocation.state);
       if (selectedLocation.municipality) params.set('municipio', selectedLocation.municipality);
-
-      // Pasar coordenadas para centrar el mapa
       if (selectedLocation.lat && selectedLocation.lng) {
         params.set('lat', selectedLocation.lat.toString());
         params.set('lng', selectedLocation.lng.toString());
@@ -102,55 +73,90 @@ const Home = () => {
     if (bathrooms && bathrooms !== 'all') params.set('banos', bathrooms);
     if (parking && parking !== 'all') params.set('estacionamiento', parking);
 
-    // Navegar con o sin parámetros
     const queryString = params.toString();
     navigate(queryString ? `/buscar?${queryString}` : '/buscar');
   };
-  const handlePlaceSelect = (place: {
-    address: string;
-    municipality: string;
-    state: string;
-    lat?: number;
-    lng?: number;
-  }) => {
+
+  const handlePlaceSelect = (place: { address: string; municipality: string; state: string; lat?: number; lng?: number; }) => {
     setSelectedLocation(place);
   };
+
   const handlePropertyClick = (propertyId: string) => {
     setSelectedPropertyId(propertyId);
     setSheetOpen(true);
   };
-  return <div className="min-h-screen bg-background">
-      <SEOHead title="Kentra - Encuentra tu Propiedad Ideal en México | Casas, Departamentos y más" description="Plataforma inmobiliaria líder en México. Miles de propiedades en venta y renta: casas, departamentos, terrenos, oficinas. Contacta directamente con agentes certificados." canonical="/" structuredData={[generateWebsiteStructuredData(), generateOrganizationStructuredData()]} />
+
+  return (
+    <div className="min-h-screen bg-background">
+      <SEOHead 
+        title="Kentra - Encuentra tu Propiedad Ideal en México | Casas, Departamentos y más" 
+        description="Plataforma inmobiliaria líder en México. Miles de propiedades en venta y renta: casas, departamentos, terrenos, oficinas. Contacta directamente con agentes certificados." 
+        canonical="/" 
+        structuredData={[generateWebsiteStructuredData(), generateOrganizationStructuredData()]} 
+      />
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative flex min-h-[480px] md:min-h-[600px] items-center justify-center bg-cover bg-center py-8 md:py-0" style={{
-      backgroundImage: `url(${heroBackground})`
-    }}>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
-        <div className="container relative z-10 mx-auto px-4 text-center text-white">
-          <h1 className="mb-3 md:mb-4 text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold font-serif">Encuentra Tu Propiedad Ideal</h1>
-          <p className="mb-5 md:mb-8 text-base sm:text-lg md:text-xl lg:text-2xl text-white/90">
-            Miles de propiedades en México esperándote
-          </p>
+      {/* TIER S: Hero Section - Immersive Design */}
+      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
+        {/* Background mesh gradient */}
+        <div className="absolute inset-0 gradient-mesh-olive" />
+        
+        {/* Background image with refined overlay */}
+        <div className="absolute inset-0">
+          <img src={heroBackground} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-foreground/75 via-foreground/60 to-foreground/40" />
+        </div>
 
-          {/* Search Bar */}
-          <div className="mx-auto max-w-3xl px-1 sm:px-2">
-            <div className="flex flex-col gap-3 md:gap-4">
-              {/* Listing Type Selector */}
-              <div className="flex justify-center gap-2 md:gap-3">
-                <Button type="button" variant={listingType === "venta" ? "default" : "outline"} onClick={() => setListingType("venta")} className={`h-9 md:h-11 px-4 md:px-6 text-sm md:text-base ${listingType === "venta" ? "" : "bg-white/90 text-foreground hover:bg-white border-white/50"}`}>
+        {/* Subtle pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }} />
+
+        <div className="container relative z-10 text-center text-white px-4">
+          {/* Trust badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-sm font-medium mb-6 md:mb-8 animate-fade-in-up">
+            <Sparkles className="w-4 h-4 text-accent" />
+            Plataforma inmobiliaria #1 en México
+          </div>
+          
+          {/* TIER S: Display heading */}
+          <h1 className="heading-display text-white text-balance max-w-4xl mx-auto mb-4 md:mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+            Encuentra tu hogar ideal
+            <span className="block text-accent">en minutos</span>
+          </h1>
+          
+          {/* Subtitle */}
+          <p className="text-lg md:text-xl lg:text-2xl text-white/80 max-w-2xl mx-auto mb-8 md:mb-12 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+            Miles de propiedades verificadas en todo México. Compra, vende o renta con tecnología de vanguardia.
+          </p>
+          
+          {/* TIER S: Elevated Search Card */}
+          <div className="max-w-3xl mx-auto animate-scale-in" style={{ animationDelay: '300ms' }}>
+            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-4 md:p-6">
+              {/* Listing Type Toggle */}
+              <div className="flex justify-center gap-2 mb-4">
+                <Button 
+                  type="button" 
+                  variant={listingType === "venta" ? "default" : "outline"} 
+                  onClick={() => setListingType("venta")}
+                  className="px-6"
+                >
                   Venta
                 </Button>
-                <Button type="button" variant={listingType === "renta" ? "default" : "outline"} onClick={() => setListingType("renta")} className={`h-9 md:h-11 px-4 md:px-6 text-sm md:text-base ${listingType === "renta" ? "" : "bg-white/90 text-foreground hover:bg-white border-white/50"}`}>
+                <Button 
+                  type="button" 
+                  variant={listingType === "renta" ? "default" : "outline"} 
+                  onClick={() => setListingType("renta")}
+                  className="px-6"
+                >
                   Renta
                 </Button>
               </div>
 
-              {/* Property Type Selector */}
-              <div className="flex justify-center px-2">
+              {/* Property Type */}
+              <div className="flex justify-center mb-4">
                 <Select value={propertyType} onValueChange={setPropertyType}>
-                  <SelectTrigger className="w-full max-w-[200px] md:max-w-xs h-9 md:h-10 bg-white/95 text-foreground border-white/50 text-sm md:text-base">
+                  <SelectTrigger className="w-full max-w-xs bg-white text-foreground">
                     <SelectValue placeholder="Tipo de propiedad" />
                   </SelectTrigger>
                   <SelectContent>
@@ -170,105 +176,66 @@ const Home = () => {
               {/* Advanced Filters */}
               <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
                 <CollapsibleTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm" className="mx-auto text-white/80 hover:text-white hover:bg-white/10 h-8 md:h-10 px-3 md:px-4">
-                    <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5 md:h-4 md:w-4" />
-                    <span className="text-xs md:text-sm">Filtros</span>
+                  <Button type="button" variant="ghost" size="sm" className="mx-auto mb-4 text-muted-foreground">
+                    <SlidersHorizontal className="mr-1.5 h-4 w-4" />
+                    Más filtros
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-3 md:mt-4">
-                  <div className="bg-white/95 rounded-lg p-3 md:p-4 space-y-3 md:space-y-4 max-w-3xl mx-auto text-left">
-                    {/* Price Range */}
+                <CollapsibleContent className="mb-4">
+                  <div className="bg-muted/50 rounded-xl p-4 space-y-4 text-left">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="priceMin" className="text-sm font-medium text-foreground">
-                          Precio Mínimo
-                        </Label>
-                        <Input id="priceMin" type="number" placeholder="$0" value={priceMin} onChange={e => setPriceMin(e.target.value)} className="bg-white text-foreground" />
+                        <Label htmlFor="priceMin" className="text-sm font-medium">Precio Mínimo</Label>
+                        <Input id="priceMin" type="number" placeholder="$0" value={priceMin} onChange={e => setPriceMin(e.target.value)} />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="priceMax" className="text-sm font-medium text-foreground">
-                          Precio Máximo
-                        </Label>
-                        <Input id="priceMax" type="number" placeholder="Sin límite" value={priceMax} onChange={e => setPriceMax(e.target.value)} className="bg-white text-foreground" />
+                        <Label htmlFor="priceMax" className="text-sm font-medium">Precio Máximo</Label>
+                        <Input id="priceMax" type="number" placeholder="Sin límite" value={priceMax} onChange={e => setPriceMax(e.target.value)} />
                       </div>
                     </div>
-
-                    {/* Bedrooms, Bathrooms, Parking */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="bedrooms" className="text-sm font-medium text-foreground">
-                          Recámaras
-                        </Label>
-                        <Select value={bedrooms} onValueChange={setBedrooms}>
-                          <SelectTrigger id="bedrooms" className="bg-white text-foreground">
-                            <SelectValue placeholder="Cualquiera" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Cualquiera</SelectItem>
-                            <SelectItem value="1">1+</SelectItem>
-                            <SelectItem value="2">2+</SelectItem>
-                            <SelectItem value="3">3+</SelectItem>
-                            <SelectItem value="4">4+</SelectItem>
-                            <SelectItem value="5">5+</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="bathrooms" className="text-sm font-medium text-foreground">
-                          Baños
-                        </Label>
-                        <Select value={bathrooms} onValueChange={setBathrooms}>
-                          <SelectTrigger id="bathrooms" className="bg-white text-foreground">
-                            <SelectValue placeholder="Cualquiera" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Cualquiera</SelectItem>
-                            <SelectItem value="1">1+</SelectItem>
-                            <SelectItem value="2">2+</SelectItem>
-                            <SelectItem value="3">3+</SelectItem>
-                            <SelectItem value="4">4+</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="parking" className="text-sm font-medium text-foreground">
-                          Estacionamiento
-                        </Label>
-                        <Select value={parking} onValueChange={setParking}>
-                          <SelectTrigger id="parking" className="bg-white text-foreground">
-                            <SelectValue placeholder="Cualquiera" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Cualquiera</SelectItem>
-                            <SelectItem value="1">1+</SelectItem>
-                            <SelectItem value="2">2+</SelectItem>
-                            <SelectItem value="3">3+</SelectItem>
-                            <SelectItem value="4">4+</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Select value={bedrooms} onValueChange={setBedrooms}>
+                        <SelectTrigger><SelectValue placeholder="Recámaras" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Cualquiera</SelectItem>
+                          <SelectItem value="1">1+</SelectItem>
+                          <SelectItem value="2">2+</SelectItem>
+                          <SelectItem value="3">3+</SelectItem>
+                          <SelectItem value="4">4+</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={bathrooms} onValueChange={setBathrooms}>
+                        <SelectTrigger><SelectValue placeholder="Baños" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Cualquiera</SelectItem>
+                          <SelectItem value="1">1+</SelectItem>
+                          <SelectItem value="2">2+</SelectItem>
+                          <SelectItem value="3">3+</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={parking} onValueChange={setParking}>
+                        <SelectTrigger><SelectValue placeholder="Estacionamiento" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Cualquiera</SelectItem>
+                          <SelectItem value="1">1+</SelectItem>
+                          <SelectItem value="2">2+</SelectItem>
+                          <SelectItem value="3">3+</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-
-                    {/* Clear Filters Button */}
-                    {(priceMin || priceMax || bedrooms && bedrooms !== 'all' || bathrooms && bathrooms !== 'all' || parking && parking !== 'all') && <Button type="button" variant="outline" onClick={() => {
-                    setPriceMin("");
-                    setPriceMax("");
-                    setBedrooms("all");
-                    setBathrooms("all");
-                    setParking("all");
-                  }} className="w-full">
-                        Limpiar Filtros
-                      </Button>}
                   </div>
                 </CollapsibleContent>
               </Collapsible>
 
-              {/* Barra de búsqueda */}
-              <SearchBar onPlaceSelect={handlePlaceSelect} onSearch={handleSearch} placeholder="Ciudad, colonia o código postal" defaultValue={searchQuery} />
+              {/* Search Bar */}
+              <SearchBar onPlaceSelect={handlePlaceSelect} onSearch={handleSearch} placeholder="Ciudad, colonia o código postal" />
             </div>
           </div>
+        </div>
+        
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-float">
+          <ChevronDown className="w-6 h-6 text-white/50" />
         </div>
       </section>
 
@@ -278,162 +245,156 @@ const Home = () => {
       {/* Stats Counter */}
       <StatsCounter />
 
-      {/* Featured Properties */}
-      {featuredProperties.length > 0 && <section className="py-16 bg-background">
+      {/* TIER S: Featured Properties */}
+      {featuredProperties.length > 0 && (
+        <section className="section-padding bg-background">
           <div className="container mx-auto px-4">
-            <div className="mb-8 flex items-center justify-between">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="decorative-line" />
+              <span className="section-badge">Destacadas</span>
+            </div>
+            <div className="flex items-end justify-between mb-10">
               <div>
-                <h2 className="text-2xl md:text-3xl font-bold font-serif">Propiedades Destacadas</h2>
-                <p className="mt-2 text-muted-foreground">
-                  Las mejores propiedades seleccionadas para ti
+                <h2 className="heading-section">Propiedades Destacadas</h2>
+                <p className="mt-3 text-lg text-muted-foreground max-w-xl">
+                  Selección curada de las mejores propiedades del mercado
                 </p>
               </div>
-              <Button variant="outline" onClick={() => navigate("/buscar")} className="hidden md:flex items-center gap-2">
+              <Button variant="outline" onClick={() => navigate("/buscar")} className="hidden md:flex group">
                 Ver Todas
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </div>
 
-            {isLoadingProperties ? <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {[...Array(6)].map((_, i) => <div key={i} className="space-y-3">
-                    <Skeleton className="aspect-[4/3] w-full rounded-lg" />
+            {isLoadingProperties ? (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="space-y-3">
+                    <Skeleton className="aspect-[4/3] w-full rounded-2xl" />
                     <Skeleton className="h-6 w-3/4" />
                     <Skeleton className="h-8 w-1/2" />
-                    <Skeleton className="h-4 w-full" />
-                  </div>)}
-              </div> : <>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
                 <VirtualizedPropertyGrid properties={featuredProperties.slice(0, 6)} onPropertyClick={handlePropertyClick} />
-                <div className="mt-8 text-center">
+                <div className="mt-10 text-center md:hidden">
                   <Button variant="outline" size="lg" onClick={() => navigate("/buscar")}>
                     Ver Todas las Propiedades <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
-              </>}
+              </>
+            )}
           </div>
-        </section>}
+        </section>
+      )}
 
-      {/* Recent Properties */}
-      <section className="py-16 bg-muted">
+      {/* TIER S: Recent Properties */}
+      <section className="section-padding bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="decorative-line" />
+            <span className="section-badge">Recientes</span>
+          </div>
+          <div className="flex items-end justify-between mb-10">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold font-serif">Propiedades Recientes</h2>
-              <p className="mt-2 text-muted-foreground">
+              <h2 className="heading-section">Propiedades Recientes</h2>
+              <p className="mt-3 text-lg text-muted-foreground max-w-xl">
                 Últimas propiedades agregadas a la plataforma
               </p>
             </div>
-            <Button variant="outline" onClick={() => navigate("/buscar")} className="hidden md:flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate("/buscar")} className="hidden md:flex group">
               Ver Todas
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </div>
 
-          {isLoadingProperties ? <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {[...Array(8)].map((_, i) => <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-[4/3] w-full rounded-lg" />
+          {isLoadingProperties ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton className="aspect-[4/3] w-full rounded-2xl" />
                   <Skeleton className="h-6 w-3/4" />
                   <Skeleton className="h-8 w-1/2" />
-                  <Skeleton className="h-4 w-full" />
-                </div>)}
-            </div> : recentProperties.length > 0 ? <>
+                </div>
+              ))}
+            </div>
+          ) : recentProperties.length > 0 ? (
+            <>
               <VirtualizedPropertyGrid properties={recentProperties.slice(0, 8)} onPropertyClick={handlePropertyClick} />
-              <div className="mt-8 text-center">
+              <div className="mt-10 text-center md:hidden">
                 <Button variant="outline" onClick={() => navigate("/buscar")}>
                   Ver Todas <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
-            </> : <div className="py-12 text-center">
-              <p className="text-muted-foreground">
-                No hay propiedades recientes disponibles
-              </p>
-            </div>}
+            </>
+          ) : (
+            <div className="py-12 text-center">
+              <p className="text-muted-foreground">No hay propiedades recientes disponibles</p>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Property Types */}
-      <section className="py-16 bg-background">
+      {/* TIER S: Property Types */}
+      <section className="section-padding bg-background">
         <div className="container mx-auto px-4">
-          <h2 className="mb-6 md:mb-8 text-center text-2xl md:text-3xl font-bold font-serif">
-            Explora por Tipo de Propiedad
-          </h2>
+          <div className="text-center mb-10">
+            <div className="flex justify-center mb-3">
+              <div className="decorative-line" />
+            </div>
+            <h2 className="heading-section">Explora por Tipo de Propiedad</h2>
+          </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=casa`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
-              <HomeIcon className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-base md:text-xl font-semibold">Casas</h3>
-              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
-                Encuentra tu casa perfecta
-              </p>
-            </button>
-
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=departamento`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Building2 className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-base md:text-xl font-semibold">Departamentos</h3>
-              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
-                Vida urbana moderna
-              </p>
-            </button>
-
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=terreno`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
-              <TreePine className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-base md:text-xl font-semibold">Terrenos</h3>
-              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
-                Construye tu proyecto
-              </p>
-            </button>
-
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=oficina`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Briefcase className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-base md:text-xl font-semibold">Oficinas</h3>
-              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
-                Espacios profesionales
-              </p>
-            </button>
-
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=local`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Store className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-base md:text-xl font-semibold">Locales</h3>
-              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
-                Comercios y negocios
-              </p>
-            </button>
-
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=bodega`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Warehouse className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-base md:text-xl font-semibold">Bodegas</h3>
-              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
-                Almacenamiento e industria
-              </p>
-            </button>
-
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=edificio`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Building className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-base md:text-xl font-semibold">Edificios</h3>
-              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
-                Inversión comercial
-              </p>
-            </button>
-
-            <button onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=rancho`)} className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-8 transition-all hover:border-primary hover:shadow-lg">
-              <Tractor className="mb-3 md:mb-4 h-10 w-10 md:h-16 md:w-16 text-primary transition-transform group-hover:scale-110" />
-              <h3 className="text-base md:text-xl font-semibold">Ranchos</h3>
-              <p className="mt-1 md:mt-2 text-xs md:text-sm text-muted-foreground text-center">
-                Vida campestre
-              </p>
-            </button>
+            {[
+              { icon: HomeIcon, label: "Casas", desc: "Encuentra tu casa perfecta", type: "casa" },
+              { icon: Building2, label: "Departamentos", desc: "Vida urbana moderna", type: "departamento" },
+              { icon: TreePine, label: "Terrenos", desc: "Construye tu proyecto", type: "terreno" },
+              { icon: Briefcase, label: "Oficinas", desc: "Espacios profesionales", type: "oficina" },
+              { icon: Store, label: "Locales", desc: "Comercios y negocios", type: "local" },
+              { icon: Warehouse, label: "Bodegas", desc: "Almacenamiento e industria", type: "bodega" },
+              { icon: Building, label: "Edificios", desc: "Inversión comercial", type: "edificio" },
+              { icon: Tractor, label: "Ranchos", desc: "Vida campestre", type: "rancho" },
+            ].map((item) => (
+              <button 
+                key={item.type}
+                onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=${item.type}`)} 
+                className="group flex flex-col items-center rounded-2xl border border-border bg-background p-5 md:p-8 transition-all duration-300 hover:border-primary hover:shadow-xl hover:-translate-y-2"
+              >
+                <div className="mb-4 p-4 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <item.icon className="h-8 w-8 md:h-10 md:w-10 text-primary transition-transform duration-300 group-hover:scale-110" />
+                </div>
+                <h3 className="text-base md:text-lg font-semibold">{item.label}</h3>
+                <p className="mt-1 text-xs md:text-sm text-muted-foreground text-center">{item.desc}</p>
+              </button>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-muted py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="mb-4 text-3xl font-bold font-serif">¿Tienes una Propiedad?</h2>
-          <p className="mb-8 text-xl text-muted-foreground">
-            Publica tu propiedad y llega a miles de compradores potenciales
+      {/* TIER S: CTA Section */}
+      <section className="relative section-padding overflow-hidden">
+        <div className="absolute inset-0 gradient-hero-olive" />
+        <div className="absolute inset-0 opacity-10" style={{ 
+          backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+          backgroundSize: '24px 24px'
+        }} />
+        
+        <div className="container relative z-10 text-center text-white mx-auto px-4">
+          <h2 className="heading-section text-white mb-4">¿Listo para vender tu propiedad?</h2>
+          <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-10">
+            Únete a miles de agentes que ya confían en Kentra para conectar con compradores calificados
           </p>
-          <Button size="lg" onClick={() => navigate("/publicar")} className="bg-secondary hover:bg-secondary/90">
-            Publicar Gratis
-          </Button>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button size="lg" onClick={() => navigate("/publicar")} className="bg-white text-primary hover:bg-white/90 px-8">
+              Publicar Gratis
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => navigate("/pricing-agente")} className="border-white/30 text-white hover:bg-white/10 px-8">
+              Ver Planes
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -441,14 +402,12 @@ const Home = () => {
       <Testimonials />
 
       {/* Newsletter Section */}
-      <section className="bg-primary/5 py-16">
+      <section className="section-padding bg-primary/5">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="mb-4 text-3xl font-bold font-serif">
-              Suscríbete a Nuestro Newsletter
-            </h2>
+            <h2 className="heading-section mb-4">Suscríbete a Nuestro Newsletter</h2>
             <p className="mb-8 text-lg text-muted-foreground">
-              Recibe las últimas novedades del mercado inmobiliario, consejos y propiedades destacadas directamente en tu email
+              Recibe las últimas novedades del mercado inmobiliario, consejos y propiedades destacadas
             </p>
             <div className="flex justify-center">
               <NewsletterForm />
@@ -457,8 +416,13 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Footer */}
+      <Footer />
+
       {/* Property Detail Sheet */}
       <PropertyDetailSheet propertyId={selectedPropertyId} open={sheetOpen} onClose={() => setSheetOpen(false)} />
-    </div>;
+    </div>
+  );
 };
+
 export default Home;

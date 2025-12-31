@@ -2,52 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ═══════════════════════════════════════════════════════════
+   TIER S DESIGN SYSTEM - KENTRA
+   Paleta Oliva/Terracota Refinada con mejor contraste
+   ═══════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    --background: 40 25% 98%;
-    --foreground: 66 20% 20%;
+    /* Paleta Oliva/Terracota REFINADA - Mayor contraste */
+    --background: 40 30% 99%;
+    --foreground: 60 15% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 66 20% 20%;
+    --card-foreground: 60 15% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 66 20% 20%;
+    --popover-foreground: 60 15% 12%;
 
-    --primary: 66 17% 31%;
-    --primary-foreground: 40 25% 98%;
+    /* Oliva más profundo para mejor contraste */
+    --primary: 66 22% 26%;
+    --primary-foreground: 40 30% 98%;
+    
+    /* Terracota más vibrante */
+    --secondary: 32 38% 35%;
+    --secondary-foreground: 40 30% 98%;
 
-    --secondary: 45 22% 40%;
-    --secondary-foreground: 40 25% 98%;
+    --muted: 40 20% 94%;
+    --muted-foreground: 60 12% 38%;
 
-    --muted: 40 15% 92%;
-    --muted-foreground: 66 12% 45%;
-
-    --accent: 80 25% 45%;
-    --accent-foreground: 40 25% 98%;
+    /* Verde oliva más saturado */
+    --accent: 80 32% 40%;
+    --accent-foreground: 40 30% 98%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 20% 88%;
-    --input: 40 20% 88%;
-    --ring: 66 17% 31%;
+    --border: 40 18% 86%;
+    --input: 40 18% 86%;
+    --ring: 66 22% 26%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 40 25% 96%;
-    --sidebar-foreground: 66 20% 20%;
-    --sidebar-primary: 66 17% 31%;
-    --sidebar-primary-foreground: 40 25% 98%;
-    --sidebar-accent: 40 15% 92%;
-    --sidebar-accent-foreground: 66 20% 20%;
-    --sidebar-border: 40 20% 88%;
-    --sidebar-ring: 66 17% 31%;
-  }
+    /* Sidebar variables */
+    --sidebar-background: 40 25% 97%;
+    --sidebar-foreground: 60 15% 12%;
+    --sidebar-primary: 66 22% 26%;
+    --sidebar-primary-foreground: 40 30% 98%;
+    --sidebar-accent: 40 20% 94%;
+    --sidebar-accent-foreground: 60 15% 12%;
+    --sidebar-border: 40 18% 86%;
+    --sidebar-ring: 66 22% 26%;
 
+    /* TIER S: Variables adicionales para gradientes y efectos */
+    --primary-glow: 66 30% 45%;
+    --surface-elevated: 0 0% 100%;
+    --surface-sunken: 40 25% 96%;
+  }
 }
 
 @layer base {
@@ -56,13 +66,202 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 
   h1, h2, .font-display {
     font-family: 'Playfair Display', Georgia, serif;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   TIER S: TIPOGRAFÍA PREMIUM
+   ═══════════════════════════════════════════════════════════ */
+
+@layer components {
+  .heading-display {
+    @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight font-serif;
+    letter-spacing: -0.025em;
+  }
+
+  .heading-section {
+    @apply text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight font-serif;
+    letter-spacing: -0.02em;
+  }
+
+  .heading-subsection {
+    @apply text-xl md:text-2xl font-semibold tracking-tight;
+    letter-spacing: -0.01em;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TIER S: EFECTOS VISUALES PREMIUM
+   ═══════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Glassmorphism */
+  .glass-morphism {
+    @apply bg-background/80 backdrop-blur-xl border-b border-border/50;
+  }
+
+  /* Hover elevation */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out;
+  }
+  .hover-lift:hover {
+    @apply -translate-y-1 shadow-xl;
+  }
+
+  /* Decorative line */
+  .decorative-line {
+    @apply h-1 w-12 rounded-full;
+    background: linear-gradient(90deg, hsl(66 22% 26%), hsl(80 32% 40%));
+  }
+
+  /* Section badge */
+  .section-badge {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider;
+    background: hsl(66 22% 26% / 0.1);
+    color: hsl(66 22% 26%);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TIER S: GRADIENTES OLIVA REFINADOS
+   ═══════════════════════════════════════════════════════════ */
+
+@layer components {
+  .gradient-hero-olive {
+    background: linear-gradient(135deg, 
+      hsl(66 22% 26%) 0%, 
+      hsl(80 28% 32%) 50%,
+      hsl(32 38% 35%) 100%);
+  }
+
+  .gradient-mesh-olive {
+    background: 
+      radial-gradient(at 20% 30%, hsl(66 22% 26% / 0.12) 0px, transparent 50%),
+      radial-gradient(at 80% 20%, hsl(80 32% 40% / 0.08) 0px, transparent 50%),
+      radial-gradient(at 40% 80%, hsl(32 38% 35% / 0.06) 0px, transparent 50%);
+  }
+
+  .gradient-card {
+    background: linear-gradient(180deg, 
+      hsl(var(--card)) 0%, 
+      hsl(40 25% 98%) 100%);
+  }
+
+  .gradient-subtle {
+    background: linear-gradient(180deg,
+      hsl(var(--background)) 0%,
+      hsl(40 25% 97%) 100%);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TIER S: SPACING Y LAYOUT
+   ═══════════════════════════════════════════════════════════ */
+
+@layer components {
+  .section-padding {
+    @apply py-16 md:py-20 lg:py-24;
+  }
+
+  .section-padding-lg {
+    @apply py-20 md:py-28 lg:py-32;
+  }
+
+  .container-content {
+    @apply max-w-3xl mx-auto;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TIER S: ANIMACIONES
+   ═══════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out forwards;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.4s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.5s ease-out forwards;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite linear;
+  }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EXISTING MOBILE & UTILITY STYLES
+   ═══════════════════════════════════════════════════════════ */
 
 /* Safe area para notch de iPhone */
 .pb-safe {
