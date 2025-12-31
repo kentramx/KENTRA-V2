@@ -1621,88 +1621,105 @@ const getCurrentPriceRangeLabel = (precioMin: string, precioMax: string, listing
               </div>
             )}
 
-            {/* Estado de carga inicial - Tier S Skeletons */}
+            {/* Estado de carga inicial - Tier S Skeletons with PropertyCardSkeleton */}
             {!searchError && !isWaitingForViewport && loading && properties.length === 0 && (
-              <div className="p-4 md:p-6 space-y-4">
+              <div className="p-4 md:p-6 space-y-6">
                 {/* Header skeleton */}
-                <div className="flex items-center justify-between mb-2">
-                  <Skeleton className="h-5 w-32 skeleton-shimmer" />
-                  <Skeleton className="h-5 w-20 skeleton-shimmer" />
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-6 w-40 skeleton-shimmer" />
+                  <Skeleton className="h-6 w-24 skeleton-shimmer" />
                 </div>
-                {/* Property card skeletons */}
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="flex gap-4 p-4 rounded-xl border border-border/50 bg-card animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
-                    <Skeleton className="h-28 w-36 rounded-xl flex-shrink-0 skeleton-shimmer" />
-                    <div className="flex-1 space-y-3">
-                      <Skeleton className="h-6 w-3/4 skeleton-shimmer" />
-                      <Skeleton className="h-4 w-1/2 skeleton-shimmer" />
-                      <div className="flex gap-4">
-                        <Skeleton className="h-4 w-12 skeleton-shimmer" />
-                        <Skeleton className="h-4 w-12 skeleton-shimmer" />
-                        <Skeleton className="h-4 w-16 skeleton-shimmer" />
+                {/* TIER S Property card skeletons - vertical cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-fade-in">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="rounded-2xl border border-border/50 bg-card overflow-hidden animate-fade-in" style={{ animationDelay: `${i * 75}ms` }}>
+                      {/* Image skeleton */}
+                      <div className="aspect-[4/3] relative">
+                        <Skeleton className="h-full w-full skeleton-shimmer" />
+                        <div className="absolute top-3 left-3 flex gap-2">
+                          <Skeleton className="h-6 w-16 rounded-full skeleton-shimmer" />
+                        </div>
+                        <Skeleton className="absolute right-3 bottom-3 h-6 w-14 rounded-full skeleton-shimmer" />
                       </div>
-                      <Skeleton className="h-8 w-28 skeleton-shimmer" />
+                      {/* Content skeleton */}
+                      <div className="p-4 space-y-3">
+                        <Skeleton className="h-7 w-2/3 skeleton-shimmer" />
+                        <div className="flex items-center gap-4">
+                          <Skeleton className="h-4 w-12 skeleton-shimmer" />
+                          <Skeleton className="h-4 w-12 skeleton-shimmer" />
+                          <Skeleton className="h-4 w-16 skeleton-shimmer" />
+                        </div>
+                        <Skeleton className="h-5 w-full skeleton-shimmer" />
+                        <Skeleton className="h-4 w-1/2 skeleton-shimmer" />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
 
-            {/* Estado vacío - distinguir entre modo cluster y sin resultados reales */}
+            {/* Estado vacío - distinguir entre modo cluster y sin resultados reales - TIER S Empty States */}
             {!searchError && !isWaitingForViewport && !loading && !isFetching && !isViewportPending && listProperties.length === 0 && (
-              <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center min-h-[400px]">
-                <div className="rounded-full bg-muted p-6">
-                  {totalCount > 0 ? (
-                    <MapPin className="h-12 w-12 text-muted-foreground" />
-                  ) : (
-                    <Search className="h-12 w-12 text-muted-foreground" />
-                  )}
+              <div className="flex flex-col items-center justify-center p-8 md:p-12 space-y-6 text-center min-h-[450px]">
+                {/* Animated icon container */}
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping opacity-20" />
+                  <div className="relative rounded-full bg-gradient-to-br from-primary/20 to-primary/5 p-8">
+                    {totalCount > 0 ? (
+                      <MapPin className="h-14 w-14 text-primary" />
+                    ) : (
+                      <Search className="h-14 w-14 text-muted-foreground" />
+                    )}
+                  </div>
                 </div>
                 
                 {totalCount > 0 ? (
-                  // ✅ MODO CLUSTER: Hay propiedades pero zoom muy bajo
-                  <>
-                    <div className="space-y-3">
-                      <h3 className="text-xl font-semibold">
-                        {totalCount.toLocaleString()} propiedades en esta zona
+                  // ✅ MODO CLUSTER: Hay propiedades pero zoom muy bajo - TIER S
+                  <div className="space-y-4 max-w-sm">
+                    <div className="space-y-2">
+                      <h3 className="text-2xl md:text-3xl font-bold">
+                        <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                          {totalCount.toLocaleString()}
+                        </span>
+                        {' '}propiedades
                       </h3>
-                      <p className="text-muted-foreground max-w-md">
-                        Acerca el mapa o selecciona una ubicación más específica para ver propiedades individuales.
+                      <p className="text-muted-foreground">
+                        Acerca el mapa para ver propiedades individuales en esta zona.
                       </p>
                     </div>
                     {/* Botón para ir al mapa en móvil */}
-                    <Button onClick={() => setMobileView('map')} className="lg:hidden group">
-                      <MapIcon className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-                      Ver mapa
+                    <Button onClick={() => setMobileView('map')} size="lg" className="lg:hidden group h-12 px-8">
+                      <MapIcon className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
+                      Explorar en el mapa
                     </Button>
-                  </>
+                  </div>
                 ) : (
-                  // ❌ SIN RESULTADOS: Empty state elegante
-                  <>
-                    <div className="space-y-3">
-                      <h3 className="text-xl font-semibold">No encontramos propiedades</h3>
-                      <p className="text-muted-foreground max-w-md">
-                        Ajusta tus filtros o explora otras zonas para descubrir más opciones.
+                  // ❌ SIN RESULTADOS: Empty state elegante - TIER S
+                  <div className="space-y-6 max-w-sm">
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-bold">Sin resultados</h3>
+                      <p className="text-muted-foreground">
+                        No encontramos propiedades con estos criterios. Prueba ajustando los filtros.
                       </p>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <Button
                         onClick={() => {
                           setFilters(DEFAULT_FILTERS);
                           setSearchCoordinates(null);
                         }}
-                        variant="default"
-                        className="group"
+                        size="lg"
+                        className="group h-12"
                       >
-                        <Search className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+                        <Search className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
                         Limpiar filtros
                       </Button>
-                      <Button onClick={() => setMobileView('map')} variant="outline" className="lg:hidden group">
-                        <MapIcon className="h-4 w-4 mr-2" />
-                        Explorar mapa
+                      <Button onClick={() => setMobileView('map')} variant="outline" size="lg" className="lg:hidden h-12">
+                        <MapIcon className="h-5 w-5 mr-2" />
+                        Ver mapa
                       </Button>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             )}

@@ -415,12 +415,21 @@ const DirectorioAgentes = () => {
         )}
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="space-y-3">
-                <Skeleton className="h-48 w-full rounded-lg" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 stagger-fade-in">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border/50 bg-card overflow-hidden animate-fade-in" style={{ animationDelay: `${i * 75}ms` }}>
+                {/* Avatar skeleton */}
+                <div className="p-6 flex flex-col items-center">
+                  <Skeleton className="h-24 w-24 rounded-full skeleton-shimmer mb-4" />
+                  <Skeleton className="h-6 w-32 skeleton-shimmer mb-2" />
+                  <Skeleton className="h-4 w-24 skeleton-shimmer mb-4" />
+                  <div className="flex gap-2 mb-4">
+                    <Skeleton className="h-6 w-16 rounded-full skeleton-shimmer" />
+                    <Skeleton className="h-6 w-20 rounded-full skeleton-shimmer" />
+                  </div>
+                  <Skeleton className="h-4 w-28 skeleton-shimmer mb-2" />
+                  <Skeleton className="h-10 w-full skeleton-shimmer rounded-lg mt-4" />
+                </div>
               </div>
             ))}
           </div>
@@ -459,7 +468,7 @@ const DirectorioAgentes = () => {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8 stagger-fade-in">
               {paginatedAgents.map((agent) => (
                 <AgentCard key={agent.id} {...agent} />
               ))}

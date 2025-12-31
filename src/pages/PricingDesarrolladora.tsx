@@ -166,19 +166,19 @@ const PricingDesarrolladora = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      {/* Hero Section - TIER S */}
-      <section className="container mx-auto px-4 py-20 md:py-28 text-center">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6" style={{ letterSpacing: '-0.025em' }}>Planes para Desarrolladoras</h1>
-        <p className="text-muted-foreground text-xl md:text-2xl max-w-3xl mx-auto mb-10">
-          Promociona tus proyectos, genera leads calificados y posiciona tu marca con Kentra.
+      {/* Hero Section - TIER S - Compact to show plans above fold */}
+      <section className="container mx-auto px-4 py-12 md:py-16 text-center">
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-4" style={{ letterSpacing: '-0.025em' }}>Planes para Desarrolladoras</h1>
+        <p className="text-muted-foreground text-lg md:text-xl max-w-3xl mx-auto mb-6">
+          Promociona tus proyectos, genera leads calificados y posiciona tu marca.
         </p>
-        <Button size="lg" onClick={scrollToPlans} className="h-14 px-8 text-lg">
-          Comenzar ahora
+        <Button size="lg" onClick={scrollToPlans} className="h-12 px-6">
+          Ver planes
         </Button>
       </section>
 
-      {/* Intro Section */}
-      <section className="container mx-auto px-4 py-16">
+      {/* Intro Section - Compact */}
+      <section className="container mx-auto px-4 py-10">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-8">
             Visibilidad profesional para tus proyectos inmobiliarios.
@@ -211,8 +211,8 @@ const PricingDesarrolladora = () => {
         </div>
       </section>
 
-      {/* Plans Section - TIER S */}
-      <section id="planes" className="container mx-auto px-4 py-20 scroll-mt-20">
+      {/* Plans Section - TIER S - More visible above fold */}
+      <section id="planes" className="container mx-auto px-4 py-12 scroll-mt-20">
         <div className="max-w-6xl mx-auto">
           <div className="max-w-md mx-auto mb-10">
             <CouponInput 

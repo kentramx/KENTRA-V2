@@ -113,28 +113,28 @@ const Home = () => {
         }} />
 
         <div className="container relative z-10 text-center text-white px-4 pt-24 md:pt-32">
-          {/* Trust badge */}
-          <div className="opacity-0 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-sm font-medium mb-8 md:mb-10 animate-fade-in-up">
-            <Sparkles className="w-4 h-4" />
+          {/* Trust badge - VISIBLE */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-sm font-medium mb-8 md:mb-10 animate-fade-in-up shadow-lg">
+            <Sparkles className="w-4 h-4 text-amber-300" />
             Plataforma inmobiliaria #1 en México
           </div>
           
-          {/* TIER S: Display heading - STRIPE STYLE */}
+          {/* TIER S: Display heading - STRIPE STYLE - VISIBLE IMMEDIATELY */}
           <h1 
-            className="opacity-0 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white text-balance max-w-4xl mx-auto mb-5 md:mb-6 animate-fade-in-up drop-shadow-lg" 
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white text-balance max-w-4xl mx-auto mb-5 md:mb-6 animate-fade-in-up drop-shadow-lg" 
             style={{ animationDelay: '100ms', letterSpacing: '-0.025em' }}
           >
             Tu próximo hogar,
             <span className="block bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">a un clic</span>
           </h1>
           
-          {/* Subtitle - More visible */}
-          <p className="opacity-0 text-lg md:text-xl lg:text-2xl text-white/80 max-w-2xl mx-auto mb-10 md:mb-14 animate-fade-in-up font-medium" style={{ animationDelay: '200ms' }}>
+          {/* Subtitle - More visible - NO OPACITY-0 */}
+          <p className="text-lg md:text-xl lg:text-2xl text-white/90 max-w-2xl mx-auto mb-10 md:mb-14 animate-fade-in-up font-medium" style={{ animationDelay: '200ms' }}>
             Miles de propiedades verificadas en todo México. Compra, vende o renta con confianza.
           </p>
           
-          {/* TIER S: Glass Search Card - MUCH MORE VISIBLE */}
-          <div className="opacity-0 max-w-3xl mx-auto mb-20 md:mb-28 animate-scale-in" style={{ animationDelay: '300ms' }}>
+          {/* TIER S: Glass Search Card - MUCH MORE VISIBLE - NO OPACITY-0 */}
+          <div className="max-w-3xl mx-auto mb-20 md:mb-28 animate-scale-in" style={{ animationDelay: '300ms' }}>
             <div className="bg-white/30 backdrop-blur-xl rounded-3xl shadow-2xl shadow-black/30 border-2 border-white/40 p-6 md:p-8">
               {/* Listing Type Toggle - TIER S prominent */}
               <div className="inline-flex p-2 bg-black/40 rounded-2xl mb-6 backdrop-blur-sm">

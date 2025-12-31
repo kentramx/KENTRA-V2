@@ -218,15 +218,44 @@
 }
 
 @keyframes fade-in-up {
-  0% {
+  from {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(20px);
   }
-  100% {
+  to {
     opacity: 1;
     transform: translateY(0);
   }
 }
+
+/* TIER S: Skeleton shimmer animation */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted-foreground) / 0.1) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+/* TIER S: Stagger animation delays */
+.stagger-fade-in > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-fade-in > *:nth-child(2) { animation-delay: 75ms; }
+.stagger-fade-in > *:nth-child(3) { animation-delay: 150ms; }
+.stagger-fade-in > *:nth-child(4) { animation-delay: 225ms; }
+.stagger-fade-in > *:nth-child(5) { animation-delay: 300ms; }
+.stagger-fade-in > *:nth-child(6) { animation-delay: 375ms; }
 
 @keyframes fade-in {
   0% { opacity: 0; }

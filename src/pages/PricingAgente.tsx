@@ -250,15 +250,15 @@ const PricingAgente = () => {
       />
       <Navbar />
       
-      <div className="container mx-auto px-4 py-20 md:py-28">
-        {/* Hero Section - TIER S */}
-        <div className="max-w-4xl mx-auto text-center mb-20">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6" style={{ letterSpacing: '-0.025em' }}>Planes para Agentes</h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-            Publica tus propiedades, recibe leads directos y haz crecer tu negocio inmobiliario.
+      <div className="container mx-auto px-4 py-12 md:py-16">
+        {/* Hero Section - TIER S - Compact to show plans above fold */}
+        <div className="max-w-4xl mx-auto text-center mb-12 md:mb-16">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-4" style={{ letterSpacing: '-0.025em' }}>Planes para Agentes</h1>
+          <p className="text-lg md:text-xl text-muted-foreground mb-6 max-w-2xl mx-auto">
+            Publica tus propiedades, recibe leads directos y haz crecer tu negocio.
           </p>
-          <Button size="lg" onClick={scrollToPlans} className="group h-14 px-8 text-lg">
-            Comenzar ahora
+          <Button size="lg" onClick={scrollToPlans} className="group h-12 px-6">
+            Ver planes
             <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Button>
         </div>
@@ -301,9 +301,9 @@ const PricingAgente = () => {
           </Card>
         </div>
 
-        {/* Plans Section - TIER S */}
-        <div id="planes" className="max-w-7xl mx-auto mb-24 scroll-mt-20">
-          <div className="text-center mb-14">
+        {/* Plans Section - TIER S - VISIBLE ABOVE FOLD */}
+        <div id="planes" className="max-w-7xl mx-auto mb-16 scroll-mt-20">
+          <div className="text-center mb-10">
             <h2 className="text-3xl md:text-4xl font-bold mb-6" style={{ letterSpacing: '-0.02em' }}>Elige tu plan</h2>
             
             <div className="max-w-md mx-auto mb-6">
