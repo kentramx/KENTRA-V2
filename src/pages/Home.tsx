@@ -97,7 +97,7 @@ const Home = () => {
       <Navbar />
 
       {/* TIER S: Hero Section - Immersive Design */}
-      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
         {/* Background mesh gradient */}
         <div className="absolute inset-0 gradient-mesh-olive" />
         
@@ -112,7 +112,7 @@ const Home = () => {
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }} />
 
-        <div className="container relative z-10 text-center text-white px-4">
+        <div className="container relative z-10 text-center text-white px-4 pt-20 md:pt-24">
           {/* Trust badge */}
           <div className="opacity-0 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-sm font-medium mb-6 md:mb-8 animate-fade-in-up">
             <Sparkles className="w-4 h-4" />
@@ -131,7 +131,7 @@ const Home = () => {
           </p>
           
           {/* TIER S: Glass Search Card */}
-          <div className="opacity-0 max-w-3xl mx-auto animate-scale-in" style={{ animationDelay: '300ms' }}>
+          <div className="opacity-0 max-w-3xl mx-auto mb-12 md:mb-16 animate-scale-in" style={{ animationDelay: '300ms' }}>
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 p-5 md:p-6">
               {/* Listing Type Toggle */}
               <div className="inline-flex p-1 bg-white/10 rounded-lg mb-5">
@@ -185,17 +185,17 @@ const Home = () => {
                   <div className="bg-white/10 rounded-xl p-4 space-y-4 text-left">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="priceMin" className="text-sm font-medium">Precio Mínimo</Label>
-                        <Input id="priceMin" type="number" placeholder="$0" value={priceMin} onChange={e => setPriceMin(e.target.value)} />
+                        <Label htmlFor="priceMin" className="text-sm font-medium text-white/80">Precio Mínimo</Label>
+                        <Input id="priceMin" type="number" placeholder="$0" value={priceMin} onChange={e => setPriceMin(e.target.value)} className="bg-white/15 border-white/20 text-white placeholder:text-white/60" />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="priceMax" className="text-sm font-medium">Precio Máximo</Label>
-                        <Input id="priceMax" type="number" placeholder="Sin límite" value={priceMax} onChange={e => setPriceMax(e.target.value)} />
+                        <Label htmlFor="priceMax" className="text-sm font-medium text-white/80">Precio Máximo</Label>
+                        <Input id="priceMax" type="number" placeholder="Sin límite" value={priceMax} onChange={e => setPriceMax(e.target.value)} className="bg-white/15 border-white/20 text-white placeholder:text-white/60" />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <Select value={bedrooms} onValueChange={setBedrooms}>
-                        <SelectTrigger><SelectValue placeholder="Recámaras" /></SelectTrigger>
+                        <SelectTrigger className="bg-white/15 border-white/20 text-white"><SelectValue placeholder="Recámaras" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Cualquiera</SelectItem>
                           <SelectItem value="1">1+</SelectItem>
@@ -205,7 +205,7 @@ const Home = () => {
                         </SelectContent>
                       </Select>
                       <Select value={bathrooms} onValueChange={setBathrooms}>
-                        <SelectTrigger><SelectValue placeholder="Baños" /></SelectTrigger>
+                        <SelectTrigger className="bg-white/15 border-white/20 text-white"><SelectValue placeholder="Baños" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Cualquiera</SelectItem>
                           <SelectItem value="1">1+</SelectItem>
@@ -214,7 +214,7 @@ const Home = () => {
                         </SelectContent>
                       </Select>
                       <Select value={parking} onValueChange={setParking}>
-                        <SelectTrigger><SelectValue placeholder="Estacionamiento" /></SelectTrigger>
+                        <SelectTrigger className="bg-white/15 border-white/20 text-white"><SelectValue placeholder="Estacionamiento" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Cualquiera</SelectItem>
                           <SelectItem value="1">1+</SelectItem>
@@ -391,7 +391,7 @@ const Home = () => {
               Publicar Gratis
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/pricing-agente")} className="border-white/30 text-white hover:bg-white/10 px-8">
+            <Button size="lg" variant="ghost" onClick={() => navigate("/pricing-agente")} className="border border-white/30 text-white hover:bg-white/10 px-8">
               Ver Planes
             </Button>
           </div>
