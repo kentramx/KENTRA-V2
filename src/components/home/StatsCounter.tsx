@@ -83,7 +83,7 @@ const StatsCounter = () => {
               </div>
               
               {/* TIER S: Large bold number */}
-              <div className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-primary mb-2 tracking-tight">
+              <div className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary tracking-tight mb-2">
                 {isVisible ? <AnimatedNumber value={stat.value} /> : 0}
                 {stat.suffix}
               </div>

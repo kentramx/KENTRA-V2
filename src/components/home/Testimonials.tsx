@@ -96,7 +96,7 @@ const Testimonials = () => {
             
             <CardContent className="relative p-8 md:p-12 lg:p-16">
               {/* Content */}
-              <p className="text-xl md:text-2xl lg:text-3xl text-foreground leading-relaxed mb-10 font-serif italic min-h-[120px]">
+              <p className="text-xl md:text-2xl text-foreground leading-relaxed mb-10 font-medium min-h-[120px]">
                 "{testimonials[currentIndex].content}"
               </p>
 

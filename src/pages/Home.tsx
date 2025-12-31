@@ -114,40 +114,40 @@ const Home = () => {
 
         <div className="container relative z-10 text-center text-white px-4">
           {/* Trust badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-sm font-medium mb-6 md:mb-8 animate-fade-in-up">
-            <Sparkles className="w-4 h-4 text-accent" />
+          <div className="opacity-0 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-sm font-medium mb-6 md:mb-8 animate-fade-in-up">
+            <Sparkles className="w-4 h-4" />
             Plataforma inmobiliaria #1 en México
           </div>
           
           {/* TIER S: Display heading */}
-          <h1 className="heading-display text-white text-balance max-w-4xl mx-auto mb-4 md:mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+          <h1 className="opacity-0 heading-display text-white text-balance max-w-4xl mx-auto mb-4 md:mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
             Encuentra tu hogar ideal
-            <span className="block text-white/90">en minutos</span>
+            <span className="block text-white/80">en minutos</span>
           </h1>
           
           {/* Subtitle */}
-          <p className="text-lg md:text-xl lg:text-2xl text-white/80 max-w-2xl mx-auto mb-8 md:mb-12 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+          <p className="opacity-0 text-lg md:text-xl text-white/70 max-w-2xl mx-auto mb-8 md:mb-12 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
             Miles de propiedades verificadas en todo México. Compra, vende o renta con tecnología de vanguardia.
           </p>
           
           {/* TIER S: Elevated Search Card */}
-          <div className="max-w-3xl mx-auto animate-scale-in" style={{ animationDelay: '300ms' }}>
-            <div className="bg-white rounded-2xl shadow-xl p-4 md:p-5">
+          <div className="opacity-0 max-w-3xl mx-auto animate-scale-in" style={{ animationDelay: '300ms' }}>
+            <div className="bg-white rounded-2xl shadow-lg border border-border/50 p-5 md:p-6">
               {/* Listing Type Toggle */}
-              <div className="flex justify-center gap-2 mb-4">
+              <div className="inline-flex p-1 bg-muted rounded-lg mb-5">
                 <Button 
                   type="button" 
-                  variant={listingType === "venta" ? "default" : "outline"} 
+                  variant={listingType === "venta" ? "default" : "ghost"} 
                   onClick={() => setListingType("venta")}
-                  className={listingType !== "venta" ? "px-6 text-foreground border-border bg-white hover:bg-muted" : "px-6"}
+                  className={`px-5 rounded-md ${listingType !== "venta" ? "text-muted-foreground" : ""}`}
                 >
                   Venta
                 </Button>
                 <Button 
                   type="button" 
-                  variant={listingType === "renta" ? "default" : "outline"} 
+                  variant={listingType === "renta" ? "default" : "ghost"} 
                   onClick={() => setListingType("renta")}
-                  className={listingType !== "renta" ? "px-6 text-foreground border-border bg-white hover:bg-muted" : "px-6"}
+                  className={`px-5 rounded-md ${listingType !== "renta" ? "text-muted-foreground" : ""}`}
                 >
                   Renta
                 </Button>
