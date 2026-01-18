@@ -12,7 +12,7 @@ import { SearchMap } from '@/components/maps/SearchMap';
 import { useMapClusters } from '@/hooks/useMapClusters';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useFavorites } from '@/hooks/useFavorites';
-import { PropertyCard } from '@/components/PropertyCard';
+import PropertyCard from '@/components/PropertyCard';
 import { PropertyCardSkeleton } from '@/components/PropertyCardSkeleton';
 import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import Navbar from '@/components/Navbar';
