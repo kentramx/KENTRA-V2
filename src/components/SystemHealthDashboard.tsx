@@ -54,7 +54,7 @@ export const SystemHealthDashboard = () => {
 
   const fetchSystemHealth = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_system_health_metrics');
+      const { data, error } = await supabase.rpc('get_system_health_metrics' as any);
       
       if (error) throw error;
       setMetrics(data as unknown as SystemHealthMetrics);

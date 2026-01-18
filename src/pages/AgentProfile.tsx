@@ -109,7 +109,7 @@ const AgentProfile = () => {
       }
 
       // Auto-assign badges based on current stats
-      await supabase.rpc("auto_assign_badges", { p_user_id: id });
+      await supabase.rpc("auto_assign_badges" as any, { p_user_id: id });
 
       // Fetch agent properties
       const { data: propertiesData, error: propertiesError } = await supabase

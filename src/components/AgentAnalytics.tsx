@@ -204,7 +204,7 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
     try {
       // Fetch overall stats
       const { data: statsData, error: statsError } = await supabase
-        .rpc("get_agent_stats", { agent_uuid: agentId });
+        .rpc("get_agent_stats" as any, { agent_uuid: agentId });
 
       if (statsError) throw statsError;
       setStats(statsData?.[0] || null);

@@ -35,7 +35,7 @@ export default function UnirseEquipo() {
   const loadInvitation = async () => {
     try {
       // Primero expirar invitaciones vencidas
-      await supabase.rpc('expire_old_invitations');
+      await supabase.rpc('expire_old_invitations' as any);
 
       // Cargar la invitación
       const { data, error: invError } = await supabase

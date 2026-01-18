@@ -164,8 +164,8 @@ const DeveloperDashboard = () => {
           id: developerId 
         });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: ownerId });
-        if (subInfo && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, { user_uuid: ownerId });
+        if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
       } finally {
         setLoading(false);
       }
@@ -194,8 +194,8 @@ const DeveloperDashboard = () => {
           id: developerId 
         });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: ownerId });
-        if (subInfo && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, { user_uuid: ownerId });
+        if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
         
         setLoading(false);
         return;
@@ -231,11 +231,11 @@ const DeveloperDashboard = () => {
       setDeveloper(developerData);
 
       // Obtener información de suscripción
-      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info', {
+      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info' as any, {
         user_uuid: user?.id,
       });
 
-      if (!subError && subInfo && subInfo.length > 0) {
+      if (!subError && subInfo && Array.isArray(subInfo) && subInfo.length > 0) {
         setSubscriptionInfo(subInfo[0]);
       }
     } catch (error) {
@@ -273,10 +273,10 @@ const DeveloperDashboard = () => {
       
       // Refresh subscription info
       if (effectiveOwnerId) {
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { 
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, { 
           user_uuid: effectiveOwnerId 
         });
-        if (subInfo && subInfo.length > 0) {
+        if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) {
           setSubscriptionInfo(subInfo[0]);
         }
       }

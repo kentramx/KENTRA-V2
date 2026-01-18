@@ -131,7 +131,7 @@ export function FinancialDashboard() {
       setLoading(true);
       const { start, end } = getDateRange();
 
-      const { data, error } = await supabase.rpc('get_financial_metrics', {
+      const { data, error } = await supabase.rpc('get_financial_metrics' as any, {
         start_date: start.toISOString(),
         end_date: end.toISOString(),
       });

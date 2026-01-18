@@ -33,13 +33,17 @@ const RoleChangeDialog = ({ currentRole, onRoleChanged }: RoleChangeDialogProps)
   const handleRoleChange = async (newRole: 'agent' | 'agency') => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('change_user_role', {
-        new_role: newRole
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('No user found');
+
+      const { data, error } = await supabase.rpc('change_user_role' as any, {
+        new_role: newRole,
+        target_user_id: userData.user.id,
       });
 
       if (error) throw error;
 
-      const result = data as { 
+      const result = (data as unknown) as { 
         success: boolean; 
         error?: string; 
         requires_subscription?: boolean;

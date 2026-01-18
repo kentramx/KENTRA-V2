@@ -223,7 +223,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleRenewProperty = async (propertyId: string) => {
     try {
-      const { error } = await supabase.rpc('renew_property', {
+      const { error } = await supabase.rpc('renew_property' as any, {
         property_id: propertyId
       });
       
