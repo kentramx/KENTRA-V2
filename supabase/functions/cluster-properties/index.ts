@@ -1,15 +1,14 @@
 /**
  * Edge Function: cluster-properties
- * Clustering profesional con Supercluster (Mapbox algorithm)
- * 
- * FASE 1: Sin cache Redis (validación de concepto)
+ * Clustering con Supercluster + PostGIS optimizado
+ *
+ * Usa RPC get_properties_in_viewport para queries O(log n)
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Supercluster from "https://esm.sh/supercluster@8";
 import { corsHeaders } from "../_shared/cors.ts";
 
-// Tipos
 interface RequestBody {
   bounds: {
     north: number;
@@ -24,35 +23,55 @@ interface RequestBody {
     min_price?: number;
     max_price?: number;
     min_bedrooms?: number;
-    min_bathrooms?: number;
     state?: string;
     municipality?: string;
-    colonia?: string;
   };
 }
 
-// Configuración de Supercluster estilo Zillow/Airbnb
-// Zoom 0-9: clusters grandes | Zoom 10-11: clusters medianos | Zoom 12+: markers individuales
+interface PropertyFromDB {
+  id: string;
+  lat: number;
+  lng: number;
+  price: number;
+  currency: string;
+  title: string;
+  type: string;
+  listing_type: string;
+  address: string;
+  colonia: string | null;
+  municipality: string;
+  state: string;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  parking: number | null;
+  sqft: number | null;
+  for_sale: boolean;
+  for_rent: boolean;
+  sale_price: number | null;
+  rent_price: number | null;
+  agent_id: string;
+  is_featured: boolean;
+  created_at: string;
+}
+
 const SUPERCLUSTER_OPTIONS = {
-  radius: 60,        // ↓ Radio pequeño = clusters más pequeños, se separan antes
-  maxZoom: 11,       // ↓ Mostrar markers individuales desde zoom 12
+  radius: 60,
+  maxZoom: 14,
   minZoom: 0,
-  minPoints: 2,      // ↓ Clusters desde 2 propiedades
-  extent: 512,       // ↑ Grid más fina = agrupación más precisa
+  minPoints: 2,
+  extent: 512,
   nodeSize: 64,
-  // Agregar propiedades para mostrar en clusters
-  map: (props: any) => ({
+  map: (props: PropertyFromDB) => ({
     price: props.price || 0,
     count: 1,
   }),
-  reduce: (accumulated: any, props: any) => {
+  reduce: (accumulated: { price: number; count: number }, props: { price: number; count: number }) => {
     accumulated.price = (accumulated.price || 0) + (props.price || 0);
     accumulated.count = (accumulated.count || 0) + (props.count || 1);
   },
 };
 
 Deno.serve(async (req) => {
-  // CORS
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -60,176 +79,52 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const body: RequestBody = await req.json();
-    const { bounds, zoom, filters = {} } = body;
+    const { bounds, zoom, filters = {} }: RequestBody = await req.json();
 
-    console.log(`[cluster-properties] Request: zoom=${zoom}, bounds=[${bounds.south.toFixed(3)},${bounds.north.toFixed(3)}], limit=${zoom <= 7 ? 50000 : zoom <= 10 ? 20000 : 10000}`);
-
-    // Cliente Supabase
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // ═══════════════════════════════════════════════════════════
-    // OBTENER TIPO DE CAMBIO DINÁMICO DESDE app_settings
-    // ═══════════════════════════════════════════════════════════
-    let exchangeRate = 20.15; // Fallback
+    // Usar RPC de PostGIS - UNA query optimizada con índice GIST
+    const { data: properties, error } = await supabase.rpc('get_properties_in_viewport', {
+      bounds_north: bounds.north,
+      bounds_south: bounds.south,
+      bounds_east: bounds.east,
+      bounds_west: bounds.west,
+      p_status: 'activa',
+      p_listing_type: filters.listing_type || null,
+      p_property_type: filters.property_type || null,
+      p_min_price: filters.min_price || null,
+      p_max_price: filters.max_price || null,
+      p_min_bedrooms: filters.min_bedrooms || null,
+      p_state: filters.state || null,
+      p_municipality: filters.municipality || null,
+      p_limit: 50000,
+    });
 
-    const { data: settingsData } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "exchange_rate_usd_mxn")
-      .single();
-
-    if (settingsData?.value?.rate) {
-      exchangeRate = settingsData.value.rate;
-      console.log(`[cluster-properties] Using exchange rate: ${exchangeRate} MXN/USD`);
+    if (error) {
+      console.error("[cluster-properties] RPC error:", error);
+      throw new Error(`Database error: ${error.message}`);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // PAGINACIÓN EN LOTES - PostgREST limita a 1,000 por request
-    // Necesitamos múltiples requests para vistas nacionales
-    // ═══════════════════════════════════════════════════════════
-    const BATCH_SIZE = 1000;  // Máximo permitido por PostgREST
-    const MAX_BATCHES = zoom <= 7 ? 50 : zoom <= 10 ? 20 : 10;  // 50k/20k/10k max
-
-    let allProperties: any[] = [];
-    let hasMore = true;
-    let batchIndex = 0;
-
-    const selectFields = `
-      id, lat, lng, price, currency, type, title,
-      bedrooms, bathrooms, sqft, parking, listing_type,
-      address, colonia, state, municipality,
-      for_sale, for_rent, sale_price, rent_price,
-      agent_id, created_at
-    `;
-
-    // ═══════════════════════════════════════════════════════════
-    // CALCULAR RANGOS DE PRECIO PARA USD Y MXN
-    // Los filtros del frontend vienen en MXN, convertimos a USD
-    // ═══════════════════════════════════════════════════════════
-    const minPriceMXN = filters.min_price || 0;
-    const maxPriceMXN = filters.max_price || 999999999;
-    const minPriceUSD = Math.floor(minPriceMXN / exchangeRate);
-    const maxPriceUSD = Math.ceil(maxPriceMXN / exchangeRate);
-
-    const hasPriceFilter = filters.min_price || filters.max_price;
-
-    while (hasMore && batchIndex < MAX_BATCHES) {
-      const from = batchIndex * BATCH_SIZE;
-      const to = from + BATCH_SIZE - 1;
-
-      let query = supabase
-        .from("properties")
-        .select(selectFields)
-        .eq("status", "activa")
-        .not("lat", "is", null)
-        .not("lng", "is", null)
-        .gte("lat", bounds.south - 0.5)
-        .lte("lat", bounds.north + 0.5)
-        .gte("lng", bounds.west - 0.5)
-        .lte("lng", bounds.east + 0.5)
-        .range(from, to);  // ← Paginación con range
-
-      // Aplicar filtros NO geográficos
-      if (filters.listing_type) {
-        query = query.eq("listing_type", filters.listing_type);
-      }
-      if (filters.property_type) {
-        query = query.eq("type", filters.property_type);
-      }
-
-      // ═══════════════════════════════════════════════════════════
-      // FILTRO DE PRECIO MULTI-MONEDA (MXN y USD)
-      // Filtra: (MXN en rango MXN) OR (USD en rango USD equivalente) OR (null currency en rango MXN)
-      // ═══════════════════════════════════════════════════════════
-      if (hasPriceFilter) {
-        query = query.or(
-          `and(currency.eq.MXN,price.gte.${minPriceMXN},price.lte.${maxPriceMXN}),` +
-          `and(currency.eq.USD,price.gte.${minPriceUSD},price.lte.${maxPriceUSD}),` +
-          `and(currency.is.null,price.gte.${minPriceMXN},price.lte.${maxPriceMXN})`
-        );
-      }
-if (filters.min_bedrooms) {
-      query = query.gte("bedrooms", filters.min_bedrooms);
-    }
-    if (filters.min_bathrooms) {
-      query = query.gte("bathrooms", filters.min_bathrooms);
-    }
-
-    // Filtros geográficos
-    if (filters.state) {
-      query = query.eq("state", filters.state);
-    }
-    // TODO: Habilitar cuando se normalicen los datos de ubicación
-    // Por ahora, el viewport geográfico (bounds) filtra las propiedades por lat/lng
-    // if (filters.municipality) {
-    //   query = query.eq("municipality", filters.municipality);
-    // }
-    // if (filters.colonia) {
-    //   query = query.eq("colonia", filters.colonia);
-    // }
-
-    const { data, error: dbError } = await query;
-
-      if (dbError) {
-        throw new Error(`Database error: ${dbError.message}`);
-      }
-
-      if (data && data.length > 0) {
-        allProperties = allProperties.concat(data);
-        hasMore = data.length === BATCH_SIZE;  // Si devuelve menos, no hay más
-        batchIndex++;
-        
-        if (batchIndex % 5 === 0) {
-          console.log(`[cluster-properties] Batch ${batchIndex}: ${allProperties.length} properties loaded`);
-        }
-      } else {
-        hasMore = false;
-      }
-    }
-
-    const properties = allProperties;
-    console.log(`[cluster-properties] Total loaded: ${properties.length} properties in ${batchIndex} batches`);
+    const propertiesArray = (properties || []) as PropertyFromDB[];
+    console.log(`[cluster-properties] PostGIS returned ${propertiesArray.length} properties in ${Date.now() - startTime}ms`);
 
     // Convertir a GeoJSON para Supercluster
-    const points: any[] = (properties || []).map((p: any) => ({
-      type: "Feature",
+    const points = propertiesArray.map((p) => ({
+      type: "Feature" as const,
       geometry: {
-        type: "Point",
-        coordinates: [p.lng, p.lat],
+        type: "Point" as const,
+        coordinates: [p.lng, p.lat] as [number, number],
       },
-      properties: {
-        id: p.id,
-        price: p.price || 0,
-        currency: p.currency || "MXN",
-        type: p.type,
-        title: p.title,
-        bedrooms: p.bedrooms,
-        bathrooms: p.bathrooms,
-        sqft: p.sqft,
-        parking: p.parking,
-        listing_type: p.listing_type || "venta",
-        address: p.address,
-        colonia: p.colonia,
-        state: p.state,
-        municipality: p.municipality,
-        for_sale: p.for_sale ?? true,
-        for_rent: p.for_rent ?? false,
-        sale_price: p.sale_price,
-        rent_price: p.rent_price,
-        agent_id: p.agent_id,
-        created_at: p.created_at,
-      },
+      properties: p,
     }));
 
-    // Crear índice Supercluster
+    // Clustering
     const index = new Supercluster(SUPERCLUSTER_OPTIONS);
     index.load(points);
 
-    // Obtener clusters/properties para el viewport
     const bbox: [number, number, number, number] = [
       bounds.west,
       bounds.south,
@@ -238,157 +133,56 @@ if (filters.min_bedrooms) {
     ];
     const clustersRaw = index.getClusters(bbox, zoom);
 
-    console.log(`[cluster-properties] Supercluster returned ${clustersRaw.length} items at zoom ${zoom}`);
-
     // Separar clusters de propiedades individuales
-    const clusters: any[] = [];
-    const individualProperties: any[] = [];
+    const clusters: Array<{
+      id: string;
+      lat: number;
+      lng: number;
+      count: number;
+      expansion_zoom: number;
+    }> = [];
+
+    const individualProperties: PropertyFromDB[] = [];
 
     for (const feature of clustersRaw) {
       if (feature.properties.cluster) {
-        // Es un cluster - ID estable basado en coordenadas redondeadas
-        const clusterLat = feature.geometry.coordinates[1];
-        const clusterLng = feature.geometry.coordinates[0];
-        const stableId = `c-${Math.round(clusterLat * 1000)}-${Math.round(clusterLng * 1000)}-z${zoom}`;
-        
+        const clusterId = feature.properties.cluster_id;
         clusters.push({
-          id: stableId,
-          lat: clusterLat,
-          lng: clusterLng,
-          count: feature.properties.point_count,
-          avg_price: Math.round(
-            (feature.properties.price || 0) / (feature.properties.count || 1)
-          ),
-          expansion_zoom: index.getClusterExpansionZoom(feature.properties.cluster_id),
-        });
-      } else {
-        // Es una propiedad individual
-        const props = feature.properties;
-        individualProperties.push({
-          id: props.id,
+          id: `cluster-${clusterId}`,
           lat: feature.geometry.coordinates[1],
           lng: feature.geometry.coordinates[0],
-          price: props.price,
-          currency: props.currency,
-          type: props.type,
-          title: props.title,
-          bedrooms: props.bedrooms,
-          bathrooms: props.bathrooms,
-          sqft: props.sqft,
-          parking: props.parking,
-          listing_type: props.listing_type,
-          address: props.address,
-          colonia: props.colonia,
-          state: props.state,
-          municipality: props.municipality,
-          for_sale: props.for_sale,
-          for_rent: props.for_rent,
-          sale_price: props.sale_price,
-          rent_price: props.rent_price,
-          images: [],  // FASE 2: cargar imágenes
-          agent_id: props.agent_id,
-          is_featured: false,  // FASE 2: verificar featured
-          created_at: props.created_at,
+          count: feature.properties.point_count,
+          expansion_zoom: index.getClusterExpansionZoom(clusterId),
         });
+      } else {
+        individualProperties.push(feature.properties as PropertyFromDB);
       }
     }
-
-    // ═══════════════════════════════════════════════════════════
-    // EXPANDIR CLUSTERS PEQUEÑOS PARA LA LISTA
-    // Si hay clusters y estamos en zoom medio-alto, extraer propiedades
-    // de clusters pequeños (≤30) para poblar la lista
-    // ═══════════════════════════════════════════════════════════
-    let propertiesForList = [...individualProperties];
-
-    if (clusters.length > 0 && zoom >= 9) {
-      for (const feature of clustersRaw) {
-        if (feature.properties.cluster && feature.properties.point_count <= 30) {
-          try {
-            const leaves = index.getLeaves(feature.properties.cluster_id, 30);
-            for (const leaf of leaves) {
-              const props = leaf.properties;
-              propertiesForList.push({
-                id: props.id,
-                lat: leaf.geometry.coordinates[1],
-                lng: leaf.geometry.coordinates[0],
-                price: props.price,
-                currency: props.currency,
-                type: props.type,
-                title: props.title,
-                bedrooms: props.bedrooms,
-                bathrooms: props.bathrooms,
-                sqft: props.sqft,
-                parking: props.parking,
-                listing_type: props.listing_type,
-                address: props.address,
-                colonia: props.colonia,
-                state: props.state,
-                municipality: props.municipality,
-                for_sale: props.for_sale,
-                for_rent: props.for_rent,
-                sale_price: props.sale_price,
-                rent_price: props.rent_price,
-                images: [],
-                agent_id: props.agent_id,
-                is_featured: false,
-                created_at: props.created_at,
-              });
-            }
-          } catch (e) {
-            console.error(`[cluster-properties] Error expanding cluster:`, e);
-          }
-        }
-      }
-    }
-
-    // Eliminar duplicados por ID
-    const uniqueMap = new Map();
-    for (const p of propertiesForList) {
-      if (!uniqueMap.has(p.id)) {
-        uniqueMap.set(p.id, p);
-      }
-    }
-    propertiesForList = Array.from(uniqueMap.values());
 
     const duration = Date.now() - startTime;
-    
-    // Calcular el total REAL del viewport (clusters + individuales)
-    const clusterTotal = clusters.reduce((sum, c) => sum + (c.count || 0), 0);
-    const viewportTotal = clusterTotal + individualProperties.length;
-    
-    console.log(
-      `[cluster-properties] Response: ${clusters.length} clusters, ${individualProperties.length} individual, ${propertiesForList.length} for list, viewportTotal=${viewportTotal}, ${duration}ms`
+    console.log(`[cluster-properties] ${clusters.length} clusters, ${individualProperties.length} individual, ${duration}ms`);
+
+    return new Response(
+      JSON.stringify({
+        clusters,
+        properties: individualProperties.slice(0, 200),
+        total: propertiesArray.length,
+        is_clustered: clusters.length > 0,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
-
-    const response = {
-      properties: propertiesForList.slice(0, 200),
-      clusters,
-      total_count: viewportTotal, // ← Total real del viewport, no de la DB
-      is_clustered: clusters.length > 0,
-      _debug: {
-        duration_ms: duration,
-        raw_points: points.length,
-        db_total: properties?.length || 0,
-        viewport_total: viewportTotal,
-        cluster_total: clusterTotal,
-        individual_count: individualProperties.length,
-        expanded_count: propertiesForList.length,
-        zoom,
-      },
-    };
-
-    return new Response(JSON.stringify(response), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err: unknown) {
+  } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Internal error";
     console.error("[cluster-properties] Error:", errorMessage);
+
     return new Response(
       JSON.stringify({
         error: errorMessage,
-        properties: [],
         clusters: [],
-        total_count: 0,
+        properties: [],
+        total: 0,
         is_clustered: false,
       }),
       {
