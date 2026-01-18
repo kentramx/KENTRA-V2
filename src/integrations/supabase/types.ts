@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -770,13 +770,6 @@ export type Database = {
             referencedRelation: "properties"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "favorites_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       featured_properties: {
@@ -839,7 +832,7 @@ export type Database = {
         Row: {
           components: Json | null
           created_at: string
-          hits: number
+          hits: number | null
           id: string
           last_used_at: string
           lat: number
@@ -849,7 +842,7 @@ export type Database = {
         Insert: {
           components?: Json | null
           created_at?: string
-          hits?: number
+          hits?: number | null
           id?: string
           last_used_at?: string
           lat: number
@@ -859,7 +852,7 @@ export type Database = {
         Update: {
           components?: Json | null
           created_at?: string
-          hits?: number
+          hits?: number | null
           id?: string
           last_used_at?: string
           lat?: number
@@ -1558,15 +1551,16 @@ export type Database = {
           amenities: Json | null
           bathrooms: number | null
           bedrooms: number | null
+          code: string | null
           colonia: string | null
           created_at: string | null
-          currency: string
+          currency: string | null
           description: string | null
           duplicate_warning: boolean | null
           duplicate_warning_data: Json | null
           expires_at: string | null
-          for_rent: boolean
-          for_sale: boolean
+          for_rent: boolean | null
+          for_sale: boolean | null
           geom: unknown
           has_inappropriate_images: boolean | null
           has_manipulated_images: boolean | null
@@ -1576,7 +1570,7 @@ export type Database = {
           is_featured: boolean | null
           last_renewed_at: string | null
           lat: number | null
-          listing_type: string
+          listing_type: string | null
           lng: number | null
           lot_size: number | null
           municipality: string
@@ -1588,7 +1582,7 @@ export type Database = {
           rejection_history: Json | null
           rent_price: number | null
           requires_manual_review: boolean | null
-          resubmission_count: number
+          resubmission_count: number | null
           sale_price: number | null
           search_vector: unknown
           sqft: number | null
@@ -1612,15 +1606,16 @@ export type Database = {
           amenities?: Json | null
           bathrooms?: number | null
           bedrooms?: number | null
+          code?: string | null
           colonia?: string | null
           created_at?: string | null
-          currency?: string
+          currency?: string | null
           description?: string | null
           duplicate_warning?: boolean | null
           duplicate_warning_data?: Json | null
           expires_at?: string | null
-          for_rent?: boolean
-          for_sale?: boolean
+          for_rent?: boolean | null
+          for_sale?: boolean | null
           geom?: unknown
           has_inappropriate_images?: boolean | null
           has_manipulated_images?: boolean | null
@@ -1630,7 +1625,7 @@ export type Database = {
           is_featured?: boolean | null
           last_renewed_at?: string | null
           lat?: number | null
-          listing_type?: string
+          listing_type?: string | null
           lng?: number | null
           lot_size?: number | null
           municipality: string
@@ -1642,7 +1637,7 @@ export type Database = {
           rejection_history?: Json | null
           rent_price?: number | null
           requires_manual_review?: boolean | null
-          resubmission_count?: number
+          resubmission_count?: number | null
           sale_price?: number | null
           search_vector?: unknown
           sqft?: number | null
@@ -1666,15 +1661,16 @@ export type Database = {
           amenities?: Json | null
           bathrooms?: number | null
           bedrooms?: number | null
+          code?: string | null
           colonia?: string | null
           created_at?: string | null
-          currency?: string
+          currency?: string | null
           description?: string | null
           duplicate_warning?: boolean | null
           duplicate_warning_data?: Json | null
           expires_at?: string | null
-          for_rent?: boolean
-          for_sale?: boolean
+          for_rent?: boolean | null
+          for_sale?: boolean | null
           geom?: unknown
           has_inappropriate_images?: boolean | null
           has_manipulated_images?: boolean | null
@@ -1684,7 +1680,7 @@ export type Database = {
           is_featured?: boolean | null
           last_renewed_at?: string | null
           lat?: number | null
-          listing_type?: string
+          listing_type?: string | null
           lng?: number | null
           lot_size?: number | null
           municipality?: string
@@ -1696,7 +1692,7 @@ export type Database = {
           rejection_history?: Json | null
           rent_price?: number | null
           requires_manual_review?: boolean | null
-          resubmission_count?: number
+          resubmission_count?: number | null
           sale_price?: number | null
           search_vector?: unknown
           sqft?: number | null
@@ -1713,13 +1709,6 @@ export type Database = {
             columns: ["agency_id"]
             isOneToOne: false
             referencedRelation: "agencies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "properties_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -2225,42 +2214,39 @@ export type Database = {
       }
       user_active_upsells: {
         Row: {
-          auto_renew: boolean
           created_at: string
           end_date: string | null
           id: string
+          metadata: Json | null
           quantity: number
           start_date: string
           status: string
-          stripe_payment_intent_id: string | null
           stripe_subscription_id: string | null
           updated_at: string
           upsell_id: string
           user_id: string
         }
         Insert: {
-          auto_renew?: boolean
           created_at?: string
           end_date?: string | null
           id?: string
+          metadata?: Json | null
           quantity?: number
           start_date?: string
           status?: string
-          stripe_payment_intent_id?: string | null
           stripe_subscription_id?: string | null
           updated_at?: string
           upsell_id: string
           user_id: string
         }
         Update: {
-          auto_renew?: boolean
           created_at?: string
           end_date?: string | null
           id?: string
+          metadata?: Json | null
           quantity?: number
           start_date?: string
           status?: string
-          stripe_payment_intent_id?: string | null
           stripe_subscription_id?: string | null
           updated_at?: string
           upsell_id?: string
@@ -2281,21 +2267,18 @@ export type Database = {
           badge_code: string
           earned_at: string
           id: string
-          metadata: Json | null
           user_id: string
         }
         Insert: {
           badge_code: string
           earned_at?: string
           id?: string
-          metadata?: Json | null
           user_id: string
         }
         Update: {
           badge_code?: string
           earned_at?: string
           id?: string
-          metadata?: Json | null
           user_id?: string
         }
         Relationships: [
@@ -2310,6 +2293,7 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          created_at: string | null
           granted_at: string | null
           granted_by: string | null
           id: string
@@ -2317,13 +2301,15 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          created_at?: string | null
           granted_at?: string | null
           granted_by?: string | null
           id?: string
-          role: Database["public"]["Enums"]["app_role"]
+          role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          created_at?: string | null
           granted_at?: string | null
           granted_by?: string | null
           id?: string
@@ -2334,8 +2320,10 @@ export type Database = {
       }
       user_subscriptions: {
         Row: {
-          billing_cycle: string | null
+          billing_cycle: string
           cancel_at_period_end: boolean | null
+          canceled_at: string | null
+          cancellation_reason: string | null
           created_at: string | null
           current_period_end: string | null
           current_period_start: string | null
@@ -2347,12 +2335,15 @@ export type Database = {
           status: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          trial_ends_at: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
-          billing_cycle?: string | null
+          billing_cycle?: string
           cancel_at_period_end?: boolean | null
+          canceled_at?: string | null
+          cancellation_reason?: string | null
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
@@ -2364,12 +2355,15 @@ export type Database = {
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
-          billing_cycle?: string | null
+          billing_cycle?: string
           cancel_at_period_end?: boolean | null
+          canceled_at?: string | null
+          cancellation_reason?: string | null
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
@@ -2381,6 +2375,7 @@ export type Database = {
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -2396,30 +2391,36 @@ export type Database = {
       }
       whatsapp_interactions: {
         Row: {
-          agent_id: string
+          agent_id: string | null
           created_at: string
           id: string
           interaction_type: string
+          message_preview: string | null
+          metadata: Json | null
+          phone_number: string | null
           property_id: string | null
-          session_id: string | null
           user_id: string | null
         }
         Insert: {
-          agent_id: string
+          agent_id?: string | null
           created_at?: string
           id?: string
           interaction_type: string
+          message_preview?: string | null
+          metadata?: Json | null
+          phone_number?: string | null
           property_id?: string | null
-          session_id?: string | null
           user_id?: string | null
         }
         Update: {
-          agent_id?: string
+          agent_id?: string | null
           created_at?: string
           id?: string
           interaction_type?: string
+          message_preview?: string | null
+          metadata?: Json | null
+          phone_number?: string | null
           property_id?: string | null
-          session_id?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -2447,15 +2448,7 @@ export type Database = {
           total_reviews: number | null
           total_views: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "properties_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       geography_columns: {
         Row: {
@@ -2496,35 +2489,6 @@ export type Database = {
           f_table_schema?: unknown
           srid?: number | null
           type?: string | null
-        }
-        Relationships: []
-      }
-      property_stats_by_municipality: {
-        Row: {
-          active_properties: number | null
-          avg_price: number | null
-          avg_sqft: number | null
-          max_price: number | null
-          min_price: number | null
-          municipality: string | null
-          properties_for_rent: number | null
-          properties_for_sale: number | null
-          state: string | null
-          total_agents: number | null
-          total_properties: number | null
-        }
-        Relationships: []
-      }
-      property_stats_by_state: {
-        Row: {
-          active_properties: number | null
-          avg_price: number | null
-          max_price: number | null
-          min_price: number | null
-          state: string | null
-          total_agents: number | null
-          total_municipalities: number | null
-          total_properties: number | null
         }
         Relationships: []
       }
@@ -2658,42 +2622,7 @@ export type Database = {
             Returns: string
           }
       auto_assign_badges: { Args: { p_user_id: string }; Returns: undefined }
-      calculate_churn_rate: {
-        Args: { p_days?: number }
-        Returns: {
-          churn_rate: number
-          churned_count: number
-          net_change: number
-          new_subscriptions: number
-          period_end: string
-          period_start: string
-          starting_count: number
-        }[]
-      }
-      calculate_mrr: {
-        Args: never
-        Returns: {
-          active_subscriptions: number
-          average_revenue_per_user: number
-          monthly_subscribers: number
-          mrr_by_plan: Json
-          total_mrr: number
-          yearly_subscribers: number
-        }[]
-      }
-      calculate_property_images_score: {
-        Args: { p_property_id: string }
-        Returns: number
-      }
-      can_create_property: {
-        Args: { user_uuid: string }
-        Returns: {
-          can_create: boolean
-          current_count: number
-          max_allowed: number
-          reason: string
-        }[]
-      }
+      can_create_property: { Args: { user_id: string }; Returns: boolean }
       can_create_property_with_upsells: {
         Args: { user_uuid: string }
         Returns: {
@@ -2714,29 +2643,24 @@ export type Database = {
           reason: string
         }[]
       }
-      can_get_trial: {
-        Args: { p_device_fingerprint?: string; p_ip_address?: string }
-        Returns: {
-          can_trial: boolean
-          previous_trials: number
-          reason: string
-        }[]
-      }
       change_user_role: {
-        Args: { new_role: Database["public"]["Enums"]["app_role"] }
-        Returns: Json
+        Args: {
+          granted_by_user_id?: string
+          new_role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
+        }
+        Returns: boolean
+      }
+      check_property_limit: {
+        Args: { p_user_id: string }
+        Returns: {
+          can_create: boolean
+          current_count: number
+          max_allowed: number
+          plan_name: string
+        }[]
       }
       cleanup_expired_auth_tokens: { Args: never; Returns: number }
-      cleanup_old_data: { Args: never; Returns: undefined }
-      cleanup_old_webhook_events: { Args: never; Returns: number }
-      database_health_check: {
-        Args: never
-        Returns: {
-          metric: string
-          status: string
-          value: string
-        }[]
-      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -2771,21 +2695,6 @@ export type Database = {
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       expire_old_invitations: { Args: never; Returns: undefined }
-      generate_filters_hash:
-        | { Args: { p_filters: Json }; Returns: string }
-        | {
-            Args: {
-              p_bathrooms?: number
-              p_bedrooms?: number
-              p_listing_type?: string
-              p_municipality?: string
-              p_price_max?: number
-              p_price_min?: number
-              p_property_type?: string
-              p_state?: string
-            }
-            Returns: string
-          }
       generate_property_code: { Args: never; Returns: string }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
@@ -2885,204 +2794,45 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
-      get_agent_stats: {
-        Args: { agent_uuid: string }
-        Returns: {
-          active_properties: number
-          conversion_rate: number
-          total_conversations: number
-          total_favorites: number
-          total_properties: number
-          total_views: number
-        }[]
-      }
-      get_auth_users_for_admin: {
-        Args: never
-        Returns: {
-          email: string
-          email_confirmed_at: string
-          id: string
-          last_sign_in_at: string
-        }[]
-      }
+      get_avg_review_time_minutes: { Args: never; Returns: number }
       get_churn_metrics: {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
       }
-      get_financial_metrics: {
-        Args: { end_date?: string; start_date?: string }
-        Returns: Json
-      }
-      get_images_batch: {
-        Args: { property_ids: string[] }
-        Returns: {
-          images: Json
-          property_id: string
-        }[]
-      }
-      get_map_data:
-        | {
-            Args: {
-              p_bathrooms?: number
-              p_bedrooms?: number
-              p_east: number
-              p_listing_type?: string
-              p_municipality?: string
-              p_north: number
-              p_price_max?: number
-              p_price_min?: number
-              p_property_type?: string
-              p_south: number
-              p_state?: string
-              p_west: number
-              p_zoom?: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_bathrooms?: number
-              p_bedrooms?: number
-              p_colonia?: string
-              p_east: number
-              p_listing_type?: string
-              p_municipality?: string
-              p_north: number
-              p_price_max?: number
-              p_price_min?: number
-              p_property_type?: string
-              p_south: number
-              p_state?: string
-              p_west: number
-              p_zoom: number
-            }
-            Returns: Json
-          }
+      get_featured_limit: { Args: { user_id: string }; Returns: number }
       get_marketing_metrics: {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
       }
-      get_municipality_stats: {
-        Args: { p_municipality: string; p_state: string }
+      get_moderation_stats: {
+        Args: never
         Returns: {
-          active_properties: number
-          avg_price: number
-          avg_sqft: number
-          max_price: number
-          min_price: number
-          municipality: string
-          properties_for_rent: number
-          properties_for_sale: number
-          state: string
-          total_agents: number
-          total_properties: number
+          approved_today: number
+          avg_review_minutes: number
+          pending_count: number
+          rejected_today: number
         }[]
       }
-      get_properties_cursor: {
-        Args: {
-          p_cursor?: string
-          p_limit?: number
-          p_listing_type?: string
-          p_municipality?: string
-          p_price_max?: number
-          p_price_min?: number
-          p_state?: string
-          p_type?: string
-        }
-        Returns: {
-          address: string
-          agent_id: string
-          bathrooms: number
-          bedrooms: number
-          created_at: string
-          currency: string
-          for_rent: boolean
-          for_sale: boolean
-          id: string
-          lat: number
-          listing_type: string
-          lng: number
-          municipality: string
-          next_cursor: string
-          parking: number
-          price: number
-          rent_price: number
-          sale_price: number
-          sqft: number
-          state: string
-          title: string
-          type: Database["public"]["Enums"]["property_type"]
-        }[]
-      }
-      get_properties_total_count: {
-        Args: {
-          p_listing_type?: string
-          p_municipality?: string
-          p_price_max?: number
-          p_price_min?: number
-          p_state?: string
-          p_type?: string
-        }
-        Returns: number
-      }
-      get_state_stats: {
-        Args: { p_state: string }
-        Returns: {
-          active_properties: number
-          avg_price: number
-          max_price: number
-          min_price: number
-          state: string
-          total_agents: number
-          total_municipalities: number
-          total_properties: number
-        }[]
-      }
+      get_property_limit: { Args: { user_id: string }; Returns: number }
       get_system_health_metrics: { Args: never; Returns: Json }
-      get_user_id_by_email: { Args: { user_email: string }; Returns: string }
-      get_user_role: {
-        Args: { _user_id: string }
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
-      get_user_subscription_info: {
-        Args: { user_uuid: string }
-        Returns: {
-          cancel_at_period_end: boolean
-          current_period_end: string
-          display_name: string
-          featured_limit: number
-          featured_used: number
-          features: Json
-          has_subscription: boolean
-          name: string
-          properties_limit: number
-          properties_used: number
-          status: string
-        }[]
-      }
       gettransactionid: { Args: never; Returns: unknown }
-      has_admin_access: { Args: { _user_id: string }; Returns: boolean }
-      has_role: {
+      has_admin_access: { Args: { user_uuid: string }; Returns: boolean }
+      has_any_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
+          roles: Database["public"]["Enums"]["app_role"][]
+          user_id: string
         }
         Returns: boolean
       }
-      increment_coupon_uses: { Args: { p_code: string }; Returns: undefined }
-      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
-      longtransactionsenabled: { Args: never; Returns: boolean }
-      mark_messages_as_read: {
-        Args: { p_conversation_id: string; p_user_id: string }
-        Returns: undefined
+      has_role: {
+        Args: {
+          check_role: Database["public"]["Enums"]["app_role"]
+          user_uuid: string
+        }
+        Returns: boolean
       }
-      normalize_location:
-        | { Args: { input_text: string }; Returns: string }
-        | {
-            Args: { input_text: string; location_type?: string }
-            Returns: string
-          }
-      normalize_state_name: { Args: { input_state: string }; Returns: string }
+      is_super_admin: { Args: { user_uuid: string }; Returns: boolean }
+      longtransactionsenabled: { Args: never; Returns: boolean }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -3123,50 +2873,10 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
-      promote_user_to_admin: {
-        Args: {
-          new_admin_role: Database["public"]["Enums"]["app_role"]
-          target_user_id: string
-        }
-        Returns: undefined
-      }
       reactivate_property: { Args: { property_id: string }; Returns: undefined }
-      refresh_agent_stats: { Args: never; Returns: undefined }
-      refresh_all_active_properties: { Args: never; Returns: Json }
-      renew_property: { Args: { property_id: string }; Returns: undefined }
-      resubmit_property: { Args: { property_id: string }; Returns: Json }
-      search_properties_fts: {
-        Args: {
-          p_limit?: number
-          p_listing_type?: string
-          p_municipality?: string
-          p_offset?: number
-          p_price_max?: number
-          p_price_min?: number
-          p_state?: string
-          p_type?: string
-          search_query: string
-        }
-        Returns: {
-          address: string
-          agent_id: string
-          bathrooms: number
-          bedrooms: number
-          created_at: string
-          id: string
-          lat: number
-          listing_type: string
-          lng: number
-          municipality: string
-          parking: number
-          price: number
-          rank: number
-          sqft: number
-          state: string
-          title: string
-          type: Database["public"]["Enums"]["property_type"]
-        }[]
-      }
+      refresh_agent_performance_stats: { Args: never; Returns: undefined }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
@@ -3748,20 +3458,6 @@ export type Database = {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
       }
-      subscription_cohort_analysis: {
-        Args: { p_months?: number }
-        Returns: {
-          avg_revenue: number
-          cohort_month: string
-          ltv_estimate: number
-          month_1_retention: number
-          month_2_retention: number
-          month_3_retention: number
-          month_6_retention: number
-          still_active: number
-          total_subscriptions: number
-        }[]
-      }
       unaccent: { Args: { "": string }; Returns: string }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {
@@ -3774,50 +3470,55 @@ export type Database = {
         }
         Returns: string
       }
-      validate_coupon: {
-        Args: { p_code: string; p_plan_type?: string; p_user_id: string }
-        Returns: {
-          coupon_id: string
-          discount_type: string
-          discount_value: number
-          is_valid: boolean
-          message: string
-          stripe_coupon_id: string
-        }[]
-      }
     }
     Enums: {
-      ai_moderation_status: "pass" | "review" | "reject" | "pending"
+      ai_moderation_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "manual_review"
       app_role:
         | "buyer"
         | "agent"
         | "agency"
+        | "developer"
+        | "moderator"
         | "admin"
         | "super_admin"
-        | "moderator"
-        | "developer"
-      invitation_status: "pending" | "accepted" | "rejected" | "expired"
+      invitation_status:
+        | "pending"
+        | "accepted"
+        | "rejected"
+        | "expired"
+        | "revoked"
       moderation_action:
+        | "submitted"
         | "approved"
         | "rejected"
         | "resubmitted"
         | "auto_approved"
+        | "auto_rejected"
+        | "auto_flagged"
+        | "manual_override"
       property_status:
+        | "borrador"
+        | "pendiente_aprobacion"
         | "activa"
+        | "pausada"
+        | "expirada"
         | "vendida"
         | "rentada"
-        | "pausada"
-        | "pendiente_aprobacion"
+        | "rechazada"
       property_type:
         | "casa"
         | "departamento"
         | "terreno"
         | "oficina"
-        | "local_comercial"
         | "local"
         | "bodega"
         | "edificio"
         | "rancho"
+        | "otro"
       user_status: "active" | "suspended" | "banned"
     }
     CompositeTypes: {
@@ -3954,40 +3655,58 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      ai_moderation_status: ["pass", "review", "reject", "pending"],
+      ai_moderation_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "manual_review",
+      ],
       app_role: [
         "buyer",
         "agent",
         "agency",
+        "developer",
+        "moderator",
         "admin",
         "super_admin",
-        "moderator",
-        "developer",
       ],
-      invitation_status: ["pending", "accepted", "rejected", "expired"],
+      invitation_status: [
+        "pending",
+        "accepted",
+        "rejected",
+        "expired",
+        "revoked",
+      ],
       moderation_action: [
+        "submitted",
         "approved",
         "rejected",
         "resubmitted",
         "auto_approved",
+        "auto_rejected",
+        "auto_flagged",
+        "manual_override",
       ],
       property_status: [
+        "borrador",
+        "pendiente_aprobacion",
         "activa",
+        "pausada",
+        "expirada",
         "vendida",
         "rentada",
-        "pausada",
-        "pendiente_aprobacion",
+        "rechazada",
       ],
       property_type: [
         "casa",
         "departamento",
         "terreno",
         "oficina",
-        "local_comercial",
         "local",
         "bodega",
         "edificio",
         "rancho",
+        "otro",
       ],
       user_status: ["active", "suspended", "banned"],
     },
