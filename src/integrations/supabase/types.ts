@@ -2813,6 +2813,48 @@ export type Database = {
           rejected_today: number
         }[]
       }
+      get_properties_in_viewport: {
+        Args: {
+          bounds_east: number
+          bounds_north: number
+          bounds_south: number
+          bounds_west: number
+          p_limit?: number
+          p_listing_type?: string
+          p_max_price?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_municipality?: string
+          p_property_type?: string
+          p_state?: string
+          p_status?: string
+        }
+        Returns: {
+          address: string
+          agent_id: string
+          bathrooms: number
+          bedrooms: number
+          colonia: string
+          created_at: string
+          currency: string
+          for_rent: boolean
+          for_sale: boolean
+          id: string
+          is_featured: boolean
+          lat: number
+          listing_type: string
+          lng: number
+          municipality: string
+          parking: number
+          price: number
+          rent_price: number
+          sale_price: number
+          sqft: number
+          state: string
+          title: string
+          type: string
+        }[]
+      }
       get_property_limit: { Args: { user_id: string }; Returns: number }
       get_system_health_metrics: { Args: never; Returns: Json }
       gettransactionid: { Args: never; Returns: unknown }
@@ -2875,6 +2917,29 @@ export type Database = {
       postgis_wagyu_version: { Args: never; Returns: string }
       reactivate_property: { Args: { property_id: string }; Returns: undefined }
       refresh_agent_performance_stats: { Args: never; Returns: undefined }
+      search_properties: {
+        Args: {
+          p_bounds_east?: number
+          p_bounds_north?: number
+          p_bounds_south?: number
+          p_bounds_west?: number
+          p_limit?: number
+          p_listing_type?: string
+          p_max_price?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_municipality?: string
+          p_offset?: number
+          p_property_type?: string
+          p_sort?: string
+          p_state?: string
+          p_status?: string
+        }
+        Returns: {
+          properties: Json
+          total_count: number
+        }[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       st_3dclosestpoint: {
