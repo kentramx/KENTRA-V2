@@ -78,6 +78,9 @@ verify_jwt = true
 [functions.cluster-properties]
 verify_jwt = false
 
+[functions.property-search]
+verify_jwt = false
+
 [functions.og-image]
 verify_jwt = false
 
