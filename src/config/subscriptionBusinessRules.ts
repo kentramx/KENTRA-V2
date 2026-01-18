@@ -164,13 +164,13 @@ export async function validatePropertyLimits(
 ): Promise<PropertyLimitValidation> {
   try {
     // Obtener info de suscripción (incluye properties_limit y properties_used)
-    const { data: subInfo, error } = await supabase.rpc('get_user_subscription_info', {
+    const { data: subInfo, error } = await supabase.rpc('get_user_subscription_info' as any, {
       user_uuid: userId,
     });
 
     if (error) throw error;
 
-    if (!subInfo || subInfo.length === 0) {
+    if (!subInfo || !Array.isArray(subInfo) || subInfo.length === 0) {
       return {
         canPublish: false,
         reason: 'Necesitas una suscripción activa para publicar propiedades como agente',
@@ -268,13 +268,13 @@ export async function validateFeaturedLimits(
   userId: string
 ): Promise<FeaturedLimitValidation> {
   try {
-    const { data: subInfo, error } = await supabase.rpc('get_user_subscription_info', {
+    const { data: subInfo, error } = await supabase.rpc('get_user_subscription_info' as any, {
       user_uuid: userId,
     });
 
     if (error) throw error;
 
-    if (!subInfo || subInfo.length === 0) {
+    if (!subInfo || !Array.isArray(subInfo) || subInfo.length === 0) {
       return {
         canFeature: false,
         reason: 'Necesitas una suscripción activa para destacar propiedades',
@@ -411,11 +411,11 @@ export async function validateDowngrade(
   newPlanMaxProperties: number
 ): Promise<{ canDowngrade: boolean; reason: string; excessCount: number }> {
   try {
-    const { data: subInfo } = await supabase.rpc('get_user_subscription_info', {
+    const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, {
       user_uuid: userId,
     });
 
-    if (!subInfo || subInfo.length === 0) {
+    if (!subInfo || !Array.isArray(subInfo) || subInfo.length === 0) {
       return { canDowngrade: true, reason: '', excessCount: 0 };
     }
 

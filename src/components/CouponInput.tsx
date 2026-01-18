@@ -56,7 +56,7 @@ export function CouponInput({ onCouponApplied, onDiscountDetails, planType }: Co
         return;
       }
 
-      const { data, error } = await supabase.rpc('validate_coupon', {
+      const { data, error } = await supabase.rpc('validate_coupon' as any, {
         p_code: couponCode.toUpperCase(),
         p_user_id: user.user.id,
         p_plan_type: planType || null,
@@ -64,8 +64,13 @@ export function CouponInput({ onCouponApplied, onDiscountDetails, planType }: Co
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
-        const validation = data[0];
+      if (data && Array.isArray(data) && data.length > 0) {
+        const validation = data[0] as {
+          is_valid: boolean;
+          message: string;
+          discount_type?: string;
+          discount_value?: number;
+        };
         
         if (validation.is_valid) {
           setAppliedCoupon(couponCode.toUpperCase());

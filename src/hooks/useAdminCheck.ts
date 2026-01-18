@@ -31,8 +31,8 @@ export const useAdminCheck = () => {
       const impersonatedRole = localStorage.getItem(IMPERSONATION_KEY);
       if (impersonatedRole && ['buyer', 'agent', 'agency'].includes(impersonatedRole)) {
         // Verify user is actually super admin before allowing impersonation
-        const { data: isSuperData } = await supabase.rpc('is_super_admin', {
-          _user_id: user.id,
+        const { data: isSuperData } = await supabase.rpc('is_super_admin' as any, {
+          user_uuid: user.id,
         });
 
         if (isSuperData) {
@@ -46,8 +46,8 @@ export const useAdminCheck = () => {
       }
 
       // Verificar acceso administrativo general usando has_admin_access
-      const { data: hasAccessData, error: accessError } = await supabase.rpc('has_admin_access', {
-        _user_id: user.id,
+      const { data: hasAccessData, error: accessError } = await supabase.rpc('has_admin_access' as any, {
+        user_uuid: user.id,
       });
 
       if (accessError) {
@@ -60,8 +60,8 @@ export const useAdminCheck = () => {
 
         if (hasAccessData) {
           // Si tiene acceso admin, verificar si es super_admin
-          const { data: isSuperData, error: superError } = await supabase.rpc('is_super_admin', {
-            _user_id: user.id,
+          const { data: isSuperData, error: superError } = await supabase.rpc('is_super_admin' as any, {
+            user_uuid: user.id,
           });
 
           if (!superError) {

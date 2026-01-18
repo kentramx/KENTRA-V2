@@ -67,7 +67,7 @@ export const usePropertyTitleValidation = (
         setResult({
           isDuplicate: (data?.length || 0) > 0,
           duplicateCount: data?.length || 0,
-          existingProperties: data || [],
+          existingProperties: (data || []) as unknown as ExistingPropertyInfo[],
           loading: false,
         });
       } catch (error) {

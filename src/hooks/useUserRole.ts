@@ -30,8 +30,8 @@ export const useUserRole = () => {
       const impersonatedRole = localStorage.getItem(IMPERSONATION_KEY);
       if (impersonatedRole) {
         // Verify user is actually super admin
-        const { data: isSuperData } = await supabase.rpc('is_super_admin', {
-          _user_id: user.id,
+        const { data: isSuperData } = await supabase.rpc('is_super_admin' as any, {
+          user_uuid: user.id,
         });
 
         if (isSuperData) {

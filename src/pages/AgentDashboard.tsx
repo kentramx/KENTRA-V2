@@ -167,8 +167,8 @@ const AgentDashboard = () => {
           .single();
         setProfile(profileData || { name: 'Demo Agent Kentra', id: demoId });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: demoId });
-        if (subInfo && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, { user_uuid: demoId });
+        if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
 
         await fetchFeaturedCount();
       } finally {
@@ -194,11 +194,11 @@ const AgentDashboard = () => {
         
         setProfile(profileData || { name: 'Demo Agent Kentra', id: effectiveAgentId });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', {
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, {
           user_uuid: effectiveAgentId,
         });
 
-        if (subInfo && subInfo.length > 0) {
+        if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) {
           setSubscriptionInfo(subInfo[0]);
         }
 
@@ -242,20 +242,20 @@ const AgentDashboard = () => {
 
       setProfile(profileData);
 
-      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info', {
+      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info' as any, {
         user_uuid: user?.id,
       });
 
-      if (!subError && subInfo && subInfo.length > 0) {
+      if (!subError && subInfo && Array.isArray(subInfo) && subInfo.length > 0) {
         setSubscriptionInfo(subInfo[0]);
         
         if (subInfo[0].status === 'canceled') {
           try {
             await supabase.functions.invoke('sync-subscription-status');
-            const { data: updatedSubInfo } = await supabase.rpc('get_user_subscription_info', {
+            const { data: updatedSubInfo } = await supabase.rpc('get_user_subscription_info' as any, {
               user_uuid: user?.id,
             });
-            if (updatedSubInfo && updatedSubInfo.length > 0) {
+            if (updatedSubInfo && Array.isArray(updatedSubInfo) && updatedSubInfo.length > 0) {
               setSubscriptionInfo(updatedSubInfo[0]);
             }
           } catch (syncError) {
@@ -349,10 +349,10 @@ const AgentDashboard = () => {
       });
       
       if (effectiveAgentId) {
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { 
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, { 
           user_uuid: effectiveAgentId 
         });
-        if (subInfo && subInfo.length > 0) {
+        if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) {
           setSubscriptionInfo(subInfo[0]);
         }
       }
@@ -389,8 +389,8 @@ const AgentDashboard = () => {
     }
 
     try {
-      const { data: validation, error } = await supabase.rpc('can_create_property', {
-        user_uuid: effectiveAgentId,
+      const { data: validation, error } = await supabase.rpc('can_create_property' as any, {
+        user_id: effectiveAgentId,
       });
 
       if (error) throw error;

@@ -36,11 +36,15 @@ export const useProperty = (propertyId: string | undefined) => {
         .gte('end_date', new Date().toISOString())
         .maybeSingle();
 
+      // Transform agent array to single object
+      const agentData = Array.isArray(data.agent) ? data.agent[0] : data.agent;
+
       return {
         ...data,
         images: (data.images || []).sort((a: any, b: any) => a.position - b.position),
         is_featured: !!featuredData,
-      } as PropertyWithAgent;
+        agent: agentData,
+      } as unknown as PropertyWithAgent;
     },
     enabled: !!propertyId,
     staleTime: 10 * 60 * 1000,
