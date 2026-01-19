@@ -54,7 +54,7 @@ export interface PropertyMarker {
   for_rent: boolean;
   sale_price: number | null;
   rent_price: number | null;
-  images: { url: string; position?: number }[];
+  images?: { url: string; position?: number }[];
   agent_id: string;
   is_featured: boolean;
   created_at: string;
