@@ -316,16 +316,39 @@ export default function Buscar() {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {listProperties.map((property) => (
-                      <PropertyCard
+                      <div
                         key={property.id}
-                        property={property}
-                        isFavorite={favorites.has(property.id)}
-                        isHighlighted={property.id === hoveredPropertyId}
-                        onClick={() => handlePropertyClick(property.id)}
-                        onFavoriteToggle={() => toggleFavorite(property.id)}
                         onMouseEnter={() => setHoveredPropertyId(property.id)}
                         onMouseLeave={() => setHoveredPropertyId(null)}
-                      />
+                      >
+                        <PropertyCard
+                          id={property.id}
+                          title={property.title}
+                          price={property.price}
+                          type={property.type}
+                          listingType={property.listing_type}
+                          currency={property.currency}
+                          address={property.address}
+                          colonia={property.colonia}
+                          municipality={property.municipality}
+                          state={property.state}
+                          bedrooms={property.bedrooms}
+                          bathrooms={property.bathrooms}
+                          parking={property.parking}
+                          sqft={property.sqft}
+                          for_sale={property.for_sale}
+                          for_rent={property.for_rent}
+                          sale_price={property.sale_price}
+                          rent_price={property.rent_price}
+                          agentId={property.agent_id}
+                          isFeatured={property.is_featured}
+                          createdAt={property.created_at}
+                          isFavorite={favorites.has(property.id)}
+                          isHovered={property.id === hoveredPropertyId}
+                          onCardClick={handlePropertyClick}
+                          onToggleFavorite={() => toggleFavorite(property.id)}
+                        />
+                      </div>
                     ))}
                   </div>
 
