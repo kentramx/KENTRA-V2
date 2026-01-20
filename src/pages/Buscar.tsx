@@ -267,6 +267,8 @@ export default function Buscar() {
               onPropertyClick={handlePropertyClick}
               onPropertyHover={(p) => setHoveredPropertyId(p?.id || null)}
               onViewportChange={handleViewportChange}
+              initialCenter={INITIAL_VIEWPORT.center}
+              initialZoom={INITIAL_VIEWPORT.zoom}
             />
           </div>
 
