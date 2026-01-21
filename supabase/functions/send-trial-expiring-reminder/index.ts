@@ -1,17 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, apiRateLimit } from "../_shared/rateLimit.ts";
 
 /**
  * Cron job que envía recordatorio 2 días antes de que expire el trial
  * Debe ejecutarse diariamente
  */
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting for API operations
+  const clientIP = getClientIP(req);
+  const rateResult = checkRateLimit(clientIP, apiRateLimit);
+  if (!rateResult.allowed) {
+    return rateLimitedResponse(rateResult, corsHeaders);
   }
 
   try {

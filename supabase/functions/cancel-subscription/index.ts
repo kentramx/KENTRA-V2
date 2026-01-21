@@ -2,15 +2,22 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
 // @deno-types="https://esm.sh/stripe@11.16.0/types/index.d.ts"
 import Stripe from 'https://esm.sh/stripe@11.16.0?target=deno';
 import { withSentry } from '../_shared/sentry.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, paymentRateLimit } from "../_shared/rateLimit.ts";
 
 Deno.serve(withSentry(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting for payment operations
+  const clientIP = getClientIP(req);
+  const rateResult = checkRateLimit(clientIP, paymentRateLimit);
+  if (!rateResult.allowed) {
+    return rateLimitedResponse(rateResult, corsHeaders);
   }
 
   try {

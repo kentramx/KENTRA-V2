@@ -39,10 +39,7 @@ const getClientIdentifier = (req: Request): string => {
   return cfConnectingIp || realIp || forwarded?.split(',')[0] || 'unknown';
 };
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 interface NotificationRequest {
   recipientId: string;
@@ -54,6 +51,9 @@ interface NotificationRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

@@ -10,17 +10,15 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
-import { 
-  getRecoveryEmailHtml, 
-  getRecoveryEmailText 
+import { maskEmail } from "../_shared/emailHelper.ts";
+import {
+  getRecoveryEmailHtml,
+  getRecoveryEmailText
 } from "../_shared/authEmailTemplates.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, authRateLimit } from "../_shared/rateLimit.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 // Configuración - ESTANDARIZADO
 const TOKEN_LENGTH = 64;
@@ -54,9 +52,19 @@ interface RequestBody {
 }
 
 serve(async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting for auth operations
+  const clientIP = getClientIP(req);
+  const rateResult = checkRateLimit(clientIP, authRateLimit);
+  if (!rateResult.allowed) {
+    return rateLimitedResponse(rateResult, corsHeaders);
   }
 
   try {
@@ -71,7 +79,7 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    console.log(`📧 Processing recovery request for: ${normalizedEmail}`);
+    console.log(`📧 Processing recovery request for: ${maskEmail(normalizedEmail)}`);
 
     // Crear cliente Supabase con service role
     const supabaseAdmin = createClient(
@@ -93,7 +101,7 @@ serve(async (req: Request): Promise<Response> => {
     if (rateLimitError) {
       console.warn("⚠️ Rate limit check failed, proceeding:", rateLimitError);
     } else if (rateLimitData && rateLimitData[0] && !rateLimitData[0].allowed) {
-      console.log(`🚫 Rate limit exceeded for password reset: ${normalizedEmail}`);
+      console.log(`🚫 Rate limit exceeded for password reset: ${maskEmail(normalizedEmail)}`);
       // Still return success to prevent email enumeration
       return new Response(
         JSON.stringify({
@@ -135,7 +143,7 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     if (!userId) {
-      console.log(`ℹ️ No user found for email: ${normalizedEmail}`);
+      console.log(`ℹ️ No user found for email: ${maskEmail(normalizedEmail)}`);
       // No revelamos si el usuario existe o no por seguridad
       return new Response(
         JSON.stringify({ 

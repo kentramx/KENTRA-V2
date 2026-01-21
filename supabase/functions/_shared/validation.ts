@@ -9,14 +9,18 @@ export interface ValidationResult<T> {
   errors?: string[];
 }
 
-// Simple validation helpers
-const isString = (v: any): v is string => typeof v === 'string';
-const isNumber = (v: any): v is number => typeof v === 'number' && !isNaN(v);
-const isBoolean = (v: any): v is boolean => typeof v === 'boolean';
-const isUUID = (v: any): boolean => 
+// Simple validation helpers - exported for use in other modules
+export const isString = (v: any): v is string => typeof v === 'string';
+export const isNumber = (v: any): v is number => typeof v === 'number' && !isNaN(v);
+export const isInteger = (v: any): v is number => isNumber(v) && Number.isInteger(v);
+export const isBoolean = (v: any): v is boolean => typeof v === 'boolean';
+export const isUUID = (v: any): boolean =>
   isString(v) && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
-const isEmail = (v: any): boolean =>
+export const isEmail = (v: any): boolean =>
   isString(v) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+export const isPositiveInteger = (v: any): boolean => isInteger(v) && v > 0;
+export const isInRange = (v: any, min: number, max: number): boolean =>
+  isNumber(v) && v >= min && v <= max;
 
 // Checkout request validation
 export interface CheckoutRequest {

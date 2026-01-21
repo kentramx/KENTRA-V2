@@ -14,8 +14,8 @@ export const useRoleImpersonation = () => {
 
   useEffect(() => {
     mountedRef.current = true;
+    // SECURITY: Must verify super admin status BEFORE loading impersonated role
     checkSuperAdminStatus();
-    loadImpersonatedRole();
 
     return () => {
       mountedRef.current = false;
@@ -30,6 +30,8 @@ export const useRoleImpersonation = () => {
 
       if (!user) {
         setIsSuperAdmin(false);
+        // Clear any stale impersonation data if not logged in
+        clearImpersonationData();
         return;
       }
 
@@ -41,18 +43,43 @@ export const useRoleImpersonation = () => {
 
       if (!error && data) {
         setIsSuperAdmin(true);
+        // Only load impersonated role AFTER confirming super admin status
+        loadImpersonatedRole();
+      } else {
+        setIsSuperAdmin(false);
+        // SECURITY: Clear any impersonation data if user is not super admin
+        // This prevents localStorage manipulation attacks
+        clearImpersonationData();
       }
     } catch (error) {
       if (!mountedRef.current) return;
       monitoring.error('Error checking super admin status', { hook: 'useRoleImpersonation', error });
+      // On error, clear impersonation data as a security precaution
+      clearImpersonationData();
     }
+  };
+
+  const clearImpersonationData = () => {
+    const stored = localStorage.getItem(IMPERSONATION_KEY);
+    if (stored) {
+      localStorage.removeItem(IMPERSONATION_KEY);
+      monitoring.warn('Cleared unauthorized impersonation data', { hook: 'useRoleImpersonation' });
+    }
+    setImpersonatedRole(null);
+    setIsImpersonating(false);
   };
 
   const loadImpersonatedRole = () => {
     const stored = localStorage.getItem(IMPERSONATION_KEY);
-    if (stored) {
+    // Validate the stored role is a valid value
+    const validRoles: ImpersonatedRole[] = ['buyer', 'agent', 'agency', 'developer', 'moderator'];
+    if (stored && validRoles.includes(stored as ImpersonatedRole)) {
       setImpersonatedRole(stored as ImpersonatedRole);
       setIsImpersonating(true);
+    } else if (stored) {
+      // Invalid role in localStorage, clear it
+      localStorage.removeItem(IMPERSONATION_KEY);
+      monitoring.warn('Cleared invalid impersonation role from localStorage', { hook: 'useRoleImpersonation', stored });
     }
   };
 

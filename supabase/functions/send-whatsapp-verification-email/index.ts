@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { sendEmail, getAntiSpamFooter, EMAIL_CONFIG } from '../_shared/emailHelper.ts';
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { sendEmail, getAntiSpamFooter, EMAIL_CONFIG, maskEmail } from '../_shared/emailHelper.ts';
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, apiRateLimit } from "../_shared/rateLimit.ts";
 
 interface WhatsAppVerificationEmailRequest {
   userEmail: string;
@@ -13,8 +10,18 @@ interface WhatsAppVerificationEmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting for API operations
+  const clientIP = getClientIP(req);
+  const rateResult = checkRateLimit(clientIP, apiRateLimit);
+  if (!rateResult.allowed) {
+    return rateLimitedResponse(rateResult, corsHeaders);
   }
 
   try {
@@ -47,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
     
-    console.log(`📤 Sending WhatsApp verification confirmation to ${userEmail}`);
+    console.log(`📤 Sending WhatsApp verification confirmation to ${maskEmail(userEmail)}`);
 
     const html = `
 <!DOCTYPE html>

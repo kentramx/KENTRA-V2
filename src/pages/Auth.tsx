@@ -29,6 +29,40 @@ const resetPasswordSchema = z.object({
   email: z.string().trim().email({ message: 'Correo electrónico inválido' }),
 });
 
+/**
+ * Validates redirect URL to prevent Open Redirect attacks
+ * Only allows relative paths starting with /
+ * Blocks:
+ * - Absolute URLs (https://evil.com)
+ * - Protocol-relative URLs (//evil.com)
+ * - JavaScript URLs (javascript:...)
+ * - Data URLs (data:...)
+ */
+const getSafeRedirectUrl = (redirect: string | null): string | null => {
+  if (!redirect) return null;
+
+  // Must be a relative path starting with /
+  if (!redirect.startsWith('/')) return null;
+
+  // Block protocol-relative URLs (//evil.com)
+  if (redirect.startsWith('//')) return null;
+
+  // Block any URL with : before the first / (javascript:, data:, etc.)
+  const colonIndex = redirect.indexOf(':');
+  const slashIndex = redirect.indexOf('/', 1);
+  if (colonIndex !== -1 && (slashIndex === -1 || colonIndex < slashIndex)) {
+    return null;
+  }
+
+  // Block URLs with @ (user:pass@host attack)
+  if (redirect.includes('@')) return null;
+
+  // Block backslash (IE normalization attack)
+  if (redirect.includes('\\')) return null;
+
+  return redirect;
+};
+
 const newPasswordSchema = z.object({
   password: passwordSchema,
   confirmPassword: z.string(),
@@ -92,9 +126,12 @@ const Auth = () => {
     if (mode === 'reset') {
       return;
     }
-    
-    if (user && redirect) {
-      navigate(redirect);
+
+    // Validate redirect URL to prevent Open Redirect attacks
+    const safeRedirect = getSafeRedirectUrl(redirect);
+
+    if (user && safeRedirect) {
+      navigate(safeRedirect);
     } else if (user && view !== 'reset' && view !== 'verify') {
       navigate('/');
     }

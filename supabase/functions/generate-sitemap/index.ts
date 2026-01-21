@@ -1,15 +1,22 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Content-Type': 'application/xml',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, publicRateLimit } from "../_shared/rateLimit.ts";
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const baseCorsHeaders = getCorsHeaders(origin);
+  const corsHeaders = { ...baseCorsHeaders, 'Content-Type': 'application/xml' };
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
+  }
+
+  // Rate limiting for public operations
+  const clientIP = getClientIP(req);
+  const rateResult = checkRateLimit(clientIP, publicRateLimit);
+  if (!rateResult.allowed) {
+    return rateLimitedResponse(rateResult, corsHeaders);
   }
 
   try {

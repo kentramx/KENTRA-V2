@@ -14,6 +14,21 @@ import { Resend } from 'https://esm.sh/resend@2.0.0';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
+/**
+ * Mask email for logging purposes
+ * user@example.com -> u***@e***.com
+ */
+export function maskEmail(email: string): string {
+  if (!email || !email.includes('@')) return '***@***.***';
+  const [local, domain] = email.split('@');
+  const domainParts = domain.split('.');
+  const maskedLocal = local.length > 1 ? `${local[0]}***` : '***';
+  const maskedDomain = domainParts.length > 1
+    ? `${domainParts[0][0]}***.${domainParts[domainParts.length - 1]}`
+    : '***';
+  return `${maskedLocal}@${maskedDomain}`;
+}
+
 // Configuración centralizada
 const EMAIL_CONFIG = {
   fromAddress: 'Kentra <no-reply@updates.kentra.com.mx>', // Estandarizado con guión
@@ -134,7 +149,7 @@ export async function sendEmail({
       ...tags,
     ];
 
-    console.log(`📧 [EmailHelper] Sending ${category} email to ${toArray.join(', ')}`);
+    console.log(`📧 [EmailHelper] Sending ${category} email to ${toArray.map(e => maskEmail(e)).join(', ')}`);
     console.log(`📧 [EmailHelper] Subject: ${subject}`);
 
     const { data, error } = await resend.emails.send({

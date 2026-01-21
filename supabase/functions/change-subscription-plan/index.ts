@@ -4,19 +4,25 @@ import Stripe from 'https://esm.sh/stripe@11.16.0?target=deno';
 import { createLogger } from '../_shared/logger.ts';
 import { withRetry, isRetryableStripeError } from '../_shared/retry.ts';
 import { withSentry } from '../_shared/sentry.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, paymentRateLimit } from "../_shared/rateLimit.ts";
 
 Deno.serve(withSentry(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
   const logger = createLogger('change-subscription-plan');
   const startTime = Date.now();
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting for payment operations
+  const clientIP = getClientIP(req);
+  const rateResult = checkRateLimit(clientIP, paymentRateLimit);
+  if (!rateResult.allowed) {
+    return rateLimitedResponse(rateResult, corsHeaders);
   }
 
   try {

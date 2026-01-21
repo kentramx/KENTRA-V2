@@ -69,10 +69,21 @@ export const getClientIdentifier = (req: Request): string => {
 
 export const createRateLimitResponse = (
   resetTime: number,
-  maxRequests: number
+  maxRequests: number,
+  corsHeaders?: Record<string, string>
 ): Response => {
   const retryAfter = Math.ceil((resetTime - Date.now()) / 1000);
-  
+
+  // Use provided CORS headers or minimal safe defaults (no wildcard)
+  const responseHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Retry-After': retryAfter.toString(),
+    'X-RateLimit-Limit': maxRequests.toString(),
+    'X-RateLimit-Remaining': '0',
+    'X-RateLimit-Reset': resetTime.toString(),
+    ...(corsHeaders || {}),
+  };
+
   return new Response(
     JSON.stringify({
       error: 'Rate limit exceeded',
@@ -81,14 +92,7 @@ export const createRateLimitResponse = (
     }),
     {
       status: 429,
-      headers: {
-        'Content-Type': 'application/json',
-        'Retry-After': retryAfter.toString(),
-        'X-RateLimit-Limit': maxRequests.toString(),
-        'X-RateLimit-Remaining': '0',
-        'X-RateLimit-Reset': resetTime.toString(),
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: responseHeaders,
     }
   );
 };
@@ -103,25 +107,25 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-// Export como edge function para testing
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
+// Export como edge function para testing
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   return new Response(
-    JSON.stringify({ 
+    JSON.stringify({
       status: 'Rate limiter utility ready',
-      configs: rateLimitConfigs 
+      configs: rateLimitConfigs
     }),
-    { 
+    {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+      status: 200
     }
   );
 });

@@ -10,6 +10,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { maskEmail } from "../_shared/emailHelper.ts";
 import {
   getVerificationEmailHtml,
   getVerificationEmailText
@@ -127,7 +128,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`📧 Sending verification email to: ${email}`);
+    console.log(`📧 Sending verification email to: ${maskEmail(email)}`);
 
     // Rate limiting check (5 attempts per hour, 24-hour block)
     const { data: rateLimitData, error: rateLimitError } = await supabaseAdmin
@@ -142,7 +143,7 @@ serve(async (req: Request): Promise<Response> => {
     if (rateLimitError) {
       console.warn("⚠️ Rate limit check failed, proceeding:", rateLimitError);
     } else if (rateLimitData && rateLimitData[0] && !rateLimitData[0].allowed) {
-      console.log(`🚫 Rate limit exceeded for: ${email}`);
+      console.log(`🚫 Rate limit exceeded for: ${maskEmail(email)}`);
       return new Response(
         JSON.stringify({
           error: "Demasiados intentos. Por favor espera antes de solicitar otro código.",

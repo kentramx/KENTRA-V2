@@ -1,15 +1,22 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
-import { sendEmail, getAntiSpamFooter, EMAIL_CONFIG } from '../_shared/emailHelper.ts';
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { sendEmail, getAntiSpamFooter, EMAIL_CONFIG, maskEmail } from '../_shared/emailHelper.ts';
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, apiRateLimit } from "../_shared/rateLimit.ts";
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting for API operations
+  const clientIP = getClientIP(req);
+  const rateResult = checkRateLimit(clientIP, apiRateLimit);
+  if (!rateResult.allowed) {
+    return rateLimitedResponse(rateResult, corsHeaders);
   }
 
   try {
@@ -77,7 +84,7 @@ const handler = async (req: Request): Promise<Response> => {
         const agentName = agentProfile?.name || 'Agente';
         const expiryDate = new Date(property.expires_at);
 
-        console.log(`📤 Sending ${reminder.days}-day reminder to ${agentEmail}`);
+        console.log(`📤 Sending ${reminder.days}-day reminder to ${maskEmail(agentEmail)}`);
 
         const urgencyColor = reminder.days === 1 ? '#ef4444' : reminder.days === 3 ? '#f97316' : '#eab308';
         const urgencyText = reminder.days === 1 ? 'URGENTE' : reminder.days === 3 ? 'Importante' : 'Recordatorio';

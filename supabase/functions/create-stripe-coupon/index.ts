@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { getCorsHeaders, corsHeaders } from "../_shared/cors.ts";
+import { maskEmail } from "../_shared/emailHelper.ts";
+import { isNumber, isPositiveInteger, isString } from "../_shared/validation.ts";
 
 serve(async (req) => {
   const origin = req.headers.get('origin');
@@ -72,14 +74,30 @@ serve(async (req) => {
     }
 
     // Validate code format (alphanumeric, 3-50 chars)
-    if (!/^[A-Za-z0-9_-]{3,50}$/.test(code)) {
+    if (!isString(code) || !/^[A-Za-z0-9_-]{3,50}$/.test(code)) {
       return new Response(
         JSON.stringify({ error: 'Invalid coupon code format. Use 3-50 alphanumeric characters.' }),
         { headers: { ...headers, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    // Validate discount value
+    // Validate discount_type
+    if (!['percentage', 'fixed_amount'].includes(discount_type)) {
+      return new Response(
+        JSON.stringify({ error: 'discount_type must be "percentage" or "fixed_amount"' }),
+        { headers: { ...headers, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Validate discount_value is a number
+    if (!isNumber(discount_value)) {
+      return new Response(
+        JSON.stringify({ error: 'discount_value must be a number' }),
+        { headers: { ...headers, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Validate discount value range
     if (discount_type === 'percentage' && (discount_value < 1 || discount_value > 100)) {
       return new Response(
         JSON.stringify({ error: 'Percentage discount must be between 1 and 100' }),
@@ -94,7 +112,32 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[ADMIN: ${user.email}] Creating Stripe coupon:`, { code, discount_type, discount_value });
+    // Validate max_redemptions if provided
+    if (max_redemptions !== undefined && !isPositiveInteger(max_redemptions)) {
+      return new Response(
+        JSON.stringify({ error: 'max_redemptions must be a positive integer' }),
+        { headers: { ...headers, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Validate valid_until if provided
+    if (valid_until !== undefined) {
+      const validUntilDate = new Date(valid_until);
+      if (isNaN(validUntilDate.getTime())) {
+        return new Response(
+          JSON.stringify({ error: 'valid_until must be a valid date' }),
+          { headers: { ...headers, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      if (validUntilDate <= new Date()) {
+        return new Response(
+          JSON.stringify({ error: 'valid_until must be a future date' }),
+          { headers: { ...headers, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    }
+
+    console.log(`[ADMIN: ${maskEmail(user.email)}] Creating Stripe coupon:`, { code, discount_type, discount_value });
 
     // Create coupon in Stripe
     const couponParams: Stripe.CouponCreateParams = {

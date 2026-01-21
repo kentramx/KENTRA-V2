@@ -1,10 +1,9 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { maskEmail } from "../_shared/emailHelper.ts";
+import { isUUID, isString } from "../_shared/validation.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, apiRateLimit } from "../_shared/rateLimit.ts";
 
 interface UserActionRequest {
   action: 'suspend' | 'activate' | 'ban' | 'change-role' | 'delete' | 'reset-password' | 'resend-verification' | 'bulk-suspend' | 'bulk-activate' | 'bulk-delete';
@@ -15,8 +14,18 @@ interface UserActionRequest {
 }
 
 serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting
+  const clientIP = getClientIP(req);
+  const rateResult = checkRateLimit(clientIP, apiRateLimit);
+  if (!rateResult.allowed) {
+    return rateLimitedResponse(rateResult, corsHeaders);
   }
 
   try {
@@ -63,8 +72,27 @@ serve(async (req: Request) => {
     const request: UserActionRequest = await req.json();
     const { action, userId, userIds, reason, newRole } = request;
 
-    if (!action) {
-      return new Response(JSON.stringify({ error: 'Missing action' }), {
+    // Input validation
+    const validActions = ['suspend', 'activate', 'ban', 'change-role', 'delete', 'reset-password', 'resend-verification', 'bulk-suspend', 'bulk-activate', 'bulk-delete'];
+    if (!action || !validActions.includes(action)) {
+      return new Response(JSON.stringify({ error: `Invalid action. Must be one of: ${validActions.join(', ')}` }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate reason if provided (max 500 chars to prevent abuse)
+    if (reason !== undefined && (!isString(reason) || reason.length > 500)) {
+      return new Response(JSON.stringify({ error: 'reason must be a string with max 500 characters' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate newRole if provided
+    const validRoles = ['agente', 'inmobiliaria', 'desarrolladora', 'admin', 'super_admin', 'moderator'];
+    if (newRole !== undefined && (!isString(newRole) || !validRoles.includes(newRole))) {
+      return new Response(JSON.stringify({ error: `Invalid newRole. Must be one of: ${validRoles.join(', ')}` }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -72,11 +100,28 @@ serve(async (req: Request) => {
 
     // Handle bulk actions
     if (action.startsWith('bulk-')) {
-      if (!userIds || userIds.length === 0) {
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
         return new Response(JSON.stringify({ error: 'userIds array is required for bulk actions' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+      }
+
+      // Validate all userIds are valid UUIDs (max 100 for safety)
+      if (userIds.length > 100) {
+        return new Response(JSON.stringify({ error: 'Maximum 100 users per bulk action' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      for (const id of userIds) {
+        if (!isUUID(id)) {
+          return new Response(JSON.stringify({ error: `Invalid UUID in userIds: ${id}` }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
       }
 
       // Filter out self and super_admins from bulk actions
@@ -164,6 +209,14 @@ serve(async (req: Request) => {
     // Single user actions require userId
     if (!userId) {
       return new Response(JSON.stringify({ error: 'userId is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate userId is a valid UUID
+    if (!isUUID(userId)) {
+      return new Response(JSON.stringify({ error: 'userId must be a valid UUID' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -336,8 +389,8 @@ serve(async (req: Request) => {
         });
 
         if (resetError) throw resetError;
-        result = { success: true, message: `Password reset email sent to ${targetUser.email}` };
-        console.log(`[admin-user-action] Password reset sent to ${targetUser.email} by ${adminUser.id}`);
+        result = { success: true, message: `Password reset email sent` };
+        console.log(`[admin-user-action] Password reset sent to ${maskEmail(targetUser.email)} by ${adminUser.id}`);
         break;
       }
 
@@ -366,8 +419,8 @@ serve(async (req: Request) => {
         });
 
         if (resendError) throw resendError;
-        result = { success: true, message: `Verification email resent to ${targetUser.email}` };
-        console.log(`[admin-user-action] Verification email resent to ${targetUser.email} by ${adminUser.id}`);
+        result = { success: true, message: `Verification email resent` };
+        console.log(`[admin-user-action] Verification email resent to ${maskEmail(targetUser.email)} by ${adminUser.id}`);
         break;
       }
 

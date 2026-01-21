@@ -7,6 +7,32 @@ import { withCircuitBreaker } from '../_shared/circuitBreaker.ts';
 import { withSentry } from '../_shared/sentry.ts';
 import { getCorsHeaders } from '../_shared/cors.ts';
 
+/**
+ * Validates that a redirect URL is safe (on allowed domain)
+ * Prevents open redirect attacks in payment flows
+ */
+const ALLOWED_DOMAINS = ['kentra.mx', 'kentra.com.mx', 'www.kentra.mx', 'www.kentra.com.mx', 'localhost:5173', 'localhost:3000'];
+function isValidRedirectUrl(url: string | undefined, origin: string): boolean {
+  if (!url) return true; // undefined is OK, will use default
+
+  try {
+    const parsed = new URL(url);
+    // Allow URLs on the same origin
+    const originHost = new URL(origin).hostname;
+    if (parsed.hostname === originHost) return true;
+    // Allow URLs on allowed domains
+    return ALLOWED_DOMAINS.some(domain =>
+      parsed.hostname === domain || parsed.hostname.endsWith('.' + domain)
+    );
+  } catch {
+    // Invalid URL - could be a relative path, check it starts with /
+    if (url.startsWith('/') && !url.startsWith('//')) {
+      return true;
+    }
+    return false;
+  }
+}
+
 // Rate limiting utilities inlined
 interface RateLimitEntry {
   count: number;
@@ -141,6 +167,24 @@ Deno.serve(withSentry(async (req) => {
 
     // === GENERAR URLs DE REDIRECCIÓN POR DEFECTO ===
     const origin = req.headers.get('origin') || 'https://kentra.mx';
+
+    // SECURITY: Validate redirect URLs to prevent open redirect attacks
+    if (!isValidRedirectUrl(successUrl, origin)) {
+      return new Response(JSON.stringify({
+        error: 'Invalid successUrl - must be on kentra.mx domain'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (!isValidRedirectUrl(cancelUrl, origin)) {
+      return new Response(JSON.stringify({
+        error: 'Invalid cancelUrl - must be on kentra.mx domain'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     // Determinar tipo de plan para URLs dinámicas
     const determinePlanType = (planId: string): string => {
@@ -453,15 +497,72 @@ Deno.serve(withSentry(async (req) => {
     }
 
     // Build line items (plan + upsells)
+    // SECURITY: Validate upsells from database instead of trusting client-provided price IDs
+    let validatedUpsellLineItems: { price: string; quantity: number }[] = [];
+    if (upsells && upsells.length > 0) {
+      const upsellIds = upsells.map((u: any) => u.id).filter(Boolean);
+
+      if (upsellIds.length > 0) {
+        // Fetch upsells from database to get validated stripe_price_ids
+        const { data: upsellDetails, error: upsellFetchError } = await supabaseAdmin
+          .from('upsells')
+          .select('id, name, stripe_price_id, is_recurring')
+          .in('id', upsellIds);
+
+        if (upsellFetchError) {
+          console.error('Error fetching upsells:', upsellFetchError);
+          return new Response(
+            JSON.stringify({ error: 'Error validating additional services' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (upsellDetails && upsellDetails.length > 0) {
+          // Validate each upsell has a valid stripe_price_id
+          for (const upsell of upsellDetails) {
+            if (!upsell.stripe_price_id) {
+              return new Response(
+                JSON.stringify({
+                  error: `El servicio "${upsell.name}" no tiene precio configurado. Contacta soporte.`
+                }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+
+            // Validate stripe_price_id exists in Stripe
+            const isValid = await validateStripePriceId(upsell.stripe_price_id);
+            if (!isValid) {
+              return new Response(
+                JSON.stringify({
+                  error: `El servicio "${upsell.name}" tiene configuración inválida. Contacta soporte.`
+                }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          }
+
+          // Build validated line items using DB price IDs (not client-provided)
+          const upsellQuantities: Record<string, number> = {};
+          upsells.forEach((u: any) => {
+            if (u.id) {
+              upsellQuantities[u.id] = Math.max(1, Math.min(u.quantity || 1, 100));
+            }
+          });
+
+          validatedUpsellLineItems = upsellDetails.map((upsell) => ({
+            price: upsell.stripe_price_id,
+            quantity: upsellQuantities[upsell.id] || 1,
+          }));
+        }
+      }
+    }
+
     const lineItems = [
       {
         price: priceId,
         quantity: 1,
       },
-      ...upsells.map((upsell: any) => ({
-        price: upsell.stripePriceId,
-        quantity: 1,
-      })),
+      ...validatedUpsellLineItems,
     ];
 
     // METADATA COMPLETA para webhook - CRÍTICO para sincronización correcta

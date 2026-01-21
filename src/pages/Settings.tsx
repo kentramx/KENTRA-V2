@@ -54,8 +54,13 @@ const accountSchema = z.object({
   phone: z.string().max(20).optional(),
 });
 
+// Password validation rules - must match Auth.tsx for consistency
 const passwordSchema = z.object({
-  newPassword: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+  newPassword: z.string()
+    .min(12, "La contraseña debe tener al menos 12 caracteres")
+    .regex(/[A-Z]/, "La contraseña debe contener al menos una mayúscula")
+    .regex(/[a-z]/, "La contraseña debe contener al menos una minúscula")
+    .regex(/[0-9]/, "La contraseña debe contener al menos un número"),
   confirmPassword: z.string(),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "Las contraseñas no coinciden",

@@ -1,11 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, apiRateLimit } from "../_shared/rateLimit.ts";
+import { isUUID } from "../_shared/validation.ts";
 
 type ActionType = "cancel" | "reactivate" | "change-plan";
 
@@ -19,8 +17,18 @@ interface ActionRequest {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting for API operations
+  const clientIP = getClientIP(req);
+  const rateResult = checkRateLimit(clientIP, apiRateLimit);
+  if (!rateResult.allowed) {
+    return rateLimitedResponse(rateResult, corsHeaders);
   }
 
   try {
@@ -73,14 +81,48 @@ serve(async (req) => {
 
     const { action, userId, params }: ActionRequest = await req.json();
 
-    if (!action || !userId) {
+    // Input validation
+    const validActions: ActionType[] = ["cancel", "reactivate", "change-plan"];
+    if (!action || !validActions.includes(action)) {
       return new Response(
-        JSON.stringify({ error: "Missing action or userId" }),
+        JSON.stringify({ error: `Invalid action. Must be one of: ${validActions.join(", ")}` }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
+
+    if (!userId || !isUUID(userId)) {
+      return new Response(
+        JSON.stringify({ error: "userId must be a valid UUID" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Validate params for change-plan action
+    if (action === "change-plan") {
+      if (!params?.newPlanId || !isUUID(params.newPlanId)) {
+        return new Response(
+          JSON.stringify({ error: "newPlanId must be a valid UUID for change-plan action" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      if (params.billingCycle && !["monthly", "yearly"].includes(params.billingCycle)) {
+        return new Response(
+          JSON.stringify({ error: "billingCycle must be 'monthly' or 'yearly'" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
     }
 
     // Get user's subscription
