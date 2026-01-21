@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { monitoring } from '@/lib/monitoring';
 
-const IMPERSONATION_KEY = 'kentra_impersonated_role';
+// SECURITY: Key prefix - actual key includes user ID to prevent cross-user data leakage
+const IMPERSONATION_KEY_PREFIX = 'kentra_impersonated_role';
 
 export type ImpersonatedRole = 'buyer' | 'agent' | 'agency' | 'developer' | 'moderator' | null;
 
@@ -10,7 +11,14 @@ export const useRoleImpersonation = () => {
   const [impersonatedRole, setImpersonatedRole] = useState<ImpersonatedRole>(null);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const mountedRef = useRef(true);
+
+  // Get user-specific localStorage key
+  const getStorageKey = (userId: string | null) => {
+    if (!userId) return null;
+    return `${IMPERSONATION_KEY_PREFIX}_${userId}`;
+  };
 
   useEffect(() => {
     mountedRef.current = true;
@@ -30,10 +38,13 @@ export const useRoleImpersonation = () => {
 
       if (!user) {
         setIsSuperAdmin(false);
+        setCurrentUserId(null);
         // Clear any stale impersonation data if not logged in
-        clearImpersonationData();
+        clearImpersonationData(null);
         return;
       }
+
+      setCurrentUserId(user.id);
 
       const { data, error } = await (supabase.rpc as any)('is_super_admin', {
         _user_id: user.id,
@@ -44,33 +55,39 @@ export const useRoleImpersonation = () => {
       if (!error && data) {
         setIsSuperAdmin(true);
         // Only load impersonated role AFTER confirming super admin status
-        loadImpersonatedRole();
+        loadImpersonatedRole(user.id);
       } else {
         setIsSuperAdmin(false);
         // SECURITY: Clear any impersonation data if user is not super admin
         // This prevents localStorage manipulation attacks
-        clearImpersonationData();
+        clearImpersonationData(user.id);
       }
     } catch (error) {
       if (!mountedRef.current) return;
       monitoring.error('Error checking super admin status', { hook: 'useRoleImpersonation', error });
       // On error, clear impersonation data as a security precaution
-      clearImpersonationData();
+      clearImpersonationData(currentUserId);
     }
   };
 
-  const clearImpersonationData = () => {
-    const stored = localStorage.getItem(IMPERSONATION_KEY);
+  const clearImpersonationData = (userId: string | null) => {
+    const storageKey = getStorageKey(userId);
+    if (!storageKey) return;
+
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
-      localStorage.removeItem(IMPERSONATION_KEY);
+      localStorage.removeItem(storageKey);
       monitoring.warn('Cleared unauthorized impersonation data', { hook: 'useRoleImpersonation' });
     }
     setImpersonatedRole(null);
     setIsImpersonating(false);
   };
 
-  const loadImpersonatedRole = () => {
-    const stored = localStorage.getItem(IMPERSONATION_KEY);
+  const loadImpersonatedRole = (userId: string) => {
+    const storageKey = getStorageKey(userId);
+    if (!storageKey) return;
+
+    const stored = localStorage.getItem(storageKey);
     // Validate the stored role is a valid value
     const validRoles: ImpersonatedRole[] = ['buyer', 'agent', 'agency', 'developer', 'moderator'];
     if (stored && validRoles.includes(stored as ImpersonatedRole)) {
@@ -78,33 +95,41 @@ export const useRoleImpersonation = () => {
       setIsImpersonating(true);
     } else if (stored) {
       // Invalid role in localStorage, clear it
-      localStorage.removeItem(IMPERSONATION_KEY);
+      localStorage.removeItem(storageKey);
       monitoring.warn('Cleared invalid impersonation role from localStorage', { hook: 'useRoleImpersonation', stored });
     }
   };
 
   const startImpersonation = useCallback((role: ImpersonatedRole) => {
-    if (!isSuperAdmin) {
+    if (!isSuperAdmin || !currentUserId) {
       monitoring.warn('Only super admins can impersonate roles', { hook: 'useRoleImpersonation' });
       return;
     }
 
+    const storageKey = getStorageKey(currentUserId);
+    if (!storageKey) return;
+
     if (role) {
-      localStorage.setItem(IMPERSONATION_KEY, role);
+      localStorage.setItem(storageKey, role);
       setImpersonatedRole(role);
       setIsImpersonating(true);
     }
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, currentUserId]);
 
   const stopImpersonation = useCallback(() => {
-    localStorage.removeItem(IMPERSONATION_KEY);
+    const storageKey = getStorageKey(currentUserId);
+    if (storageKey) {
+      localStorage.removeItem(storageKey);
+    }
     setImpersonatedRole(null);
     setIsImpersonating(false);
-  }, []);
+  }, [currentUserId]);
 
   const isSimulating = useCallback(() => {
-    return localStorage.getItem(IMPERSONATION_KEY) !== null;
-  }, []);
+    const storageKey = getStorageKey(currentUserId);
+    if (!storageKey) return false;
+    return localStorage.getItem(storageKey) !== null;
+  }, [currentUserId]);
 
   const getDemoUserId = useCallback((): string | null => {
     if (!isImpersonating || !impersonatedRole) return null;
