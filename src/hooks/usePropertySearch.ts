@@ -44,7 +44,10 @@ export function usePropertySearch({
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/property-search`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
           body: JSON.stringify({
             filters: {
               listing_type: filters.listing_type || null,
