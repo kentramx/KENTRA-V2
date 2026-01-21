@@ -81,16 +81,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+        with:
+          fetch-depth: 0  # Required for TruffleHog to scan commit history
+
       - name: Run npm audit
         run: npm audit --audit-level=moderate || true
-      
-      - name: Check for secrets
+
+      - name: Check for secrets (Pull Request)
+        if: github.event_name == 'pull_request'
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: main
-          head: HEAD
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
+
+      - name: Check for secrets (Push)
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.before }}
+          head: ${{ github.event.after }}
 
   # Job 5: Deploy to Production (solo en main)
   deploy:
