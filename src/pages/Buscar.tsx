@@ -8,7 +8,7 @@
  * - Viewport real de Google Maps (no hardcoded)
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SearchMap } from '@/components/maps/SearchMap';
 import { LocationSearchInput, type LocationResult } from '@/components/maps/LocationSearchInput';
@@ -29,6 +29,7 @@ import { GOOGLE_MAPS_CONFIG } from '@/config/googleMaps';
 // Centro inicial de México (solo center y zoom, NO bounds hardcoded)
 const INITIAL_CENTER = GOOGLE_MAPS_CONFIG.defaultCenter;
 const INITIAL_ZOOM = GOOGLE_MAPS_CONFIG.zoom.default;
+const LOCATION_ZOOM = 12; // Zoom para cuando hay lat/lng en URL
 
 // Tipos de propiedad
 const PROPERTY_TYPES = [
@@ -52,6 +53,36 @@ export default function Buscar() {
     bounds?: google.maps.LatLngBounds;
     zoom?: number;
   } | null>(null);
+
+  // Flag para evitar re-aplicar ubicación de URL después del primer render
+  const hasAppliedUrlLocation = useRef(false);
+
+  // Leer lat/lng de URL params y hacer zoom al cargar la página
+  useEffect(() => {
+    // Solo aplicar una vez al montar el componente
+    if (hasAppliedUrlLocation.current) return;
+
+    const latParam = searchParams.get('lat');
+    const lngParam = searchParams.get('lng');
+
+    if (latParam && lngParam) {
+      const lat = parseFloat(latParam);
+      const lng = parseFloat(lngParam);
+
+      if (!isNaN(lat) && !isNaN(lng)) {
+        console.log('[Buscar] Applying location from URL:', { lat, lng });
+        hasAppliedUrlLocation.current = true;
+
+        // Pequeño delay para asegurar que el mapa esté listo
+        setTimeout(() => {
+          setSearchLocation({
+            center: { lat, lng },
+            zoom: LOCATION_ZOOM,
+          });
+        }, 100);
+      }
+    }
+  }, [searchParams]);
 
   // Estado de UI
   const [mobileView, setMobileView] = useState<'map' | 'list'>('list');
