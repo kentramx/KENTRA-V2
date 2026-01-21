@@ -184,15 +184,36 @@ export function SearchMap({
     }
   }, [fitToBounds]);
 
-  // Handler de click en cluster - zoom suave animado
+  // Handler de click en cluster - zoom suave animado estilo Zillow
   const handleClusterClick = useCallback((cluster: PropertyCluster) => {
     if (onClusterClick) {
       onClusterClick(cluster);
     } else if (map) {
+      const currentZoom = map.getZoom() || 5;
+      const targetZoom = Math.min(cluster.expansion_zoom, 16);
+
+      // Smooth zoom animation - primero pan, luego zoom gradual
       map.panTo({ lat: cluster.lat, lng: cluster.lng });
-      setTimeout(() => {
-        map.setZoom(cluster.expansion_zoom);
-      }, 200);
+
+      // Zoom progresivo para transición más suave
+      const zoomSteps = Math.abs(targetZoom - currentZoom);
+      if (zoomSteps <= 2) {
+        // Zoom directo si es poco cambio
+        setTimeout(() => map.setZoom(targetZoom), 150);
+      } else {
+        // Zoom en pasos para cambios grandes
+        let step = 0;
+        const stepZoom = () => {
+          step++;
+          const progress = step / 2;
+          const newZoom = Math.round(currentZoom + (targetZoom - currentZoom) * Math.min(progress, 1));
+          map.setZoom(newZoom);
+          if (step < 2) {
+            setTimeout(stepZoom, 120);
+          }
+        };
+        setTimeout(stepZoom, 150);
+      }
     }
   }, [map, onClusterClick]);
 

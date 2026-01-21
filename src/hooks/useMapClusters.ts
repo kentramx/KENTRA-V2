@@ -25,8 +25,8 @@ export function useMapClusters({
   filters = {},
   enabled = true,
 }: UseMapClustersOptions) {
-  // Debounce de 300ms para evitar requests excesivos
-  const debouncedViewport = useDebouncedValue(viewport, 300);
+  // Debounce de 200ms para UX más responsive
+  const debouncedViewport = useDebouncedValue(viewport, 200);
 
   const query = useQuery({
     queryKey: ['map-clusters', debouncedViewport, filters],

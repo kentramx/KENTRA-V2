@@ -1,6 +1,9 @@
 /**
  * Marcador de cluster premium estilo Zillow
  * KENTRA MAP STACK - OFICIAL
+ *
+ * Diseño: Círculos azules sólidos con tipografía clara
+ * Referencia: Zillow Blue #0041D9
  */
 
 import { memo, useCallback, useState } from 'react';
@@ -26,51 +29,38 @@ function formatCount(count: number): string {
   return count.toString();
 }
 
-// Calcular tamaño basado en cantidad (escala logarítmica)
+// Calcular tamaño basado en cantidad (escala logarítmica más pronunciada)
 function getClusterSize(count: number): { size: number; fontSize: number } {
-  const minSize = 40;
-  const maxSize = 70;
-  
-  const scale = Math.min(Math.log10(count + 1) / 4, 1);
-  const size = Math.round(minSize + (maxSize - minSize) * scale);
-  const fontSize = Math.round(size * 0.32);
-  
-  return { size, fontSize };
-}
-
-// Obtener estilo según densidad
-function getClusterStyle(count: number): { 
-  gradient: string; 
-  shadowNormal: string;
-  shadowHover: string;
-} {
+  // Tamaños más grandes y diferenciados
+  if (count >= 1000) {
+    return { size: 56, fontSize: 15 };
+  }
   if (count >= 500) {
-    return { 
-      gradient: 'linear-gradient(145deg, #1a1a1a 0%, #000000 100%)',
-      shadowNormal: '0 4px 14px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.3)',
-      shadowHover: '0 8px 28px rgba(0,0,0,0.6), 0 4px 10px rgba(0,0,0,0.4)',
-    };
+    return { size: 52, fontSize: 14 };
   }
   if (count >= 100) {
-    return { 
-      gradient: 'linear-gradient(145deg, #2d2d2d 0%, #1a1a1a 100%)',
-      shadowNormal: '0 4px 12px rgba(0,0,0,0.45), 0 2px 5px rgba(0,0,0,0.25)',
-      shadowHover: '0 8px 24px rgba(0,0,0,0.55), 0 4px 8px rgba(0,0,0,0.35)',
-    };
+    return { size: 48, fontSize: 14 };
+  }
+  if (count >= 50) {
+    return { size: 44, fontSize: 13 };
   }
   if (count >= 20) {
-    return { 
-      gradient: 'linear-gradient(145deg, #404040 0%, #2d2d2d 100%)',
-      shadowNormal: '0 4px 10px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2)',
-      shadowHover: '0 8px 20px rgba(0,0,0,0.5), 0 4px 6px rgba(0,0,0,0.3)',
-    };
+    return { size: 40, fontSize: 13 };
   }
-  return { 
-    gradient: 'linear-gradient(145deg, #525252 0%, #404040 100%)',
-    shadowNormal: '0 3px 8px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.15)',
-    shadowHover: '0 6px 16px rgba(0,0,0,0.45), 0 3px 5px rgba(0,0,0,0.25)',
-  };
+  // Clusters pequeños (menos de 20)
+  return { size: 36, fontSize: 12 };
 }
+
+// Colores premium estilo Zillow
+const CLUSTER_COLORS = {
+  // Azul Zillow como color principal
+  primary: '#0066FF',
+  primaryDark: '#0052CC',
+  primaryLight: '#3385FF',
+  // Sombras
+  shadow: 'rgba(0, 102, 255, 0.35)',
+  shadowHover: 'rgba(0, 102, 255, 0.5)',
+};
 
 export const ClusterMarker = memo(function ClusterMarker({
   map,
@@ -79,13 +69,12 @@ export const ClusterMarker = memo(function ClusterMarker({
   onClick,
 }: ClusterMarkerProps) {
   const [isHovered, setIsHovered] = useState(false);
-  
+
   const handleClick = useCallback(() => {
     onClick?.(cluster);
   }, [onClick, cluster]);
 
   const { size, fontSize } = getClusterSize(cluster.count);
-  const style = getClusterStyle(cluster.count);
   const countLabel = formatCount(cluster.count);
 
   return (
@@ -103,19 +92,27 @@ export const ClusterMarker = memo(function ClusterMarker({
           'absolute -translate-x-1/2 -translate-y-1/2',
           'rounded-full',
           'flex items-center justify-center',
-          'font-bold text-white tracking-tight',
-          'transition-all duration-200 ease-out',
+          'font-bold text-white',
           'cursor-pointer select-none',
-          'focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent'
+          'focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:ring-offset-2',
         )}
         style={{
           width: size,
           height: size,
           fontSize,
-          background: style.gradient,
-          border: '3px solid white',
-          boxShadow: isHovered ? style.shadowHover : style.shadowNormal,
-          transform: isHovered ? 'translate(-50%, -50%) scale(1.12)' : 'translate(-50%, -50%) scale(1)',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          letterSpacing: '-0.02em',
+          background: isHovered
+            ? `linear-gradient(180deg, ${CLUSTER_COLORS.primaryLight} 0%, ${CLUSTER_COLORS.primary} 100%)`
+            : `linear-gradient(180deg, ${CLUSTER_COLORS.primary} 0%, ${CLUSTER_COLORS.primaryDark} 100%)`,
+          border: '2px solid rgba(255,255,255,0.95)',
+          boxShadow: isHovered
+            ? `0 4px 16px ${CLUSTER_COLORS.shadowHover}, 0 2px 4px rgba(0,0,0,0.1)`
+            : `0 2px 8px ${CLUSTER_COLORS.shadow}, 0 1px 2px rgba(0,0,0,0.08)`,
+          transform: isHovered
+            ? 'translate(-50%, -50%) scale(1.08)'
+            : 'translate(-50%, -50%) scale(1)',
+          transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
         }}
         aria-label={`Grupo de ${cluster.count} propiedades. Click para acercar.`}
       >

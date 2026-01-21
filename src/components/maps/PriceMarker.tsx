@@ -1,6 +1,8 @@
 /**
  * Marcador de precio premium estilo Zillow
  * KENTRA MAP STACK - OFICIAL
+ *
+ * Diseño: Pill shape negro con flecha, estados claros
  */
 
 import { memo, useCallback, useMemo } from 'react';
@@ -19,12 +21,13 @@ interface PriceMarkerProps {
   onHover?: (property: PropertyMarker | null) => void;
 }
 
-// Formatear precio compacto
+// Formatear precio compacto - más legible
 function formatPrice(price: number, currency: string): string {
   const symbol = currency === 'USD' ? 'US$' : '$';
-  
+
   if (price >= 1_000_000) {
     const millions = price / 1_000_000;
+    // Mostrar un decimal solo si es necesario
     return `${symbol}${millions >= 10 ? millions.toFixed(0) : millions.toFixed(1)}M`;
   }
   if (price >= 1_000) {
@@ -34,43 +37,35 @@ function formatPrice(price: number, currency: string): string {
   return `${symbol}${price.toLocaleString()}`;
 }
 
-// Configuración de estilos por estado
+// Estilos premium - Negro elegante con estados claros
 const MARKER_STYLES = {
   default: {
-    bg: 'bg-black',
-    text: 'text-white',
-    border: 'border-white',
-    shadow: '0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2)',
+    bg: '#18181B', // zinc-900
+    text: '#FFFFFF',
+    shadow: '0 2px 8px rgba(0,0,0,0.25), 0 1px 3px rgba(0,0,0,0.15)',
     scale: 1,
     zIndex: 20,
-    triangleColor: 'border-t-black',
   },
   hover: {
-    bg: 'bg-primary',
-    text: 'text-primary-foreground',
-    border: 'border-primary',
-    shadow: '0 6px 20px rgba(0,0,0,0.4), 0 3px 6px rgba(0,0,0,0.25)',
-    scale: 1.08,
+    bg: '#0066FF', // Azul Zillow
+    text: '#FFFFFF',
+    shadow: '0 4px 16px rgba(0,102,255,0.4), 0 2px 4px rgba(0,0,0,0.1)',
+    scale: 1.05,
     zIndex: 40,
-    triangleColor: 'border-t-primary',
   },
   selected: {
-    bg: 'bg-primary',
-    text: 'text-primary-foreground',
-    border: 'border-primary',
-    shadow: '0 8px 28px rgba(0,0,0,0.45), 0 4px 8px rgba(0,0,0,0.3)',
-    scale: 1.12,
+    bg: '#0066FF', // Azul Zillow
+    text: '#FFFFFF',
+    shadow: '0 6px 20px rgba(0,102,255,0.5), 0 3px 6px rgba(0,0,0,0.15)',
+    scale: 1.08,
     zIndex: 50,
-    triangleColor: 'border-t-primary',
   },
   visited: {
-    bg: 'bg-muted',
-    text: 'text-muted-foreground',
-    border: 'border-muted',
-    shadow: '0 2px 8px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.1)',
-    scale: 1,
+    bg: '#71717A', // zinc-500
+    text: '#FFFFFF',
+    shadow: '0 1px 4px rgba(0,0,0,0.15)',
+    scale: 0.95,
     zIndex: 10,
-    triangleColor: 'border-t-muted',
   },
 } as const;
 
@@ -113,42 +108,49 @@ export const PriceMarker = memo(function PriceMarker({
     >
       <div
         className="absolute"
-        style={{ 
+        style={{
           transform: 'translate(-50%, -100%)',
-          paddingBottom: '8px',
+          paddingBottom: '6px',
         }}
       >
         <button
           onClick={handleClick}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          className={cn(
-            'relative px-2.5 py-1.5 rounded-lg',
-            'text-xs font-bold whitespace-nowrap',
-            styles.bg,
-            styles.text,
-            'border-2',
-            styles.border,
-            'transition-all duration-150 ease-out',
-            'cursor-pointer select-none',
-            'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1'
-          )}
+          className="relative cursor-pointer select-none focus:outline-none"
           style={{
+            padding: '6px 10px',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: 600,
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            letterSpacing: '-0.01em',
+            whiteSpace: 'nowrap',
+            backgroundColor: styles.bg,
+            color: styles.text,
             boxShadow: styles.shadow,
             transform: `scale(${styles.scale})`,
+            transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
           }}
           aria-label={`${property.title} - ${priceLabel}`}
         >
           {priceLabel}
-          
-          <span 
-            className={cn(
-              'absolute left-1/2 top-full -translate-x-1/2 -mt-px',
-              'border-l-[7px] border-r-[7px] border-t-[7px]',
-              'border-l-transparent border-r-transparent',
-              styles.triangleColor,
-              'transition-colors duration-150'
-            )} 
+
+          {/* Triangle pointer - mismo color que el fondo */}
+          <span
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '100%',
+              transform: 'translateX(-50%)',
+              marginTop: '-1px',
+              width: 0,
+              height: 0,
+              borderLeft: '6px solid transparent',
+              borderRight: '6px solid transparent',
+              borderTop: `6px solid ${styles.bg}`,
+              transition: 'border-color 200ms ease-out',
+            }}
           />
         </button>
       </div>

@@ -51,22 +51,118 @@ export const GOOGLE_MAPS_CONFIG = {
     maxClustersPerViewport: 100,
   },
 
-  // Debounce para eventos de mapa
+  // Debounce para eventos de mapa - reducido para UX más responsive
   debounce: {
-    boundsChange: 500,
-    search: 500,
+    boundsChange: 200,
+    search: 300,
   },
 
-  // Estilos del mapa (minimalista)
+  // Estilos premium del mapa - basados en Zillow (Snazzy Maps #13330)
+  // https://snazzymaps.com/style/13330/zillow
   styles: [
+    // Landscape base - beige claro
+    {
+      featureType: "landscape",
+      elementType: "geometry",
+      stylers: [{ color: "#e7e6e5" }],
+    },
+    // Terreno natural - verde suave
+    {
+      featureType: "landscape.natural.terrain",
+      elementType: "geometry",
+      stylers: [{ color: "#c5dea2" }],
+    },
+    // Agua - azul apagado
+    {
+      featureType: "water",
+      elementType: "geometry",
+      stylers: [{ color: "#b1bdd6" }],
+    },
+    // Carreteras principales - blancas
+    {
+      featureType: "road.highway",
+      elementType: "geometry.fill",
+      stylers: [{ color: "#ffffff" }],
+    },
+    {
+      featureType: "road.highway",
+      elementType: "geometry.stroke",
+      stylers: [{ color: "#d6d6d6" }, { weight: 0.5 }],
+    },
+    // Carreteras arteriales
+    {
+      featureType: "road.arterial",
+      elementType: "geometry.fill",
+      stylers: [{ color: "#ffffff" }],
+    },
+    {
+      featureType: "road.arterial",
+      elementType: "geometry.stroke",
+      stylers: [{ color: "#d6d6d6" }, { weight: 0.3 }],
+    },
+    // Carreteras locales
+    {
+      featureType: "road.local",
+      elementType: "geometry.fill",
+      stylers: [{ color: "#f3f1ef" }],
+    },
+    {
+      featureType: "road.local",
+      elementType: "geometry.stroke",
+      stylers: [{ visibility: "off" }],
+    },
+    // Labels de carreteras - gris suave
+    {
+      featureType: "road",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#817d76" }],
+    },
+    // Ocultar tránsito completamente
+    {
+      featureType: "transit",
+      stylers: [{ visibility: "off" }],
+    },
+    // POIs - ocultar la mayoría
     {
       featureType: "poi",
       elementType: "labels",
       stylers: [{ visibility: "off" }],
     },
     {
-      featureType: "transit",
+      featureType: "poi.business",
       stylers: [{ visibility: "off" }],
+    },
+    {
+      featureType: "poi.attraction",
+      stylers: [{ visibility: "off" }],
+    },
+    // Parques visibles pero sutiles
+    {
+      featureType: "poi.park",
+      elementType: "geometry",
+      stylers: [{ color: "#c5dea2" }],
+    },
+    {
+      featureType: "poi.park",
+      elementType: "labels",
+      stylers: [{ visibility: "off" }],
+    },
+    // Labels administrativos
+    {
+      featureType: "administrative.locality",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#444444" }],
+    },
+    {
+      featureType: "administrative.neighborhood",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#666666" }],
+    },
+    // Estados/provincias - más sutiles
+    {
+      featureType: "administrative.province",
+      elementType: "geometry.stroke",
+      stylers: [{ color: "#c0c0c0" }, { weight: 1 }],
     },
   ],
 };

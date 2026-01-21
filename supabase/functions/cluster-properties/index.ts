@@ -54,11 +54,13 @@ interface PropertyFromDB {
   created_at: string;
 }
 
+// Configuración premium de Supercluster - optimizada para UX tipo Zillow
+// CLAVE: Evitar clusters pequeños (2-10) que saturan el mapa
 const SUPERCLUSTER_OPTIONS = {
-  radius: 60,
-  maxZoom: 14,
+  radius: 120,       // Radio grande = menos clusters, más limpios
+  maxZoom: 14,       // Dejar de agrupar a zoom 14+ para ver precios individuales
   minZoom: 0,
-  minPoints: 2,
+  minPoints: 8,      // Mínimo 8 puntos para cluster - evita clusters pequeños
   extent: 512,
   nodeSize: 64,
   map: (props: PropertyFromDB) => ({
