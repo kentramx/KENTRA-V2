@@ -137,7 +137,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`[ADMIN: ${maskEmail(user.email)}] Creating Stripe coupon:`, { code, discount_type, discount_value });
+    console.log(`[ADMIN: ${maskEmail(user.email ?? 'unknown')}] Creating Stripe coupon:`, { code, discount_type, discount_value });
 
     // Create coupon in Stripe
     const couponParams: Stripe.CouponCreateParams = {

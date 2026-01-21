@@ -43,11 +43,12 @@ export interface SupabaseError {
  */
 export function isRLSViolation(error: SupabaseError | null): boolean {
   if (!error?.code) return false;
-  return [
+  const rlsCodes: string[] = [
     PG_ERROR_CODES.INSUFFICIENT_PRIVILEGE,
     PG_ERROR_CODES.RLS_VIOLATION,
     PG_ERROR_CODES.PERMISSION_DENIED,
-  ].includes(error.code);
+  ];
+  return rlsCodes.includes(error.code);
 }
 
 /**
@@ -55,12 +56,13 @@ export function isRLSViolation(error: SupabaseError | null): boolean {
  */
 export function isConstraintViolation(error: SupabaseError | null): boolean {
   if (!error?.code) return false;
-  return [
+  const constraintCodes: string[] = [
     PG_ERROR_CODES.UNIQUE_VIOLATION,
     PG_ERROR_CODES.FOREIGN_KEY_VIOLATION,
     PG_ERROR_CODES.CHECK_VIOLATION,
     PG_ERROR_CODES.NOT_NULL_VIOLATION,
-  ].includes(error.code);
+  ];
+  return constraintCodes.includes(error.code);
 }
 
 /**

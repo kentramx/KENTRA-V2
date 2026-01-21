@@ -107,7 +107,7 @@ export const useDeleteProperty = () => {
         .update({
           deleted_at: new Date().toISOString(),
           deleted_by: user?.id || null,
-          status: 'eliminada' as const,
+          status: 'expirada',
         })
         .eq('id', propertyId);
 

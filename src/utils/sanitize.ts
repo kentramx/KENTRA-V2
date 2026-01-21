@@ -4,7 +4,7 @@
 import DOMPurify from 'dompurify';
 
 // Configure DOMPurify with strict settings
-const DOMPURIFY_CONFIG: DOMPurify.Config = {
+const DOMPURIFY_CONFIG = {
   ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'span'],
   ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
   ALLOW_DATA_ATTR: false,
@@ -14,9 +14,9 @@ const DOMPURIFY_CONFIG: DOMPurify.Config = {
 };
 
 // Stricter config for plain text (no HTML allowed)
-const DOMPURIFY_TEXT_ONLY: DOMPurify.Config = {
-  ALLOWED_TAGS: [],
-  ALLOWED_ATTR: [],
+const DOMPURIFY_TEXT_ONLY = {
+  ALLOWED_TAGS: [] as string[],
+  ALLOWED_ATTR: [] as string[],
 };
 
 /**
@@ -25,7 +25,7 @@ const DOMPURIFY_TEXT_ONLY: DOMPurify.Config = {
  */
 export function sanitizeHtml(html: string | null | undefined): string {
   if (!html) return '';
-  return DOMPurify.sanitize(html, DOMPURIFY_CONFIG);
+  return DOMPurify.sanitize(html, DOMPURIFY_CONFIG) as string;
 }
 
 /**
@@ -34,7 +34,7 @@ export function sanitizeHtml(html: string | null | undefined): string {
  */
 export function stripHtml(html: string | null | undefined): string {
   if (!html) return '';
-  return DOMPurify.sanitize(html, DOMPURIFY_TEXT_ONLY);
+  return DOMPurify.sanitize(html, DOMPURIFY_TEXT_ONLY) as string;
 }
 
 /**

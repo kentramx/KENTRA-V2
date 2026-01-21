@@ -2,13 +2,24 @@
  * Supabase helper utilities for enhanced functionality
  */
 import { supabase } from '@/integrations/supabase/client';
-import type { FunctionsResponse } from '@supabase/supabase-js';
 
 export interface InvokeFunctionOptions {
   body?: Record<string, unknown>;
   headers?: Record<string, string>;
   timeout?: number; // Default: 30000ms (30 seconds)
 }
+
+interface FunctionsResponseSuccess<T> {
+  data: T;
+  error: null;
+}
+
+interface FunctionsResponseError {
+  data: null;
+  error: { message: string; context?: unknown };
+}
+
+type FunctionsResponse<T> = FunctionsResponseSuccess<T> | FunctionsResponseError;
 
 /**
  * SECURITY: Invoke a Supabase Edge Function with timeout protection
@@ -36,7 +47,7 @@ export async function invokeWithTimeout<T = unknown>(
       }),
     ]);
 
-    return result;
+    return result as FunctionsResponse<T>;
   } finally {
     clearTimeout(timeoutId);
   }

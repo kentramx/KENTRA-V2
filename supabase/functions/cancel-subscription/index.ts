@@ -31,8 +31,8 @@ Deno.serve(withSentry(async (req) => {
   }
 
   // Helper to add rate limit headers to all responses
-  const getResponseHeaders = () => addRateLimitHeaders(
-    getResponseHeaders(),
+  const getResponseHeaders = (): Record<string, string> => addRateLimitHeaders(
+    { ...corsHeaders, 'Content-Type': 'application/json' },
     rateResult,
     paymentRateLimit
   );

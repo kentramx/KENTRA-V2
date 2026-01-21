@@ -460,14 +460,14 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
                       </div>
                       
                       <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                        {agentStats && agentStats.avgRating > 0 && (
+                        {agentStats && agentStats.avgRating && parseFloat(agentStats.avgRating) > 0 && (
                           <span className="flex items-center gap-1">
                             <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                            {agentStats.avgRating.toFixed(1)}
+                            {parseFloat(agentStats.avgRating).toFixed(1)}
                           </span>
                         )}
                         {agentStats && (
-                          <span>{agentStats.totalProperties} {agentStats.totalProperties === 1 ? 'propiedad' : 'propiedades'}</span>
+                          <span>{agentStats.activeProperties} {agentStats.activeProperties === 1 ? 'propiedad' : 'propiedades'}</span>
                         )}
                       </div>
                     </div>
