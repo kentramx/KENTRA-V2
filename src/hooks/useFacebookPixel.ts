@@ -88,12 +88,9 @@ export const useFacebookPixel = () => {
       if (typeof window !== 'undefined' && window.fbq) {
         try {
           window.fbq('track', eventName, parameters);
-          console.log(`Facebook Pixel: ${eventName}`, parameters);
         } catch (error) {
-          console.error('Error tracking Facebook Pixel event:', error);
+          monitoring.warn('Error tracking Facebook Pixel event', { eventName, error });
         }
-      } else {
-        console.warn('Facebook Pixel no está disponible');
       }
 
       // 2. Guardar en la base de datos local
@@ -107,9 +104,8 @@ export const useFacebookPixel = () => {
       if (typeof window !== 'undefined' && window.fbq) {
         try {
           window.fbq('trackCustom', eventName, parameters);
-          console.log(`Facebook Pixel Custom: ${eventName}`, parameters);
         } catch (error) {
-          console.error('Error tracking Facebook Pixel custom event:', error);
+          monitoring.warn('Error tracking Facebook Pixel custom event', { eventName, error });
         }
       }
     },

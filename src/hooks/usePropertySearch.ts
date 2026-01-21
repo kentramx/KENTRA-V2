@@ -55,8 +55,6 @@ export function usePropertySearch({
     refetchOnWindowFocus: false,
 
     queryFn: async (): Promise<SearchResponse> => {
-      console.log('[usePropertySearch] Fetching with bounds:', validBounds);
-
       // When we have valid bounds, don't use state/municipality filters
       // The bounds already provide accurate geographic filtering
       const { data, error } = await supabase.functions.invoke('property-search', {
@@ -83,7 +81,6 @@ export function usePropertySearch({
         throw new Error(error.message || 'Failed to search properties');
       }
 
-      console.log('[usePropertySearch] Response total:', data?.total);
       return data as SearchResponse;
     },
   });

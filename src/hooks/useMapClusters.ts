@@ -58,8 +58,6 @@ export function useMapClusters({
         return { clusters: [], properties: [], total: 0, is_clustered: false };
       }
 
-      console.log('[useMapClusters] Fetching with bounds:', debouncedViewport.bounds);
-
       // When we have valid bounds, don't use state/municipality filters
       // The bounds already provide accurate geographic filtering
       const { data, error } = await supabase.functions.invoke('cluster-properties', {
@@ -84,7 +82,6 @@ export function useMapClusters({
         throw new Error(error.message || 'Failed to fetch map data');
       }
 
-      console.log('[useMapClusters] Response:', data);
       return data as MapClustersResponse;
     },
   });

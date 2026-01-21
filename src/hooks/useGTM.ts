@@ -47,12 +47,9 @@ export const useGTM = () => {
     if (typeof window !== 'undefined' && window.dataLayer) {
       try {
         window.dataLayer.push(eventData);
-        console.log('GTM dataLayer push:', eventData);
       } catch (error) {
         monitoring.debug('Error pushing to GTM dataLayer', { eventData, error });
       }
-    } else {
-      console.warn('GTM dataLayer no está disponible');
     }
   }, []);
 

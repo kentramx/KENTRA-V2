@@ -102,8 +102,6 @@ export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions 
 
   const handleSubscriptionUpdate = useCallback(
     (payload: { new: unknown; old: unknown }) => {
-      console.log('[useSubscriptionRealtime] Update received:', payload);
-
       const newData = payload.new as SubscriptionData;
       const oldData = payload.old as SubscriptionData;
 
@@ -166,12 +164,9 @@ export function useSubscriptionRealtime(options: UseSubscriptionRealtimeOptions 
         },
         handleSubscriptionUpdate
       )
-      .subscribe((status) => {
-        console.log('[useSubscriptionRealtime] Channel status:', status);
-      });
+      .subscribe();
 
     return () => {
-      console.log('[useSubscriptionRealtime] Cleaning up channel');
       supabase.removeChannel(channel);
     };
   }, [effectiveUserId, fetchSubscription, handleSubscriptionUpdate]);
