@@ -60,6 +60,8 @@ export function useMapClusters({
 
       console.log('[useMapClusters] Fetching with bounds:', debouncedViewport.bounds);
 
+      // When we have valid bounds, don't use state/municipality filters
+      // The bounds already provide accurate geographic filtering
       const { data, error } = await supabase.functions.invoke('cluster-properties', {
         body: {
           bounds: debouncedViewport.bounds,
@@ -70,8 +72,9 @@ export function useMapClusters({
             min_price: filters.min_price || null,
             max_price: filters.max_price || null,
             min_bedrooms: filters.min_bedrooms || null,
-            state: filters.state || null,
-            municipality: filters.municipality || null,
+            // Skip state/municipality when using bounds - they can cause mismatches
+            state: null,
+            municipality: null,
           },
         },
       });

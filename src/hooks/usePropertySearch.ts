@@ -57,6 +57,8 @@ export function usePropertySearch({
     queryFn: async (): Promise<SearchResponse> => {
       console.log('[usePropertySearch] Fetching with bounds:', validBounds);
 
+      // When we have valid bounds, don't use state/municipality filters
+      // The bounds already provide accurate geographic filtering
       const { data, error } = await supabase.functions.invoke('property-search', {
         body: {
           filters: {
@@ -65,8 +67,9 @@ export function usePropertySearch({
             min_price: filters.min_price || null,
             max_price: filters.max_price || null,
             min_bedrooms: filters.min_bedrooms || null,
-            state: filters.state || null,
-            municipality: filters.municipality || null,
+            // Skip state/municipality when using bounds - they can cause mismatches
+            state: validBounds ? null : (filters.state || null),
+            municipality: validBounds ? null : (filters.municipality || null),
           },
           bounds: validBounds,
           sort,
