@@ -97,7 +97,7 @@ const Home = () => {
       <Navbar />
 
       {/* TIER S: Hero Section - Immersive Design */}
-      <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[50vh] md:min-h-[55vh] flex items-center justify-center overflow-hidden">
         {/* Background mesh gradient */}
         <div className="absolute inset-0 gradient-mesh-olive" />
         
@@ -112,16 +112,16 @@ const Home = () => {
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }} />
 
-        <div className="container relative z-10 text-center text-white px-4 pt-16 md:pt-20">
+        <div className="container relative z-10 text-center text-white px-4 pt-8 md:pt-12">
           {/* Trust badge - VISIBLE */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-sm font-medium mb-8 md:mb-10 animate-fade-in-up shadow-lg">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-sm font-medium mb-4 md:mb-6 animate-fade-in-up shadow-lg">
             <Sparkles className="w-4 h-4 text-amber-300" />
             Plataforma inmobiliaria #1 en México
           </div>
           
           {/* TIER S: Display heading - STRIPE STYLE - VISIBLE IMMEDIATELY */}
           <h1 
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white text-balance max-w-4xl mx-auto mb-5 md:mb-6 animate-fade-in-up drop-shadow-lg" 
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white text-balance max-w-4xl mx-auto mb-3 md:mb-4 animate-fade-in-up drop-shadow-lg" 
             style={{ animationDelay: '100ms', letterSpacing: '-0.025em' }}
           >
             Tu próximo hogar,
@@ -129,15 +129,15 @@ const Home = () => {
           </h1>
           
           {/* Subtitle - More visible - NO OPACITY-0 */}
-          <p className="text-lg md:text-xl lg:text-2xl text-white/90 max-w-2xl mx-auto mb-6 md:mb-8 animate-fade-in-up font-medium" style={{ animationDelay: '200ms' }}>
+          <p className="text-lg md:text-xl lg:text-2xl text-white/90 max-w-2xl mx-auto mb-4 md:mb-5 animate-fade-in-up font-medium" style={{ animationDelay: '200ms' }}>
             Miles de propiedades verificadas en todo México. Compra, vende o renta con confianza.
           </p>
           
           {/* TIER S: Glass Search Card - MUCH MORE VISIBLE - NO OPACITY-0 */}
-          <div className="max-w-3xl mx-auto mb-8 md:mb-12 animate-scale-in" style={{ animationDelay: '300ms' }}>
-            <div className="bg-white/30 backdrop-blur-xl rounded-3xl shadow-2xl shadow-black/30 border-2 border-white/40 p-6 md:p-8">
+          <div className="max-w-3xl mx-auto mb-4 md:mb-6 animate-scale-in" style={{ animationDelay: '300ms' }}>
+            <div className="bg-white/30 backdrop-blur-xl rounded-3xl shadow-2xl shadow-black/30 border-2 border-white/40 p-4 md:p-6">
               {/* Listing Type Toggle - TIER S prominent */}
-              <div className="inline-flex p-2 bg-black/40 rounded-2xl mb-6 backdrop-blur-sm">
+              <div className="inline-flex p-2 bg-black/40 rounded-2xl mb-4 backdrop-blur-sm">
                 <Button 
                   type="button" 
                   variant={listingType === "venta" ? "default" : "ghost"} 
@@ -157,7 +157,7 @@ const Home = () => {
               </div>
 
               {/* Property Type - Glass style with visible text */}
-              <div className="flex justify-center mb-5">
+              <div className="flex justify-center mb-3">
                 <Select value={propertyType} onValueChange={setPropertyType}>
                   <SelectTrigger className="w-full max-w-xs h-12 bg-white/30 border-2 border-white/50 text-white font-medium [&>span]:text-white rounded-xl">
                     <SelectValue placeholder="Tipo de propiedad" className="text-white" />
@@ -179,12 +179,12 @@ const Home = () => {
               {/* Advanced Filters */}
               <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
                 <CollapsibleTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm" className="mx-auto mb-5 text-white/80 hover:text-white hover:bg-white/15 font-medium">
+                  <Button type="button" variant="ghost" size="sm" className="mx-auto mb-3 text-white/80 hover:text-white hover:bg-white/15 font-medium">
                     <SlidersHorizontal className="mr-2 h-4 w-4" />
                     Más filtros
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mb-5">
+                <CollapsibleContent className="mb-3">
                   <div className="bg-white/20 rounded-2xl p-5 space-y-4 text-left border border-white/30 backdrop-blur-sm">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
