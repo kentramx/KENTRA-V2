@@ -30,9 +30,9 @@ const PricingDesarrolladora = () => {
   const proPlan = dbPlans?.find(p => p.name === 'desarrolladora_pro');
 
   // Helper to get features from DB or fallback
-  const getFeatureList = (plan: any): string[] => {
+  const getFeatureList = (plan: { features?: { feature_list?: Array<{ text: string }>; limits?: Record<string, number>; capabilities?: Record<string, boolean> } } | null | undefined): string[] => {
     if (plan?.features?.feature_list && Array.isArray(plan.features.feature_list)) {
-      return plan.features.feature_list.map((f: any) => f.text);
+      return plan.features.feature_list.map((f) => f.text);
     }
     // Fallback
     const features: string[] = [];

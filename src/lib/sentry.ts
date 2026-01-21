@@ -80,7 +80,7 @@ export const initSentry = () => {
 // Helpers para capturar excepciones con contexto
 export const captureException = (
   error: Error,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ) => {
   if (context) {
     Sentry.setContext('custom', context);
@@ -91,7 +91,7 @@ export const captureException = (
 export const captureMessage = (
   message: string,
   level: Sentry.SeverityLevel = 'info',
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ) => {
   if (context) {
     Sentry.setContext('custom', context);
@@ -115,7 +115,7 @@ export const addBreadcrumb = (breadcrumb: {
   message: string;
   category?: string;
   level?: Sentry.SeverityLevel;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }) => {
   Sentry.addBreadcrumb(breadcrumb);
 };

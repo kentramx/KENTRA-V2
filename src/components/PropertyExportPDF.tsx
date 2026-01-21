@@ -6,9 +6,32 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode";
 
+interface PropertyData {
+  id: string;
+  title: string;
+  price: number;
+  description?: string;
+  type?: string;
+  listing_type?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  parking?: number;
+  sqft?: number;
+  lot_size?: number;
+  municipality?: string;
+  state?: string;
+  images?: (string | { url: string })[];
+}
+
+interface AgentData {
+  name?: string;
+  phone?: string;
+  whatsapp_number?: string;
+}
+
 interface PropertyExportPDFProps {
-  property: any;
-  agent: any;
+  property: PropertyData;
+  agent: AgentData;
 }
 
 export const PropertyExportPDF = ({ property, agent }: PropertyExportPDFProps) => {
@@ -130,7 +153,7 @@ export const PropertyExportPDF = ({ property, agent }: PropertyExportPDFProps) =
         yPosition += 7;
 
         // Load and add up to 4 images
-        const imageUrls = property.images.map((img: any) => 
+        const imageUrls = property.images.map((img: string | { url: string }) =>
           typeof img === 'string' ? img : img.url
         ).slice(0, 4);
 
@@ -182,7 +205,7 @@ export const PropertyExportPDF = ({ property, agent }: PropertyExportPDFProps) =
         headStyles: { fillColor: [0, 100, 200] },
       });
 
-      yPosition = (doc as any).lastAutoTable.finalY + 15;
+      yPosition = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
 
       // Description
       if (property.description) {

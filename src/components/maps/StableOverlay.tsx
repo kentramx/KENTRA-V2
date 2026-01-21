@@ -34,6 +34,7 @@ export function StableOverlay({
   useEffect(() => {
     positionRef.current = position;
     overlayRef.current?.draw();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- position object ref is intentionally excluded, using lat/lng values directly
   }, [position.lat, position.lng]);
 
   // Crear overlay UNA SOLA VEZ

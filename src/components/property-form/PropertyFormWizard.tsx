@@ -22,7 +22,7 @@ type PropertyInsert = Database['public']['Tables']['properties']['Insert'];
 type PropertyUpdate = Database['public']['Tables']['properties']['Update'];
 
 interface PropertyFormWizardProps {
-  property?: any;
+  property?: PropertyUpdate & { id?: string; agent_id?: string; images?: { id: string; url: string }[] };
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -195,7 +195,7 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
     const propertyData: PropertyInsert = {
       title: generatedTitle,
       price: mainPrice,
-      agent_id: user?.id!,
+      agent_id: user?.id ?? '',
       for_sale: formData.for_sale,
       for_rent: formData.for_rent,
       sale_price: formData.sale_price,

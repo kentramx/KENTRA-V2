@@ -14,7 +14,7 @@ interface Step4DescriptionImagesProps {
   updateFormData: (data: Partial<PropertyFormData>) => void;
   imageFiles: File[];
   setImageFiles: (files: File[]) => void;
-  existingImages?: any[];
+  existingImages?: { id: string; url: string }[];
 }
 
 export const Step4DescriptionImages = ({

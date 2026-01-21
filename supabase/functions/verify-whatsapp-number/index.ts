@@ -138,7 +138,7 @@ serve(async (req) => {
     console.log('WhatsApp verification result:', hasWhatsApp ? 'VERIFIED' : 'NOT FOUND');
 
     // Actualizar perfil con resultado de verificación
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       whatsapp_verified: hasWhatsApp,
     };
 

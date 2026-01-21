@@ -96,7 +96,7 @@ export const changePlan = async (
   newPlanId: string,
   billingCycle: 'monthly' | 'yearly',
   previewOnly: boolean = false
-): Promise<{ success: boolean; error?: string; preview?: any }> => {
+): Promise<{ success: boolean; error?: string; preview?: unknown }> => {
   try {
     const { data, error } = await supabase.functions.invoke('change-subscription-plan', {
       body: { 

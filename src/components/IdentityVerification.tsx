@@ -55,6 +55,7 @@ export const IdentityVerification = () => {
 
   useEffect(() => {
     fetchVerification();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchVerification is intentionally excluded to prevent infinite loops
   }, [user]);
 
   const fetchVerification = async () => {
@@ -77,13 +78,13 @@ export const IdentityVerification = () => {
         setDateOfBirth(data.date_of_birth || "");
         setAddress(data.address || "");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Error fetching verification", {
         component: "IdentityVerification",
         userId: user?.id,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: "IdentityVerification",
         action: "fetchVerification",
       });
@@ -154,13 +155,13 @@ export const IdentityVerification = () => {
       });
 
       await fetchVerification();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Error submitting verification", {
         component: "IdentityVerification",
         userId: user?.id,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: "IdentityVerification",
         action: "handleSubmit",
       });

@@ -7,7 +7,7 @@ import { checkRateLimit, getClientIP, rateLimitedResponse, apiRateLimit } from "
 interface NotificationRequest {
   userId: string;
   type: 'renewal_success' | 'payment_failed' | 'payment_failed_day_3' | 'payment_failed_day_5' | 'payment_failed_day_7' | 'subscription_canceled' | 'subscription_expiring' | 'downgrade_confirmed' | 'upgrade_confirmed' | 'trial_expired' | 'trial_started' | 'trial_expiring' | 'subscription_suspended' | 'welcome_paid' | 'upsell_expired' | 'renewal_reminder';
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 const BASE_URL = EMAIL_CONFIG.baseUrl;
@@ -489,14 +489,15 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error sending subscription notification', {
       userId: requestUserId,
       action: requestType,
-      error: error.message,
+      error: errorMessage,
     });
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

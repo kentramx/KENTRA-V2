@@ -70,26 +70,31 @@ export const PropertyStats = ({ properties, listingType, duration = 800 }: Prope
     if (!listingType) {
       animateValue(displayAvgVenta, avgVentaPrice, setDisplayAvgVenta);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- animateValue and displayAvgVenta are intentionally excluded
   }, [avgVentaPrice, listingType]);
 
   useEffect(() => {
     if (!listingType) {
       animateValue(displayAvgRenta, avgRentaPrice, setDisplayAvgRenta);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- animateValue and displayAvgRenta are intentionally excluded
   }, [avgRentaPrice, listingType]);
 
   useEffect(() => {
     if (listingType) {
       animateValue(displayAvg, avgPrice, setDisplayAvg);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- animateValue and displayAvg are intentionally excluded
   }, [avgPrice, listingType]);
 
   useEffect(() => {
     animateValue(displayMin, minPrice, setDisplayMin);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- animateValue and displayMin are intentionally excluded
   }, [minPrice]);
 
   useEffect(() => {
     animateValue(displayMax, maxPrice, setDisplayMax);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- animateValue and displayMax are intentionally excluded
   }, [maxPrice]);
 
   const formatCurrency = (value: number) => {

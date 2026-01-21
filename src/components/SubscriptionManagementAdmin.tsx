@@ -201,9 +201,9 @@ export const SubscriptionManagementAdmin = () => {
 
       toast.success(`Trial extendido ${extendDays} días`);
       fetchSubscriptions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error extending trial:', error);
-      toast.error(error.message || 'Error al extender trial');
+      toast.error(error instanceof Error ? error.message : 'Error al extender trial');
     } finally {
       setActionLoading(false);
       setActionDialog(null);

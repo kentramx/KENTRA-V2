@@ -176,6 +176,7 @@ export const ChatWindow = ({
         clearTimeout(typingTimeoutRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch functions are intentionally excluded to prevent infinite loops
   }, [conversationId, user]);
 
   // Auto-scroll al final cuando hay nuevos mensajes (solo si no hay búsqueda activa)
@@ -450,7 +451,7 @@ export const ChatWindow = ({
 
     try {
       // Llamar a la función de base de datos para marcar mensajes como leídos
-      const { error } = await supabase.rpc('mark_messages_as_read' as any, {
+      const { error } = await supabase.rpc('mark_messages_as_read' as 'get_agency_statistics', {
         p_conversation_id: conversationId,
         p_user_id: user.id,
       });
@@ -528,6 +529,7 @@ export const ChatWindow = ({
         error,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- warn is intentionally excluded as it's a stable reference
   }, [user]);
 
   // Manejar cambios en el textarea

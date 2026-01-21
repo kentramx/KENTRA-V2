@@ -50,6 +50,54 @@ interface AgentStats {
   totalReviews: number;
 }
 
+interface AgentData {
+  id: string;
+  name: string;
+  bio: string | null;
+  phone: string | null;
+  city: string | null;
+  state: string | null;
+  avatar_url: string | null;
+  is_verified: boolean | null;
+  phone_verified: boolean | null;
+  whatsapp_verified: boolean | null;
+  whatsapp_number: string | null;
+  whatsapp_enabled: boolean | null;
+}
+
+interface PropertyData {
+  id: string;
+  title: string;
+  price: number;
+  type: string;
+  listing_type: string;
+  address: string | null;
+  municipality: string | null;
+  state: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  parking: number | null;
+  sqft: number | null;
+  status: string;
+  agent_id: string;
+  created_at: string;
+  images: { url: string }[] | null;
+}
+
+interface UserBadgeRow {
+  badge_code: string;
+  badge_definitions: BadgeData | null;
+}
+
+interface SubscriptionPlanData {
+  name: string;
+}
+
+interface SubscriptionData {
+  plan_id: string;
+  subscription_plans: SubscriptionPlanData | null;
+}
+
 const AgentProfile = () => {
   const { id: rawId } = useParams();
   const navigate = useNavigate();
@@ -57,9 +105,9 @@ const AgentProfile = () => {
 
   // SECURITY: Validate UUID format to prevent malformed IDs
   const id = isValidUUID(rawId) ? rawId : undefined;
-  const [agent, setAgent] = useState<any>(null);
+  const [agent, setAgent] = useState<AgentData | null>(null);
   const [agentPlanName, setAgentPlanName] = useState<string | null>(null);
-  const [properties, setProperties] = useState<any[]>([]);
+  const [properties, setProperties] = useState<PropertyData[]>([]);
   const [badges, setBadges] = useState<BadgeData[]>([]);
   const [stats, setStats] = useState<AgentStats>({
     totalProperties: 0,
@@ -80,6 +128,7 @@ const AgentProfile = () => {
     if (id) {
       fetchAgentData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- navigate and fetchAgentData are stable, only re-run when id/rawId changes
   }, [id, rawId]);
 
   const fetchAgentData = async () => {
@@ -103,7 +152,7 @@ const AgentProfile = () => {
         .maybeSingle();
       
       if (subscriptionData?.subscription_plans) {
-        setAgentPlanName((subscriptionData.subscription_plans as any).name);
+        setAgentPlanName((subscriptionData as SubscriptionData).subscription_plans?.name ?? null);
       }
 
       // Fetch agent badges
@@ -113,12 +162,14 @@ const AgentProfile = () => {
         .eq("user_id", id);
 
       if (!badgesError && badgesData) {
-        const fetchedBadges = badgesData.map((ub: any) => ub.badge_definitions).filter(Boolean);
+        const fetchedBadges = (badgesData as UserBadgeRow[])
+          .map((ub) => ub.badge_definitions)
+          .filter((badge): badge is BadgeData => badge !== null);
         setBadges(fetchedBadges);
       }
 
       // Auto-assign badges based on current stats
-      await supabase.rpc("auto_assign_badges" as any, { p_user_id: id });
+      await supabase.rpc("auto_assign_badges" as unknown as "auto_assign_badges", { p_user_id: id });
 
       // Fetch agent properties
       const { data: propertiesData, error: propertiesError } = await supabase

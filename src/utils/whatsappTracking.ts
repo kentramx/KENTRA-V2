@@ -15,11 +15,11 @@ declare global {
     fbq?: (
       command: string,
       eventName: string,
-      parameters?: Record<string, any>
+      parameters?: Record<string, unknown>
     ) => void;
     gtag?: (
       command: string,
-      ...args: any[]
+      ...args: unknown[]
     ) => void;
   }
 }

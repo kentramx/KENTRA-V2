@@ -24,7 +24,7 @@ function formatPrice(price: number): string {
 }
 
 // Generar SVG para propiedad
-function generatePropertySVG(property: any): string {
+function generatePropertySVG(property: Record<string, unknown>): string {
   const price = formatPrice(property.price || 0);
   const title = property.title?.slice(0, 40) || "Propiedad";
   const location = `${property.municipality || ""}, ${property.state || ""}`.slice(0, 35);
@@ -80,7 +80,7 @@ function generatePropertySVG(property: any): string {
 }
 
 // Generar SVG para agente
-function generateAgentSVG(agent: any, stats: any): string {
+function generateAgentSVG(agent: Record<string, unknown>, stats: Record<string, unknown>): string {
   const name = agent.name?.slice(0, 30) || "Agente";
   const location = [agent.city, agent.state].filter(Boolean).join(", ").slice(0, 35) || "México";
   const properties = stats.activeProperties || 0;

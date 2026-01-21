@@ -42,7 +42,7 @@ export interface Property {
   lng: number | null;
 
   // Amenidades y medios
-  amenities: Record<string, any> | null;
+  amenities: Record<string, unknown> | null;
   images: PropertyImage[];
   video_url: string | null;
 
@@ -57,7 +57,7 @@ export interface Property {
   ai_moderation_notes: string | null;
   ai_moderated_at: string | null;
   requires_manual_review: boolean | null;
-  rejection_history: Record<string, any> | null;
+  rejection_history: Record<string, unknown> | null;
   resubmission_count: number;
 
   // Featured y destacados
@@ -71,10 +71,10 @@ export interface Property {
 
   // Duplicados
   duplicate_warning: boolean | null;
-  duplicate_warning_data: Record<string, any> | null;
+  duplicate_warning_data: Record<string, unknown> | null;
 
   // Historial de precios
-  price_history: Record<string, any> | null;
+  price_history: Record<string, unknown> | null;
 
   // Fechas
   created_at: string;

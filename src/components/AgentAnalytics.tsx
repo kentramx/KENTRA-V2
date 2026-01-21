@@ -68,6 +68,7 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
 
   useEffect(() => {
     fetchAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchAnalytics is intentionally excluded to prevent infinite loops
   }, [agentId]);
 
   const handleExportCSV = async () => {
@@ -156,10 +157,10 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
 
       // Property performance section
       doc.setFontSize(16);
-      const finalY = (doc as any).lastAutoTable.finalY || 50;
+      const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY || 50;
       doc.text('Rendimiento por Propiedad', 14, finalY + 15);
 
-      const propertyData = data.propertyPerformance.map((p: any) => [
+      const propertyData = data.propertyPerformance.map((p: { title: string; views: number; favorites: number; conversations: number }) => [
         p.title.length > 40 ? p.title.substring(0, 40) + '...' : p.title,
         p.views,
         p.favorites,
@@ -204,7 +205,7 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
     try {
       // Fetch overall stats
       const { data: statsData, error: statsError } = await supabase
-        .rpc("get_agent_stats" as any, { agent_uuid: agentId });
+        .rpc("get_agent_stats" as 'get_agency_statistics', { agent_uuid: agentId } as unknown as { agency_id: string });
 
       if (statsError) throw statsError;
       setStats(statsData?.[0] || null);
@@ -275,7 +276,7 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
 
         // Group views by date
         const viewsByDate: { [key: string]: number } = {};
-        viewsData?.forEach((view: any) => {
+        viewsData?.forEach((view: { viewed_at: string; property_id: string }) => {
           const date = new Date(view.viewed_at).toISOString().split('T')[0];
           viewsByDate[date] = (viewsByDate[date] || 0) + 1;
         });

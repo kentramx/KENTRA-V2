@@ -205,10 +205,10 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error in send-developer-invitation:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Error interno del servidor' }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Error interno del servidor' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

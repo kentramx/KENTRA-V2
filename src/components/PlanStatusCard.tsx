@@ -108,7 +108,7 @@ export const PlanStatusCard = ({
   const statusInfo = getStatusInfo();
   return <div className="space-y-4">
       {/* Alerta de estado si es necesario */}
-      {statusInfo.showAlert && <Alert variant={statusInfo.alertType as any}>
+      {statusInfo.showAlert && <Alert variant={statusInfo.alertType as 'default' | 'destructive' | null | undefined}>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{statusInfo.alertMessage}</AlertDescription>
         </Alert>}

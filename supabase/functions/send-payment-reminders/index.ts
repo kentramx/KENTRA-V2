@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
             userId: sub.user_id,
             type: reminderType,
             metadata: {
-              planName: (sub as any).subscription_plans?.display_name || 'tu plan',
+              planName: (sub as unknown as { subscription_plans?: { display_name?: string } }).subscription_plans?.display_name || 'tu plan',
               daysSinceFailed,
               daysRemaining: 7 - daysSinceFailed,
             },

@@ -30,6 +30,7 @@ export const PropertyInvestmentMetrics = ({
 
   useEffect(() => {
     fetchMarketData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchMarketData is intentionally excluded to prevent infinite loops
   }, [state, municipality, type]);
 
   const fetchMarketData = async () => {
@@ -44,7 +45,7 @@ export const PropertyInvestmentMetrics = ({
 
       // Only add type filter if it's a valid enum value
       if (type) {
-        query = query.eq("type", type as any);
+        query = query.eq("type", type);
       }
 
       const { data, error } = await query;

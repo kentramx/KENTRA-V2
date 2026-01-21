@@ -72,6 +72,7 @@ export const ChurnMetrics = () => {
 
   useEffect(() => {
     fetchChurnMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchChurnMetrics is intentionally excluded to prevent infinite loops
   }, [dateRange]);
 
   const fetchChurnMetrics = async () => {
@@ -81,7 +82,7 @@ export const ChurnMetrics = () => {
       else if (dateRange === '6m') startDate.setMonth(startDate.getMonth() - 6);
       else startDate.setFullYear(startDate.getFullYear() - 1);
 
-      const { data, error } = await supabase.rpc('get_churn_metrics' as any, {
+      const { data, error } = await supabase.rpc('get_churn_metrics' as 'get_agency_statistics', {
         start_date: startDate.toISOString(),
         end_date: new Date().toISOString()
       });

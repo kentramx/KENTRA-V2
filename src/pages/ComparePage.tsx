@@ -26,7 +26,24 @@ import propertyPlaceholder from "@/assets/property-placeholder.jpg";
 
 const ComparePage = () => {
   const { compareList, removeFromCompare, clearCompare } = usePropertyCompare();
-  const [properties, setProperties] = useState<any[]>([]);
+  const [properties, setProperties] = useState<Array<{
+    id: string;
+    title: string;
+    price: number;
+    currency: string;
+    type: string;
+    listing_type: string;
+    address: string | null;
+    municipality: string | null;
+    state: string | null;
+    bedrooms: number | null;
+    bathrooms: number | null;
+    parking: number | null;
+    sqft: number | null;
+    lot_size: number | null;
+    amenities: Array<{ category: string; items: string[] }> | null;
+    images: Array<{ url: string }> | null;
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -358,7 +375,7 @@ const ComparePage = () => {
                   <td key={property.id} className="p-4">
                     {property.amenities && property.amenities.length > 0 ? (
                       <div className="space-y-3 text-left">
-                        {property.amenities.map((amenity: any, idx: number) => (
+                        {property.amenities.map((amenity: { category: string; items: string[] }, idx: number) => (
                           <div key={idx}>
                             <p className="font-semibold text-xs text-muted-foreground mb-1">
                               {amenity.category}

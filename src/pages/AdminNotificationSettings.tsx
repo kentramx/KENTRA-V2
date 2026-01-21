@@ -44,6 +44,7 @@ export default function AdminNotificationSettings() {
     if (isAdmin) {
       fetchPreferences();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchPreferences is stable and only needs to run when isAdmin changes
   }, [isAdmin]);
 
   const fetchPreferences = async () => {

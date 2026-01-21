@@ -7,7 +7,7 @@ import { CheckCircle2, Home, MapPin, Maximize, Bed, Bath, Car, FileText, Sparkle
 interface Step6ReviewProps {
   formData: PropertyFormData;
   imageFiles: File[];
-  existingImages?: any[];
+  existingImages?: { id: string; url: string }[];
 }
 
 export const Step6Review = ({ formData, imageFiles, existingImages = [] }: Step6ReviewProps) => {

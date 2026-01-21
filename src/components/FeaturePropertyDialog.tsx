@@ -121,13 +121,13 @@ export const FeaturePropertyDialog = ({
 
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError('Error featuring property', {
         component: 'FeaturePropertyDialog',
         propertyId: property.id,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: 'FeaturePropertyDialog',
         action: 'handleFeature',
         propertyId: property.id,

@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
     console.log('✅ Stripe subscription reactivated');
 
     // Update database - restore to active status if was suspended
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       cancel_at_period_end: false,
       updated_at: new Date().toISOString(),
     };

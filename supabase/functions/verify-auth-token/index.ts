@@ -75,7 +75,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("❌ Unexpected error:", error);
     // SECURITY: Don't expose internal error details to clients
     return new Response(
@@ -89,7 +89,7 @@ serve(async (req: Request): Promise<Response> => {
  * Maneja la verificación de código de email
  */
 async function handleVerification(
-  supabaseAdmin: any,
+  supabaseAdmin: ReturnType<typeof createClient>,
   { code, email }: VerifyVerificationRequest,
   headers: Record<string, string>
 ): Promise<Response> {
@@ -162,7 +162,7 @@ async function handleVerification(
  * Maneja la recuperación de contraseña
  */
 async function handleRecovery(
-  supabaseAdmin: any,
+  supabaseAdmin: ReturnType<typeof createClient>,
   { token, newPassword }: VerifyRecoveryRequest,
   headers: Record<string, string>
 ): Promise<Response> {

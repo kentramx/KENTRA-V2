@@ -171,11 +171,14 @@ Deno.serve(withSentry(async (req) => {
       }),
       { headers: getResponseHeaders() }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error canceling subscription:', error);
 
     // Handle the specific case where subscription is already canceled
-    const message = error?.raw?.message || error?.message || '';
+    const errorObj = error as Record<string, unknown>;
+    const rawMessage = (errorObj?.raw as Record<string, unknown>)?.message;
+    const message = (typeof rawMessage === 'string' ? rawMessage : '') ||
+                    (error instanceof Error ? error.message : '');
     if (typeof message === 'string' && message.includes('A canceled subscription can only update its cancellation_details')) {
       console.log('Subscription already canceled in Stripe (caught in error handler), syncing database');
 

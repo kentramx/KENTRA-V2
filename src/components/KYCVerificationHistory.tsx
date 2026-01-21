@@ -36,6 +36,7 @@ export const KYCVerificationHistory = ({ verificationId }: KYCVerificationHistor
 
   useEffect(() => {
     fetchHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchHistory is intentionally excluded to prevent infinite loops
   }, [verificationId]);
 
   const fetchHistory = async () => {
@@ -75,7 +76,7 @@ export const KYCVerificationHistory = ({ verificationId }: KYCVerificationHistor
       } else {
         setHistory([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       monitoring.error("Error fetching KYC history", {
         component: "KYCVerificationHistory",
         verificationId,

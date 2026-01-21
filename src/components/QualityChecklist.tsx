@@ -9,8 +9,16 @@ const QUALITY_CHECKS = [
   { id: 'location', label: 'Ubicación verificada en mapa', required: true },
 ];
 
+interface PropertyData {
+  description?: string;
+  amenities?: unknown[];
+  images?: unknown[];
+  lat?: number;
+  lng?: number;
+}
+
 interface QualityChecklistProps {
-  property: any;
+  property: PropertyData;
 }
 
 const QualityChecklist = ({ property }: QualityChecklistProps) => {

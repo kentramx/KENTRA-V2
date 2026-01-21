@@ -38,6 +38,7 @@ export const MessageBadge = () => {
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchUnreadCount is intentionally excluded to prevent infinite loops
   }, [user]);
 
   const fetchUnreadCount = async () => {
@@ -53,7 +54,7 @@ export const MessageBadge = () => {
 
       const total = data?.reduce((sum, item) => sum + item.unread_count, 0) || 0;
       setUnreadCount(total);
-    } catch (error: any) {
+    } catch (error: unknown) {
       monitoring.warn('Error fetching unread count', {
         component: 'MessageBadge',
         userId: user?.id,

@@ -44,7 +44,9 @@ export function useNativeFeatures() {
       const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
       const styles = { light: ImpactStyle.Light, medium: ImpactStyle.Medium, heavy: ImpactStyle.Heavy };
       await Haptics.impact({ style: styles[style] });
-    } catch {}
+    } catch {
+      // Haptics not available - silently ignore
+    }
   }, [isNative]);
 
   const share = useCallback(async (data: { title: string; text?: string; url: string }) => {
@@ -64,24 +66,20 @@ export function useNativeFeatures() {
   }, [isNative]);
 
   const getLocation = useCallback(async () => {
-    try {
-      if (isNative) {
-        const { Geolocation } = await import('@capacitor/geolocation');
-        const perm = await Geolocation.checkPermissions();
-        if (perm.location === 'prompt') await Geolocation.requestPermissions();
-        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
-        return { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      } else {
-        return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-            (err) => reject(err),
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
-        });
-      }
-    } catch (e) {
-      throw e;
+    if (isNative) {
+      const { Geolocation } = await import('@capacitor/geolocation');
+      const perm = await Geolocation.checkPermissions();
+      if (perm.location === 'prompt') await Geolocation.requestPermissions();
+      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } else {
+      return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          (err) => reject(err),
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      });
     }
   }, [isNative]);
 

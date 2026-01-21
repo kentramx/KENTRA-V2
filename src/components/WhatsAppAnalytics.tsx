@@ -48,6 +48,7 @@ export const WhatsAppAnalytics = ({ agentId }: { agentId: string }) => {
 
   useEffect(() => {
     fetchWhatsAppAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchWhatsAppAnalytics is intentionally excluded to prevent infinite loops
   }, [agentId]);
 
   const fetchWhatsAppAnalytics = async () => {

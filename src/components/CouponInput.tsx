@@ -56,7 +56,7 @@ export function CouponInput({ onCouponApplied, onDiscountDetails, planType }: Co
         return;
       }
 
-      const { data, error } = await supabase.rpc('validate_coupon' as any, {
+      const { data, error } = await supabase.rpc('validate_coupon' as 'get_agency_statistics', {
         p_code: couponCode.toUpperCase(),
         p_user_id: user.user.id,
         p_plan_type: planType || null,
@@ -91,14 +91,14 @@ export function CouponInput({ onCouponApplied, onDiscountDetails, planType }: Co
           triggerShake();
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError('Error validating coupon', {
         component: 'CouponInput',
         couponCode,
         planType,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: 'CouponInput',
         action: 'validateCoupon',
         couponCode,

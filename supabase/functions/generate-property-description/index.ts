@@ -61,7 +61,7 @@ function incrementRateLimit(userId: string) {
   globalRateLimit.count++;
 }
 
-function generateCacheKey(data: any): string {
+function generateCacheKey(data: Record<string, unknown>): string {
   // Create a hash based on key property characteristics
   const keyParts = [
     data.type || '',
@@ -196,7 +196,7 @@ serve(async (req) => {
     const listingType = for_sale && for_rent ? 'venta y renta' : (for_sale ? 'venta' : 'renta');
     
     // Format amenities for prompt
-    const amenitiesList = amenities?.flatMap((cat: any) => cat.items || []).slice(0, 10).join(', ') || 'No especificadas';
+    const amenitiesList = amenities?.flatMap((cat: Record<string, unknown>) => (cat.items as string[]) || []).slice(0, 10).join(', ') || 'No especificadas';
 
     const prompt = `Genera una descripción profesional para esta propiedad inmobiliaria en México:
 

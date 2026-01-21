@@ -55,19 +55,19 @@ export const PhoneVerification = ({ phoneNumber, phoneVerified, onPhoneVerified 
       }
 
       setCodeSent(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Error sending verification code", {
         component: "PhoneVerification",
         phoneNumber,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: "PhoneVerification",
         action: "handleSendCode",
       });
       toast({
         title: "Error",
-        description: error.message || "No se pudo enviar el código",
+        description: error instanceof Error ? error.message : "No se pudo enviar el código",
         variant: "destructive",
       });
     } finally {
@@ -101,12 +101,12 @@ export const PhoneVerification = ({ phoneNumber, phoneVerified, onPhoneVerified 
       onPhoneVerified();
       setCodeSent(false);
       setVerificationCode("");
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Error verifying code", {
         component: "PhoneVerification",
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: "PhoneVerification",
         action: "handleVerifyCode",
       });

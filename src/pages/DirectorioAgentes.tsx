@@ -33,9 +33,73 @@ interface AgentData {
   phone_verified?: boolean;
   whatsapp_verified?: boolean;
   logo_url?: string;
+  avatar_url?: string;
   plan_name: string | null;
   plan_level: string | null;
   badges: BadgeData[];
+}
+
+interface PropertyAgentRow {
+  agent_id: string;
+}
+
+interface PropertyRow {
+  id: string;
+  status: string;
+  state: string;
+  municipality: string;
+}
+
+interface ReviewRow {
+  rating: number;
+}
+
+interface ProfileRow {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  is_verified: boolean | null;
+  phone_verified: boolean | null;
+  whatsapp_verified: boolean | null;
+  properties: PropertyRow[] | null;
+  agent_reviews: ReviewRow[] | null;
+}
+
+interface AgencyRow {
+  id: string;
+  name: string;
+  state: string | null;
+  city: string | null;
+  is_verified: boolean | null;
+  logo_url: string | null;
+  owner_id: string;
+}
+
+interface SubscriptionPlanInfo {
+  display_name: string;
+  name: string;
+}
+
+interface SubscriptionRow {
+  user_id: string;
+  status: string;
+  subscription_plans: SubscriptionPlanInfo | null;
+}
+
+interface UserBadgeRow {
+  user_id: string;
+  badge_definitions: BadgeData | null;
+}
+
+interface AgencyPropertyRow {
+  id: string;
+  status: string;
+  agent_id: string;
+}
+
+interface OwnerBadgeRow {
+  badge_code: string;
+  badge_definitions: BadgeData | null;
 }
 
 const DirectorioAgentes = () => {
@@ -56,6 +120,7 @@ const DirectorioAgentes = () => {
 
   useEffect(() => {
     fetchAgents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchAgents is stable, only re-run when filters/sortBy changes
   }, [filters, sortBy]);
 
   const fetchAgents = async () => {
@@ -77,7 +142,7 @@ const DirectorioAgentes = () => {
           .from("properties")
           .select("agent_id")
           .eq("status", "activa");
-        const fromProps = Array.from(new Set((propAgents || []).map((p: any) => p.agent_id))).filter(Boolean);
+        const fromProps = Array.from(new Set((propAgents || []).map((p: PropertyAgentRow) => p.agent_id))).filter(Boolean);
         agentIds = fromProps;
       }
 
@@ -99,7 +164,7 @@ const DirectorioAgentes = () => {
       }
 
       // Fetch agencies
-      let agenciesQuery = supabase
+      const agenciesQuery = supabase
         .from("agencies")
         .select(`
           id,
@@ -120,48 +185,48 @@ const DirectorioAgentes = () => {
       if (agenciesResult.error) throw agenciesResult.error;
 
       // Obtener suscripciones de los agentes (condicional si hay IDs)
-      let agentSubscriptions: any[] = [];
+      let agentSubscriptions: SubscriptionRow[] = [];
       if (agentIds.length > 0) {
         const { data } = await supabase
           .from("user_subscriptions")
           .select("user_id, status, subscription_plans(display_name, name)")
           .in("user_id", agentIds)
           .eq("status", "active");
-        agentSubscriptions = data || [];
+        agentSubscriptions = (data || []) as SubscriptionRow[];
       }
 
       const subscriptionMap = new Map(
-        (agentSubscriptions || []).map((sub: any) => [sub.user_id, sub])
+        agentSubscriptions.map((sub) => [sub.user_id, sub])
       );
 
       // Obtener badges de los agentes en una sola consulta (condicional si hay IDs)
-      let agentBadgesRows: any[] = [];
+      let agentBadgesRows: UserBadgeRow[] = [];
       if (agentIds.length > 0) {
         const { data } = await supabase
           .from("user_badges")
           .select("user_id, badge_definitions(code, name, description, icon, color, priority, is_secret)")
           .in("user_id", agentIds);
-        agentBadgesRows = data || [];
+        agentBadgesRows = (data || []) as UserBadgeRow[];
       }
 
       const badgesMap = new Map<string, BadgeData[]>();
-      (agentBadgesRows || []).forEach((row: any) => {
+      agentBadgesRows.forEach((row) => {
         const list = badgesMap.get(row.user_id) || [];
         if (row.badge_definitions) list.push(row.badge_definitions);
         badgesMap.set(row.user_id, list);
       });
 
       // Process agents
-      const processedAgents: AgentData[] = (agentsResult.data || []).map((profile: any) => {
-        const activeProperties = profile.properties?.filter((p: any) => p.status === 'activa') || [];
+      const processedAgents: AgentData[] = ((agentsResult.data || []) as ProfileRow[]).map((profile) => {
+        const activeProperties = (profile.properties || []).filter((p) => p.status === 'activa');
         const reviews = profile.agent_reviews || [];
         const avgRating = reviews.length > 0
-          ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
+          ? reviews.reduce((sum: number, r) => sum + r.rating, 0) / reviews.length
           : null;
 
         // Get most frequent state/city from properties
-        const states = activeProperties.map((p: any) => p.state);
-        const municipalities = activeProperties.map((p: any) => p.municipality);
+        const states = activeProperties.map((p) => p.state);
+        const municipalities = activeProperties.map((p) => p.municipality);
         const mostFrequentState = states.length > 0 ? states.sort((a: string, b: string) =>
           states.filter((s: string) => s === a).length - states.filter((s: string) => s === b).length
         ).pop() : "";
@@ -208,7 +273,7 @@ const DirectorioAgentes = () => {
 
       // Process agencies
       const processedAgencies: AgentData[] = await Promise.all(
-        (agenciesResult.data || []).map(async (agency: any) => {
+        ((agenciesResult.data || []) as AgencyRow[]).map(async (agency) => {
           // Fetch properties for this agency directly by agency_id
           const { data: properties } = await supabase
             .from("properties")
@@ -217,19 +282,19 @@ const DirectorioAgentes = () => {
             .eq("status", "activa");
 
           // Derive unique agent ids from properties to fetch reviews
-          const agentIdsForReviews = Array.from(new Set((properties || []).map((p: any) => p.agent_id))).filter(Boolean);
+          const agentIdsForReviews = Array.from(new Set(((properties || []) as AgencyPropertyRow[]).map((p) => p.agent_id))).filter(Boolean);
 
-          let reviews: any[] = [];
+          let reviews: ReviewRow[] = [];
           if (agentIdsForReviews.length > 0) {
             const { data: reviewsData } = await supabase
               .from("agent_reviews")
               .select("rating")
               .in("agent_id", agentIdsForReviews);
-            reviews = reviewsData || [];
+            reviews = (reviewsData || []) as ReviewRow[];
           }
 
           const activeProperties = properties?.length || 0;
-          const avgRating = reviews && reviews.length > 0
+          const avgRating = reviews.length > 0
             ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
             : null;
 
@@ -241,18 +306,20 @@ const DirectorioAgentes = () => {
             .select("badge_code, badge_definitions(code, name, description, icon, color, priority, is_secret)")
             .eq("user_id", agency.owner_id);
 
-          const badges = ownerBadges?.map((ub: any) => ub.badge_definitions).filter(Boolean) || [];
+          const badges = ((ownerBadges || []) as OwnerBadgeRow[])
+            .map((ub) => ub.badge_definitions)
+            .filter((badge): badge is BadgeData => badge !== null);
 
           return {
             id: agency.id,
             name: agency.name,
-            type: 'agency',
+            type: 'agency' as const,
             role: 'agency',
             city: agency.city || "",
             state: agency.state || "",
             active_properties: activeProperties,
             avg_rating: avgRating,
-            total_reviews: reviews?.length || 0,
+            total_reviews: reviews.length,
             is_verified: agency.is_verified || false,
             logo_url: agency.logo_url,
             plan_name: subscription?.subscription_plans?.display_name || "Sin Plan",
@@ -378,9 +445,9 @@ const DirectorioAgentes = () => {
       });
 
       setAgents(combinedData);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching agents:", err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : "Error desconocido");
     } finally {
       setLoading(false);
     }

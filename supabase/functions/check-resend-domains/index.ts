@@ -68,10 +68,10 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // Analizar dominios - Resend devuelve array directamente
-    const domainList = Array.isArray(domains) ? domains : (domains as any)?.data || [];
+    const domainList = Array.isArray(domains) ? domains : (domains as Record<string, unknown>)?.data || [];
     console.log(`📧 Found ${domainList.length} domain(s) in Resend account:`);
     
-    const domainInfo = domainList.map((domain: any) => {
+    const domainInfo = domainList.map((domain: Record<string, unknown>) => {
       console.log(`   - ${domain.name} (status: ${domain.status}, region: ${domain.region})`);
       return {
         name: domain.name,
@@ -82,19 +82,19 @@ serve(async (req: Request): Promise<Response> => {
     });
 
     // Verificar si updates.kentra.com.mx está en la lista
-    const hasKentraDomain = domainList.some((d: any) => 
+    const hasKentraDomain = domainList.some((d: Record<string, unknown>) => 
       d.name === "updates.kentra.com.mx" || d.name === "kentra.com.mx"
     );
 
     console.log(`📧 Has kentra domain verified: ${hasKentraDomain}`);
 
     // Obtener info de API keys (si está disponible)
-    let apiKeysInfo: any[] | null = null;
+    let apiKeysInfo: Array<{ id: unknown; name: unknown; createdAt: unknown }> | null = null;
     try {
       const { data: apiKeys } = await resend.apiKeys.list();
-      const keysList = Array.isArray(apiKeys) ? apiKeys : (apiKeys as any)?.data || [];
+      const keysList = Array.isArray(apiKeys) ? apiKeys : (apiKeys as Record<string, unknown>)?.data || [];
       if (keysList.length > 0) {
-        apiKeysInfo = keysList.map((key: any) => ({
+        apiKeysInfo = (keysList as Array<Record<string, unknown>>).map((key: Record<string, unknown>) => ({
           id: key.id,
           name: key.name,
           createdAt: key.created_at
@@ -120,7 +120,7 @@ serve(async (req: Request): Promise<Response> => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("❌ Unexpected error:", error);
     // SECURITY: Don't expose internal error details to clients
     return new Response(

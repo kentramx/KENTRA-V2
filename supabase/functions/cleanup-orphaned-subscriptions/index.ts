@@ -62,13 +62,13 @@ serve(async (req) => {
     console.log(`📊 Found ${orphanedSubs?.length || 0} active subscriptions to check`);
 
     // Filter subscriptions with null plans (orphaned)
-    const orphaned = orphanedSubs?.filter((sub: any) => !sub.subscription_plans) || [];
+    const orphaned = orphanedSubs?.filter((sub: Record<string, unknown>) => !sub.subscription_plans) || [];
     console.log(`⚠️ Found ${orphaned.length} orphaned subscriptions`);
 
     const results = {
       total: orphaned.length,
       processed: 0,
-      errors: [] as any[],
+      errors: [] as Array<{ subscription_id: string; error: string }>,
     };
 
     // Process each orphaned subscription
@@ -82,8 +82,8 @@ serve(async (req) => {
             console.log(`❌ Canceling Stripe subscription: ${sub.stripe_subscription_id}`);
             await stripe.subscriptions.cancel(sub.stripe_subscription_id);
             console.log(`✅ Stripe subscription canceled`);
-          } catch (stripeError: any) {
-            console.error(`⚠️ Error canceling Stripe subscription:`, stripeError.message);
+          } catch (stripeError: unknown) {
+            console.error(`⚠️ Error canceling Stripe subscription:`, stripeError instanceof Error ? stripeError.message : 'Unknown error');
             // Continue even if Stripe fails (might already be canceled)
           }
         }
@@ -111,9 +111,9 @@ serve(async (req) => {
         // This would require implementing an email service
         console.log(`📧 TODO: Send email to user ${sub.user_id} about discontinued plan`);
         
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`❌ Error processing subscription ${sub.id}:`, error);
-        results.errors.push({ subscription_id: sub.id, error: error.message });
+        results.errors.push({ subscription_id: sub.id as string, error: error instanceof Error ? error.message : 'Unknown error' });
       }
     }
 
@@ -130,12 +130,12 @@ serve(async (req) => {
         status: 200,
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error in cleanup-orphaned-subscriptions:', error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

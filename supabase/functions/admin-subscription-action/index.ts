@@ -149,7 +149,7 @@ serve(async (req) => {
       );
     }
 
-    let result: any = { success: true };
+    const result: Record<string, unknown> = { success: true };
 
     switch (action) {
       case "cancel": {

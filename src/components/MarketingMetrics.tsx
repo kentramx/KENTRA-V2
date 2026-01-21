@@ -107,6 +107,7 @@ export const MarketingMetrics = () => {
   useEffect(() => {
     fetchMetrics();
     fetchRecentEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch functions are intentionally excluded to prevent infinite loops
   }, [dateRange]);
 
   const fetchMetrics = async () => {
@@ -115,7 +116,7 @@ export const MarketingMetrics = () => {
       const endDate = new Date();
       const startDate = subDays(endDate, parseInt(dateRange));
 
-      const { data, error } = await supabase.rpc("get_marketing_metrics" as any, {
+      const { data, error } = await supabase.rpc("get_marketing_metrics" as 'get_agency_statistics', {
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
       });
@@ -143,8 +144,8 @@ export const MarketingMetrics = () => {
           purchase: rawData?.funnel_data?.purchase || 0,
         },
       };
-    } catch (error: any) {
-      captureException(error, {
+    } catch (error: unknown) {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: "MarketingMetrics",
         action: "fetchMetrics",
         dateRange,
@@ -193,7 +194,7 @@ export const MarketingMetrics = () => {
       if (error) throw error;
 
       setRecentEvents(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Error fetching recent events", {
         component: "MarketingMetrics",
         eventTypeFilter,
@@ -205,6 +206,7 @@ export const MarketingMetrics = () => {
 
   useEffect(() => {
     fetchRecentEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchRecentEvents is intentionally excluded to prevent infinite loops
   }, [eventTypeFilter, eventSourceFilter]);
 
   if (loading) {

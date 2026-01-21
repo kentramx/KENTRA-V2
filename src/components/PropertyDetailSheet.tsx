@@ -88,6 +88,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
         checkFavorite();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- trackPropertyView and checkFavorite are intentionally excluded to prevent infinite loops
   }, [propertyId, open, user]);
 
   useEffect(() => {
@@ -224,10 +225,11 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
           await navigator.clipboard.writeText(url);
           toast({ title: 'Enlace copiado', description: 'El enlace ha sido copiado al portapapeles' });
           break;
-        case 'whatsapp':
+        case 'whatsapp': {
           const whatsappMessage = `🏡 *${property.title}*\n\n💰 ${text}\n📍 ${property.municipality}, ${property.state}\n\n🔗 Ver más: ${url}`;
           window.open(`https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
           break;
+        }
         case 'facebook':
           window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
           break;
@@ -615,7 +617,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
           {/* Amenidades */}
           {property.amenities && typeof property.amenities === 'object' && (
             <SectionErrorBoundary sectionName="PropertyAmenities" fallbackMessage="No se pudieron cargar las amenidades">
-              <PropertyAmenities amenities={property.amenities as any} />
+              <PropertyAmenities amenities={property.amenities as string[] | { category: string; items: string[] }[]} />
             </SectionErrorBoundary>
           )}
 
@@ -635,7 +637,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
           <PropertyTimeline
             createdAt={property.created_at}
             updatedAt={property.updated_at}
-            priceHistory={property.price_history as any || []}
+            priceHistory={property.price_history as { date: string; price: number }[] || []}
             currentPrice={property.price}
           />
 

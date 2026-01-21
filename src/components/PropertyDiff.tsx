@@ -5,20 +5,32 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { monitoring } from '@/lib/monitoring';
 
+interface PropertyData {
+  id: string;
+  resubmission_count?: number;
+  images?: unknown[];
+  description?: string;
+  amenities?: { items: unknown[] }[];
+  lat?: number;
+  lng?: number;
+}
+
 interface PropertyDiffProps {
-  property: any;
+  property: PropertyData;
 }
 
 const PropertyDiff = ({ property }: PropertyDiffProps) => {
-  const [previousData, setPreviousData] = useState<any>(null);
+  const [previousData, setPreviousData] = useState<{ rejection_reason?: { label?: string; details?: string } } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchPreviousVersion();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchPreviousVersion is intentionally excluded to prevent infinite loops
   }, [property.id]);
 
   const fetchPreviousVersion = async () => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic Supabase query for property_moderation_history table
       const { data, error } = await (supabase as any)
         .from('property_moderation_history')
         .select('previous_data, rejection_reason')
@@ -116,7 +128,7 @@ const PropertyDiff = ({ property }: PropertyDiffProps) => {
           <div>
             <p className="font-semibold mb-1">Amenidades:</p>
             <p className="text-muted-foreground">
-              {property.amenities?.reduce((acc: number, cat: any) => acc + cat.items.length, 0) || 0} amenidades
+              {property.amenities?.reduce((acc: number, cat: { items: unknown[] }) => acc + cat.items.length, 0) || 0} amenidades
             </p>
           </div>
           <div>

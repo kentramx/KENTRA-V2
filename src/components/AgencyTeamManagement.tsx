@@ -32,16 +32,22 @@ import { Loader2, UserPlus, Trash2, Mail, Clock, XCircle, Send } from 'lucide-re
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+interface SubscriptionInfo {
+  features?: {
+    max_agents?: number;
+  };
+}
+
 interface AgencyTeamManagementProps {
   agencyId: string;
-  subscriptionInfo: any;
+  subscriptionInfo: SubscriptionInfo;
 }
 
 export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamManagementProps) => {
   const { toast } = useToast();
   const { error: logError, warn, captureException } = useMonitoring();
-  const [agents, setAgents] = useState<any[]>([]);
-  const [invitations, setInvitations] = useState<any[]>([]);
+  const [agents, setAgents] = useState<Record<string, unknown>[]>([]);
+  const [invitations, setInvitations] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -55,6 +61,7 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
     fetchAgents();
     fetchInvitations();
     fetchAgencyName();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch functions are intentionally excluded to prevent infinite loops
   }, [agencyId]);
 
   const fetchAgents = async () => {
@@ -193,21 +200,21 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
       setInviteDialogOpen(false);
       setInviteEmail('');
       fetchInvitations(); // Recargar invitaciones
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError('Error inviting agent to agency', {
         component: 'AgencyTeamManagement',
         agencyId,
         inviteEmail,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: 'AgencyTeamManagement',
         action: 'inviteAgent',
         agencyId,
       });
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo enviar la invitación',
+        description: error instanceof Error ? error.message : 'No se pudo enviar la invitación',
         variant: 'destructive',
       });
     } finally {
@@ -251,7 +258,7 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
     }
   };
 
-  const handleResendInvitation = async (invitation: any) => {
+  const handleResendInvitation = async (invitation: Record<string, unknown>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
@@ -279,20 +286,20 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
         title: 'Invitación reenviada',
         description: `Se ha reenviado la invitación a ${invitation.email}`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError('Error resending invitation', {
         component: 'AgencyTeamManagement',
         invitationId: invitation.id,
         email: invitation.email,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: 'AgencyTeamManagement',
         action: 'resendInvitation',
       });
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo reenviar la invitación',
+        description: error instanceof Error ? error.message : 'No se pudo reenviar la invitación',
         variant: 'destructive',
       });
     }
@@ -505,7 +512,7 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
 
             <div className="space-y-2">
               <Label htmlFor="role">Rol</Label>
-              <Select value={inviteRole} onValueChange={(value: any) => setInviteRole(value)}>
+              <Select value={inviteRole} onValueChange={(value: 'agent' | 'manager') => setInviteRole(value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

@@ -28,6 +28,7 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
 
   useEffect(() => {
     checkMFAStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- checkMFAStatus only needs to run on mount
   }, []);
 
   const checkMFAStatus = async () => {
@@ -95,18 +96,18 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
           description: "Escanea el código con tu app de autenticación",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Error enrolling MFA", {
         component: "TwoFactorAuth",
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: "TwoFactorAuth",
         action: "startEnrollment",
       });
       toast({
         title: "Error",
-        description: error.message || "No se pudo iniciar la configuración de 2FA",
+        description: error instanceof Error ? error.message : "No se pudo iniciar la configuración de 2FA",
         variant: "destructive",
       });
     }
@@ -139,18 +140,18 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
         title: "2FA habilitado",
         description: "La autenticación de dos factores está activa",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Error verifying MFA", {
         component: "TwoFactorAuth",
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: "TwoFactorAuth",
         action: "verifyAndEnable",
       });
       toast({
         title: "Error",
-        description: error.message || "Código incorrecto. Intenta de nuevo.",
+        description: error instanceof Error ? error.message : "Código incorrecto. Intenta de nuevo.",
         variant: "destructive",
       });
     }
@@ -173,18 +174,18 @@ export const TwoFactorAuth = ({ isAdminRole, userRole }: TwoFactorAuthProps) => 
         title: "2FA deshabilitado",
         description: "La autenticación de dos factores ha sido desactivada",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Error disabling MFA", {
         component: "TwoFactorAuth",
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: "TwoFactorAuth",
         action: "disableMFA",
       });
       toast({
         title: "Error",
-        description: error.message || "No se pudo desactivar 2FA",
+        description: error instanceof Error ? error.message : "No se pudo desactivar 2FA",
         variant: "destructive",
       });
     }

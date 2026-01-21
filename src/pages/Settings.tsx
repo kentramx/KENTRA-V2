@@ -70,11 +70,21 @@ const passwordSchema = z.object({
 type AccountFormData = z.infer<typeof accountSchema>;
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
+interface UserProfile {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  email_notifications: boolean | null;
+  role: string | null;
+  avatar_url: string | null;
+  created_at: string;
+}
+
 const Settings = () => {
   const { user, updatePassword, signOut } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [savingAccount, setSavingAccount] = useState(false);
@@ -108,6 +118,7 @@ const Settings = () => {
     }
     fetchUserData();
     checkNotificationPermission();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- navigate and fetchUserData are stable, only re-run when user changes
   }, [user]);
 
   const checkNotificationPermission = () => {
@@ -239,7 +250,7 @@ const Settings = () => {
 
       const loadingToast = toast.loading("Eliminando cuenta...");
 
-      const { data, error } = await supabase.functions.invoke('delete-user-account');
+      const { error } = await supabase.functions.invoke('delete-user-account');
 
       if (error) throw error;
 

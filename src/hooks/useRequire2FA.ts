@@ -24,6 +24,7 @@ export const useRequire2FA = () => {
 
   useEffect(() => {
     checkMFARequirement();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- checkMFARequirement is intentionally not in deps to avoid infinite loops; it reads these values directly
   }, [isAdmin, isSuperAdmin, adminLoading]);
 
   const checkMFARequirement = async () => {

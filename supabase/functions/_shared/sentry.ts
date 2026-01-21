@@ -10,7 +10,7 @@ interface SentryEvent {
       type: string;
       value: string;
       stacktrace?: {
-        frames: any[];
+        frames: Array<Record<string, unknown>>;
       };
     }>;
   };
@@ -20,7 +20,7 @@ interface SentryEvent {
   environment: string;
   server_name: string;
   tags?: Record<string, string>;
-  extra?: Record<string, any>;
+  extra?: Record<string, unknown>;
   user?: {
     id?: string;
     email?: string;
@@ -38,7 +38,7 @@ export async function captureException(
   context?: {
     user?: { id: string; email?: string };
     tags?: Record<string, string>;
-    extra?: Record<string, any>;
+    extra?: Record<string, unknown>;
   }
 ) {
   if (!SENTRY_DSN) {
@@ -81,7 +81,7 @@ export async function captureMessage(
   level: 'fatal' | 'error' | 'warning' | 'info' | 'debug' = 'info',
   context?: {
     tags?: Record<string, string>;
-    extra?: Record<string, any>;
+    extra?: Record<string, unknown>;
   }
 ) {
   if (!SENTRY_DSN) {
@@ -149,7 +149,7 @@ function extractPublicKey(dsn: string): string {
 /**
  * Parsear stack trace
  */
-function parseStackTrace(stack: string): any[] {
+function parseStackTrace(stack: string): Array<Record<string, unknown>> {
   return stack
     .split('\n')
     .slice(1)
@@ -170,10 +170,10 @@ function parseStackTrace(stack: string): any[] {
 /**
  * Wrapper para funciones edge con manejo de errores automático
  */
-export function withSentry<T extends (...args: any[]) => Promise<Response>>(
+export function withSentry<T extends (...args: unknown[]) => Promise<Response>>(
   handler: T
 ): T {
-  return (async (...args: any[]) => {
+  return (async (...args: unknown[]) => {
     try {
       return await handler(...args);
     } catch (error) {

@@ -12,11 +12,11 @@ interface TrackingParameters {
   currency?: string;
   item_id?: string;
   item_name?: string;
-  items?: any[];
+  items?: Record<string, unknown>[];
   search_term?: string;
   promotion_id?: string;
   promotion_name?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export const useTracking = () => {

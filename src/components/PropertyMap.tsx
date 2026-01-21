@@ -31,7 +31,7 @@ export const PropertyMap = ({ address, lat, lng, height = '400px' }: PropertyMap
   });
 
   // Validar coordenadas
-  const isValidCoordinate = (value: any): value is number => {
+  const isValidCoordinate = (value: unknown): value is number => {
     return typeof value === 'number' && !isNaN(value) && isFinite(value);
   };
 

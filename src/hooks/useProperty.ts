@@ -39,9 +39,14 @@ export const useProperty = (propertyId: string | undefined) => {
       // Transform agent array to single object
       const agentData = Array.isArray(data.agent) ? data.agent[0] : data.agent;
 
+      interface PropertyImageSort {
+        url: string;
+        position: number;
+      }
+
       return {
         ...data,
-        images: (data.images || []).sort((a: any, b: any) => a.position - b.position),
+        images: (data.images || []).sort((a: PropertyImageSort, b: PropertyImageSort) => a.position - b.position),
         is_featured: !!featuredData,
         agent: agentData,
       } as unknown as PropertyWithAgent;

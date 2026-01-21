@@ -77,6 +77,7 @@ export const AdminKYCReview = () => {
 
   useEffect(() => {
     fetchVerifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchVerifications is intentionally excluded to prevent infinite loops
   }, [filter]);
 
   const fetchVerifications = async () => {
@@ -114,13 +115,13 @@ export const AdminKYCReview = () => {
       } else {
         setVerifications([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Error fetching KYC verifications", {
         component: "AdminKYCReview",
         filter,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: "AdminKYCReview",
         action: "fetchVerifications",
         filter,
@@ -172,21 +173,21 @@ export const AdminKYCReview = () => {
       setRejectionReason("");
       setAdminNotes("");
       await fetchVerifications();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Error processing KYC review", {
         component: "AdminKYCReview",
         verificationId: selectedVerification.id,
         action: reviewAction,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: "AdminKYCReview",
         action: "processReview",
         reviewAction,
       });
       toast({
         title: "Error",
-        description: error.message || "No se pudo procesar la revisión",
+        description: error instanceof Error ? error.message : "No se pudo procesar la revisión",
         variant: "destructive",
       });
     } finally {

@@ -24,10 +24,30 @@ const getIconForSlug = (slug: string) => {
   }
 };
 
-const buildFeaturesArray = (plan: any): string[] => {
+interface FeatureItem {
+  text: string;
+}
+
+interface PlanFeatures {
+  feature_list?: FeatureItem[];
+  capabilities?: Record<string, boolean>;
+  priority_support?: boolean;
+  analytics?: boolean;
+  autopublicacion?: boolean;
+  reportes_avanzados?: boolean;
+  ia_copys?: boolean;
+  asesor_dedicado?: boolean;
+}
+
+interface PlanData {
+  features?: PlanFeatures;
+  [key: string]: unknown;
+}
+
+const buildFeaturesArray = (plan: PlanData): string[] => {
   // Priorizar feature_list de la nueva estructura de BD
   if (plan.features?.feature_list && Array.isArray(plan.features.feature_list)) {
-    return plan.features.feature_list.map((f: any) => f.text);
+    return plan.features.feature_list.map((f) => f.text);
   }
   
   // Fallback: generar features dinámicamente desde limits/capabilities

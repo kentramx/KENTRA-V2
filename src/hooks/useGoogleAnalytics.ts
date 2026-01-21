@@ -6,9 +6,9 @@ declare global {
   interface Window {
     gtag?: (
       command: string,
-      ...args: any[]
+      ...args: unknown[]
     ) => void;
-    dataLayer?: any[];
+    dataLayer?: unknown[];
   }
 }
 
@@ -31,8 +31,8 @@ interface EventParameters {
   value?: number;
   currency?: string;
   transaction_id?: string;
-  items?: any[];
-  [key: string]: any;
+  items?: Record<string, unknown>[];
+  [key: string]: unknown;
 }
 
 // Mapeo de eventos de Facebook Pixel a GA4

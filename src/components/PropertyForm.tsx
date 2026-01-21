@@ -39,7 +39,7 @@ const propertySchema = z.object({
 });
 
 interface PropertyFormProps {
-  property?: any;
+  property?: Record<string, unknown> & { id?: string; agent_id?: string };
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -49,7 +49,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [existingImages, setExistingImages] = useState<any[]>([]);
+  const [existingImages, setExistingImages] = useState<{ id: string; url: string }[]>([]);
   
   const [formData, setFormData] = useState({
     description: '',
@@ -257,11 +257,11 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         title: '✅ Imágenes optimizadas',
         description: `${compressedFiles.length} imágenes listas para subir`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error comprimiendo imágenes:', error);
       toast({
         title: '❌ Error',
-        description: error.message || 'Error al comprimir imágenes',
+        description: error instanceof Error ? error.message : 'Error al comprimir imágenes',
         variant: 'destructive',
       });
     }
@@ -376,13 +376,13 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
         const { error } = await supabase
           .from('properties')
-          .update({ ...validatedData, title: autoTitle } as any)
+          .update({ ...validatedData, title: autoTitle } as Record<string, unknown>)
           .eq('id', property.id)
           .eq('agent_id', user?.id); // Double-check ownership at DB level
 
         if (error) throw error;
       } else {
-        const propertyData: any = {
+        const propertyData: Record<string, unknown> = {
           ...validatedData,
           title: autoTitle,
           agent_id: user?.id,
@@ -472,7 +472,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
       }
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving property:', error);
       
       if (error instanceof z.ZodError) {

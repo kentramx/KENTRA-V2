@@ -223,6 +223,7 @@ export function ChangePlanDialog({
 
     const debounceTimer = setTimeout(fetchPreview, 300);
     return () => clearTimeout(debounceTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- currentPlanName, navigate, onOpenChange are intentionally excluded
   }, [selectedPlanId, billingCycle, open, currentPlanId, currentBillingCycle]);
 
   // Handle plan change confirmation

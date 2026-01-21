@@ -64,7 +64,7 @@ import { useMemo } from 'react';
 import { isValidUUID } from '@/utils/sanitize';
 
 // Helper para normalizar amenities
-const normalizeAmenities = (amenities: Record<string, any> | null | undefined): PropertyAmenity[] => {
+const normalizeAmenities = (amenities: Record<string, unknown> | null | undefined): PropertyAmenity[] => {
   if (!amenities || typeof amenities !== 'object') return [];
   
   // Si ya es un array, devolverlo
@@ -82,7 +82,7 @@ const normalizeAmenities = (amenities: Record<string, any> | null | undefined): 
 };
 
 // Helper para normalizar price history
-const normalizePriceHistory = (priceHistory: Record<string, any> | null | undefined): PropertyPriceHistory[] => {
+const normalizePriceHistory = (priceHistory: Record<string, unknown> | unknown[] | null | undefined): PropertyPriceHistory[] => {
   if (!priceHistory) return [];
   
   if (Array.isArray(priceHistory)) {
@@ -527,7 +527,9 @@ const PropertyDetail = () => {
             // Escritorio: intenta abrir la app y luego WhatsApp Web (sin api.whatsapp.com)
             try {
               window.location.href = deep;
-            } catch {}
+            } catch {
+              // Silently ignore if deep link fails - will fallback to web
+            }
 
             setTimeout(async () => {
               try {
@@ -542,7 +544,9 @@ const PropertyDetail = () => {
                   title: 'Mensaje copiado',
                   description: 'Abre WhatsApp (Web o app) y pega el mensaje.',
                 });
-              } catch {}
+              } catch {
+                // Silently ignore clipboard errors
+              }
             }, 700);
           }
           break;
@@ -750,7 +754,7 @@ const PropertyDetail = () => {
                   {property.status === 'activa' ? 'Activa' : property.status}
                 </Badge>
                 <Badge variant="secondary" className="font-mono text-sm px-3 py-1">
-                  {(property as any).property_code || `ID: ${property.id.slice(0, 8)}`}
+                  {(property as Property & { property_code?: string }).property_code || `ID: ${property.id.slice(0, 8)}`}
                 </Badge>
               </div>
 

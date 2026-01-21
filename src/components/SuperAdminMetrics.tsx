@@ -46,6 +46,7 @@ export const SuperAdminMetrics = () => {
 
   useEffect(() => {
     fetchMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchMetrics only needs to run on mount
   }, []);
 
   const fetchMetrics = async () => {
@@ -202,8 +203,9 @@ export const SuperAdminMetrics = () => {
       const distMap = new Map<string, { count: number; revenue: number }>();
       
       subscriptions?.forEach(sub => {
-        const planName = (sub.subscription_plans as any)?.display_name || 'Desconocido';
-        const price = Number((sub.subscription_plans as any)?.price_monthly || 0);
+        const plans = sub.subscription_plans as { display_name?: string; price_monthly?: number } | null;
+        const planName = plans?.display_name || 'Desconocido';
+        const price = Number(plans?.price_monthly || 0);
         const existing = distMap.get(planName) || { count: 0, revenue: 0 };
         distMap.set(planName, {
           count: existing.count + 1,
@@ -572,7 +574,7 @@ export const SuperAdminMetrics = () => {
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px'
                   }}
-                  formatter={(value: number, name: string, props: any) => [
+                  formatter={(value: number, name: string, props: { payload: { revenue: number } }) => [
                     `${value} suscripciones`,
                     `$${props.payload.revenue.toLocaleString('es-MX')} MRR`
                   ]}

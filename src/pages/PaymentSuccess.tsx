@@ -18,7 +18,7 @@ interface SubscriptionDetails {
   price: number;
   billingCycle: string;
   currentPeriodEnd: string;
-  features: any;
+  features: Record<string, unknown>;
   status: string;
 }
 

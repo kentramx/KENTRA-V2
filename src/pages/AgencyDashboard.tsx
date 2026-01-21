@@ -36,8 +36,17 @@ const AgencyDashboard = () => {
   const { isImpersonating, impersonatedRole, getDemoUserId, getDemoAgencyId } = useRoleImpersonation();
   const emailVerified = isEmailVerified();
   const [loading, setLoading] = useState(true);
-  const [agency, setAgency] = useState<any>(null);
-  const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
+  const [agency, setAgency] = useState<{ id: string; name: string; owner_id: string } | null>(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<{
+    status?: string;
+    name?: string;
+    display_name?: string;
+    plan_name?: string;
+    current_period_end?: string;
+    properties_limit?: number;
+    featured_limit?: number;
+    cancel_at_period_end?: boolean;
+  } | null>(null);
   const [reactivating, setReactivating] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
@@ -152,7 +161,7 @@ const AgencyDashboard = () => {
 
         setAgency(agencyData || { name: 'Kentra Inmobiliaria Demo', owner_id: ownerId, id: agencyId });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, { user_uuid: ownerId });
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { user_uuid: ownerId });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
       } finally {
         setLoading(false);
@@ -178,7 +187,7 @@ const AgencyDashboard = () => {
         
         setAgency(agencyData || { name: 'Kentra Inmobiliaria Demo', owner_id: ownerId, id: agencyId });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, { user_uuid: ownerId });
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { user_uuid: ownerId });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
         
         setLoading(false);
@@ -215,7 +224,7 @@ const AgencyDashboard = () => {
       setAgency(agencyData);
 
       // Obtener información de suscripción
-      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info' as any, {
+      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", {
         user_uuid: user?.id,
       });
 
@@ -257,18 +266,18 @@ const AgencyDashboard = () => {
       
       // Refresh subscription info
       if (effectiveOwnerId) {
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, { 
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { 
           user_uuid: effectiveOwnerId 
         });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) {
           setSubscriptionInfo(subInfo[0]);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error reactivating subscription:', error);
       toast({
         title: "Error al reactivar",
-        description: error.message || "No se pudo reactivar tu suscripción.",
+        description: error instanceof Error ? error.message : "No se pudo reactivar tu suscripción.",
         variant: "destructive",
       });
     } finally {

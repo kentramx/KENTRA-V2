@@ -7,7 +7,7 @@ declare global {
     fbq?: (
       command: string,
       eventName: string,
-      parameters?: Record<string, any>
+      parameters?: Record<string, unknown>
     ) => void;
   }
 }
@@ -25,7 +25,7 @@ interface EventParameters {
   content_category?: string;
   value?: number;
   currency?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface QueuedEvent {

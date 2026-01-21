@@ -60,6 +60,7 @@ export const ReviewForm = ({ agentId, propertyId, onReviewSubmitted }: ReviewFor
     if (user && agentId) {
       checkReviewEligibility();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- checkReviewEligibility is intentionally excluded to prevent infinite loops
   }, [user, agentId]);
 
   const checkReviewEligibility = async () => {

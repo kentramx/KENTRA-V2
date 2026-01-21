@@ -304,10 +304,10 @@ Deno.serve(withSentry(async (req) => {
 
       // VALIDACIÓN 6: Verificar límite de slots adicionales
       if (upsells && upsells.length > 0) {
-        const slotUpsellIds = upsells.filter((u: any) => 
+        const slotUpsellIds = upsells.filter((u: Record<string, unknown>) => 
           u.name?.toLowerCase().includes('slot adicional') || 
           u.name?.toLowerCase().includes('paquete')
-        ).map((u: any) => u.id);
+        ).map((u: Record<string, unknown>) => u.id);
 
         if (slotUpsellIds.length > 0) {
           const { data: activeSlots, error: slotsError } = await supabaseClient
@@ -333,9 +333,9 @@ Deno.serve(withSentry(async (req) => {
       const customerId = activeSub.stripe_customer_id;
 
       // Obtener IDs y cantidades de upsells del frontend
-      const upsellIds = upsells.map((u: any) => u.id).filter(Boolean);
+      const upsellIds = upsells.map((u: Record<string, unknown>) => u.id).filter(Boolean);
       const upsellQuantities: Record<string, number> = {};
-      upsells.forEach((u: any) => {
+      upsells.forEach((u: Record<string, unknown>) => {
         if (u.id) {
           upsellQuantities[u.id] = Math.max(1, Math.min(u.quantity || 1, 100)); // Entre 1 y 100
         }
@@ -398,7 +398,7 @@ Deno.serve(withSentry(async (req) => {
       console.log('Creating upsell checkout with line items:', lineItems, 'mode:', mode);
 
       // Crear sesión
-      const sessionParams: any = {
+      const sessionParams: Record<string, unknown> = {
         mode,
         payment_method_types: ['card'],
         customer: customerId,
@@ -522,7 +522,7 @@ Deno.serve(withSentry(async (req) => {
     // SECURITY: Validate upsells from database instead of trusting client-provided price IDs
     let validatedUpsellLineItems: { price: string; quantity: number }[] = [];
     if (upsells && upsells.length > 0) {
-      const upsellIds = upsells.map((u: any) => u.id).filter(Boolean);
+      const upsellIds = upsells.map((u: Record<string, unknown>) => u.id).filter(Boolean);
 
       if (upsellIds.length > 0) {
         // Fetch upsells from database to get validated stripe_price_ids
@@ -565,7 +565,7 @@ Deno.serve(withSentry(async (req) => {
 
           // Build validated line items using DB price IDs (not client-provided)
           const upsellQuantities: Record<string, number> = {};
-          upsells.forEach((u: any) => {
+          upsells.forEach((u: Record<string, unknown>) => {
             if (u.id) {
               upsellQuantities[u.id] = Math.max(1, Math.min(u.quantity || 1, 100));
             }
@@ -611,7 +611,7 @@ Deno.serve(withSentry(async (req) => {
     const mode = upsellOnly ? 'payment' : 'subscription';
 
     // Create checkout session
-    const sessionParams: any = {
+    const sessionParams: Record<string, unknown> = {
       mode,
       payment_method_types: ['card'],
       customer: customerId,

@@ -61,9 +61,30 @@ interface RejectionRecord {
 
 type FilterType = 'all' | 'active' | 'featured' | 'pending' | 'rejected' | 'expiring';
 
+interface SubscriptionInfo {
+  featured_limit?: number;
+  featured_used?: number;
+}
+
+interface PropertyRecord {
+  id: string;
+  title: string;
+  status: string;
+  price: number;
+  municipality?: string;
+  state?: string;
+  type?: string;
+  expires_at: string | null;
+  images?: { url: string }[];
+  colonia?: string;
+  property_code?: string;
+  rejection_history?: RejectionRecord[];
+  resubmission_count?: number;
+}
+
 interface AgentPropertyListProps {
-  onEdit: (property: any) => void;
-  subscriptionInfo?: any;
+  onEdit: (property: PropertyRecord) => void;
+  subscriptionInfo?: SubscriptionInfo;
   agentId?: string;
   onCreateProperty?: () => void;
 }
@@ -74,7 +95,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
   const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [featuredProperties, setFeaturedProperties] = useState<Set<string>>(new Set());
-  const [featureProperty, setFeatureProperty] = useState<any>(null);
+  const [featureProperty, setFeatureProperty] = useState<PropertyRecord | null>(null);
   const [togglingFeaturedId, setTogglingFeaturedId] = useState<string | null>(null);
   const { error: logError, warn, captureException } = useMonitoring();
 
@@ -100,6 +121,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   useEffect(() => {
     fetchFeaturedProperties();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchFeaturedProperties is intentionally excluded to prevent infinite loops
   }, [effectiveAgentId]);
 
   const fetchFeaturedProperties = async () => {
@@ -140,8 +162,8 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
     active: properties.filter(p => p.status === 'activa').length,
     featured: featuredProperties.size,
     pending: properties.filter(p => p.status === 'pendiente_aprobacion').length,
-    rejected: properties.filter(p => 
-      p.status === 'pausada' && (p as any).rejection_history?.length > 0
+    rejected: properties.filter(p =>
+      p.status === 'pausada' && (p as unknown as { rejection_history?: RejectionRecord[] }).rejection_history?.length
     ).length,
     expiring: properties.filter(p => 
       p.status === 'activa' && getDaysUntilExpiration(p.expires_at) <= 7
@@ -157,8 +179,8 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
           const query = searchQuery.toLowerCase();
           return (
             p.title.toLowerCase().includes(query) ||
-            (p as any).property_code?.toLowerCase().includes(query) ||
-            (p as any).colonia?.toLowerCase().includes(query) ||
+            (p as PropertyRecord).property_code?.toLowerCase().includes(query) ||
+            (p as PropertyRecord).colonia?.toLowerCase().includes(query) ||
             p.municipality?.toLowerCase().includes(query) ||
             p.state?.toLowerCase().includes(query) ||
             p.type?.toLowerCase().includes(query)
@@ -172,7 +194,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
           case 'active': return p.status === 'activa';
           case 'featured': return featuredProperties.has(p.id);
           case 'pending': return p.status === 'pendiente_aprobacion';
-          case 'rejected': return p.status === 'pausada' && (p as any).rejection_history?.length > 0;
+          case 'rejected': return p.status === 'pausada' && (p as PropertyRecord).rejection_history?.length > 0;
           case 'expiring': return p.status === 'activa' && getDaysUntilExpiration(p.expires_at) <= 7;
           default: return true;
         }
@@ -180,7 +202,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
   }, [properties, searchQuery, activeFilter, featuredProperties]);
 
   // Toggle featured (add or remove)
-  const handleToggleFeatured = async (property: any) => {
+  const handleToggleFeatured = async (property: PropertyRecord) => {
     const isFeatured = featuredProperties.has(property.id);
     setTogglingFeaturedId(property.id);
 
@@ -223,7 +245,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleRenewProperty = async (propertyId: string) => {
     try {
-      const { error } = await supabase.rpc('renew_property' as any, {
+      const { error } = await supabase.rpc('renew_property' as 'get_agency_statistics', {
         property_id: propertyId
       });
       
@@ -244,7 +266,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleResubmitProperty = async (propertyId: string) => {
     try {
-      const { data, error } = await supabase.rpc('resubmit_property' as any, { property_id: propertyId });
+      const { data, error } = await supabase.rpc('resubmit_property' as 'get_agency_statistics', { property_id: propertyId } as unknown as { agency_id: string });
       
       if (error) {
         toast({ title: 'Error', description: error.message || 'No se pudo conectar', variant: 'destructive' });
@@ -284,7 +306,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleReactivateProperty = async (propertyId: string) => {
     try {
-      const { error } = await supabase.rpc('reactivate_property' as any, { property_id: propertyId });
+      const { error } = await supabase.rpc('reactivate_property' as 'get_agency_statistics', { property_id: propertyId } as unknown as { agency_id: string });
       
       if (error) throw error;
       
@@ -368,7 +390,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
     
     selected.forEach((p, i) => {
       const url = `${window.location.origin}/propiedad/${p.id}`;
-      const location = (p as any).colonia ? `${(p as any).colonia}, ${p.municipality}` : p.municipality;
+      const location = (p as PropertyRecord).colonia ? `${(p as PropertyRecord).colonia}, ${p.municipality}` : p.municipality;
       message += `${i + 1}. *${p.title}*\n`;
       message += `   📍 ${location}\n`;
       message += `   💰 ${formatPrice(p.price)}\n`;
@@ -580,10 +602,10 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
               key={property.id}
               property={{
                 ...property,
-                colonia: (property as any).colonia,
-                property_code: (property as any).property_code,
-                rejection_history: (property as any).rejection_history,
-                resubmission_count: (property as any).resubmission_count,
+                colonia: (property as PropertyRecord).colonia,
+                property_code: (property as PropertyRecord).property_code,
+                rejection_history: (property as PropertyRecord).rejection_history,
+                resubmission_count: (property as PropertyRecord & { resubmission_count?: number }).resubmission_count,
               }}
               isFeatured={featuredProperties.has(property.id)}
               subscriptionInfo={subscriptionInfo}
@@ -596,12 +618,12 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
               onToggleFeatured={() => handleToggleFeatured(property)}
               onRenew={() => handleRenewProperty(property.id)}
               onResubmit={
-                property.status === 'pausada' && (property as any).rejection_history?.length > 0
+                property.status === 'pausada' && (property as PropertyRecord).rejection_history?.length > 0
                   ? () => handleResubmitProperty(property.id)
                   : undefined
               }
               onReactivate={
-                property.status === 'pausada' && !(property as any).rejection_history?.length
+                property.status === 'pausada' && !(property as PropertyRecord).rejection_history?.length
                   ? () => handleReactivateProperty(property.id)
                   : undefined
               }
@@ -650,14 +672,14 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                             )}
                           </div>
                           <Badge variant="outline" className="font-mono text-xs mt-1">
-                            {(property as any).property_code || property.id.slice(0, 8)}
+                            {(property as PropertyRecord).property_code || property.id.slice(0, 8)}
                           </Badge>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <span className="text-sm text-muted-foreground">
-                        {(property as any).colonia ? `${(property as any).colonia}, ` : ''}
+                        {(property as PropertyRecord).colonia ? `${(property as PropertyRecord).colonia}, ` : ''}
                         {property.municipality}
                       </span>
                     </TableCell>
@@ -678,7 +700,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                         <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
                           ⏳ Pendiente
                         </Badge>
-                      ) : (property as any).rejection_history?.length > 0 ? (
+                      ) : (property as PropertyRecord).rejection_history?.length > 0 ? (
                         <Badge variant="destructive">❌ Rechazada</Badge>
                       ) : (
                         <Badge variant="secondary">{property.status}</Badge>

@@ -32,7 +32,7 @@ export interface PricingPlan {
     gestion_equipo?: boolean;
     soporte_prioritario?: boolean;
     landing_pages?: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   is_active: boolean;
   description?: string | null;

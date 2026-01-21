@@ -361,7 +361,7 @@ Deno.serve(withSentry(async (req) => {
         total: upcomingInvoice.total / 100,
         periodStart: new Date(upcomingInvoice.period_start * 1000).toISOString(),
         periodEnd: new Date(upcomingInvoice.period_end * 1000).toISOString(),
-        lines: upcomingInvoice.lines.data.map((line: any) => ({
+        lines: upcomingInvoice.lines.data.map((line: Record<string, unknown>) => ({
           description: line.description,
           amount: line.amount / 100,
           proration: line.proration,
@@ -427,7 +427,7 @@ Deno.serve(withSentry(async (req) => {
       let prorationCharge = 0;  // Positive lines with proration: true (charge for new plan, current period)
       let nextCycleCharge = 0;  // Positive lines with proration: false (next month's payment)
 
-      invoiceLines.forEach((line: any) => {
+      invoiceLines.forEach((line: Record<string, unknown>) => {
         if (line.proration === true) {
           // Proration lines - the actual upgrade cost
           if (line.amount < 0) {
@@ -481,7 +481,7 @@ Deno.serve(withSentry(async (req) => {
     // Apply the subscription change
     // 💳 Use 'always_invoice' to charge proration immediately
     // 📅 Use 'unchanged' to keep original billing cycle (only charge proration, not next cycle)
-    const updateParams: any = {
+    const updateParams: Record<string, unknown> = {
       items: [{
         id: stripeSubscription.items.data[0].id,
         price: newPriceId,
@@ -515,7 +515,7 @@ Deno.serve(withSentry(async (req) => {
 
     // Update database with synchronized dates from Stripe
     // 🔧 FIX: Sincronizar current_period_start/end desde Stripe para evitar inconsistencias
-    const dbUpdate: any = {
+    const dbUpdate: Record<string, unknown> = {
       plan_id: newPlanId,
       billing_cycle: billingCycle,
       updated_at: new Date().toISOString(),
@@ -671,22 +671,25 @@ Deno.serve(withSentry(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error changing subscription plan', {}, error as Error);
-    
+
     // 🔧 FIX: Detectar errores de pago de Stripe y devolver mensaje claro
-    const isPaymentError = 
-      error?.type === 'StripeCardError' || 
-      error?.code === 'card_declined' ||
-      error?.code === 'insufficient_funds' ||
-      error?.code === 'expired_card' ||
-      error?.raw?.code === 'card_declined' ||
-      error?.message?.toLowerCase()?.includes('card was declined') ||
-      error?.message?.toLowerCase()?.includes('payment') ||
-      error?.message?.toLowerCase()?.includes('declined');
-    
+    const errorObj = error as Record<string, unknown>;
+    const rawObj = errorObj?.raw as Record<string, unknown> | undefined;
+    const errorMessage = error instanceof Error ? error.message : '';
+    const isPaymentError =
+      errorObj?.type === 'StripeCardError' ||
+      errorObj?.code === 'card_declined' ||
+      errorObj?.code === 'insufficient_funds' ||
+      errorObj?.code === 'expired_card' ||
+      rawObj?.code === 'card_declined' ||
+      errorMessage?.toLowerCase()?.includes('card was declined') ||
+      errorMessage?.toLowerCase()?.includes('payment') ||
+      errorMessage?.toLowerCase()?.includes('declined');
+
     if (isPaymentError) {
-      const declineCode = error?.decline_code || error?.raw?.decline_code || 'unknown';
+      const declineCode = (errorObj?.decline_code || rawObj?.decline_code || 'unknown') as string;
       const declineMessages: Record<string, string> = {
         'insufficient_funds': 'Fondos insuficientes en la tarjeta',
         'card_declined': 'La tarjeta fue rechazada',

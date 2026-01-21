@@ -36,6 +36,91 @@ const REJECTION_REASONS = [
   { code: 'other', label: 'Otro motivo (especificar)' },
 ];
 
+interface PropertyImage {
+  url: string;
+  position: number;
+}
+
+interface PropertyProfile {
+  id: string;
+  name: string;
+}
+
+interface SimilarProperty {
+  id: string;
+  title: string;
+  address: string;
+  price: number;
+  status: string;
+}
+
+interface DuplicateWarningData {
+  duplicate_count: number;
+  similar_properties: SimilarProperty[];
+}
+
+interface RejectionRecord {
+  date: string;
+  reasons: string[];
+  comments: string;
+  reviewed_by: string | undefined;
+  resubmission_number: number;
+}
+
+interface PropertyData {
+  id: string;
+  title: string;
+  price: number;
+  address: string;
+  state: string;
+  municipality: string;
+  status: string;
+  agent_id: string;
+  ai_moderation_status: string | null;
+  ai_moderation_score: number | null;
+  created_at: string;
+  resubmission_count: number;
+  rejection_history: RejectionRecord[] | null;
+  description: string | null;
+  amenities: Record<string, boolean> | null;
+  lat: number | null;
+  lng: number | null;
+  type?: string;
+  listing_type?: string;
+  currency?: string;
+  colonia?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  parking?: number;
+  sqft?: number;
+  property_code?: string;
+  duplicate_warning?: boolean;
+  duplicate_warning_data?: DuplicateWarningData;
+  requires_manual_review?: boolean;
+  images: PropertyImage[] | null;
+  profiles: PropertyProfile | null;
+}
+
+interface ApprovedProperty {
+  id: string;
+  title: string;
+  price: number;
+  property_code: string | null;
+  address: string;
+  state: string;
+  municipality: string;
+  created_at: string;
+  updated_at: string;
+  agent_id: string;
+  type: string;
+  listing_type: string;
+  images: PropertyImage[] | null;
+  agent: PropertyProfile | null;
+  approval_date?: string;
+  approved_by?: string;
+  admin_notes?: string;
+}
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -44,8 +129,8 @@ const AdminDashboard = () => {
   const { isAdmin, isSuperAdmin, adminRole, loading: adminLoading } = useAdminCheck();
   const { requirementMet, checking: checking2FA } = useRequire2FA();
   
-  const [properties, setProperties] = useState<any[]>([]);
-  const [approvedHistory, setApprovedHistory] = useState<any[]>([]);
+  const [properties, setProperties] = useState<PropertyData[]>([]);
+  const [approvedHistory, setApprovedHistory] = useState<ApprovedProperty[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Leer la pestaña activa de la URL (si existe) o usar 'nuevas' por defecto
@@ -65,7 +150,7 @@ const AdminDashboard = () => {
   const [isRejectionSectionOpen, setIsRejectionSectionOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
   
-  const [viewProperty, setViewProperty] = useState<any>(null);
+  const [viewProperty, setViewProperty] = useState<PropertyData | null>(null);
   const [quickReviewMode, setQuickReviewMode] = useState(false);
   
   const [metrics, setMetrics] = useState({
@@ -106,11 +191,12 @@ const AdminDashboard = () => {
         fetchMetrics();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch functions are stable, only re-run when activeTab/isAdmin changes
   }, [activeTab, isAdmin]);
 
   useEffect(() => {
     if (!quickReviewMode || !viewProperty) return;
-    
+
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'a') {
         handleApprove(viewProperty);
@@ -123,6 +209,7 @@ const AdminDashboard = () => {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleApprove and goToNextProperty are stable
   }, [quickReviewMode, viewProperty]);
 
   const goToNextProperty = () => {
@@ -135,7 +222,7 @@ const AdminDashboard = () => {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-    let query = (supabase as any)
+    let query = supabase
       .from('properties')
       .select(`
         id, title, price, address, state, municipality, status,
@@ -167,11 +254,11 @@ const AdminDashboard = () => {
       const { data, error } = await query;
       if (error) throw error;
       setProperties(data || []);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching properties:', error);
     toast({
       title: 'Error',
-      description: error?.message || 'No se pudieron cargar las propiedades',
+      description: error instanceof Error ? error.message : 'No se pudieron cargar las propiedades',
       variant: 'destructive',
     });
   } finally {
@@ -183,38 +270,38 @@ const AdminDashboard = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      const { count: newCount } = await (supabase as any)
+      const { count: newCount } = await supabase
         .from('properties')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pendiente_aprobacion')
         .eq('resubmission_count', 0);
       
-      const { count: resubmittedCount } = await (supabase as any)
+      const { count: resubmittedCount } = await supabase
         .from('properties')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pendiente_aprobacion')
         .gt('resubmission_count', 0);
       
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
-      const { count: oldCount } = await (supabase as any)
+      const { count: oldCount } = await supabase
         .from('properties')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pendiente_aprobacion')
         .lt('created_at', threeDaysAgo);
       
-      const { count: approvedToday } = await (supabase as any)
+      const { count: approvedToday } = await supabase
         .from('property_moderation_history')
         .select('*', { count: 'exact', head: true })
         .eq('action', 'approved')
         .gte('created_at', today);
       
-      const { count: rejectedToday } = await (supabase as any)
+      const { count: rejectedToday } = await supabase
         .from('property_moderation_history')
         .select('*', { count: 'exact', head: true })
         .eq('action', 'rejected')
         .gte('created_at', today);
       
-      const { data: avgTime } = await (supabase as any).rpc('get_avg_review_time_minutes');
+      const { data: avgTime } = await supabase.rpc('get_avg_review_time_minutes');
       
       setMetrics({
         new: newCount || 0,
@@ -282,11 +369,11 @@ const AdminDashboard = () => {
       } else {
         setApprovedHistory([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching approved history:', error);
       toast({
         title: 'Error',
-        description: error?.message || 'No se pudo cargar el historial',
+        description: error instanceof Error ? error.message : 'No se pudo cargar el historial',
         variant: 'destructive',
       });
     } finally {
@@ -294,7 +381,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleApprove = async (property: any) => {
+  const handleApprove = async (property: PropertyData) => {
     setProcessing(true);
     try {
       const { error: updateError } = await supabase
@@ -308,7 +395,7 @@ const AdminDashboard = () => {
 
       if (updateError) throw updateError;
 
-      const { error: historyError } = await (supabase as any)
+      const { error: historyError } = await supabase
         .from('property_moderation_history')
         .insert({
           property_id: property.id,
@@ -345,11 +432,11 @@ const AdminDashboard = () => {
       fetchMetrics();
       setViewProperty(null);
       setAdminNotes('');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error approving property:', error);
       toast({
         title: 'Error',
-        description: (error as any)?.message || 'No se pudo aprobar la propiedad',
+        description: error instanceof Error ? error.message : 'No se pudo aprobar la propiedad',
         variant: 'destructive',
       });
     } finally {
@@ -442,7 +529,7 @@ const AdminDashboard = () => {
 
       if (updateError) throw updateError;
 
-      const { error: historyError } = await (supabase as any)
+      const { error: historyError } = await supabase
         .from('property_moderation_history')
         .insert({
           property_id: viewProperty.id,
@@ -494,11 +581,11 @@ const AdminDashboard = () => {
       });
       setAdminNotes('');
       setIsRejectionSectionOpen(false);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error rejecting property:', error);
       toast({
         title: 'Error',
-        description: (error as any)?.message || 'No se pudo rechazar la propiedad',
+        description: error instanceof Error ? error.message : 'No se pudo rechazar la propiedad',
         variant: 'destructive',
       });
     } finally {
@@ -624,7 +711,7 @@ const AdminDashboard = () => {
                               <div className="flex items-center gap-2 mb-1">
                                 <h3 className="font-semibold text-lg">{property.title}</h3>
                                 <Badge variant="secondary" className="font-mono text-xs">
-                                  {(property as any).property_code || property.id.slice(0, 8)}
+                                  {property.property_code || property.id.slice(0, 8)}
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground">
@@ -1094,7 +1181,7 @@ const AdminDashboard = () => {
                   <div>
                     <Label className="text-sm font-medium mb-2 block">Imágenes ({viewProperty.images.length})</Label>
                     <div className="grid grid-cols-3 gap-2">
-                      {viewProperty.images.slice(0, 6).map((image: any, index: number) => (
+                      {viewProperty.images.slice(0, 6).map((image: PropertyImage, index: number) => (
                         <img
                           key={index}
                           src={image.url}
@@ -1207,7 +1294,7 @@ const AdminDashboard = () => {
                     </p>
                     
                     <div className="space-y-3 mb-4">
-                      {viewProperty.duplicate_warning_data.similar_properties.map((dupProp: any) => (
+                      {viewProperty.duplicate_warning_data.similar_properties.map((dupProp: SimilarProperty) => (
                         <Card key={dupProp.id} className="bg-yellow-50 border-yellow-200">
                           <CardContent className="pt-4 pb-3">
                             <div className="flex justify-between items-start mb-2">

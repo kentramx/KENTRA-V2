@@ -9,8 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useRoleImpersonation } from '@/hooks/useRoleImpersonation';
 import { Badge } from './ui/badge';
 
+interface SubscriptionInfo {
+  listing_limit?: number;
+  featured_limit?: number;
+  plan_id?: string;
+}
+
 interface QuickUpsellsProps {
-  subscriptionInfo: any;
+  subscriptionInfo: SubscriptionInfo;
   activePropertiesCount: number;
   onPurchase: (upsellId: string, quantity: number) => void;
   onViewAll: () => void;

@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
       .in('property_id', propertyIds);
 
     const viewMap = new Map();
-    viewCounts?.forEach((v: any) => {
+    viewCounts?.forEach((v: Record<string, unknown>) => {
       const propId = v.property_id;
       viewMap.set(propId, (viewMap.get(propId) || 0) + 1);
     });
@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
       .in('property_id', propertyIds);
 
     const favMap = new Map();
-    favCounts?.forEach((f: any) => {
+    favCounts?.forEach((f: Record<string, unknown>) => {
       const propId = f.property_id;
       favMap.set(propId, (favMap.get(propId) || 0) + 1);
     });
@@ -142,13 +142,13 @@ Deno.serve(async (req) => {
       .in('property_id', propertyIds);
 
     const convMap = new Map();
-    convCounts?.forEach((c: any) => {
+    convCounts?.forEach((c: Record<string, unknown>) => {
       const propId = c.property_id;
       convMap.set(propId, (convMap.get(propId) || 0) + 1);
     });
 
     // Build final array with aggregated data
-    propertiesData?.forEach((property: any) => {
+    propertiesData?.forEach((property: Record<string, unknown>) => {
       propertyPerformance.push({
         title: property.title,
         views: viewMap.get(property.id) || 0,
@@ -202,9 +202,9 @@ Deno.serve(async (req) => {
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in export-analytics function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

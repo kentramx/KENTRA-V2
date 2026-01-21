@@ -32,16 +32,24 @@ import { Loader2, UserPlus, Trash2, Clock, XCircle, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+interface SubscriptionInfo {
+  features?: {
+    limits?: {
+      max_agents?: number;
+    };
+  };
+}
+
 interface DeveloperTeamManagementProps {
   developerId: string;
-  subscriptionInfo: any;
+  subscriptionInfo: SubscriptionInfo;
 }
 
 export const DeveloperTeamManagement = ({ developerId, subscriptionInfo }: DeveloperTeamManagementProps) => {
   const { toast } = useToast();
   const { error: logError, warn, captureException } = useMonitoring();
-  const [members, setMembers] = useState<any[]>([]);
-  const [invitations, setInvitations] = useState<any[]>([]);
+  const [members, setMembers] = useState<Record<string, unknown>[]>([]);
+  const [invitations, setInvitations] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -55,6 +63,7 @@ export const DeveloperTeamManagement = ({ developerId, subscriptionInfo }: Devel
     fetchMembers();
     fetchInvitations();
     fetchDeveloperName();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch functions are intentionally excluded to prevent infinite loops
   }, [developerId]);
 
   const fetchMembers = async () => {
@@ -190,14 +199,14 @@ export const DeveloperTeamManagement = ({ developerId, subscriptionInfo }: Devel
       setInviteDialogOpen(false);
       setInviteEmail('');
       fetchInvitations();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError('Error inviting team member', {
         component: 'DeveloperTeamManagement',
         developerId,
         inviteEmail,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: 'DeveloperTeamManagement',
         action: 'inviteMember',
         developerId,
@@ -452,7 +461,7 @@ export const DeveloperTeamManagement = ({ developerId, subscriptionInfo }: Devel
 
             <div className="space-y-2">
               <Label htmlFor="role">Rol</Label>
-              <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)}>
+              <Select value={inviteRole} onValueChange={(v: 'sales' | 'manager' | 'admin') => setInviteRole(v)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

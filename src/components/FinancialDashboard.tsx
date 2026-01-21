@@ -99,6 +99,7 @@ export function FinancialDashboard() {
   useEffect(() => {
     fetchFinancialData();
     fetchRecentTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch functions are intentionally excluded to prevent infinite loops
   }, [period]);
 
   const getDateRange = () => {
@@ -131,7 +132,7 @@ export function FinancialDashboard() {
       setLoading(true);
       const { start, end } = getDateRange();
 
-      const { data, error } = await supabase.rpc('get_financial_metrics' as any, {
+      const { data, error } = await supabase.rpc('get_financial_metrics' as 'get_agency_statistics', {
         start_date: start.toISOString(),
         end_date: end.toISOString(),
       });
@@ -141,19 +142,19 @@ export function FinancialDashboard() {
       // Parse JSON if needed
       const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
       setMetrics(parsedData as FinancialMetrics);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError('Error fetching financial data', {
         component: 'FinancialDashboard',
         period,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: 'FinancialDashboard',
         action: 'fetchFinancialData',
       });
       toast({
         title: 'Error',
-        description: error.message || 'Error al cargar métricas financieras',
+        description: error instanceof Error ? error.message : 'Error al cargar métricas financieras',
         variant: 'destructive',
       });
     } finally {
@@ -172,7 +173,7 @@ export function FinancialDashboard() {
       if (error) throw error;
 
       setTransactions(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError('Error fetching transactions', {
         component: 'FinancialDashboard',
         error,

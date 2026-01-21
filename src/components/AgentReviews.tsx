@@ -32,6 +32,7 @@ export const AgentReviews = ({ agentId }: AgentReviewsProps) => {
 
   useEffect(() => {
     fetchReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchReviews is intentionally excluded to prevent infinite loops
   }, [agentId]);
 
   const fetchReviews = async () => {

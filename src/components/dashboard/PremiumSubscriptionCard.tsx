@@ -13,8 +13,17 @@ import { differenceInDays, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getPlanTier, PLAN_TIER_CONFIG, METRIC_ICONS } from '@/config/planTierConfig';
 
+interface SubscriptionInfo {
+  plan_type?: string;
+  status?: string;
+  listing_limit?: number;
+  featured_limit?: number;
+  trial_ends_at?: string;
+  current_period_end?: string;
+}
+
 interface PremiumSubscriptionCardProps {
-  subscriptionInfo: any;
+  subscriptionInfo: SubscriptionInfo;
   userRole?: string;
   activePropertiesCount: number;
   featuredCount: number;

@@ -10,16 +10,16 @@ export interface ValidationResult<T> {
 }
 
 // Simple validation helpers - exported for use in other modules
-export const isString = (v: any): v is string => typeof v === 'string';
-export const isNumber = (v: any): v is number => typeof v === 'number' && !isNaN(v);
-export const isInteger = (v: any): v is number => isNumber(v) && Number.isInteger(v);
-export const isBoolean = (v: any): v is boolean => typeof v === 'boolean';
-export const isUUID = (v: any): boolean =>
+export const isString = (v: unknown): v is string => typeof v === 'string';
+export const isNumber = (v: unknown): v is number => typeof v === 'number' && !isNaN(v);
+export const isInteger = (v: unknown): v is number => isNumber(v) && Number.isInteger(v);
+export const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
+export const isUUID = (v: unknown): boolean =>
   isString(v) && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
-export const isEmail = (v: any): boolean =>
+export const isEmail = (v: unknown): boolean =>
   isString(v) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-export const isPositiveInteger = (v: any): boolean => isInteger(v) && v > 0;
-export const isInRange = (v: any, min: number, max: number): boolean =>
+export const isPositiveInteger = (v: unknown): boolean => isInteger(v) && v > 0;
+export const isInRange = (v: unknown, min: number, max: number): boolean =>
   isNumber(v) && v >= min && v <= max;
 
 // Checkout request validation
@@ -31,7 +31,7 @@ export interface CheckoutRequest {
   upsells?: Array<{ id: string; quantity: number }>;
 }
 
-export function validateCheckoutRequest(body: any): ValidationResult<CheckoutRequest> {
+export function validateCheckoutRequest(body: unknown): ValidationResult<CheckoutRequest> {
   const errors: string[] = [];
 
   if (!body || typeof body !== 'object') {
@@ -67,11 +67,12 @@ export function validateCheckoutRequest(body: any): ValidationResult<CheckoutReq
     if (!Array.isArray(body.upsells)) {
       errors.push('upsells must be an array');
     } else {
-      body.upsells.forEach((upsell: any, index: number) => {
-        if (!isUUID(upsell?.id)) {
+      body.upsells.forEach((upsell: unknown, index: number) => {
+        const upsellObj = upsell as Record<string, unknown> | null;
+        if (!isUUID(upsellObj?.id)) {
           errors.push(`upsells[${index}].id must be a valid UUID`);
         }
-        if (!isNumber(upsell?.quantity) || upsell.quantity < 1 || upsell.quantity > 10) {
+        if (!isNumber(upsellObj?.quantity) || (upsellObj?.quantity as number) < 1 || (upsellObj?.quantity as number) > 10) {
           errors.push(`upsells[${index}].quantity must be a number between 1 and 10`);
         }
       });
@@ -102,7 +103,7 @@ export interface ChangePlanRequest {
   bypassCooldown?: boolean;
 }
 
-export function validateChangePlanRequest(body: any): ValidationResult<ChangePlanRequest> {
+export function validateChangePlanRequest(body: unknown): ValidationResult<ChangePlanRequest> {
   const errors: string[] = [];
 
   if (!body || typeof body !== 'object') {
@@ -144,10 +145,10 @@ export function validateChangePlanRequest(body: any): ValidationResult<ChangePla
 export interface AdminActionRequest {
   action: 'cancel' | 'reactivate' | 'change-plan' | 'extend-trial';
   userId: string;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
 }
 
-export function validateAdminActionRequest(body: any): ValidationResult<AdminActionRequest> {
+export function validateAdminActionRequest(body: unknown): ValidationResult<AdminActionRequest> {
   const errors: string[] = [];
 
   if (!body || typeof body !== 'object') {
@@ -185,10 +186,10 @@ export function validateAdminActionRequest(body: any): ValidationResult<AdminAct
 export interface NotificationRequest {
   userId: string;
   type: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
-export function validateNotificationRequest(body: any): ValidationResult<NotificationRequest> {
+export function validateNotificationRequest(body: unknown): ValidationResult<NotificationRequest> {
   const errors: string[] = [];
 
   if (!body || typeof body !== 'object') {

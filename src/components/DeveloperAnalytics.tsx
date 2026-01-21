@@ -28,6 +28,7 @@ export const DeveloperAnalytics = ({ developerId }: DeveloperAnalyticsProps) => 
 
   useEffect(() => {
     fetchDeveloperStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchDeveloperStats is intentionally excluded to prevent infinite loops
   }, [developerId]);
 
   const fetchDeveloperStats = async () => {

@@ -24,7 +24,7 @@ interface PropertyAmenitiesProps {
   amenities: string[] | Amenity[];
 }
 
-const AMENITY_ICONS: Record<string, any> = {
+const AMENITY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Interior: Lightbulb,
   Exterior: Trees,
   Servicios: Wifi,
@@ -32,7 +32,7 @@ const AMENITY_ICONS: Record<string, any> = {
   Recreación: Dumbbell,
 };
 
-const ITEM_ICONS: Record<string, any> = {
+const ITEM_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "WiFi": Wifi,
   "Internet": Wifi,
   "TV por cable": Tv,

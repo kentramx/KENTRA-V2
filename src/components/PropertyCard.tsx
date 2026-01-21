@@ -203,7 +203,7 @@ const PropertyCardComponent = ({
       "hover:shadow-xl hover:-translate-y-1 hover:border-primary/20",
       isHovered && 'ring-2 ring-primary shadow-xl scale-[1.02]'
     )}>
-      {/* @ts-ignore */}
+      {/* @ts-expect-error - Wrapper component has dynamic props based on linkHref */}
       <Wrapper {...wrapperProps}>
         <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
           <LazyImage
@@ -296,11 +296,11 @@ const PropertyCardComponent = ({
             </Button>
           )}
         </div>
-      {/* @ts-ignore */}
+      {/* @ts-expect-error - Wrapper component has dynamic props based on linkHref */}
       </Wrapper>
 
       <CardContent className="flex-1 p-5 space-y-3">
-        {/* @ts-ignore */}
+        {/* @ts-expect-error - Wrapper component has dynamic props based on linkHref */}
         <Wrapper {...wrapperProps}>
           {/* Price - TIER S typography */}
           <div className="mb-4">
@@ -351,7 +351,7 @@ const PropertyCardComponent = ({
               {getDaysOnMarket()}
             </p>
           )}
-        {/* @ts-ignore */}
+        {/* @ts-expect-error - Wrapper component has dynamic props based on linkHref */}
         </Wrapper>
       </CardContent>
     </Card>

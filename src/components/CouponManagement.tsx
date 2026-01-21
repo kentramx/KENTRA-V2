@@ -36,7 +36,7 @@ export function CouponManagement() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewRedemptionsId, setViewRedemptionsId] = useState<string | null>(null);
-  const [redemptions, setRedemptions] = useState<any[]>([]);
+  const [redemptions, setRedemptions] = useState<Record<string, unknown>[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -62,8 +62,8 @@ export function CouponManagement() {
 
       if (error) throw error;
       setCoupons((data || []) as Coupon[]);
-    } catch (error: any) {
-      toast.error("Error al cargar cupones: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Error al cargar cupones: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setLoading(false);
     }
@@ -122,8 +122,8 @@ export function CouponManagement() {
         applies_to: 'all',
         campaign_name: '',
       });
-    } catch (error: any) {
-      toast.error("Error al crear cupón: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Error al crear cupón: " + (error instanceof Error ? error.message : String(error)));
     }
   };
 
@@ -137,8 +137,8 @@ export function CouponManagement() {
       if (error) throw error;
       toast.success(currentStatus ? "Cupón desactivado" : "Cupón activado");
       fetchCoupons();
-    } catch (error: any) {
-      toast.error("Error al actualizar cupón: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Error al actualizar cupón: " + (error instanceof Error ? error.message : String(error)));
     }
   };
 
@@ -156,8 +156,8 @@ export function CouponManagement() {
       if (error) throw error;
       setRedemptions(data || []);
       setViewRedemptionsId(couponId);
-    } catch (error: any) {
-      toast.error("Error al cargar canjes: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Error al cargar canjes: " + (error instanceof Error ? error.message : String(error)));
     }
   };
 

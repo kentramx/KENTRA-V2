@@ -70,7 +70,7 @@ export interface SubscriptionInfo {
   has_subscription: boolean;
   name: string; // e.g., 'agente_basico', 'agente_pro'
   display_name: string;
-  features: any; // JSONB from DB
+  features: Record<string, unknown>; // JSONB from DB
   status: SubscriptionStatus;
   current_period_end: string;
   cancel_at_period_end?: boolean; // Optional para compatibilidad
@@ -164,7 +164,8 @@ export async function validatePropertyLimits(
 ): Promise<PropertyLimitValidation> {
   try {
     // Obtener info de suscripción (incluye properties_limit y properties_used)
-    const { data: subInfo, error } = await supabase.rpc('get_user_subscription_info' as any, {
+    // @ts-expect-error - RPC function not typed in generated schema
+    const { data: subInfo, error } = await supabase.rpc('get_user_subscription_info', {
       user_uuid: userId,
     });
 
@@ -268,7 +269,8 @@ export async function validateFeaturedLimits(
   userId: string
 ): Promise<FeaturedLimitValidation> {
   try {
-    const { data: subInfo, error } = await supabase.rpc('get_user_subscription_info' as any, {
+    // @ts-expect-error - RPC function not typed in generated schema
+    const { data: subInfo, error } = await supabase.rpc('get_user_subscription_info', {
       user_uuid: userId,
     });
 
@@ -411,7 +413,8 @@ export async function validateDowngrade(
   newPlanMaxProperties: number
 ): Promise<{ canDowngrade: boolean; reason: string; excessCount: number }> {
   try {
-    const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, {
+    // @ts-expect-error - RPC function not typed in generated schema
+    const { data: subInfo } = await supabase.rpc('get_user_subscription_info', {
       user_uuid: userId,
     });
 

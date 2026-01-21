@@ -113,7 +113,7 @@ Deno.serve(withSentry(async (req: Request) => {
  * Nota: En producción real, usarías un patrón scan + delete
  * pero Upstash REST no lo soporta directamente
  */
-async function invalidatePropertyListings(redis: any): Promise<number> {
+async function invalidatePropertyListings(redis: ReturnType<typeof getRedis>): Promise<number> {
   // Lista de variantes comunes de cache keys
   const commonFilters = [
     'properties:{"filters":{},"page":1,"limit":12}',

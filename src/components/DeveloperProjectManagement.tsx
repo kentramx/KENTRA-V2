@@ -37,9 +37,17 @@ import { toast as sonnerToast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+interface SubscriptionInfo {
+  features?: {
+    limits?: {
+      max_projects?: number;
+    };
+  };
+}
+
 interface DeveloperProjectManagementProps {
   developerId: string;
-  subscriptionInfo: any;
+  subscriptionInfo: SubscriptionInfo;
 }
 
 interface Project {
@@ -97,6 +105,7 @@ export const DeveloperProjectManagement = ({ developerId, subscriptionInfo }: De
 
   useEffect(() => {
     fetchProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchProjects is intentionally excluded to prevent infinite loops
   }, [developerId]);
 
   const fetchProjects = async () => {
@@ -234,13 +243,13 @@ export const DeveloperProjectManagement = ({ developerId, subscriptionInfo }: De
       setCreateDialogOpen(false);
       setEditingProject(null);
       fetchProjects();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError('Error saving project', {
         component: 'DeveloperProjectManagement',
         developerId,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: 'DeveloperProjectManagement',
         action: 'saveProject',
         developerId,

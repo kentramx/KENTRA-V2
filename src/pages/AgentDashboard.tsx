@@ -36,7 +36,7 @@ const AgentDashboard = () => {
   const { toast } = useToast();
   const { isImpersonating, impersonatedRole, getDemoUserId } = useRoleImpersonation();
   const emailVerified = isEmailVerified();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<{ id: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
@@ -53,8 +53,17 @@ const AgentDashboard = () => {
     }
   }, [searchParams]);
   
-  const [editingProperty, setEditingProperty] = useState<any>(null);
-  const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
+  const [editingProperty, setEditingProperty] = useState<Record<string, unknown> | null>(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<{
+    status?: string;
+    name?: string;
+    display_name?: string;
+    plan_name?: string;
+    current_period_end?: string;
+    properties_limit?: number;
+    featured_limit?: number;
+    cancel_at_period_end?: boolean;
+  } | null>(null);
   const [userRole, setUserRole] = useState<string>('');
   const [featuredCount, setFeaturedCount] = useState(0);
   const [reactivating, setReactivating] = useState(false);
@@ -167,7 +176,7 @@ const AgentDashboard = () => {
           .single();
         setProfile(profileData || { name: 'Demo Agent Kentra', id: demoId });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, { user_uuid: demoId });
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { user_uuid: demoId });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
 
         await fetchFeaturedCount();
@@ -194,7 +203,7 @@ const AgentDashboard = () => {
         
         setProfile(profileData || { name: 'Demo Agent Kentra', id: effectiveAgentId });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, {
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", {
           user_uuid: effectiveAgentId,
         });
 
@@ -242,7 +251,7 @@ const AgentDashboard = () => {
 
       setProfile(profileData);
 
-      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info' as any, {
+      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", {
         user_uuid: user?.id,
       });
 
@@ -252,7 +261,7 @@ const AgentDashboard = () => {
         if (subInfo[0].status === 'canceled') {
           try {
             await supabase.functions.invoke('sync-subscription-status');
-            const { data: updatedSubInfo } = await supabase.rpc('get_user_subscription_info' as any, {
+            const { data: updatedSubInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", {
               user_uuid: user?.id,
             });
             if (updatedSubInfo && Array.isArray(updatedSubInfo) && updatedSubInfo.length > 0) {
@@ -308,7 +317,7 @@ const AgentDashboard = () => {
     });
   };
 
-  const handleEditProperty = (property: any) => {
+  const handleEditProperty = (property: Record<string, unknown>) => {
     setEditingProperty(property);
     setActiveTab('form');
   };
@@ -349,18 +358,18 @@ const AgentDashboard = () => {
       });
       
       if (effectiveAgentId) {
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as any, { 
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { 
           user_uuid: effectiveAgentId 
         });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) {
           setSubscriptionInfo(subInfo[0]);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error reactivating subscription:', error);
       toast({
         title: "Error al reactivar",
-        description: error.message || "No se pudo reactivar tu suscripción. Por favor intenta nuevamente.",
+        description: error instanceof Error ? error.message : "No se pudo reactivar tu suscripción. Por favor intenta nuevamente.",
         variant: "destructive",
       });
     } finally {
@@ -389,7 +398,7 @@ const AgentDashboard = () => {
     }
 
     try {
-      const { data: validation, error } = await supabase.rpc('can_create_property' as any, {
+      const { data: validation, error } = await supabase.rpc('can_create_property' as unknown as "can_create_property", {
         user_id: effectiveAgentId,
       });
 
@@ -477,11 +486,11 @@ const AgentDashboard = () => {
       } else {
         throw new Error('No se recibió URL de checkout');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error comprando upsell:', error);
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo iniciar el proceso de compra',
+        description: error instanceof Error ? error.message : 'No se pudo iniciar el proceso de compra',
         variant: 'destructive',
       });
     } finally {

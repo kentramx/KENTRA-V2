@@ -33,16 +33,17 @@ interface PlaceAutocompleteProps {
 }
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- Required for extending JSX intrinsic elements
   namespace JSX {
     interface IntrinsicElements {
-      'gmp-place-autocomplete': any;
+      'gmp-place-autocomplete': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
     }
   }
 }
 
 // Helper function to extract colonia with multiple fallback strategies
 const extractColoniaFromComponents = (
-  addressComponents: google.maps.GeocoderAddressComponent[] | any[],
+  addressComponents: google.maps.GeocoderAddressComponent[] | { types: string[]; long_name?: string; longText?: string }[],
   formattedAddress?: string
 ): string => {
   let colonia = '';

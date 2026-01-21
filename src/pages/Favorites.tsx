@@ -125,7 +125,7 @@ const Favorites = () => {
         title: fav.properties.title,
         price: fav.properties.price,
         currency: fav.properties.currency,
-        type: fav.properties.type as any,
+        type: fav.properties.type,
         listing_type: fav.properties.listing_type,
         for_sale: fav.properties.for_sale,
         for_rent: fav.properties.for_rent,

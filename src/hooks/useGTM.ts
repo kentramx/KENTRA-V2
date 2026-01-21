@@ -4,7 +4,7 @@ import { monitoring } from '@/lib/monitoring';
 // Extend Window interface for GTM dataLayer
 declare global {
   interface Window {
-    dataLayer?: any[];
+    dataLayer?: Record<string, unknown>[];
   }
 }
 
@@ -38,7 +38,7 @@ export type GTMEvent =
 
 interface GTMEventData {
   event: GTMEvent;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export const useGTM = () => {
@@ -55,7 +55,7 @@ export const useGTM = () => {
 
   // Trackear evento genérico
   const trackEvent = useCallback(
-    (eventName: GTMEvent, parameters?: Record<string, any>) => {
+    (eventName: GTMEvent, parameters?: Record<string, unknown>) => {
       pushToDataLayer({
         event: eventName,
         ...parameters,
@@ -80,7 +80,7 @@ export const useGTM = () => {
 
   // Trackear evento de comercio electrónico
   const trackEcommerceEvent = useCallback(
-    (eventName: GTMEvent, ecommerce: Record<string, any>) => {
+    (eventName: GTMEvent, ecommerce: Record<string, unknown>) => {
       pushToDataLayer({
         event: eventName,
         ecommerce,

@@ -83,13 +83,13 @@ Deno.serve(async (req) => {
     for (const sub of subscriptions) {
       try {
         // Skip trial plans
-        const planName = (sub.subscription_plans as any)?.name;
+        const planName = (sub.subscription_plans as Record<string, unknown>)?.name;
         if (planName === 'agente_trial') {
           console.log(`[send-renewal-reminder] Skipping trial subscription for user ${sub.user_id}`);
           continue;
         }
 
-        const plan = sub.subscription_plans as any;
+        const plan = sub.subscription_plans as Record<string, unknown>;
         const amount = sub.billing_cycle === 'yearly' ? plan.price_yearly : plan.price_monthly;
         const currency = plan.currency || 'MXN';
         const renewalDate = new Date(sub.current_period_end!).toLocaleDateString('es-MX', {

@@ -19,7 +19,7 @@ interface RealtimeNotification {
   type: 'bypass' | 'upgrade' | 'downgrade' | 'unusual';
   message: string;
   timestamp: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
   read: boolean;
 }
 
@@ -90,7 +90,7 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
           table: 'subscription_changes',
         },
         async (payload) => {
-          await handleNewChange(payload.new as any);
+          await handleNewChange(payload.new as Record<string, unknown>);
         }
       )
       .subscribe();
@@ -98,6 +98,7 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleNewChange is intentionally excluded as it uses preferences state
   }, [isAdmin]);
 
   useEffect(() => {
@@ -158,9 +159,9 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
     }
   };
 
-  const handleNewChange = async (change: any) => {
-    const metadata = change.metadata || {};
-    
+  const handleNewChange = async (change: Record<string, unknown>) => {
+    const metadata = (change.metadata || {}) as Record<string, unknown>;
+
     // Determinar si es un evento importante
     const isBypassed = metadata.bypassed_cooldown === true;
     const isAdminChange = metadata.changed_by_admin === true;
@@ -181,17 +182,17 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
       .single();
 
     const userName = profile?.name || 'Usuario desconocido';
-    const planName = metadata.new_plan_name || 'Plan desconocido';
-    
+    const planName = (metadata.new_plan_name as string) || 'Plan desconocido';
+
     let notification: RealtimeNotification | null = null;
 
     // Bypass de cooldown
     if (isBypassed) {
       notification = {
-        id: change.id,
+        id: change.id as string,
         type: 'bypass',
         message: `${isAdminChange ? 'Admin forzó' : 'Bypass detectado'} cambio de plan para ${userName} a ${planName}`,
-        timestamp: change.changed_at,
+        timestamp: change.changed_at as string,
         metadata: change,
         read: false,
       };
@@ -207,10 +208,10 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
     // Upgrade significativo
     else if (change.change_type === 'upgrade') {
       notification = {
-        id: change.id,
+        id: change.id as string,
         type: 'upgrade',
         message: `${userName} mejoró a ${planName}`,
-        timestamp: change.changed_at,
+        timestamp: change.changed_at as string,
         metadata: change,
         read: false,
       };
@@ -226,10 +227,10 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
     // Downgrade (puede indicar problema)
     else if (change.change_type === 'downgrade') {
       notification = {
-        id: change.id,
+        id: change.id as string,
         type: 'downgrade',
         message: `${userName} bajó a ${planName}`,
-        timestamp: change.changed_at,
+        timestamp: change.changed_at as string,
         metadata: change,
         read: false,
       };

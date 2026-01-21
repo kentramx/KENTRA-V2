@@ -58,7 +58,7 @@ export const useGenerateDescription = () => {
 
       // Check if error in response body
       if ('error' in data) {
-        throw new Error((data as any).error);
+        throw new Error((data as { error: string }).error);
       }
 
       setRemaining(data.remaining);
@@ -77,9 +77,9 @@ export const useGenerateDescription = () => {
 
       return data.description;
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Generate description error:', err);
-      const errorMessage = err.message || 'Error al generar descripción';
+      const errorMessage = err instanceof Error ? err.message : 'Error al generar descripción';
       setError(errorMessage);
       
       toast({

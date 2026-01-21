@@ -32,6 +32,7 @@ export const useRoleImpersonation = () => {
     return () => {
       mountedRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- checkSuperAdminStatus is intentionally not in deps; it's defined inside the hook and only runs once on mount
   }, []);
 
   const checkSuperAdminStatus = async () => {
@@ -50,7 +51,7 @@ export const useRoleImpersonation = () => {
 
       setCurrentUserId(user.id);
 
-      const { data, error } = await (supabase.rpc as any)('is_super_admin', {
+      const { data, error } = await (supabase.rpc as (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)('is_super_admin', {
         _user_id: user.id,
       });
 

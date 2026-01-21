@@ -37,7 +37,7 @@ function normalizeKey(parts: (string | null)[]): string {
 }
 
 async function getCachedCoords(
-  supabase: any,
+  supabase: ReturnType<typeof createClient>,
   normalizedKey: string
 ): Promise<{ lat: number; lng: number } | null> {
   const { data, error } = await supabase
@@ -61,7 +61,7 @@ async function getCachedCoords(
 }
 
 async function saveToCache(
-  supabase: any,
+  supabase: ReturnType<typeof createClient>,
   normalizedKey: string,
   lat: number,
   lng: number
@@ -268,7 +268,7 @@ serve(async (req) => {
 
     // Deduplicar en memoria por batch
     const locationMap = new Map<string, { lat: number; lng: number }>();
-    const propertyByLocation = new Map<string, any[]>();
+    const propertyByLocation = new Map<string, Array<{ id: string; colonia: string | null; municipality: string; state: string }>>();
 
     for (const property of properties) {
       const normalizedKey = normalizeKey([property.colonia, property.municipality, property.state, 'Mexico']);

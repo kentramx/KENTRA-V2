@@ -62,7 +62,7 @@ export async function withRetry<T>(
  */
 export function isRetryableStripeError(error: Error): boolean {
   const message = error.message.toLowerCase();
-  const statusCode = (error as any).statusCode || (error as any).status;
+  const statusCode = (error as Record<string, unknown>).statusCode || (error as Record<string, unknown>).status;
   
   // Retry on network errors
   if (message.includes('network') || message.includes('econnreset') || message.includes('timeout')) {
@@ -88,7 +88,7 @@ export function isRetryableStripeError(error: Error): boolean {
  */
 export function isRetryableEmailError(error: Error): boolean {
   const message = error.message.toLowerCase();
-  const statusCode = (error as any).statusCode || (error as any).status;
+  const statusCode = (error as Record<string, unknown>).statusCode || (error as Record<string, unknown>).status;
 
   if (message.includes('network') || message.includes('timeout')) {
     return true;

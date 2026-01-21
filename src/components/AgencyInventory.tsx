@@ -34,26 +34,31 @@ import { toast as sonnerToast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+interface SubscriptionInfo {
+  featured_used?: number;
+  featured_limit?: number;
+}
+
 interface AgencyInventoryProps {
   agencyId: string;
-  subscriptionInfo?: any;
+  subscriptionInfo?: SubscriptionInfo;
 }
 
 export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryProps) => {
   const { toast } = useToast();
   const { error: logError, warn, captureException } = useMonitoring();
   const navigate = useNavigate();
-  const [properties, setProperties] = useState<any[]>([]);
-  const [agents, setAgents] = useState<any[]>([]);
+  const [properties, setProperties] = useState<Record<string, unknown>[]>([]);
+  const [agents, setAgents] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterAgent, setFilterAgent] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  const [selectedProperty, setSelectedProperty] = useState<Record<string, unknown> | null>(null);
   const [selectedNewAgent, setSelectedNewAgent] = useState<string>('');
   const [assigning, setAssigning] = useState(false);
   const [featuredProperties, setFeaturedProperties] = useState<Set<string>>(new Set());
-  const [featureProperty, setFeatureProperty] = useState<any>(null);
+  const [featureProperty, setFeatureProperty] = useState<Record<string, unknown> | null>(null);
   
   // Estados para compartir rápido
   const [selectionMode, setSelectionMode] = useState(false);
@@ -61,6 +66,7 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadData is intentionally excluded to prevent infinite loops
   }, [agencyId]);
 
   const loadData = async () => {
@@ -72,7 +78,7 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
     }
   };
 
-  const fetchFeaturedProperties = async (propertiesToCheck: any[] = properties) => {
+  const fetchFeaturedProperties = async (propertiesToCheck: Record<string, unknown>[] = properties) => {
     if (propertiesToCheck.length === 0) return;
 
     try {
@@ -197,7 +203,7 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
   };
 
   // WhatsApp individual
-  const handleWhatsAppShare = (property: any) => {
+  const handleWhatsAppShare = (property: Record<string, unknown>) => {
     const url = `${window.location.origin}/propiedad/${property.id}`;
     const location = property.colonia 
       ? `${property.colonia}, ${property.municipality}` 
@@ -234,7 +240,7 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
     handleCancelSelection();
   };
 
-  const handleOpenAssignDialog = (property: any) => {
+  const handleOpenAssignDialog = (property: Record<string, unknown>) => {
     setSelectedProperty(property);
     setSelectedNewAgent(property.agent_id || '');
     setAssignDialogOpen(true);

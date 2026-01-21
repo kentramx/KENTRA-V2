@@ -159,12 +159,12 @@ Deno.serve(async (req) => {
       }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in cleanup-expired-properties:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: false,
-        error: error.message 
+        error: error instanceof Error ? error.message : 'Unknown error'
       }),
       { 
         status: 500,

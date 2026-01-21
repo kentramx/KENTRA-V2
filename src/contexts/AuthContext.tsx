@@ -4,18 +4,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { monitoring, setUser as setSentryUser, clearUser as clearSentryUser } from '@/lib/monitoring';
 
+interface AuthError {
+  message: string;
+  code?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signInWithGoogle: () => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name: string, role?: 'buyer' | 'agent' | 'agency' | 'developer') => Promise<{ error: any; needsVerification?: boolean }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signInWithGoogle: () => Promise<{ error: AuthError | null }>;
+  signUp: (email: string, password: string, name: string, role?: 'buyer' | 'agent' | 'agency' | 'developer') => Promise<{ error: AuthError | null; needsVerification?: boolean }>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: any }>;
-  updatePassword: (newPassword: string) => Promise<{ error: any }>;
-  resetPasswordWithToken: (token: string, newPassword: string) => Promise<{ error: any }>;
-  resendConfirmationEmail: (email: string, userName?: string) => Promise<{ error: any }>;
-  verifyEmailCode: (email: string, code: string) => Promise<{ error: any }>;
+  resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
+  resetPasswordWithToken: (token: string, newPassword: string) => Promise<{ error: AuthError | null }>;
+  resendConfirmationEmail: (email: string, userName?: string) => Promise<{ error: AuthError | null }>;
+  verifyEmailCode: (email: string, code: string) => Promise<{ error: AuthError | null }>;
   isEmailVerified: () => boolean;
   loading: boolean;
 }
@@ -195,14 +200,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await supabase.functions.invoke('send-auth-recovery-email', {
         body: { email }
       });
-      
+
       if (response.error) {
         return { error: { message: response.error.message || 'Error al enviar email de recuperación' } };
       }
-      
+
       return { error: null };
-    } catch (error: any) {
-      return { error: { message: error.message || 'Error inesperado' } };
+    } catch (error: unknown) {
+      return { error: { message: error instanceof Error ? error.message : 'Error inesperado' } };
     }
   };
 
@@ -229,19 +234,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           newPassword
         }
       });
-      
+
       if (response.error) {
         return { error: { message: response.error.message || 'Error al actualizar contraseña' } };
       }
-      
-      const data = response.data;
-      if (!data.success) {
-        return { error: { message: data.error || 'Error desconocido' } };
+
+      const data = response.data as { success?: boolean; error?: string } | null;
+      if (!data?.success) {
+        return { error: { message: data?.error || 'Error desconocido' } };
       }
-      
+
       return { error: null };
-    } catch (error: any) {
-      return { error: { message: error.message || 'Error inesperado' } };
+    } catch (error: unknown) {
+      return { error: { message: error instanceof Error ? error.message : 'Error inesperado' } };
     }
   };
 
@@ -251,11 +256,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const resendConfirmationEmail = async (email: string, userName?: string) => {
     try {
       // Primero obtener el usuario ID del email
-      const { data: userData, error: userError } = await supabase.auth.signInWithPassword({
+      // This call intentionally fails but triggers email lookup
+      await supabase.auth.signInWithPassword({
         email,
         password: 'dummy_password_to_get_user_info_' + Date.now(), // Esto fallará pero nos da info
       });
-      
+
       // Intentamos enviar de todas formas - la Edge Function buscará el usuario
       const response = await supabase.functions.invoke('send-auth-verification-email', {
         body: {
@@ -264,15 +270,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           userName: userName || ''
         }
       });
-      
+
       if (response.error) {
         // Si el error es de autenticación, ignorar y continuar
         // Error logged via monitoring if needed
       }
-      
+
       return { error: null };
-    } catch (error: any) {
-      return { error: { message: error.message || 'Error inesperado' } };
+    } catch (error: unknown) {
+      return { error: { message: error instanceof Error ? error.message : 'Error inesperado' } };
     }
   };
 
@@ -288,22 +294,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email
         }
       });
-      
+
       if (response.error) {
         return { error: { message: response.error.message || 'Error al verificar código' } };
       }
-      
-      const data = response.data;
-      if (!data.success) {
-        return { error: { message: data.error || 'Código inválido o expirado' } };
+
+      const data = response.data as { success?: boolean; error?: string } | null;
+      if (!data?.success) {
+        return { error: { message: data?.error || 'Código inválido o expirado' } };
       }
-      
+
       // Refrescar sesión para obtener el estado actualizado
       await supabase.auth.refreshSession();
-      
+
       return { error: null };
-    } catch (error: any) {
-      return { error: { message: error.message || 'Error inesperado' } };
+    } catch (error: unknown) {
+      return { error: { message: error instanceof Error ? error.message : 'Error inesperado' } };
     }
   };
 

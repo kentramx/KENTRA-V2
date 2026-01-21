@@ -161,12 +161,12 @@ export default function AdminGeocoding() {
 
       // Recargar estadísticas
       await loadStats();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error geocoding:', error);
       toast({
         variant: "destructive",
         title: "Error en geocodificación",
-        description: error.message || "Ocurrió un error durante la geocodificación",
+        description: error instanceof Error ? error.message : "Ocurrió un error durante la geocodificación",
       });
     } finally {
       setProcessing(false);
@@ -213,12 +213,12 @@ export default function AdminGeocoding() {
         title: "Auto-ejecución completada",
         description: `Completados ${cycles} ciclos. ${stats.withoutCoords} propiedades restantes.`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error en auto-run:', error);
       toast({
         variant: "destructive",
         title: "Error en auto-ejecución",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Error desconocido",
       });
     } finally {
       setAutoRunning(false);

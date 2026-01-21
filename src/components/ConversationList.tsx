@@ -70,6 +70,7 @@ export const ConversationList = ({ selectedId, onSelect }: ConversationListProps
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchConversations is intentionally excluded to prevent infinite loops
   }, [user]);
 
   const fetchConversations = async () => {

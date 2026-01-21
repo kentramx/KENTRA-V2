@@ -25,6 +25,7 @@ export const AgencyAnalytics = ({ agencyId }: AgencyAnalyticsProps) => {
 
   useEffect(() => {
     fetchAgencyStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchAgencyStats is intentionally excluded to prevent infinite loops
   }, [agencyId]);
 
   const fetchAgencyStats = async () => {

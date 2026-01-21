@@ -13,7 +13,7 @@ export interface LogContext {
   page?: string;
   component?: string;
   action?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 class MonitoringService {
@@ -101,7 +101,7 @@ class MonitoringService {
   /**
    * Track user action con breadcrumbs
    */
-  trackEvent(eventName: string, properties?: Record<string, any>) {
+  trackEvent(eventName: string, properties?: Record<string, unknown>) {
     this.log('info', `Event: ${eventName}`, {
       event: eventName,
       ...properties,

@@ -9,6 +9,32 @@ import { Loader2, CheckCircle, XCircle, AlertTriangle, Building2 } from 'lucide-
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/Navbar';
 
+interface AgencyData {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+}
+
+interface InviterData {
+  id: string;
+  raw_user_meta_data: Record<string, unknown>;
+}
+
+interface InvitationData {
+  id: string;
+  token: string;
+  email: string;
+  status: string;
+  role: string;
+  agency_id: string;
+  invited_by: string;
+  expires_at: string;
+  accepted_at: string | null;
+  agency: AgencyData;
+  inviter: InviterData;
+}
+
 export default function UnirseEquipo() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -17,7 +43,7 @@ export default function UnirseEquipo() {
   
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
-  const [invitation, setInvitation] = useState<any>(null);
+  const [invitation, setInvitation] = useState<InvitationData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -30,12 +56,13 @@ export default function UnirseEquipo() {
       setError('Token de invitación no válido');
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadInvitation is stable, only re-run when token changes
   }, [token]);
 
   const loadInvitation = async () => {
     try {
       // Primero expirar invitaciones vencidas
-      await supabase.rpc('expire_old_invitations' as any);
+      await supabase.rpc('expire_old_invitations' as unknown as "expire_old_invitations");
 
       // Cargar la invitación
       const { data, error: invError } = await supabase
@@ -166,11 +193,11 @@ export default function UnirseEquipo() {
         navigate('/panel-agente');
       }, 2000);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error accepting invitation:', error);
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo aceptar la invitación',
+        description: error instanceof Error ? error.message : 'No se pudo aceptar la invitación',
         variant: 'destructive',
       });
     } finally {

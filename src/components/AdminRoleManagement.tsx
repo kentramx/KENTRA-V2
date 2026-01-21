@@ -38,6 +38,7 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
 
   useEffect(() => {
     fetchAdminUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchAdminUsers only needs to run on mount
   }, []);
 
   const fetchAdminUsers = async () => {
@@ -46,7 +47,7 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role, granted_at, granted_by')
-        .in('role', ['super_admin', 'moderator'] as any)
+        .in('role', ['super_admin', 'moderator'])
         .order('granted_at', { ascending: false });
 
       if (rolesError) throw rolesError;
@@ -137,10 +138,10 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
       const foundUser = searchResult.user;
 
       // Promover usando la función RPC
-      const { error: promoteError } = await (supabase.rpc as any)('promote_user_to_admin', {
+      const { error: promoteError } = await supabase.rpc('promote_user_to_admin' as 'get_agency_statistics', {
         target_user_id: foundUser.id,
         new_admin_role: selectedRole,
-      });
+      } as unknown as { agency_id: string });
 
       if (promoteError) throw promoteError;
 
@@ -152,14 +153,14 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
       setTargetEmail('');
       setSelectedRole('moderator');
       fetchAdminUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError('Error promoting user', {
         component: 'AdminRoleManagement',
         targetEmail,
         selectedRole,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: 'AdminRoleManagement',
         action: 'promoteUser',
         targetEmail,
@@ -167,7 +168,7 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
       });
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo promover al usuario',
+        description: error instanceof Error ? error.message : 'No se pudo promover al usuario',
         variant: 'destructive',
       });
     } finally {
@@ -251,7 +252,7 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
               <Label htmlFor="role">Rol Administrativo</Label>
               <Select
                 value={selectedRole}
-                onValueChange={(value: any) => setSelectedRole(value)}
+                onValueChange={(value: string) => setSelectedRole(value)}
                 disabled={promoting}
               >
                 <SelectTrigger>

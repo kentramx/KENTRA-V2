@@ -159,7 +159,7 @@ serve(async (req) => {
     }
 
     // Get user emails from auth.users (only for current page)
-    const userIds = [...new Set(subscriptions?.map((s: any) => s.user_id) || [])];
+    const userIds = [...new Set(subscriptions?.map((s: Record<string, unknown>) => s.user_id as string) || [])];
     const userEmails: Record<string, string> = {};
 
     // Batch fetch emails (max 50 at a time to avoid rate limits)
@@ -176,25 +176,29 @@ serve(async (req) => {
     }
 
     // Transform subscriptions data
-    const transformedSubscriptions: SubscriptionData[] = (subscriptions || []).map((sub: any) => ({
-      id: sub.id,
-      user_id: sub.user_id,
-      plan_id: sub.plan_id,
-      status: sub.status,
-      billing_cycle: sub.billing_cycle || "monthly",
-      current_period_start: sub.current_period_start,
-      current_period_end: sub.current_period_end,
-      cancel_at_period_end: sub.cancel_at_period_end || false,
-      stripe_subscription_id: sub.stripe_subscription_id,
-      stripe_customer_id: sub.stripe_customer_id,
-      created_at: sub.created_at,
-      user_name: sub.profiles?.name || "Usuario",
-      user_email: userEmails[sub.user_id] || "Sin email",
-      plan_name: sub.subscription_plans?.name || "",
-      plan_display_name: sub.subscription_plans?.display_name || "Sin plan",
-      price_monthly: sub.subscription_plans?.price_monthly || 0,
-      price_yearly: sub.subscription_plans?.price_yearly || 0,
-    }));
+    const transformedSubscriptions: SubscriptionData[] = (subscriptions || []).map((sub: Record<string, unknown>) => {
+      const profiles = sub.profiles as Record<string, unknown> | null;
+      const plans = sub.subscription_plans as Record<string, unknown> | null;
+      return {
+        id: sub.id as string,
+        user_id: sub.user_id as string,
+        plan_id: sub.plan_id as string,
+        status: sub.status as string,
+        billing_cycle: (sub.billing_cycle as string) || "monthly",
+        current_period_start: sub.current_period_start as string,
+        current_period_end: sub.current_period_end as string,
+        cancel_at_period_end: (sub.cancel_at_period_end as boolean) || false,
+        stripe_subscription_id: sub.stripe_subscription_id as string,
+        stripe_customer_id: sub.stripe_customer_id as string,
+        created_at: sub.created_at as string,
+        user_name: (profiles?.name as string) || "Usuario",
+        user_email: userEmails[sub.user_id as string] || "Sin email",
+        plan_name: (plans?.name as string) || "",
+        plan_display_name: (plans?.display_name as string) || "Sin plan",
+        price_monthly: (plans?.price_monthly as number) || 0,
+        price_yearly: (plans?.price_yearly as number) || 0,
+      };
+    });
 
     // Calculate metrics (use cached/aggregated data for performance on large datasets)
     const now = new Date();
@@ -225,11 +229,12 @@ serve(async (req) => {
       .eq('status', 'active')
       .eq('cancel_at_period_end', false);
 
-    const mrr = (activeForMrr || []).reduce((acc, s: any) => {
+    const mrr = (activeForMrr || []).reduce((acc, s: Record<string, unknown>) => {
+      const plans = s.subscription_plans as Record<string, unknown> | null;
       if (s.billing_cycle === "yearly") {
-        return acc + (s.subscription_plans?.price_yearly || 0) / 12;
+        return acc + ((plans?.price_yearly as number) || 0) / 12;
       }
-      return acc + (s.subscription_plans?.price_monthly || 0);
+      return acc + ((plans?.price_monthly as number) || 0);
     }, 0);
 
     // Calculate churn rate

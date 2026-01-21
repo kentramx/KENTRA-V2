@@ -48,6 +48,7 @@ export const InvoiceHistory = ({ userId }: InvoiceHistoryProps) => {
 
   useEffect(() => {
     fetchInvoices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchInvoices is intentionally excluded to prevent infinite loops
   }, [userId]);
 
   const fetchInvoices = async () => {
@@ -66,9 +67,9 @@ export const InvoiceHistory = ({ userId }: InvoiceHistoryProps) => {
       }
 
       setInvoices(data?.invoices || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching invoices:', err);
-      setError(err.message || 'Error al cargar las facturas');
+      setError(err instanceof Error ? err.message : 'Error al cargar las facturas');
       toast({
         title: 'Error',
         description: 'No se pudieron cargar las facturas',

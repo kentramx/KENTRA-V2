@@ -98,7 +98,7 @@ serve(async (req: Request) => {
     if (authUsersError) {
       console.error('Error fetching auth users via RPC:', authUsersError);
     } else if (authUsers) {
-      authUsers.forEach((u: any) => {
+      authUsers.forEach((u: Record<string, unknown>) => {
         emailMap.set(u.id, { 
           email: u.email || '', 
           lastSignIn: u.last_sign_in_at || null,
@@ -215,11 +215,11 @@ serve(async (req: Request) => {
         subscription_plans(name, display_name)
       `);
 
-    const subscriptionMap = new Map<string, any>();
+    const subscriptionMap = new Map<string, Record<string, unknown>>();
     if (!subError && subscriptions) {
-      subscriptions.forEach((s: any) => {
-        const plan = s.subscription_plans;
-        subscriptionMap.set(s.user_id, {
+      subscriptions.forEach((s: Record<string, unknown>) => {
+        const plan = s.subscription_plans as Record<string, unknown> | null;
+        subscriptionMap.set(s.user_id as string, {
           status: s.status,
           billing_cycle: s.billing_cycle,
           current_period_end: s.current_period_end,

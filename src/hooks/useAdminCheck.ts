@@ -23,6 +23,7 @@ export const useAdminCheck = () => {
     return () => {
       mountedRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- checkAdminStatus is intentionally not in deps; it reads user directly and is defined inside the hook
   }, [user]);
 
   const checkAdminStatus = async () => {
@@ -39,7 +40,7 @@ export const useAdminCheck = () => {
     try {
       // OPTIMIZATION: Single query to get admin role - avoids multiple RPC calls
       // is_super_admin implies has_admin_access, so check super_admin first
-      const { data: isSuperData, error: superError } = await supabase.rpc('is_super_admin' as any, {
+      const { data: isSuperData, error: superError } = await (supabase.rpc as (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)('is_super_admin', {
         user_uuid: user.id,
       });
 

@@ -159,12 +159,12 @@ export const ActiveUpsells = ({ userId }: ActiveUpsellsProps) => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-semibold">{upsell?.name}</h4>
-                        {(item as any).auto_renew && (
+                        {(item as unknown as { auto_renew: boolean }).auto_renew && (
                           <Badge variant="secondary" className="text-xs">
                             Renovación automática
                           </Badge>
                         )}
-                        {isExpiringSoon && !(item as any).auto_renew && (
+                        {isExpiringSoon && !(item as unknown as { auto_renew: boolean }).auto_renew && (
                           <Badge variant="destructive" className="text-xs">
                             Próximo a vencer
                           </Badge>
@@ -190,7 +190,7 @@ export const ActiveUpsells = ({ userId }: ActiveUpsellsProps) => {
                       </div>
                     </div>
 
-                    {(item as any).auto_renew && (
+                    {(item as unknown as { auto_renew: boolean }).auto_renew && (
                       <Button
                         variant="ghost"
                         size="sm"

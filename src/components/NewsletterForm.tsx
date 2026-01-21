@@ -97,13 +97,13 @@ export const NewsletterForm = () => {
 
       setIsOpen(false);
       form.reset();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError("Error al suscribirse al newsletter", {
         component: "NewsletterForm",
         email: data.email,
         error,
       });
-      captureException(error, {
+      captureException(error instanceof Error ? error : new Error(String(error)), {
         component: "NewsletterForm",
         action: "onSubmit",
       });

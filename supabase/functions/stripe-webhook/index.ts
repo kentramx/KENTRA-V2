@@ -364,7 +364,7 @@ Deno.serve(withSentry(async (req) => {
             .single();
 
           if (planDetails) {
-            const features = planDetails.features as Record<string, any>;
+            const features = planDetails.features as Record<string, unknown>;
             await supabaseClient.functions.invoke('send-subscription-notification', {
               body: {
                 userId: userId,
@@ -723,7 +723,7 @@ Deno.serve(withSentry(async (req) => {
                   userId: existingSub.user_id,
                   type: 'subscription_canceled',
                   metadata: {
-                    planName: (existingSub.subscription_plans as any)?.display_name || 'Tu plan',
+                    planName: (existingSub.subscription_plans as Record<string, unknown>)?.display_name || 'Tu plan',
                     endDate: new Date().toLocaleDateString('es-MX', {
                       year: 'numeric',
                       month: 'long',

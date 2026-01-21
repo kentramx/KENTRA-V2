@@ -40,6 +40,32 @@ interface LeaderboardAgent {
   is_verified: boolean;
 }
 
+interface PropertyRow {
+  id: string;
+  status: string;
+  state: string;
+  municipality: string;
+}
+
+interface ReviewRow {
+  rating: number;
+}
+
+interface UserBadgeRow {
+  badge_code: string;
+  badge_definitions: BadgeData | null;
+}
+
+interface ProfileRow {
+  id: string;
+  name: string;
+  is_verified: boolean | null;
+  user_roles: { role: string }[];
+  properties: PropertyRow[] | null;
+  agent_reviews: ReviewRow[] | null;
+  user_badges: UserBadgeRow[] | null;
+}
+
 const Leaderboard = () => {
   const [agents, setAgents] = useState<LeaderboardAgent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +74,7 @@ const Leaderboard = () => {
 
   useEffect(() => {
     fetchLeaderboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchLeaderboard is stable, only re-run when selectedState changes
   }, [selectedState]);
 
   const fetchLeaderboard = async () => {
@@ -72,18 +99,18 @@ const Leaderboard = () => {
 
       if (agentsError) throw agentsError;
 
-      const processedAgents: LeaderboardAgent[] = (agentsData || []).map((profile: any) => {
+      const processedAgents: LeaderboardAgent[] = ((agentsData || []) as ProfileRow[]).map((profile) => {
         const properties = profile.properties || [];
-        const activeProperties = properties.filter((p: any) => p.status === 'activa');
-        const soldProperties = properties.filter((p: any) => p.status === 'vendida');
+        const activeProperties = properties.filter((p) => p.status === 'activa');
+        const soldProperties = properties.filter((p) => p.status === 'vendida');
         const reviews = profile.agent_reviews || [];
         const avgRating = reviews.length > 0
-          ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
+          ? reviews.reduce((sum: number, r) => sum + r.rating, 0) / reviews.length
           : 0;
 
         // Get most frequent state/city
-        const states = properties.map((p: any) => p.state).filter(Boolean);
-        const municipalities = properties.map((p: any) => p.municipality).filter(Boolean);
+        const states = properties.map((p) => p.state).filter(Boolean);
+        const municipalities = properties.map((p) => p.municipality).filter(Boolean);
         const mostFrequentState = states.length > 0 ? states.sort((a: string, b: string) =>
           states.filter((s: string) => s === a).length - states.filter((s: string) => s === b).length
         ).pop() : "";
@@ -91,7 +118,9 @@ const Leaderboard = () => {
           municipalities.filter((m: string) => m === a).length - municipalities.filter((m: string) => m === b).length
         ).pop() : "";
 
-        const badges = profile.user_badges?.map((ub: any) => ub.badge_definitions).filter(Boolean) || [];
+        const badges = (profile.user_badges || [])
+          .map((ub) => ub.badge_definitions)
+          .filter((badge): badge is BadgeData => badge !== null);
         const badgeScore = badges.reduce((sum: number, badge: BadgeData) => sum + badge.priority, 0);
 
         return {
@@ -266,7 +295,7 @@ const Leaderboard = () => {
         </Card>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "sellers" | "rated" | "badges")}>
           <TabsList className="grid w-full grid-cols-3 mb-8 overflow-x-auto scrollbar-hide">
             <TabsTrigger value="sellers" className="flex items-center gap-2">
               <Trophy className="h-4 w-4" />

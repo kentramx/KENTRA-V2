@@ -34,6 +34,7 @@ export const AnimatedCounter = ({ value, duration = 800, label = "propiedades" }
     };
 
     requestAnimationFrame(animateCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- displayValue is intentionally excluded to avoid triggering animation on its own update
   }, [value, duration]);
 
   return (

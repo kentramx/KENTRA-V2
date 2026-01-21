@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
               userId: sub.user_id,
               type: 'payment_expired',
               metadata: {
-                planName: (sub.subscription_plans as any)?.display_name || 'Tu plan',
+                planName: (sub.subscription_plans as Record<string, unknown>)?.display_name || 'Tu plan',
                 reason: 'El tiempo para completar tu pago ha expirado',
                 hours: MAX_PENDING_PAYMENT_HOURS,
               },

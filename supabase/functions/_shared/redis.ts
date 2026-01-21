@@ -3,7 +3,7 @@
  * Cache distribuido y rate limiting
  */
 
-interface RedisResponse<T = any> {
+interface RedisResponse<T = unknown> {
   result: T;
   error?: string;
 }
@@ -27,7 +27,7 @@ class RedisClient {
   /**
    * Ejecutar comando Redis
    */
-  private async execute<T = any>(command: string[]): Promise<T | null> {
+  private async execute<T = unknown>(command: string[]): Promise<T | null> {
     try {
       const response = await fetch(`${this.url}`, {
         method: 'POST',
@@ -76,7 +76,7 @@ class RedisClient {
   /**
    * SET - Guardar valor
    */
-  async set(key: string, value: any, expirationSeconds?: number): Promise<boolean> {
+  async set(key: string, value: unknown, expirationSeconds?: number): Promise<boolean> {
     const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
     
     const command = expirationSeconds
@@ -90,7 +90,7 @@ class RedisClient {
   /**
    * SETEX - Guardar con expiración
    */
-  async setex(key: string, seconds: number, value: any): Promise<boolean> {
+  async setex(key: string, seconds: number, value: unknown): Promise<boolean> {
     return this.set(key, value, seconds);
   }
 
@@ -137,7 +137,7 @@ class RedisClient {
   /**
    * HSET - Hash set
    */
-  async hset(key: string, field: string, value: any): Promise<boolean> {
+  async hset(key: string, field: string, value: unknown): Promise<boolean> {
     const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
     const result = await this.execute<number>(['HSET', key, field, stringValue]);
     return result === 1;
@@ -175,7 +175,7 @@ class RedisClient {
     if (!result || result.length === 0) return null;
 
     // Convertir array [key, value, key, value] a objeto
-    const obj: any = {};
+    const obj: Record<string, string> = {};
     for (let i = 0; i < result.length; i += 2) {
       obj[result[i]] = result[i + 1];
     }

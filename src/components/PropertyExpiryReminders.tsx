@@ -149,6 +149,7 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchReminders, navigate, and reminders are intentionally excluded
   }, [agentId, toast]);
 
   const fetchReminders = async () => {
@@ -173,7 +174,7 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
       if (error) throw error;
 
       // Formatear datos para acceso más fácil
-      const formattedData = data?.map((reminder: any) => ({
+      const formattedData = data?.map((reminder: Record<string, unknown>) => ({
         ...reminder,
         property: Array.isArray(reminder.properties) ? reminder.properties[0] : reminder.properties,
       })) || [];

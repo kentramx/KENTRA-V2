@@ -20,7 +20,7 @@ export interface SubscriptionFeatures {
   analytics: boolean;
   priority_support: boolean;
   api_access?: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SubscriptionInfo {
@@ -54,5 +54,5 @@ export interface SubscriptionChange {
   new_billing_cycle: string;
   prorated_amount: number | null;
   changed_at: string;
-  metadata: Record<string, any> | null;
+  metadata: Record<string, unknown> | null;
 }

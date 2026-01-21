@@ -31,13 +31,14 @@ const AdminModerationMetrics = () => {
     avgReviewTime: 0,
     resubmissionRate: 0,
   });
-  const [trendData, setTrendData] = useState<any[]>([]);
-  const [reviewTimeData, setReviewTimeData] = useState<any[]>([]);
-  const [rejectionReasons, setRejectionReasons] = useState<any[]>([]);
-  const [adminStats, setAdminStats] = useState<any[]>([]);
+  const [trendData, setTrendData] = useState<Record<string, unknown>[]>([]);
+  const [reviewTimeData, setReviewTimeData] = useState<Record<string, unknown>[]>([]);
+  const [rejectionReasons, setRejectionReasons] = useState<{ name: string; value: number }[]>([]);
+  const [adminStats, setAdminStats] = useState<{ id: string; approved: number; rejected: number; total: number }[]>([]);
 
   useEffect(() => {
     fetchMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchMetrics is intentionally excluded to prevent infinite loops
   }, [dateRange]);
 
   const fetchMetrics = async () => {
@@ -47,7 +48,7 @@ const AdminModerationMetrics = () => {
       const startDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
 
       // Fetch moderation history
-      const { data: history, error } = await (supabase as any)
+      const { data: history, error } = await (supabase as unknown as { from: (table: string) => { select: (cols: string) => { gte: (col: string, val: string) => { order: (col: string, opts: { ascending: boolean }) => Promise<{ data: Record<string, unknown>[] | null; error: Error | null }> } } } })
         .from('property_moderation_history')
         .select('*')
         .gte('created_at', startDate)
@@ -56,21 +57,21 @@ const AdminModerationMetrics = () => {
       if (error) throw error;
 
       // Calculate main metrics
-      const totalReviewed = history?.filter((h: any) => 
+      const totalReviewed = history?.filter((h: Record<string, unknown>) =>
         h.action === 'approved' || h.action === 'rejected' || h.action === 'auto_approved'
       ).length || 0;
 
-      const approved = history?.filter((h: any) => 
+      const approved = history?.filter((h: Record<string, unknown>) =>
         h.action === 'approved' || h.action === 'auto_approved'
       ).length || 0;
 
       const approvalRate = totalReviewed > 0 ? (approved / totalReviewed) * 100 : 0;
 
-      const resubmissions = history?.filter((h: any) => h.action === 'resubmitted').length || 0;
+      const resubmissions = history?.filter((h: Record<string, unknown>) => h.action === 'resubmitted').length || 0;
       const resubmissionRate = totalReviewed > 0 ? (resubmissions / totalReviewed) * 100 : 0;
 
       // Calculate average review time
-      const { data: avgTimeData } = await (supabase as any).rpc('get_avg_review_time_minutes');
+      const { data: avgTimeData } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ data: number | null }> }).rpc('get_avg_review_time_minutes');
       const avgReviewTime = avgTimeData || 0;
 
       setMetrics({
@@ -82,10 +83,10 @@ const AdminModerationMetrics = () => {
 
       // Process trend data (by day)
       const trendMap = new Map();
-      history?.forEach((h: any) => {
-        const date = new Date(h.created_at).toLocaleDateString('es-MX', { 
-          month: 'short', 
-          day: 'numeric' 
+      history?.forEach((h: Record<string, unknown>) => {
+        const date = new Date(h.created_at as string).toLocaleDateString('es-MX', {
+          month: 'short',
+          day: 'numeric'
         });
         
         if (!trendMap.has(date)) {
@@ -115,14 +116,14 @@ const AdminModerationMetrics = () => {
         const { data: property } = await supabase
           .from('properties')
           .select('created_at')
-          .eq('id', h.property_id)
+          .eq('id', h.property_id as string)
           .single();
 
         if (property) {
-          const reviewTime = (new Date(h.created_at).getTime() - new Date(property.created_at).getTime()) / (1000 * 60 * 60); // hours
-          const date = new Date(h.created_at).toLocaleDateString('es-MX', { 
-            month: 'short', 
-            day: 'numeric' 
+          const reviewTime = (new Date(h.created_at as string).getTime() - new Date(property.created_at).getTime()) / (1000 * 60 * 60); // hours
+          const date = new Date(h.created_at as string).toLocaleDateString('es-MX', {
+            month: 'short',
+            day: 'numeric'
           });
 
           if (!reviewTimeMap.has(date)) {
@@ -141,10 +142,11 @@ const AdminModerationMetrics = () => {
 
       // Process rejection reasons
       const rejectionMap = new Map();
-      history?.filter((h: any) => h.action === 'rejected' && h.rejection_reason?.code)
-        .forEach((h: any) => {
-          const code = h.rejection_reason.code;
-          const label = h.rejection_reason.label;
+      history?.filter((h: Record<string, unknown>) => h.action === 'rejected' && (h.rejection_reason as Record<string, unknown> | null)?.code)
+        .forEach((h: Record<string, unknown>) => {
+          const rejectionReason = h.rejection_reason as Record<string, unknown>;
+          const code = rejectionReason.code as string;
+          const label = rejectionReason.label as string;
           if (!rejectionMap.has(code)) {
             rejectionMap.set(code, { name: label, value: 0 });
           }
@@ -155,11 +157,11 @@ const AdminModerationMetrics = () => {
 
       // Admin performance stats
       const adminMap = new Map();
-      history?.filter((h: any) => h.action === 'approved' || h.action === 'rejected')
-        .forEach((h: any) => {
+      history?.filter((h: Record<string, unknown>) => h.action === 'approved' || h.action === 'rejected')
+        .forEach((h: Record<string, unknown>) => {
           if (!adminMap.has(h.admin_id)) {
             adminMap.set(h.admin_id, {
-              id: h.admin_id,
+              id: h.admin_id as string,
               approved: 0,
               rejected: 0,
               total: 0,

@@ -69,7 +69,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 interface SavedSearch {
   id: string;
   name: string;
-  filters: any;
+  filters: Record<string, unknown>;
   created_at: string;
 }
 
@@ -78,7 +78,17 @@ const UserProfile = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAdmin, isSuperAdmin, adminRole, loading: adminLoading } = useAdminCheck();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<{
+    id: string;
+    name: string;
+    phone: string | null;
+    bio: string | null;
+    state: string | null;
+    city: string | null;
+    avatar_url: string | null;
+    email_notifications: boolean | null;
+    created_at: string;
+  } | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,6 +117,7 @@ const UserProfile = () => {
     }
     fetchUserData();
     checkNotificationPermission();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchUserData and navigate are stable, only re-run when user changes
   }, [user]);
 
   const checkNotificationPermission = () => {
@@ -223,7 +234,7 @@ const UserProfile = () => {
     }
   };
 
-  const handleApplySearch = (filters: any) => {
+  const handleApplySearch = (filters: Record<string, unknown>) => {
     const searchParams = new URLSearchParams();
     
     if (filters.listingType) searchParams.set("listingType", filters.listingType);

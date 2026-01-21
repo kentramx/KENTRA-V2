@@ -214,7 +214,7 @@ export default function AdminUsers() {
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 1);
       setSelectedUsers(new Set());
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching users:', error);
       toast.error('Error al cargar usuarios');
     } finally {
@@ -222,7 +222,7 @@ export default function AdminUsers() {
     }
   };
 
-  const handleAction = async (action: string, userId: string, params?: any) => {
+  const handleAction = async (action: string, userId: string, params?: Record<string, unknown>) => {
     setActionLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -237,9 +237,9 @@ export default function AdminUsers() {
 
       toast.success(response.data?.message || 'Acción completada');
       fetchUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error performing action:', error);
-      toast.error(error.message || 'Error al realizar la acción');
+      toast.error(error instanceof Error ? error.message : 'Error al realizar la acción');
     } finally {
       setActionLoading(false);
       setSuspendDialog({ open: false, user: null });
@@ -271,9 +271,9 @@ export default function AdminUsers() {
 
       toast.success(response.data?.message || 'Acción completada');
       fetchUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error performing bulk action:', error);
-      toast.error(error.message || 'Error al realizar la acción');
+      toast.error(error instanceof Error ? error.message : 'Error al realizar la acción');
     } finally {
       setActionLoading(false);
       setBulkDialog({ open: false, action: '' });

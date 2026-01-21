@@ -40,7 +40,7 @@ export const PropertyTimeline = ({
     type: string;
     date: string;
     title: string;
-    icon: any;
+    icon: React.ComponentType<{ className?: string }>;
     price?: number;
   }> = [
     {
