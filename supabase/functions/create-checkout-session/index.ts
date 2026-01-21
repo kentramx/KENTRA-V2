@@ -6,6 +6,7 @@ import { withRetry, isRetryableStripeError } from '../_shared/retry.ts';
 import { withCircuitBreaker } from '../_shared/circuitBreaker.ts';
 import { withSentry } from '../_shared/sentry.ts';
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkBodySize, bodySizeLimitResponse, BODY_SIZE_LIMITS } from '../_shared/validation.ts';
 
 /**
  * Validates that a redirect URL is safe (on allowed domain)
@@ -127,6 +128,13 @@ Deno.serve(withSentry(async (req) => {
   }
 
   try {
+    // SECURITY: Check body size before reading
+    const bodySizeResult = await checkBodySize(req, BODY_SIZE_LIMITS.DEFAULT);
+    if (!bodySizeResult.allowed) {
+      logger.warn('Request body too large', { size: bodySizeResult.size });
+      return bodySizeLimitResponse(corsHeaders);
+    }
+
     // Rate limiting: 10 requests per hour
     const clientId = getClientIdentifier(req);
     const limit = checkRateLimit(clientId, { maxRequests: 10, windowMs: 60 * 60 * 1000 });

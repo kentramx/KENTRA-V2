@@ -232,7 +232,62 @@ export function validationErrorResponse(errors: string[], corsHeaders: Record<st
     }),
     {
       status: 400,
-      headers: { 
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+      },
+    }
+  );
+}
+
+/**
+ * SECURITY: Body size limits to prevent DoS attacks
+ */
+export const BODY_SIZE_LIMITS = {
+  DEFAULT: 1024 * 100,      // 100KB default for most endpoints
+  WEBHOOK: 1024 * 500,       // 500KB for webhooks (Stripe events can be large)
+  PROPERTY: 1024 * 200,      // 200KB for property submissions
+  MESSAGE: 1024 * 50,        // 50KB for chat messages
+  EMAIL: 1024 * 100,         // 100KB for email content
+} as const;
+
+/**
+ * Check if request body size is within limits
+ * SECURITY: Prevents DoS attacks via large request bodies
+ *
+ * @param req - The request object
+ * @param maxSize - Maximum allowed body size in bytes (default 100KB)
+ * @returns Object with allowed flag and error message if exceeded
+ */
+export async function checkBodySize(
+  req: Request,
+  maxSize: number = BODY_SIZE_LIMITS.DEFAULT
+): Promise<{ allowed: boolean; size?: number; error?: string }> {
+  // Check Content-Length header first (faster, but can be spoofed)
+  const contentLength = req.headers.get('Content-Length');
+  if (contentLength) {
+    const size = parseInt(contentLength, 10);
+    if (size > maxSize) {
+      return {
+        allowed: false,
+        size,
+        error: `Request body too large: ${size} bytes (max: ${maxSize} bytes)`,
+      };
+    }
+  }
+
+  return { allowed: true };
+}
+
+/**
+ * Create a response for body size limit exceeded
+ */
+export function bodySizeLimitResponse(corsHeaders: Record<string, string> = {}): Response {
+  return new Response(
+    JSON.stringify({ error: 'Request body too large' }),
+    {
+      status: 413,
+      headers: {
         'Content-Type': 'application/json',
         ...corsHeaders,
       },

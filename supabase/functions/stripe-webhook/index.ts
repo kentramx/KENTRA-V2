@@ -25,6 +25,7 @@ const OPERATIONAL_STATUSES = [SUBSCRIPTION_STATUSES.ACTIVE, SUBSCRIPTION_STATUSE
 const REQUIRES_ACTION_STATUSES = [SUBSCRIPTION_STATUSES.PAST_DUE, SUBSCRIPTION_STATUSES.INCOMPLETE];
 
 import { getCorsHeaders, corsHeaders } from '../_shared/cors.ts';
+import { checkBodySize, bodySizeLimitResponse, BODY_SIZE_LIMITS } from '../_shared/validation.ts';
 
 // Note: Stripe webhooks come from Stripe servers, not browser origins
 // We keep corsHeaders for compatibility but webhooks don't need CORS
@@ -46,6 +47,13 @@ Deno.serve(withSentry(async (req) => {
   }
 
   try {
+    // SECURITY: Check body size before reading (webhooks can be large but have limits)
+    const bodySizeResult = await checkBodySize(req, BODY_SIZE_LIMITS.WEBHOOK);
+    if (!bodySizeResult.allowed) {
+      logger.warn('Request body too large', { size: bodySizeResult.size });
+      return bodySizeLimitResponse(corsHeaders);
+    }
+
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
       apiVersion: '2023-10-16',
       httpClient: Stripe.createFetchHttpClient(),

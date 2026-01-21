@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkBodySize, bodySizeLimitResponse, BODY_SIZE_LIMITS } from "../_shared/validation.ts";
 
 // Rate limiting: 20 requests per hour per IP
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -184,8 +185,15 @@ serve(async (req) => {
   }
 
   try {
+    // SECURITY: Check body size before reading
+    const bodySizeResult = await checkBodySize(req, BODY_SIZE_LIMITS.MESSAGE);
+    if (!bodySizeResult.allowed) {
+      console.log(`[support-chatbot] Request body too large: ${bodySizeResult.size}`);
+      return bodySizeLimitResponse(corsHeaders);
+    }
+
     const clientIP = getClientIP(req);
-    
+
     // Check rate limit
     if (!checkRateLimit(clientIP)) {
       console.log(`[support-chatbot] Rate limit exceeded for IP: ${clientIP}`);

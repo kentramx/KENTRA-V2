@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, getClientIP, rateLimitedResponse, apiRateLimit } from "../_shared/rateLimit.ts";
-import { isUUID } from "../_shared/validation.ts";
+import { isUUID, checkBodySize, bodySizeLimitResponse, BODY_SIZE_LIMITS } from "../_shared/validation.ts";
 
 type ActionType = "cancel" | "reactivate" | "change-plan";
 
@@ -29,6 +29,13 @@ serve(async (req) => {
   const rateResult = checkRateLimit(clientIP, apiRateLimit);
   if (!rateResult.allowed) {
     return rateLimitedResponse(rateResult, corsHeaders);
+  }
+
+  // SECURITY: Check body size before reading
+  const bodySizeResult = await checkBodySize(req, BODY_SIZE_LIMITS.DEFAULT);
+  if (!bodySizeResult.allowed) {
+    console.warn('[admin-subscription-action] Request body too large:', bodySizeResult.size);
+    return bodySizeLimitResponse(corsHeaders);
   }
 
   try {
