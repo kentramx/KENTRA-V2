@@ -29,13 +29,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Track if we've completed initial session check to prevent race conditions
+    let initialSessionChecked = false;
+    let mounted = true;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        // Only update state if component is still mounted
+        if (!mounted) return;
+
+        // For INITIAL_SESSION event, let getSession handle it to avoid race condition
+        if (event === 'INITIAL_SESSION' && !initialSessionChecked) {
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
-        
+
         // Update Sentry user context
         if (session?.user) {
           setSentryUser({
@@ -49,12 +61,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
+    // THEN check for existing session (single source of truth for initial load)
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+
+      initialSessionChecked = true;
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
+
       // Set Sentry user on initial load
       if (session?.user) {
         setSentryUser({
@@ -65,20 +80,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    
-    if (!error) {
-      navigate('/');
+
+    if (error) {
+      return { error };
     }
-    
-    return { error };
+
+    // SECURITY: Verify email is confirmed before allowing access
+    const user = data.user;
+    if (user && !user.email_confirmed_at && !user.confirmed_at) {
+      // Sign out the user since email isn't confirmed
+      await supabase.auth.signOut();
+      return {
+        error: {
+          message: 'Por favor verifica tu correo electrónico antes de iniciar sesión.',
+          code: 'email_not_confirmed'
+        }
+      };
+    }
+
+    navigate('/');
+    return { error: null };
   };
 
   const signInWithGoogle = async () => {

@@ -1,14 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { getCorsHeaders, corsHeaders } from '../_shared/cors.ts';
 
 const GOOGLE_MAPS_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 interface GeocodeRequest {
   propertyId: string;
@@ -47,24 +43,20 @@ async function geocodeAddress(
 
     if (data.status === 'OK' && data.results && data.results.length > 0) {
       const location = data.results[0].geometry.location;
-      
-      // Agregar variación aleatoria de ±500 metros para distribuir propiedades de la misma colonia
-      // 0.005 grados ≈ 500 metros
-      const randomOffsetLat = (Math.random() - 0.5) * 0.01; // ±0.005 grados
-      const randomOffsetLng = (Math.random() - 0.5) * 0.01;
-      
-      const finalLat = location.lat + randomOffsetLat;
-      const finalLng = location.lng + randomOffsetLng;
-      
-      console.log('[GEOCODE] Success with variation:', { 
-        original: { lat: location.lat, lng: location.lng },
-        final: { lat: finalLat, lng: finalLng },
-        offset: { lat: randomOffsetLat, lng: randomOffsetLng }
+
+      // SECURITY FIX: Removed random offset - showing false property locations is misleading to users
+      // and could constitute fraud. Properties should display at their actual geocoded location.
+      // If privacy is needed, handle it in the frontend by showing approximate area, not fake coordinates.
+
+      console.log('[GEOCODE] Success:', {
+        lat: location.lat,
+        lng: location.lng,
+        formattedAddress: data.results[0].formatted_address
       });
-      
+
       return {
-        lat: finalLat,
-        lng: finalLng,
+        lat: location.lat,
+        lng: location.lng,
       };
     } else {
       console.error('[GEOCODE] Failed:', data.status, data.error_message);
@@ -77,8 +69,11 @@ async function geocodeAddress(
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const headers = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers });
   }
 
   try {
@@ -91,7 +86,7 @@ serve(async (req) => {
           success: false, 
           error: 'propertyId, municipality, and state are required' 
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...headers, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
@@ -104,7 +99,7 @@ serve(async (req) => {
           success: false, 
           error: 'Geocoding failed. Unable to find coordinates for this location.' 
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...headers, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
@@ -122,7 +117,7 @@ serve(async (req) => {
       console.error('[GEOCODE] Update error:', updateError);
       return new Response(
         JSON.stringify({ success: false, error: updateError.message }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        { headers: { ...headers, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
@@ -132,14 +127,14 @@ serve(async (req) => {
         lat: coords.lat, 
         lng: coords.lng 
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...headers, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('[GEOCODE] Error:', error);
     return new Response(
       JSON.stringify({ success: false, error: String(error) }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      { headers: { ...headers, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });

@@ -5,6 +5,7 @@ import { createLogger } from '../_shared/logger.ts';
 import { withRetry, isRetryableStripeError } from '../_shared/retry.ts';
 import { withCircuitBreaker } from '../_shared/circuitBreaker.ts';
 import { withSentry } from '../_shared/sentry.ts';
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 // Rate limiting utilities inlined
 interface RateLimitEntry {
@@ -63,10 +64,12 @@ const getClientIdentifier = (req: Request): string => {
 
 const createRateLimitResponse = (
   resetTime: number,
-  maxRequests: number
+  maxRequests: number,
+  origin: string | null
 ): Response => {
   const retryAfter = Math.ceil((resetTime - Date.now()) / 1000);
-  
+  const headers = getCorsHeaders(origin);
+
   return new Response(
     JSON.stringify({
       error: 'Rate limit exceeded',
@@ -76,25 +79,21 @@ const createRateLimitResponse = (
     {
       status: 429,
       headers: {
+        ...headers,
         'Content-Type': 'application/json',
         'Retry-After': retryAfter.toString(),
         'X-RateLimit-Limit': maxRequests.toString(),
         'X-RateLimit-Remaining': '0',
         'X-RateLimit-Reset': resetTime.toString(),
-        'Access-Control-Allow-Origin': '*',
       },
     }
   );
 };
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 Deno.serve(withSentry(async (req) => {
   const logger = createLogger('create-checkout-session');
   const startTime = Date.now();
+  const corsHeaders = getCorsHeaders(req.headers.get('origin'));
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {

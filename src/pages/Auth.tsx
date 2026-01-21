@@ -13,9 +13,16 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useTracking } from '@/hooks/useTracking';
 import kentraLogo from '@/assets/kentra-logo.png';
 
+// Password validation: min 12 chars, at least 1 uppercase, 1 lowercase, 1 number
+const passwordSchema = z.string()
+  .min(12, { message: 'La contraseña debe tener al menos 12 caracteres' })
+  .regex(/[A-Z]/, { message: 'La contraseña debe contener al menos una mayúscula' })
+  .regex(/[a-z]/, { message: 'La contraseña debe contener al menos una minúscula' })
+  .regex(/[0-9]/, { message: 'La contraseña debe contener al menos un número' });
+
 const loginSchema = z.object({
   email: z.string().trim().email({ message: 'Correo electrónico inválido' }),
-  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres' }),
+  password: z.string().min(1, { message: 'Ingresa tu contraseña' }), // Login allows any password
 });
 
 const resetPasswordSchema = z.object({
@@ -23,7 +30,7 @@ const resetPasswordSchema = z.object({
 });
 
 const newPasswordSchema = z.object({
-  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres' }),
+  password: passwordSchema,
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Las contraseñas no coinciden',
@@ -33,9 +40,9 @@ const newPasswordSchema = z.object({
 const signupSchema = z.object({
   name: z.string().trim().min(2, { message: 'El nombre debe tener al menos 2 caracteres' }).max(100),
   email: z.string().trim().email({ message: 'Correo electrónico inválido' }),
-  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres' }),
+  password: passwordSchema,
   confirmPassword: z.string(),
-  role: z.enum(['buyer', 'agent', 'agency', 'developer'], { 
+  role: z.enum(['buyer', 'agent', 'agency', 'developer'], {
     required_error: 'Debes seleccionar un tipo de cuenta',
   }),
 }).refine((data) => data.password === data.confirmPassword, {

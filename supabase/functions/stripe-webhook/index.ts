@@ -24,10 +24,10 @@ const OPERATIONAL_STATUSES = [SUBSCRIPTION_STATUSES.ACTIVE, SUBSCRIPTION_STATUSE
 // Estados que requieren acción del usuario
 const REQUIRES_ACTION_STATUSES = [SUBSCRIPTION_STATUSES.PAST_DUE, SUBSCRIPTION_STATUSES.INCOMPLETE];
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, corsHeaders } from '../_shared/cors.ts';
+
+// Note: Stripe webhooks come from Stripe servers, not browser origins
+// We keep corsHeaders for compatibility but webhooks don't need CORS
 
 Deno.serve(withSentry(async (req) => {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -92,20 +92,25 @@ Deno.serve(withSentry(async (req) => {
       }
     );
 
-    // === IDEMPOTENCIA: Verificar si ya procesamos este evento ===
+    // === IDEMPOTENCIA: Verificar si ya procesamos este evento (FAIL-CLOSED) ===
     const { data: existingEvent, error: checkError } = await supabaseClient
       .from('stripe_webhook_events')
-      .select('id')
+      .select('id, processed_at')
       .eq('event_id', event.id)
       .maybeSingle();
 
     if (checkError) {
-      console.error('Error checking event idempotency:', checkError);
-      // Continuar procesando si hay error en la verificación (fail open)
+      // FAIL-CLOSED: Si no podemos verificar idempotencia, rechazar la request
+      // Stripe reintentará automáticamente
+      logger.error('Idempotency check failed - rejecting request', { error: checkError });
+      return new Response(
+        JSON.stringify({ error: 'Idempotency check failed', retryable: true }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (existingEvent) {
-      console.log(`Event ${event.id} already processed, skipping`);
+      logger.info(`Event ${event.id} already processed, skipping`);
       return new Response(
         JSON.stringify({ received: true, skipped: true, reason: 'duplicate' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -113,25 +118,31 @@ Deno.serve(withSentry(async (req) => {
     }
 
     // Registrar el evento ANTES de procesarlo para evitar race conditions
+    // Use INSERT with ON CONFLICT to handle concurrent requests atomically
     const { error: insertError } = await supabaseClient
       .from('stripe_webhook_events')
       .insert({
         event_id: event.id,
         event_type: event.type,
         payload: event.data.object,
+        processed_at: null, // Will be set after successful processing
       });
 
     if (insertError) {
       // Si es error de duplicado (unique constraint), otro proceso ya lo está manejando
       if (insertError.code === '23505') {
-        console.log(`Event ${event.id} being processed by another instance, skipping`);
+        logger.info(`Event ${event.id} being processed by another instance, skipping`);
         return new Response(
           JSON.stringify({ received: true, skipped: true, reason: 'concurrent' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      console.error('Error inserting event:', insertError);
-      // Continuar procesando si hay otro tipo de error
+      // FAIL-CLOSED: Any other insert error should reject the request
+      logger.error('Failed to record webhook event - rejecting request', { error: insertError });
+      return new Response(
+        JSON.stringify({ error: 'Failed to record event', retryable: true }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('Processing new webhook event:', event.type, event.id);
@@ -839,6 +850,12 @@ Deno.serve(withSentry(async (req) => {
       default:
         console.log('Unhandled event type:', event.type);
     }
+
+    // Mark event as successfully processed
+    await supabaseClient
+      .from('stripe_webhook_events')
+      .update({ processed_at: new Date().toISOString() })
+      .eq('event_id', event.id);
 
     logger.info('Webhook processed successfully', { stripeEventId: event.id, duration: Date.now() - startTime });
 
