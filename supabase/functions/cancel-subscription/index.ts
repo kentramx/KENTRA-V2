@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
 import Stripe from 'https://esm.sh/stripe@11.16.0?target=deno';
 import { withSentry } from '../_shared/sentry.ts';
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { checkRateLimit, getClientIP, rateLimitedResponse, paymentRateLimit } from "../_shared/rateLimit.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, addRateLimitHeaders, paymentRateLimit } from "../_shared/rateLimit.ts";
 
 Deno.serve(withSentry(async (req) => {
   const origin = req.headers.get("origin");
@@ -19,6 +19,13 @@ Deno.serve(withSentry(async (req) => {
   if (!rateResult.allowed) {
     return rateLimitedResponse(rateResult, corsHeaders);
   }
+
+  // Helper to add rate limit headers to all responses
+  const getResponseHeaders = () => addRateLimitHeaders(
+    getResponseHeaders(),
+    rateResult,
+    paymentRateLimit
+  );
 
   try {
     const supabaseClient = createClient(
@@ -39,7 +46,7 @@ Deno.serve(withSentry(async (req) => {
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: getResponseHeaders(),
       });
     }
 
@@ -58,14 +65,14 @@ Deno.serve(withSentry(async (req) => {
     if (subError || !subscription) {
       return new Response(JSON.stringify({ error: 'No subscription found' }), {
         status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: getResponseHeaders(),
       });
     }
 
     if (!subscription.stripe_subscription_id) {
       return new Response(JSON.stringify({ error: 'No Stripe subscription ID found' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: getResponseHeaders(),
       });
     }
 
@@ -101,7 +108,7 @@ Deno.serve(withSentry(async (req) => {
         message: 'La suscripción ya estaba cancelada; se sincronizó el estado.'
       }), {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: getResponseHeaders(),
       });
     }
 
@@ -112,7 +119,7 @@ Deno.serve(withSentry(async (req) => {
         error: 'La suscripción no está en un estado que permita cancelación.'
       }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: getResponseHeaders(),
       });
     }
 
@@ -140,7 +147,7 @@ Deno.serve(withSentry(async (req) => {
       console.error('Database update error:', updateError);
       return new Response(JSON.stringify({ error: 'Failed to update database' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: getResponseHeaders(),
       });
     }
 
@@ -152,7 +159,7 @@ Deno.serve(withSentry(async (req) => {
         message: 'Subscription will be canceled at the end of the current period',
         cancelAt: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: getResponseHeaders() }
     );
   } catch (error: any) {
     console.error('Error canceling subscription:', error);
@@ -207,7 +214,7 @@ Deno.serve(withSentry(async (req) => {
           message: 'La suscripción ya estaba cancelada en Stripe; se sincronizó el estado.'
         }), {
           status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: getResponseHeaders(),
         });
       } catch (syncError) {
         console.error('Error syncing in catch handler:', syncError);
@@ -222,7 +229,7 @@ Deno.serve(withSentry(async (req) => {
         error: 'INTERNAL_ERROR',
         message: 'Ocurrió un error al cancelar la suscripción.',
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: getResponseHeaders() }
     );
   }
 }));

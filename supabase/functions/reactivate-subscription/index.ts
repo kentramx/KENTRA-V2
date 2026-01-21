@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
 // @deno-types="https://esm.sh/stripe@11.16.0/types/index.d.ts"
 import Stripe from 'https://esm.sh/stripe@11.16.0?target=deno';
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { checkRateLimit, getClientIP, rateLimitedResponse, paymentRateLimit } from "../_shared/rateLimit.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, addRateLimitHeaders, paymentRateLimit } from "../_shared/rateLimit.ts";
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -19,6 +19,13 @@ Deno.serve(async (req) => {
     return rateLimitedResponse(rateResult, corsHeaders);
   }
 
+  // Helper to add rate limit headers to all responses
+  const getResponseHeaders = () => addRateLimitHeaders(
+    getResponseHeaders(),
+    rateResult,
+    paymentRateLimit
+  );
+
   try {
     console.log('🔄 Reactivate subscription endpoint called');
 
@@ -28,7 +35,7 @@ Deno.serve(async (req) => {
       console.error('❌ No authorization header');
       return new Response(
         JSON.stringify({ success: false, error: 'No autorizado' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: getResponseHeaders() }
       );
     }
 
@@ -49,7 +56,7 @@ Deno.serve(async (req) => {
       console.error('❌ Authentication error:', authError);
       return new Response(
         JSON.stringify({ success: false, error: 'No autorizado' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: getResponseHeaders() }
       );
     }
 
@@ -70,7 +77,7 @@ Deno.serve(async (req) => {
           success: false,
           error: 'No se encontró una suscripción con cancelación programada o suspendida',
         }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: getResponseHeaders() }
       );
     }
 
@@ -82,7 +89,7 @@ Deno.serve(async (req) => {
       console.error('❌ STRIPE_SECRET_KEY not configured');
       return new Response(
         JSON.stringify({ success: false, error: 'Error de configuración del servidor' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: getResponseHeaders() }
       );
     }
 
@@ -104,7 +111,7 @@ Deno.serve(async (req) => {
           success: false,
           error: 'No se pudo verificar el estado de la suscripción en Stripe',
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: getResponseHeaders() }
       );
     }
 
@@ -128,7 +135,7 @@ Deno.serve(async (req) => {
           error: 'SUBSCRIPTION_ALREADY_CANCELED',
           message: 'Tu suscripción ya ha finalizado. Por favor contrata un nuevo plan para continuar.',
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: getResponseHeaders() }
       );
     }
 
@@ -154,7 +161,7 @@ Deno.serve(async (req) => {
           success: false,
           error: 'Tu suscripción no es elegible para reactivación. Contacta soporte si crees que es un error.',
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: getResponseHeaders() }
       );
     }
 
@@ -193,7 +200,7 @@ Deno.serve(async (req) => {
       console.error('❌ Error updating database:', updateError);
       return new Response(
         JSON.stringify({ success: false, error: 'Error actualizando la base de datos' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: getResponseHeaders() }
       );
     }
 
@@ -208,7 +215,7 @@ Deno.serve(async (req) => {
           current_period_end: new Date(updatedStripeSubscription.current_period_end * 1000).toISOString(),
         },
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: getResponseHeaders() }
     );
   } catch (error) {
     console.error('❌ Error in reactivate-subscription:', error);
@@ -217,7 +224,7 @@ Deno.serve(async (req) => {
         success: false,
         error: error instanceof Error ? error.message : 'Error desconocido',
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: getResponseHeaders() }
     );
   }
 });
