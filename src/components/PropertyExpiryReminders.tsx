@@ -85,8 +85,6 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
           filter: `agent_id=eq.${agentId}`,
         },
         async (payload) => {
-          console.log('🔔 Nuevo recordatorio recibido:', payload);
-          
           // Obtener información completa del recordatorio con la propiedad
           const { data: newReminder, error } = await supabase
             .from('property_expiry_reminders')

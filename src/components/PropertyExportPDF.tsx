@@ -82,7 +82,6 @@ export const PropertyExportPDF = ({ property, agent }: PropertyExportPDFProps) =
       };
       
       const absoluteUrl = getAbsoluteImageUrl(url);
-      console.log("Loading image from:", absoluteUrl);
       img.src = absoluteUrl;
     });
   };
@@ -138,7 +137,6 @@ export const PropertyExportPDF = ({ property, agent }: PropertyExportPDFProps) =
         for (let i = 0; i < imageUrls.length; i++) {
           try {
             const imageUrl = imageUrls[i];
-            console.log(`Loading image ${i + 1}/${imageUrls.length}:`, imageUrl);
             const base64Image = await loadImageAsBase64(imageUrl);
             
             const imgWidth = pageWidth - 40;
@@ -152,7 +150,6 @@ export const PropertyExportPDF = ({ property, agent }: PropertyExportPDFProps) =
 
             doc.addImage(base64Image, "JPEG", 20, yPosition, imgWidth, imgHeight);
             yPosition += imgHeight + 10;
-            console.log(`Image ${i + 1} added successfully`);
           } catch (error) {
             console.error(`Error loading image ${i + 1}:`, error);
             // Continue with next image even if one fails

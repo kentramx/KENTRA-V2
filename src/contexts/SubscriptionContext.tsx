@@ -271,7 +271,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('[SubscriptionContext] New subscription created');
           fetchSubscription();
           
           // Show welcome toast for new subscriptions

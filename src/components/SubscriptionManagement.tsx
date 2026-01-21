@@ -53,9 +53,6 @@ function SubscriptionManagementContent({ userId, userRole }: SubscriptionManagem
   const { subscription: realtimeSubscription, loading, refetch } = useSubscriptionRealtime({
     userId,
     showToasts: true,
-    onStatusChange: (oldStatus, newStatus) => {
-      console.log(`[SubscriptionManagement] Status changed: ${oldStatus} -> ${newStatus}`);
-    },
   });
 
   // Use actions hook for cancel/reactivate/portal

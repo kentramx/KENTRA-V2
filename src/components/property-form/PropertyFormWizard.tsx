@@ -115,8 +115,6 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
     let finalLng = formData.lng;
 
     if (!finalLat || !finalLng) {
-      console.log('[PROPERTY FORM] Geocoding property automatically...');
-      
       try {
         const { data: geocodeData, error: geocodeError } = await supabase.functions.invoke(
           'geocode-property',
@@ -140,7 +138,6 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
         } else {
           finalLat = geocodeData.lat;
           finalLng = geocodeData.lng;
-          console.log('[PROPERTY FORM] Geocoded successfully:', { finalLat, finalLng });
         }
       } catch (error) {
         console.error('[PROPERTY FORM] Geocoding error:', error);
@@ -242,10 +239,8 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
 
       // Si hay nuevas imágenes, subirlas y guardarlas en la tabla images
       if (imageFiles.length > 0 && createdProperty) {
-        console.log('Uploading images to storage...');
         const uploadedUrls = await uploadImages(imageFiles, createdProperty.id);
-        
-        console.log('Saving image records to database:', uploadedUrls.length);
+
         // Insertar registros en la tabla images
         const imageRecords = uploadedUrls.map((url, index) => ({
           property_id: createdProperty.id,
@@ -258,14 +253,11 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
           .insert(imageRecords);
 
         if (imagesError) {
-          console.error('Error saving images:', imagesError);
           toast({
             title: '⚠️ Advertencia',
             description: 'La propiedad se creó pero hubo un error al guardar las imágenes',
             variant: 'destructive',
           });
-        } else {
-          console.log('Images saved successfully');
         }
       }
 

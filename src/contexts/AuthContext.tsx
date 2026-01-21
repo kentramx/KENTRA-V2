@@ -267,7 +267,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (response.error) {
         // Si el error es de autenticación, ignorar y continuar
-        console.log('Verification email response:', response);
+        // Error logged via monitoring if needed
       }
       
       return { error: null };

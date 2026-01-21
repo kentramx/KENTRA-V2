@@ -248,10 +248,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
     try {
       const compressedFiles = await compressImages(
         validFiles,
-        { maxSizeMB: 2, maxWidthOrHeight: 1920, quality: 0.85, format: 'webp' },
-        (completed, total) => {
-          console.log(`Comprimiendo: ${completed}/${total}`);
-        }
+        { maxSizeMB: 2, maxWidthOrHeight: 1920, quality: 0.85, format: 'webp' }
       );
 
       setImageFiles(prev => [...prev, ...compressedFiles]);
