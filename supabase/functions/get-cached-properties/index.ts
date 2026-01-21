@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { getCorsHeaders } from '../_shared/cors.ts';
 import { withCache, getRedis } from '../_shared/redis.ts';
 import { captureException, withSentry } from '../_shared/sentry.ts';
 
@@ -13,6 +13,9 @@ interface PropertyFilters {
 }
 
 Deno.serve(withSentry(async (req: Request) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
