@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { useRequire2FA } from '@/hooks/useRequire2FA';
 import QualityChecklist from '@/components/QualityChecklist';
 import PropertyDiff from '@/components/PropertyDiff';
 import AdminModerationMetrics from '@/components/AdminModerationMetrics';
@@ -41,6 +42,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { isAdmin, isSuperAdmin, adminRole, loading: adminLoading } = useAdminCheck();
+  const { requirementMet, checking: checking2FA } = useRequire2FA();
   
   const [properties, setProperties] = useState<any[]>([]);
   const [approvedHistory, setApprovedHistory] = useState<any[]>([]);
@@ -76,15 +78,15 @@ const AdminDashboard = () => {
   });
 
   useEffect(() => {
-    if (!adminLoading && !isAdmin) {
+    if (!adminLoading && !checking2FA && (!isAdmin || !requirementMet)) {
       navigate('/');
       toast({
         title: 'Acceso denegado',
-        description: 'No tienes permisos para acceder a esta página',
+        description: 'No tienes permisos para acceder a esta página o 2FA requerido',
         variant: 'destructive',
       });
     }
-  }, [isAdmin, adminLoading, navigate]);
+  }, [isAdmin, adminLoading, navigate, requirementMet, checking2FA]);
 
   // Sincronizar activeTab con el parámetro tab de la URL (solo pestañas de moderación)
   useEffect(() => {

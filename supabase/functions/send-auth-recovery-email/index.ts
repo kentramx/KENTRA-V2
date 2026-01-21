@@ -80,6 +80,30 @@ serve(async (req: Request): Promise<Response> => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
+    // Rate limiting check (3 attempts per hour, 24-hour block)
+    const { data: rateLimitData, error: rateLimitError } = await supabaseAdmin
+      .rpc('check_verification_rate_limit', {
+        p_email: normalizedEmail,
+        p_type: 'password_reset',
+        p_max_attempts: 3,
+        p_window_hours: 1,
+        p_block_hours: 24
+      });
+
+    if (rateLimitError) {
+      console.warn("⚠️ Rate limit check failed, proceeding:", rateLimitError);
+    } else if (rateLimitData && rateLimitData[0] && !rateLimitData[0].allowed) {
+      console.log(`🚫 Rate limit exceeded for password reset: ${normalizedEmail}`);
+      // Still return success to prevent email enumeration
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "If an account exists with this email, a recovery link will be sent"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Buscar usuario por email directamente en auth.users via SQL
     let userId: string | null = null;
     let userName: string | null = null;

@@ -364,12 +364,24 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
         }))
       } : null;
 
+      // Validar que haya al menos 1 imagen (nuevas + existentes)
+      const totalImages = imageFiles.length + existingImages.length;
+      if (totalImages === 0) {
+        throw new Error('Se requiere al menos 1 imagen para publicar la propiedad');
+      }
+
       // Create or update property
       if (property) {
+        // Validar que el usuario sea el dueño de la propiedad
+        if (property.agent_id !== user?.id) {
+          throw new Error('No tienes permiso para editar esta propiedad');
+        }
+
         const { error } = await supabase
           .from('properties')
           .update({ ...validatedData, title: autoTitle } as any)
-          .eq('id', property.id);
+          .eq('id', property.id)
+          .eq('agent_id', user?.id); // Double-check ownership at DB level
 
         if (error) throw error;
       } else {
@@ -377,7 +389,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
           ...validatedData,
           title: autoTitle,
           agent_id: user?.id,
-          status: 'pausada', // Siempre enviar a moderación
+          status: 'pendiente_aprobacion', // Enviar a cola de moderación
           last_renewed_at: new Date().toISOString(),
           duplicate_warning: titleValidation.isDuplicate,
           duplicate_warning_data: duplicateWarningData,
@@ -392,6 +404,15 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
         if (error) throw error;
         propertyId = data.id;
+
+        // Geocodificar la propiedad para obtener coordenadas
+        try {
+          await supabase.functions.invoke('geocode-property', {
+            body: { propertyId: data.id }
+          });
+        } catch (geoError) {
+          console.warn('Geocoding failed, property created without coordinates:', geoError);
+        }
       }
 
       // Upload new images

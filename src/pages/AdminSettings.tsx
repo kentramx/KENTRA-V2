@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { useRequire2FA } from '@/hooks/useRequire2FA';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ interface AppSetting {
 const AdminSettings = () => {
   const navigate = useNavigate();
   const { isSuperAdmin, loading: adminLoading } = useAdminCheck();
+  const { requirementMet, checking: checking2FA } = useRequire2FA();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [setting, setSetting] = useState<AppSetting | null>(null);
@@ -38,14 +40,14 @@ const AdminSettings = () => {
   const [updatedByName, setUpdatedByName] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!adminLoading && !isSuperAdmin) {
+    if (!adminLoading && !checking2FA && (!isSuperAdmin || !requirementMet)) {
       navigate('/');
       return;
     }
-    if (!adminLoading && isSuperAdmin) {
+    if (!adminLoading && !checking2FA && isSuperAdmin && requirementMet) {
       fetchExchangeRate();
     }
-  }, [adminLoading, isSuperAdmin, navigate]);
+  }, [adminLoading, isSuperAdmin, navigate, requirementMet, checking2FA]);
 
   const fetchExchangeRate = async () => {
     try {

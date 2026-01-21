@@ -221,6 +221,15 @@ async function handleRecovery(
     );
   }
 
+  // Invalidar todas las sesiones del usuario por seguridad
+  try {
+    await supabaseAdmin.auth.admin.signOut(tokenData.user_id, 'global');
+    console.log(`🔒 All sessions invalidated for user: ${tokenData.user_id}`);
+  } catch (signOutError) {
+    console.warn("⚠️ Could not invalidate sessions:", signOutError);
+    // Continuar aunque falle - la contraseña ya fue cambiada
+  }
+
   console.log(`✅ Password updated successfully for user: ${tokenData.user_id}`);
 
   // Obtener nombre del usuario para el email de confirmación

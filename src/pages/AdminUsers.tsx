@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { useRequire2FA } from '@/hooks/useRequire2FA';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -139,6 +140,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
 export default function AdminUsers() {
   const navigate = useNavigate();
   const { isAdmin, isSuperAdmin, loading: adminLoading } = useAdminCheck();
+  const { requirementMet, checking: checking2FA } = useRequire2FA();
   
   const [users, setUsers] = useState<UserData[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -173,16 +175,16 @@ export default function AdminUsers() {
   const [bulkDialog, setBulkDialog] = useState<{ open: boolean; action: string }>({ open: false, action: '' });
 
   useEffect(() => {
-    if (!adminLoading && !isAdmin) {
+    if (!adminLoading && !checking2FA && (!isAdmin || !requirementMet)) {
       navigate('/');
     }
-  }, [adminLoading, isAdmin, navigate]);
+  }, [adminLoading, isAdmin, navigate, requirementMet, checking2FA]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin && requirementMet) {
       fetchUsers();
     }
-  }, [isAdmin, page, search, roleFilter, statusFilter, verifiedFilter, planFilter, dateFrom, dateTo]);
+  }, [isAdmin, requirementMet, page, search, roleFilter, statusFilter, verifiedFilter, planFilter, dateFrom, dateTo]);
 
   const fetchUsers = async () => {
     setLoading(true);

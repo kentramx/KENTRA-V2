@@ -158,10 +158,7 @@ const handler = async (req: Request): Promise<Response> => {
       })
       .eq("id", user.id);
 
-    // TODO: Send SMS using Twilio
-    // For now, we'll just log the code (DEVELOPMENT ONLY)
-    console.log("🔐 Verification code:", verificationCode);
-    console.log("⏰ Expires at:", expiresAt);
+    // Twilio SMS integration below - code not logged for security
 
     // Check if Twilio credentials are configured
     const twilioAccountSid = Deno.env.get("TWILIO_ACCOUNT_SID");

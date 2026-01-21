@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
+import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { useRequire2FA } from '@/hooks/useRequire2FA';
 import { MapPin, RefreshCw, AlertTriangle, CheckCircle2, Info, Loader2, ChevronDown, Play, Square } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -45,8 +47,21 @@ export default function AdminGeocoding() {
 
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isSuperAdmin, loading: adminLoading } = useAdminCheck();
+  const { requirementMet, checking: checking2FA } = useRequire2FA();
 
   useEffect(() => {
+    if (!adminLoading && !checking2FA && (!isSuperAdmin || !requirementMet)) {
+      navigate('/');
+      return;
+    }
+    if (!adminLoading && !checking2FA && isSuperAdmin && requirementMet) {
+      checkAdminAccess();
+    }
+  }, [adminLoading, isSuperAdmin, requirementMet, checking2FA]);
+
+  useEffect(() => {
+    if (adminLoading || checking2FA) return;
     checkAdminAccess();
     loadStats();
   }, []);

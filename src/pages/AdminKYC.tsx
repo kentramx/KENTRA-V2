@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { useRequire2FA } from "@/hooks/useRequire2FA";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import { AdminKYCReview } from "@/components/AdminKYCReview";
@@ -9,11 +10,12 @@ import { Loader2 } from "lucide-react";
 
 const AdminKYC = () => {
   const { isAdmin, loading: adminLoading } = useAdminCheck();
+  const { requirementMet, checking: checking2FA } = useRequire2FA();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!adminLoading && !isAdmin) {
+    if (!adminLoading && !checking2FA && (!isAdmin || !requirementMet)) {
       navigate("/");
       toast({
         title: "Acceso denegado",
@@ -21,9 +23,9 @@ const AdminKYC = () => {
         variant: "destructive",
       });
     }
-  }, [isAdmin, adminLoading, navigate]);
+  }, [isAdmin, adminLoading, navigate, requirementMet, checking2FA]);
 
-  if (adminLoading) {
+  if (adminLoading || checking2FA) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -31,7 +33,7 @@ const AdminKYC = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin || !requirementMet) {
     return null;
   }
 

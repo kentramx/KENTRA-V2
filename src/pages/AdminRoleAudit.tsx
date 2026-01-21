@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { useRequire2FA } from "@/hooks/useRequire2FA";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ const AdminRoleAudit = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isSuperAdmin, loading } = useAdminCheck();
+  const { requirementMet, checking: checking2FA } = useRequire2FA();
   const { toast } = useToast();
 
   const [auditEntries, setAuditEntries] = useState<RoleAuditEntry[]>([]);

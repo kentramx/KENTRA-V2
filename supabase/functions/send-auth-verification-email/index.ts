@@ -27,15 +27,12 @@ const FROM_EMAIL = "Kentra <no-reply@updates.kentra.com.mx>"; // Estandarizado c
 const REPLY_TO = "soporte@kentra.com.mx";
 
 /**
- * Genera un código numérico aleatorio de N dígitos
+ * Genera un código numérico aleatorio de N dígitos usando crypto seguro
  */
 function generateVerificationCode(length: number): string {
-  const digits = "0123456789";
-  let code = "";
-  for (let i = 0; i < length; i++) {
-    code += digits.charAt(Math.floor(Math.random() * digits.length));
-  }
-  return code;
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => (byte % 10).toString()).join("");
 }
 
 /**
@@ -80,6 +77,29 @@ serve(async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
+
+    // Rate limiting check (5 attempts per hour, 24-hour block)
+    const { data: rateLimitData, error: rateLimitError } = await supabaseAdmin
+      .rpc('check_verification_rate_limit', {
+        p_email: email.toLowerCase(),
+        p_type: 'email',
+        p_max_attempts: 5,
+        p_window_hours: 1,
+        p_block_hours: 24
+      });
+
+    if (rateLimitError) {
+      console.warn("⚠️ Rate limit check failed, proceeding:", rateLimitError);
+    } else if (rateLimitData && rateLimitData[0] && !rateLimitData[0].allowed) {
+      console.log(`🚫 Rate limit exceeded for: ${email}`);
+      return new Response(
+        JSON.stringify({
+          error: "Demasiados intentos. Por favor espera antes de solicitar otro código.",
+          blocked_until: rateLimitData[0].blocked_until
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Generar código de verificación
     const verificationCode = generateVerificationCode(VERIFICATION_CODE_LENGTH);
