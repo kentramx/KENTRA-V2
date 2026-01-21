@@ -31,12 +31,21 @@ interface Coupon {
   created_at: string;
 }
 
+interface Redemption {
+  id: string;
+  discount_amount: number;
+  currency: string;
+  redeemed_at: string;
+  profiles?: { name?: string; email?: string } | null;
+  subscription_plans?: { display_name?: string } | null;
+}
+
 export function CouponManagement() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewRedemptionsId, setViewRedemptionsId] = useState<string | null>(null);
-  const [redemptions, setRedemptions] = useState<Record<string, unknown>[]>([]);
+  const [redemptions, setRedemptions] = useState<any[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({

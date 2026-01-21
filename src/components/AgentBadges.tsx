@@ -22,7 +22,7 @@ const AgentBadges = ({ badges, maxVisible = 3, size = "md" }: AgentBadgesProps) 
   if (!badges || badges.length === 0) return null;
 
   // Sort badges by priority (highest first)
-  const sortedBadges = [...badges].sort((a, b) => b.priority - a.priority);
+  const sortedBadges = [...badges].sort((a, b) => (b.priority || 0) - (a.priority || 0));
   const visibleBadges = sortedBadges.slice(0, maxVisible);
   const remainingCount = sortedBadges.length - maxVisible;
 
@@ -49,7 +49,7 @@ const AgentBadges = ({ badges, maxVisible = 3, size = "md" }: AgentBadgesProps) 
   };
 
   const renderBadge = (badge: BadgeData) => {
-    const IconComponent = (Icons as Record<string, React.ComponentType<{ className?: string }>>)[badge.icon] || Icons.Award;
+    const IconComponent = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[badge.icon] || Icons.Award;
     
     return (
       <TooltipProvider key={badge.code}>

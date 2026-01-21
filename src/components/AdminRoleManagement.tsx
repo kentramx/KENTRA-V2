@@ -138,10 +138,10 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
       const foundUser = searchResult.user;
 
       // Promover usando la función RPC
-      const { error: promoteError } = await supabase.rpc('promote_user_to_admin' as 'get_agency_statistics', {
+      const { error: promoteError } = await (supabase.rpc as any)('promote_user_to_admin', {
         target_user_id: foundUser.id,
         new_admin_role: selectedRole,
-      } as unknown as { agency_id: string });
+      });
 
       if (promoteError) throw promoteError;
 

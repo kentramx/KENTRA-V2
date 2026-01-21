@@ -451,7 +451,7 @@ export const ChatWindow = ({
 
     try {
       // Llamar a la función de base de datos para marcar mensajes como leídos
-      const { error } = await supabase.rpc('mark_messages_as_read' as 'get_agency_statistics', {
+      const { error } = await (supabase.rpc as any)('mark_messages_as_read', {
         p_conversation_id: conversationId,
         p_user_id: user.id,
       });

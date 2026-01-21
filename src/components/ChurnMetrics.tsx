@@ -82,7 +82,7 @@ export const ChurnMetrics = () => {
       else if (dateRange === '6m') startDate.setMonth(startDate.getMonth() - 6);
       else startDate.setFullYear(startDate.getFullYear() - 1);
 
-      const { data, error } = await supabase.rpc('get_churn_metrics' as 'get_agency_statistics', {
+      const { data, error } = await (supabase.rpc as any)('get_churn_metrics', {
         start_date: startDate.toISOString(),
         end_date: new Date().toISOString()
       });

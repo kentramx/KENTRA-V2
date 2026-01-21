@@ -45,11 +45,28 @@ interface DeveloperTeamManagementProps {
   subscriptionInfo: SubscriptionInfo;
 }
 
+interface TeamMember {
+  id: string;
+  user_id: string;
+  role: string;
+  status: string;
+  joined_at: string;
+  profiles?: { id?: string; name?: string; phone?: string } | null;
+}
+
+interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  invited_at: string;
+}
+
 export const DeveloperTeamManagement = ({ developerId, subscriptionInfo }: DeveloperTeamManagementProps) => {
   const { toast } = useToast();
   const { error: logError, warn, captureException } = useMonitoring();
-  const [members, setMembers] = useState<Record<string, unknown>[]>([]);
-  const [invitations, setInvitations] = useState<Record<string, unknown>[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -70,19 +87,29 @@ export const DeveloperTeamManagement = ({ developerId, subscriptionInfo }: Devel
     try {
       const { data, error } = await supabase
         .from('developer_team')
-        .select(`
-          *,
-          profiles:user_id (
-            id,
-            name,
-            phone
-          )
-        `)
+        .select('id, user_id, role, status, joined_at')
         .eq('developer_id', developerId)
         .order('joined_at', { ascending: false });
 
       if (error) throw error;
-      setMembers(data || []);
+      
+      // Fetch profiles separately
+      const userIds = data?.map(m => m.user_id) || [];
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, name, phone')
+          .in('id', userIds);
+        
+        const membersWithProfiles: TeamMember[] = data?.map(m => ({
+          ...m,
+          profiles: profilesData?.find(p => p.id === m.user_id) || null
+        })) || [];
+        
+        setMembers(membersWithProfiles);
+      } else {
+        setMembers([]);
+      }
     } catch (error) {
       logError('Error fetching developer team', {
         component: 'DeveloperTeamManagement',
@@ -213,7 +240,7 @@ export const DeveloperTeamManagement = ({ developerId, subscriptionInfo }: Devel
       });
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo enviar la invitación',
+        description: error instanceof Error ? error.message : 'No se pudo enviar la invitación',
         variant: 'destructive',
       });
     } finally {

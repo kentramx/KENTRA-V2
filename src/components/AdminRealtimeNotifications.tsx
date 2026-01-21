@@ -175,10 +175,11 @@ export const AdminRealtimeNotifications = ({ userId, isAdmin }: AdminRealtimeNot
     if (!shouldNotify) return;
 
     // Obtener nombre del usuario
+    const userId = change.user_id as string;
     const { data: profile } = await supabase
       .from('profiles')
       .select('name')
-      .eq('id', change.user_id)
+      .eq('id', userId)
       .single();
 
     const userName = profile?.name || 'Usuario desconocido';

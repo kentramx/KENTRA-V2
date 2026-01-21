@@ -43,11 +43,29 @@ interface AgencyTeamManagementProps {
   subscriptionInfo: SubscriptionInfo;
 }
 
+interface AgentRecord {
+  id: string;
+  agent_id: string;
+  role: string;
+  status: string;
+  joined_at: string;
+  profiles: { id: string; name: string; email?: string; phone?: string } | null;
+}
+
+interface InvitationRecord {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  invited_at: string;
+  expires_at: string;
+}
+
 export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamManagementProps) => {
   const { toast } = useToast();
   const { error: logError, warn, captureException } = useMonitoring();
-  const [agents, setAgents] = useState<Record<string, unknown>[]>([]);
-  const [invitations, setInvitations] = useState<Record<string, unknown>[]>([]);
+  const [agents, setAgents] = useState<AgentRecord[]>([]);
+  const [invitations, setInvitations] = useState<InvitationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -68,20 +86,33 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
     try {
       const { data, error } = await supabase
         .from('agency_agents')
-        .select(`
-          *,
-          profiles:agent_id (
-            id,
-            name,
-            email,
-            phone
-          )
-        `)
+        .select('id, agent_id, role, status, joined_at, agency_id')
         .eq('agency_id', agencyId)
         .order('joined_at', { ascending: false });
 
       if (error) throw error;
-      setAgents(data || []);
+      
+      // Fetch profile data separately
+      const agentIds = data?.map(a => a.agent_id) || [];
+      if (agentIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, name, phone')
+          .in('id', agentIds);
+        
+        const agentsWithProfiles: AgentRecord[] = data?.map(a => ({
+          id: a.id,
+          agent_id: a.agent_id,
+          role: a.role || 'agent',
+          status: a.status || 'active',
+          joined_at: a.joined_at || new Date().toISOString(),
+          profiles: profilesData?.find(p => p.id === a.agent_id) || null
+        })) || [];
+        
+        setAgents(agentsWithProfiles);
+      } else {
+        setAgents([]);
+      }
     } catch (error) {
       logError('Error fetching team agents', {
         component: 'AgencyTeamManagement',
@@ -107,13 +138,13 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
     try {
       const { data, error } = await supabase
         .from('agency_invitations')
-        .select('*')
+        .select('id, email, role, status, invited_at, expires_at')
         .eq('agency_id', agencyId)
         .in('status', ['pending', 'accepted'])
         .order('invited_at', { ascending: false });
 
       if (error) throw error;
-      setInvitations(data || []);
+      setInvitations((data || []) as InvitationRecord[]);
     } catch (error) {
       warn('Error fetching agency invitations', {
         component: 'AgencyTeamManagement',
@@ -258,7 +289,7 @@ export const AgencyTeamManagement = ({ agencyId, subscriptionInfo }: AgencyTeamM
     }
   };
 
-  const handleResendInvitation = async (invitation: Record<string, unknown>) => {
+  const handleResendInvitation = async (invitation: InvitationRecord) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');

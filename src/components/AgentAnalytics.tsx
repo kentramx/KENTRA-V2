@@ -204,8 +204,7 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
   const fetchAnalytics = async () => {
     try {
       // Fetch overall stats
-      const { data: statsData, error: statsError } = await supabase
-        .rpc("get_agent_stats" as 'get_agency_statistics', { agent_uuid: agentId } as unknown as { agency_id: string });
+      const { data: statsData, error: statsError } = await (supabase.rpc as any)("get_agent_stats", { agent_uuid: agentId });
 
       if (statsError) throw statsError;
       setStats(statsData?.[0] || null);
