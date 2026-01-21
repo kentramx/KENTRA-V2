@@ -64,9 +64,9 @@ serve(async (req: Request): Promise<Response> => {
     );
 
     if (body.type === "verification") {
-      return await handleVerification(supabaseAdmin, body);
+      return await handleVerification(supabaseAdmin, body, headers);
     } else if (body.type === "recovery") {
-      return await handleRecovery(supabaseAdmin, body);
+      return await handleRecovery(supabaseAdmin, body, headers);
     } else {
       return new Response(
         JSON.stringify({ error: "Invalid token type" }),
@@ -88,7 +88,8 @@ serve(async (req: Request): Promise<Response> => {
  */
 async function handleVerification(
   supabaseAdmin: any,
-  { code, email }: VerifyVerificationRequest
+  { code, email }: VerifyVerificationRequest,
+  headers: Record<string, string>
 ): Promise<Response> {
   if (!code || !email) {
     return new Response(
@@ -160,7 +161,8 @@ async function handleVerification(
  */
 async function handleRecovery(
   supabaseAdmin: any,
-  { token, newPassword }: VerifyRecoveryRequest
+  { token, newPassword }: VerifyRecoveryRequest,
+  headers: Record<string, string>
 ): Promise<Response> {
   if (!token || !newPassword) {
     return new Response(

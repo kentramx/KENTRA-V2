@@ -106,7 +106,8 @@ Deno.serve(withSentry(async (req) => {
     const limit = checkRateLimit(clientId, { maxRequests: 10, windowMs: 60 * 60 * 1000 });
     
     if (!limit.allowed) {
-      return createRateLimitResponse(limit.resetTime, 10);
+      const origin = req.headers.get('origin');
+      return createRateLimitResponse(limit.resetTime, 10, origin);
     }
 
     const supabaseClient = createClient(
