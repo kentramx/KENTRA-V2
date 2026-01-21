@@ -6,13 +6,16 @@
  * - Debounce integrado
  * - Estados de carga y error
  * - Accesibilidad completa
+ * - Espera a que Google Maps API esté cargado
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useJsApiLoader } from '@react-google-maps/api';
 import { Search, MapPin, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { GOOGLE_MAPS_CONFIG, GOOGLE_MAPS_LIBRARIES } from '@/config/googleMaps';
 
 export interface LocationResult {
   placeId: string;
@@ -63,9 +66,15 @@ export function LocationSearchInput({
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Inicializar servicios de Google Places
+  // Usar el mismo loader que GoogleMapBase para asegurar que la API está lista
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: GOOGLE_MAPS_CONFIG.apiKey,
+    libraries: GOOGLE_MAPS_LIBRARIES,
+  });
+
+  // Inicializar servicios de Google Places cuando la API esté cargada
   useEffect(() => {
-    if (typeof google !== 'undefined' && google.maps?.places) {
+    if (isLoaded && typeof google !== 'undefined' && google.maps?.places) {
       autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
 
       // PlacesService necesita un elemento DOM
@@ -75,7 +84,7 @@ export function LocationSearchInput({
       // Crear token de sesión para agrupar requests
       sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
     }
-  }, []);
+  }, [isLoaded]);
 
   // Limpiar debounce al desmontar
   useEffect(() => {
@@ -101,7 +110,7 @@ export function LocationSearchInput({
 
   // Buscar predicciones
   const searchPredictions = useCallback((query: string) => {
-    if (!autocompleteServiceRef.current || query.length < 2) {
+    if (!isLoaded || !autocompleteServiceRef.current || query.length < 2) {
       setPredictions([]);
       setIsOpen(false);
       return;
@@ -132,7 +141,7 @@ export function LocationSearchInput({
         }
       }
     );
-  }, []);
+  }, [isLoaded]);
 
   // Handler de input con debounce
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

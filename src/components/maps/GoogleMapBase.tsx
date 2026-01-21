@@ -70,9 +70,9 @@ export function GoogleMapBase({
     mapRef.current = map;
     hasInitialized.current = true;
     onMapReady?.(map);
-    
-    // Emitir viewport inicial
-    emitViewport(map);
+
+    // Nota: No emitir viewport aquí porque getBounds() puede ser undefined
+    // El viewport se emitirá en onIdle cuando el mapa esté completamente listo
   }, [onMapReady]);
 
   // Emitir cambio de viewport
