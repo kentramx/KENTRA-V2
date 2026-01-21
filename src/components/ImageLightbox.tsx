@@ -376,8 +376,12 @@ export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: 
               <div className="bg-background/90 backdrop-blur-sm p-2 rounded-lg">
                 <p className="text-xs font-medium mb-2 text-foreground">Vista general</p>
                 <div
-                  className="relative w-32 h-24 bg-black/50 rounded overflow-hidden cursor-pointer border-2 border-primary/50 hover:border-primary transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Mini-mapa de navegación - toca para moverte en la imagen"
+                  className="relative w-32 h-24 bg-black/50 rounded overflow-hidden cursor-pointer border-2 border-primary/50 hover:border-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   onClick={handleMinimapClick}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleMinimapClick(e as any); }}
                 >
                   {/* Imagen en miniatura */}
                   {/* SECURITY: Sanitize image URLs to prevent XSS */}

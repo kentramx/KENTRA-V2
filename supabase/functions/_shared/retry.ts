@@ -89,14 +89,74 @@ export function isRetryableStripeError(error: Error): boolean {
 export function isRetryableEmailError(error: Error): boolean {
   const message = error.message.toLowerCase();
   const statusCode = (error as any).statusCode || (error as any).status;
-  
+
   if (message.includes('network') || message.includes('timeout')) {
     return true;
   }
-  
+
   if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
     return true;
   }
-  
+
   return false;
 }
+
+/**
+ * SECURITY: Timeout wrapper to prevent hanging operations
+ * Use for database queries, external API calls, etc.
+ */
+export class TimeoutError extends Error {
+  constructor(message: string, public readonly timeoutMs: number) {
+    super(message);
+    this.name = 'TimeoutError';
+  }
+}
+
+export interface TimeoutOptions {
+  timeoutMs: number;
+  operationName?: string;
+}
+
+/**
+ * Wrap an async operation with a timeout
+ * @param fn - The async function to execute
+ * @param options - Timeout configuration
+ * @returns The result of the function, or throws TimeoutError if it takes too long
+ */
+export async function withTimeout<T>(
+  fn: () => Promise<T>,
+  options: TimeoutOptions
+): Promise<T> {
+  const { timeoutMs, operationName = 'Operation' } = options;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const result = await Promise.race([
+      fn(),
+      new Promise<never>((_, reject) => {
+        controller.signal.addEventListener('abort', () => {
+          reject(new TimeoutError(
+            `${operationName} timed out after ${timeoutMs}ms`,
+            timeoutMs
+          ));
+        });
+      }),
+    ]);
+    return result;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Common timeout values for different operation types
+ */
+export const TIMEOUT_MS = {
+  DATABASE_QUERY: 10000,      // 10s for single database queries
+  DATABASE_BATCH: 30000,      // 30s for batch database operations
+  EXTERNAL_API: 30000,        // 30s for external API calls (Stripe, Resend)
+  WEBHOOK_TOTAL: 120000,      // 2min for total webhook processing
+  GEOCODING: 15000,           // 15s for geocoding operations
+} as const;

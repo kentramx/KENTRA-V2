@@ -16,29 +16,39 @@ const BottomNav = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background md:hidden">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background md:hidden"
+      aria-label="Navegación principal móvil"
+      role="navigation"
+    >
       <div className="flex justify-around items-center h-16 pb-safe">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
-          
+
           return (
             <Link
               key={item.path}
               to={item.path}
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
                 "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors",
-                item.highlight 
-                  ? "text-amber-500" 
-                  : isActive 
-                    ? "text-primary" 
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                item.highlight
+                  ? "text-amber-500"
+                  : isActive
+                    ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Icon className={cn(
-                "h-6 w-6",
-                item.highlight && "h-7 w-7"
-              )} />
+              <Icon
+                className={cn(
+                  "h-6 w-6",
+                  item.highlight && "h-7 w-7"
+                )}
+                aria-hidden="true"
+              />
               <span className={cn(
                 "text-xs font-medium",
                 item.highlight && "font-semibold"

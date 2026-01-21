@@ -1,5 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { PropertyImage, PropertyType, ListingType } from '@/types/property';
+
+export interface SimilarProperty {
+  id: string;
+  title: string;
+  price: number;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  sqft: number | null;
+  parking: number | null;
+  address: string;
+  state: string;
+  municipality: string;
+  type: PropertyType;
+  listing_type: ListingType;
+  agent_id: string;
+  images: PropertyImage[];
+}
 
 export const useSimilarProperties = (
   propertyId: string | undefined,
@@ -30,8 +48,8 @@ export const useSimilarProperties = (
 
       return data?.map(property => ({
         ...property,
-        images: (property.images || []).sort((a: any, b: any) => a.position - b.position)
-      })) || [];
+        images: (property.images || []).sort((a: PropertyImage, b: PropertyImage) => a.position - b.position)
+      })) as SimilarProperty[] || [];
     },
     enabled: !!propertyId && !!propertyType && !!propertyState,
     staleTime: 10 * 60 * 1000,

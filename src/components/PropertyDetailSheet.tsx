@@ -54,6 +54,8 @@ import { ContactPropertyDialog } from "@/components/ContactPropertyDialog";
 import { usePropertyCompare } from "@/hooks/usePropertyCompare";
 import { getWhatsAppUrl, WhatsAppTemplates } from "@/utils/whatsapp";
 import { useTracking } from "@/hooks/useTracking";
+import { SectionErrorBoundary } from "@/components/ui/section-error-boundary";
+import type { AgentStats } from "@/types/property";
 
 interface PropertyDetailSheetProps {
   propertyId: string | null;
@@ -65,7 +67,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
-  const [agentStats, setAgentStats] = useState<any>(null);
+  const [agentStats, setAgentStats] = useState<AgentStats | null>(null);
   const { toast } = useToast();
   const { addToCompare, isInCompare, removeFromCompare } = usePropertyCompare();
   const { trackGA4Event } = useTracking();
@@ -312,20 +314,22 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
     );
   }
 
-  const imageUrls = property.images?.map((img: any) => img.url) || [];
+  const imageUrls = property.images?.map((img: { url: string }) => img.url) || [];
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
       <SheetContent side="right" className="w-full sm:max-w-4xl overflow-y-auto p-0">
         {/* Galería de imágenes - padding to avoid button overlap */}
         <div className="pt-12">
-          <PropertyImageGallery
-            images={property.images || []}
-            title={property.title}
-            type={property.type}
-            propertyId={property.id}
-            price={property.price}
-          />
+          <SectionErrorBoundary sectionName="PropertyImageGallery" fallbackMessage="No se pudieron cargar las imágenes">
+            <PropertyImageGallery
+              images={property.images || []}
+              title={property.title}
+              type={property.type}
+              propertyId={property.id}
+              price={property.price}
+            />
+          </SectionErrorBoundary>
         </div>
 
         {/* Contenido principal */}
@@ -610,18 +614,22 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
 
           {/* Amenidades */}
           {property.amenities && typeof property.amenities === 'object' && (
-            <PropertyAmenities amenities={property.amenities as any} />
+            <SectionErrorBoundary sectionName="PropertyAmenities" fallbackMessage="No se pudieron cargar las amenidades">
+              <PropertyAmenities amenities={property.amenities as any} />
+            </SectionErrorBoundary>
           )}
 
           {/* Investment Metrics */}
-          <PropertyInvestmentMetrics
-            price={property.price}
-            sqft={property.sqft}
-            listingType={property.listing_type}
-            state={property.state}
-            municipality={property.municipality}
-            type={property.type}
-          />
+          <SectionErrorBoundary sectionName="PropertyInvestmentMetrics" fallbackMessage="No se pudieron cargar las métricas">
+            <PropertyInvestmentMetrics
+              price={property.price}
+              sqft={property.sqft}
+              listingType={property.listing_type}
+              state={property.state}
+              municipality={property.municipality}
+              type={property.type}
+            />
+          </SectionErrorBoundary>
 
           {/* Timeline */}
           <PropertyTimeline
@@ -679,12 +687,14 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
                 <CardTitle>Ubicación</CardTitle>
               </CardHeader>
               <CardContent>
-                <PropertyMap 
-                  lat={property.lat} 
-                  lng={property.lng} 
-                  address={`${property.address}, ${property.municipality}, ${property.state}`}
-                  height="300px"
-                />
+                <SectionErrorBoundary sectionName="PropertyMap" fallbackMessage="No se pudo cargar el mapa">
+                  <PropertyMap
+                    lat={property.lat}
+                    lng={property.lng}
+                    address={`${property.address}, ${property.municipality}, ${property.state}`}
+                    height="300px"
+                  />
+                </SectionErrorBoundary>
               </CardContent>
             </Card>
           )}
@@ -694,7 +704,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
             <div>
               <h2 className="text-2xl font-bold mb-4">Propiedades similares</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {similarProperties.map((similarProperty: any) => (
+                {similarProperties.map((similarProperty) => (
                   <PropertyCard
                     key={similarProperty.id}
                     id={similarProperty.id}

@@ -19,8 +19,13 @@ import { toast } from "sonner";
 import { useTracking } from '@/hooks/useTracking';
 import { useMonitoring } from '@/lib/monitoring';
 
+interface ContactPropertyInfo {
+  id: string;
+  title: string;
+}
+
 interface ContactPropertyDialogProps {
-  property: any;
+  property: ContactPropertyInfo;
   agentId: string;
 }
 
