@@ -28,7 +28,7 @@ export const GOOGLE_MAPS_CONFIG = {
 
   // Límites de zoom
   zoom: {
-    default: 5,
+    default: 6,
     min: 4,
     max: 18,
     showPropertiesAt: 12,

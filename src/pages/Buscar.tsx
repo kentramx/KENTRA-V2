@@ -25,7 +25,7 @@ import type { MapViewport, MapFilters } from '@/types/map';
 // Viewport inicial (México)
 const INITIAL_VIEWPORT: MapViewport = {
   center: { lat: 23.6345, lng: -102.5528 },
-  zoom: 5,
+  zoom: 6,
   bounds: {
     north: 32.72,
     south: 14.53,
