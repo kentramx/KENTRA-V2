@@ -246,8 +246,9 @@ serve(async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error("❌ Unexpected error:", error);
+    // SECURITY: Don't expose internal error details to clients
     return new Response(
-      JSON.stringify({ error: "Internal server error", details: error.message }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }

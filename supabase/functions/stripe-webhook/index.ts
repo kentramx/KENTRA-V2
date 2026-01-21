@@ -865,10 +865,10 @@ Deno.serve(withSentry(async (req) => {
     );
   } catch (error) {
     logger.error('Error processing webhook', {}, error as Error);
+    // SECURITY: Don't expose internal error details (Stripe will see only generic error)
     return new Response(
-      JSON.stringify({ 
-        error: 'Webhook processing error', 
-        details: error instanceof Error ? error.message : 'Unknown error'
+      JSON.stringify({
+        error: 'Webhook processing error',
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

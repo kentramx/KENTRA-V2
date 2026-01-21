@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { monitoring } from '@/lib/monitoring';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface PropertyFormData {
   // Opciones de listado
@@ -35,9 +36,13 @@ export interface PropertyFormData {
   amenities: Array<{ category: string; items: string[] }>;
 }
 
-const DRAFT_KEY = 'propertyFormDraft';
+const DRAFT_KEY_PREFIX = 'propertyFormDraft';
 
 export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
+  const { user } = useAuth();
+  // SECURITY: Draft key includes user ID to prevent cross-user data leakage
+  const draftKey = user?.id ? `${DRAFT_KEY_PREFIX}_${user.id}` : null;
+
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<PropertyFormData>({
     for_sale: true,
@@ -61,9 +66,10 @@ export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
     ...initialData,
   });
 
-  // Cargar borrador guardado al montar
+  // Cargar borrador guardado al montar (solo si hay usuario autenticado)
   useEffect(() => {
-    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (!draftKey) return; // No cargar sin user ID
+    const savedDraft = localStorage.getItem(draftKey);
     if (savedDraft && !initialData) {
       try {
         const parsed = JSON.parse(savedDraft);
@@ -72,26 +78,29 @@ export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
         monitoring.warn('Error loading draft', { hook: 'useFormWizard', error });
       }
     }
-  }, []);
+  }, [draftKey]);
 
-  // Auto-save cada 30 segundos
+  // Auto-save cada 30 segundos (solo si hay usuario autenticado)
   useEffect(() => {
+    if (!draftKey) return; // No guardar sin user ID
     const timer = setTimeout(() => {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+      localStorage.setItem(draftKey, JSON.stringify(formData));
     }, 30000);
     return () => clearTimeout(timer);
-  }, [formData]);
+  }, [formData, draftKey]);
 
   const updateFormData = (updates: Partial<PropertyFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
   };
 
   const saveDraft = () => {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+    if (!draftKey) return; // No guardar sin user ID
+    localStorage.setItem(draftKey, JSON.stringify(formData));
   };
 
   const clearDraft = () => {
-    localStorage.removeItem(DRAFT_KEY);
+    if (!draftKey) return; // No borrar sin user ID
+    localStorage.removeItem(draftKey);
   };
 
   const validateStep = (step: number): boolean => {

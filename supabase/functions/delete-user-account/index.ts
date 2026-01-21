@@ -192,10 +192,10 @@ serve(async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error("Error in delete-user-account function:", error);
+    // SECURITY: Don't expose internal error details to clients
     return new Response(
       JSON.stringify({
-        error: "Error al procesar la solicitud",
-        details: error.message
+        error: "Error al procesar la solicitud"
       }),
       { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
     );

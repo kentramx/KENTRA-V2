@@ -212,12 +212,12 @@ Deno.serve(withSentry(async (req) => {
     }
 
     // Any other error is treated as internal error
+    // SECURITY: Don't expose internal error details to clients
     return new Response(
       JSON.stringify({
         success: false,
         error: 'INTERNAL_ERROR',
         message: 'Ocurrió un error al cancelar la suscripción.',
-        details: error instanceof Error ? error.message : 'Unknown error',
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
