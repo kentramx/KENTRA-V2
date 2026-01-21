@@ -14,6 +14,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { ImageLightbox } from './ImageLightbox';
 import { z } from 'zod';
 import { useMonitoring } from '@/lib/monitoring';
+import { sanitizeImageUrl, escapeRegExp } from '@/utils/sanitize';
 
 // Message content validation schema (max 5000 characters)
 const messageSchema = z.object({
@@ -229,8 +230,10 @@ export const ChatWindow = ({
 
   const highlightText = (text: string, query: string) => {
     if (!query.trim()) return text;
-    
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+
+    // SECURITY: Escape special regex characters in query to prevent injection
+    const escapedQuery = escapeRegExp(query);
+    const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'));
     return parts.map((part, index) => {
       if (part.toLowerCase() === query.toLowerCase()) {
         return (
@@ -776,13 +779,14 @@ export const ChatWindow = ({
                     }`}
                   >
                     {/* Mostrar imagen si es un mensaje de imagen */}
-                    {message.message_type === 'image' && message.image_url && (
-                      <div 
+                    {/* SECURITY: Sanitize image URLs to prevent XSS */}
+                    {message.message_type === 'image' && message.image_url && sanitizeImageUrl(message.image_url) && (
+                      <div
                         className="mb-2 cursor-pointer rounded-lg overflow-hidden"
-                        onClick={() => setLightboxImage(message.image_url!)}
+                        onClick={() => setLightboxImage(sanitizeImageUrl(message.image_url!)!)}
                       >
                         <img
-                          src={message.image_url}
+                          src={sanitizeImageUrl(message.image_url)!}
                           alt="Imagen compartida"
                           className="max-w-full max-h-64 object-cover rounded-lg hover:opacity-90 transition-opacity"
                         />

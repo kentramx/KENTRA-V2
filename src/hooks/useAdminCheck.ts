@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { monitoring } from '@/lib/monitoring';
 import type { AppRole } from '@/types/user';
 
-const IMPERSONATION_KEY = 'kentra_impersonated_role';
+// SECURITY: Key prefix - actual key includes user ID to prevent cross-user data leakage
+const IMPERSONATION_KEY_PREFIX = 'kentra_impersonated_role';
 
 export const useAdminCheck = () => {
   const { user } = useAuth();
@@ -13,6 +14,9 @@ export const useAdminCheck = () => {
   const [adminRole, setAdminRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
+
+  // Get user-specific impersonation key
+  const getImpersonationKey = () => user ? `${IMPERSONATION_KEY_PREFIX}_${user.id}` : null;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -35,76 +39,74 @@ export const useAdminCheck = () => {
     }
 
     try {
-      // Check if impersonating a non-admin role
-      const impersonatedRole = localStorage.getItem(IMPERSONATION_KEY);
-      if (impersonatedRole && ['buyer', 'agent', 'agency'].includes(impersonatedRole)) {
-        // Verify user is actually super admin before allowing impersonation
-        const { data: isSuperData } = await supabase.rpc('is_super_admin' as any, {
-          user_uuid: user.id,
-        });
-
-        if (!mountedRef.current) return;
-
-        if (isSuperData) {
-          // Simulate non-admin role
-          setIsAdmin(false);
-          setIsSuperAdmin(false);
-          setAdminRole(null);
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Verificar acceso administrativo general usando has_admin_access
-      const { data: hasAccessData, error: accessError } = await supabase.rpc('has_admin_access' as any, {
+      // OPTIMIZATION: Single query to get admin role - avoids multiple RPC calls
+      // is_super_admin implies has_admin_access, so check super_admin first
+      const { data: isSuperData, error: superError } = await supabase.rpc('is_super_admin' as any, {
         user_uuid: user.id,
       });
 
       if (!mountedRef.current) return;
 
-      if (accessError) {
-        monitoring.error('Error checking admin access', { hook: 'useAdminCheck', error: accessError });
+      if (superError) {
+        monitoring.error('Error checking super admin status', { hook: 'useAdminCheck', error: superError });
         setIsAdmin(false);
         setIsSuperAdmin(false);
         setAdminRole(null);
+        setLoading(false);
+        return;
+      }
+
+      const isSuperAdmin = Boolean(isSuperData);
+
+      // Check impersonation (user-specific key)
+      const impersonationKey = getImpersonationKey();
+      const impersonatedRole = impersonationKey ? localStorage.getItem(impersonationKey) : null;
+
+      // If super admin is impersonating a non-admin role
+      if (isSuperAdmin && impersonatedRole && ['buyer', 'agent', 'agency'].includes(impersonatedRole)) {
+        setIsAdmin(false);
+        setIsSuperAdmin(false);
+        setAdminRole(null);
+        setLoading(false);
+        return;
+      }
+
+      // If super admin is impersonating moderator
+      if (isSuperAdmin && impersonatedRole === 'moderator') {
+        setIsAdmin(true);
+        setIsSuperAdmin(false);
+        setAdminRole('moderator');
+        setLoading(false);
+        return;
+      }
+
+      // If user is super admin (not impersonating)
+      if (isSuperAdmin) {
+        setIsAdmin(true);
+        setIsSuperAdmin(true);
+        setAdminRole('super_admin');
+        setLoading(false);
+        return;
+      }
+
+      // Not super admin - check if moderator (single additional query)
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'moderator')
+        .maybeSingle();
+
+      if (!mountedRef.current) return;
+
+      if (roleData) {
+        setIsAdmin(true);
+        setIsSuperAdmin(false);
+        setAdminRole('moderator');
       } else {
-        setIsAdmin(Boolean(hasAccessData));
-
-        if (hasAccessData) {
-          // Si tiene acceso admin, verificar si es super_admin
-          const { data: isSuperData, error: superError } = await supabase.rpc('is_super_admin' as any, {
-            user_uuid: user.id,
-          });
-
-          if (!mountedRef.current) return;
-
-          if (!superError) {
-            setIsSuperAdmin(Boolean(isSuperData));
-          }
-
-          // Check if impersonating moderator
-          if (impersonatedRole === 'moderator' && isSuperData) {
-            setIsAdmin(true);
-            setIsSuperAdmin(false);
-            setAdminRole('moderator');
-            setLoading(false);
-            return;
-          }
-
-          // Obtener el rol específico
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .in('role', ['super_admin', 'moderator'])
-            .single();
-
-          if (!mountedRef.current) return;
-
-          if (roleData) {
-            setAdminRole(roleData.role as AppRole);
-          }
-        }
+        setIsAdmin(false);
+        setIsSuperAdmin(false);
+        setAdminRole(null);
       }
     } catch (error) {
       if (!mountedRef.current) return;

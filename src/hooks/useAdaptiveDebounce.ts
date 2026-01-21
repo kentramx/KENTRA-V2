@@ -12,27 +12,31 @@ export function useAdaptiveDebounce<T>(value: T, defaultDelay: number = 400): T 
   const frameTimesRef = useRef<number[]>([]);
   const lastFrameRef = useRef<number>(performance.now());
 
-  // Medir FPS en background
+  // Medir FPS solo durante inicialización (10 frames) y luego detener
+  // PERFORMANCE: No mantener RAF corriendo indefinidamente
   useEffect(() => {
     let rafId: number;
-    
+    let frameCount = 0;
+    const maxFrames = 10;
+    let isCancelled = false;
+
     const measureFPS = () => {
+      if (isCancelled) return;
+
       const now = performance.now();
       const delta = now - lastFrameRef.current;
       lastFrameRef.current = now;
-      
-      // Guardar últimos 10 frames
+
+      // Guardar frame time
       frameTimesRef.current.push(delta);
-      if (frameTimesRef.current.length > 10) {
-        frameTimesRef.current.shift();
-      }
-      
-      // Calcular FPS promedio cada segundo
-      if (frameTimesRef.current.length === 10) {
-        const avgFrameTime = frameTimesRef.current.reduce((a, b) => a + b) / 10;
+      frameCount++;
+
+      // Una vez que tenemos 10 frames, calcular FPS y DETENER
+      if (frameCount >= maxFrames) {
+        const avgFrameTime = frameTimesRef.current.reduce((a, b) => a + b) / frameTimesRef.current.length;
         const fps = 1000 / avgFrameTime;
-        
-        // Ajustar delay según FPS
+
+        // Ajustar delay según FPS (solo una vez)
         if (fps >= 50) {
           setAdaptiveDelay(200); // Rápido
         } else if (fps >= 30) {
@@ -40,14 +44,21 @@ export function useAdaptiveDebounce<T>(value: T, defaultDelay: number = 400): T 
         } else {
           setAdaptiveDelay(800); // Lento
         }
+
+        // Limpiar ref ya no necesario
+        frameTimesRef.current = [];
+        return; // NO continuar el loop
       }
-      
+
       rafId = requestAnimationFrame(measureFPS);
     };
-    
+
     rafId = requestAnimationFrame(measureFPS);
-    
-    return () => cancelAnimationFrame(rafId);
+
+    return () => {
+      isCancelled = true;
+      cancelAnimationFrame(rafId);
+    };
   }, []);
 
   useEffect(() => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { sanitizeImageUrl } from '@/utils/sanitize';
 
 interface ImageLightboxProps {
   images: { url: string }[];
@@ -379,8 +380,9 @@ export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: 
                   onClick={handleMinimapClick}
                 >
                   {/* Imagen en miniatura */}
+                  {/* SECURITY: Sanitize image URLs to prevent XSS */}
                   <img
-                    src={images[currentIndex].url}
+                    src={sanitizeImageUrl(images[currentIndex].url)}
                     alt="Mini-mapa"
                     className="w-full h-full object-contain opacity-60"
                   />
@@ -430,10 +432,10 @@ export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: 
             onTouchEnd={onTouchEnd}
           >
             <img
-              src={images[currentIndex].url}
+              src={sanitizeImageUrl(images[currentIndex].url)}
               alt={`${title || 'Imagen'} ${currentIndex + 1}`}
               className="max-w-full max-h-full object-contain select-none"
-              style={{ 
+              style={{
                 transform: `scale(${zoom}) translate(${panOffset.x / zoom}px, ${panOffset.y / zoom}px) translateX(${swipeOffset}px)`,
                 transition: (swipeOffset === 0 && !isPanning && !isPinching) ? 'transform 0.3s ease-out' : 'none',
                 cursor: zoom > 1 ? 'grab' : 'default'
@@ -479,7 +481,7 @@ export const ImageLightbox = ({ images, initialIndex, isOpen, onClose, title }: 
                   }`}
                 >
                   <img
-                    src={image.url}
+                    src={sanitizeImageUrl(image.url)}
                     alt={`Thumbnail ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
