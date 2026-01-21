@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const FALLBACK_RATE = 20.15;
@@ -14,8 +14,11 @@ export const useCurrencyConversion = () => {
   const [rateSource, setRateSource] = useState<'manual' | 'banxico'>('manual');
   const [rateUpdatedAt, setRateUpdatedAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
+
     const fetchRate = async () => {
       try {
         const { data, error } = await supabase
@@ -23,7 +26,10 @@ export const useCurrencyConversion = () => {
           .select('value, updated_at')
           .eq('key', 'exchange_rate_usd_mxn')
           .single();
-        
+
+        // Check if component is still mounted before updating state
+        if (!mountedRef.current) return;
+
         if (error) {
           console.warn('[useCurrencyConversion] Error fetching rate, using fallback:', error.message);
           return;
@@ -36,35 +42,42 @@ export const useCurrencyConversion = () => {
           setRateUpdatedAt(data.updated_at);
         }
       } catch (err) {
+        if (!mountedRef.current) return;
         console.warn('[useCurrencyConversion] Error:', err);
       } finally {
-        setIsLoading(false);
+        if (mountedRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchRate();
+
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  const convertMXNtoUSD = (mxn: number) => mxn / exchangeRate;
-  const convertUSDtoMXN = (usd: number) => usd * exchangeRate;
+  const convertMXNtoUSD = useCallback((mxn: number) => mxn / exchangeRate, [exchangeRate]);
+  const convertUSDtoMXN = useCallback((usd: number) => usd * exchangeRate, [exchangeRate]);
 
-  const formatPrice = (amount: number, currency: 'MXN' | 'USD') => {
+  const formatPrice = useCallback((amount: number, currency: 'MXN' | 'USD') => {
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
-  };
+  }, []);
 
-  const formatNumber = (value: string): string => {
+  const formatNumber = useCallback((value: string): string => {
     const number = value.replace(/[^\d]/g, '');
     return number.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  };
+  }, []);
 
-  const parseFormattedNumber = (value: string): number => {
+  const parseFormattedNumber = useCallback((value: string): number => {
     return parseFloat(value.replace(/,/g, '')) || 0;
-  };
+  }, []);
 
   return {
     convertMXNtoUSD,

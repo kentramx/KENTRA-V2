@@ -1,9 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, publicRateLimit } from "../_shared/rateLimit.ts";
 
 // Colores de la marca Kentra
 const COLORS = {
@@ -209,9 +206,19 @@ function generateDefaultSVG(): string {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const headers = getCorsHeaders(origin);
+
   // Handle CORS
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers });
+  }
+
+  // Rate limiting
+  const clientIP = getClientIP(req);
+  const rateResult = checkRateLimit(clientIP, publicRateLimit);
+  if (!rateResult.allowed) {
+    return rateLimitedResponse(rateResult, headers);
   }
 
   try {
@@ -243,7 +250,7 @@ Deno.serve(async (req) => {
       const svgContent = await cachedImage.text();
       return new Response(svgContent, {
         headers: {
-          ...corsHeaders,
+          ...headers,
           "Content-Type": "image/svg+xml",
           "Cache-Control": "public, max-age=604800", // 7 días
         },
@@ -365,7 +372,7 @@ Deno.serve(async (req) => {
 
     return new Response(svgContent, {
       headers: {
-        ...corsHeaders,
+        ...headers,
         "Content-Type": "image/svg+xml",
         "Cache-Control": "public, max-age=604800", // 7 días
       },
@@ -377,7 +384,7 @@ Deno.serve(async (req) => {
     const fallbackSVG = generateDefaultSVG();
     return new Response(fallbackSVG, {
       headers: {
-        ...corsHeaders,
+        ...headers,
         "Content-Type": "image/svg+xml",
         "Cache-Control": "public, max-age=3600", // 1 hora para errores
       },

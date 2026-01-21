@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { monitoring } from '@/lib/monitoring';
@@ -12,18 +12,16 @@ export const useUserRole = () => {
   const { user } = useAuth();
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
 
-  useEffect(() => {
-    if (user) {
-      fetchUserRole();
-    } else {
-      setUserRole(null);
-      setLoading(false);
+  const fetchUserRole = useCallback(async () => {
+    if (!user) {
+      if (mountedRef.current) {
+        setUserRole(null);
+        setLoading(false);
+      }
+      return;
     }
-  }, [user]);
-
-  const fetchUserRole = async () => {
-    if (!user) return;
 
     try {
       // Check if impersonating
@@ -33,6 +31,8 @@ export const useUserRole = () => {
         const { data: isSuperData } = await supabase.rpc('is_super_admin' as any, {
           user_uuid: user.id,
         });
+
+        if (!mountedRef.current) return;
 
         if (isSuperData) {
           setUserRole(impersonatedRole as UserRole);
@@ -47,6 +47,8 @@ export const useUserRole = () => {
         .select('role')
         .eq('user_id', user.id);
 
+      if (!mountedRef.current) return;
+
       if (error) {
         monitoring.error('Error fetching user roles', { hook: 'useUserRole', error });
         setUserRole('buyer');
@@ -55,7 +57,7 @@ export const useUserRole = () => {
       }
 
       if (!allRoles || allRoles.length === 0) {
-        setUserRole('buyer'); // Default role
+        setUserRole('buyer');
         setLoading(false);
         return;
       }
@@ -81,12 +83,30 @@ export const useUserRole = () => {
 
       setUserRole(highestRole);
     } catch (error) {
+      if (!mountedRef.current) return;
       monitoring.captureException(error as Error, { hook: 'useUserRole' });
       setUserRole('buyer');
     } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    if (user) {
+      fetchUserRole();
+    } else {
+      setUserRole(null);
       setLoading(false);
     }
-  };
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [user, fetchUserRole]);
 
   return { userRole, loading, refetch: fetchUserRole };
 };

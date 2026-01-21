@@ -14,10 +14,7 @@ import {
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, corsHeaders } from "../_shared/cors.ts";
 
 const FROM_EMAIL = "Kentra <no-reply@updates.kentra.com.mx>"; // Estandarizado con guión
 const REPLY_TO = "soporte@kentra.com.mx";
@@ -48,9 +45,12 @@ interface VerifyRecoveryRequest {
 type RequestBody = VerifyVerificationRequest | VerifyRecoveryRequest;
 
 serve(async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("origin");
+  const headers = getCorsHeaders(origin);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers });
   }
 
   try {
@@ -70,7 +70,7 @@ serve(async (req: Request): Promise<Response> => {
     } else {
       return new Response(
         JSON.stringify({ error: "Invalid token type" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
       );
     }
 
@@ -78,7 +78,7 @@ serve(async (req: Request): Promise<Response> => {
     console.error("❌ Unexpected error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error", details: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 });
@@ -93,7 +93,7 @@ async function handleVerification(
   if (!code || !email) {
     return new Response(
       JSON.stringify({ error: "code and email are required" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 
@@ -119,7 +119,7 @@ async function handleVerification(
     console.log("❌ Invalid or expired verification code");
     return new Response(
       JSON.stringify({ error: "Código inválido o expirado" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 
@@ -139,7 +139,7 @@ async function handleVerification(
     console.error("❌ Error confirming email:", updateError);
     return new Response(
       JSON.stringify({ error: "Error al verificar email" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 
@@ -151,7 +151,7 @@ async function handleVerification(
       message: "Email verificado correctamente",
       userId: tokenData.user_id
     }),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    { status: 200, headers: { ...headers, "Content-Type": "application/json" } }
   );
 }
 
@@ -165,15 +165,31 @@ async function handleRecovery(
   if (!token || !newPassword) {
     return new Response(
       JSON.stringify({ error: "token and newPassword are required" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 
-  // Validar contraseña
-  if (newPassword.length < 6) {
+  // Validar contraseña - DEBE coincidir con frontend (12 chars, mayúscula, minúscula, número)
+  const passwordErrors: string[] = [];
+  if (newPassword.length < 12) {
+    passwordErrors.push("al menos 12 caracteres");
+  }
+  if (!/[A-Z]/.test(newPassword)) {
+    passwordErrors.push("una letra mayúscula");
+  }
+  if (!/[a-z]/.test(newPassword)) {
+    passwordErrors.push("una letra minúscula");
+  }
+  if (!/[0-9]/.test(newPassword)) {
+    passwordErrors.push("un número");
+  }
+
+  if (passwordErrors.length > 0) {
     return new Response(
-      JSON.stringify({ error: "La contraseña debe tener al menos 6 caracteres" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: `La contraseña debe contener: ${passwordErrors.join(", ")}`
+      }),
+      { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 
@@ -197,7 +213,7 @@ async function handleRecovery(
     console.log("❌ Invalid or expired recovery token");
     return new Response(
       JSON.stringify({ error: "Enlace inválido o expirado. Solicita un nuevo enlace de recuperación." }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 
@@ -217,7 +233,7 @@ async function handleRecovery(
     console.error("❌ Error updating password:", updateError);
     return new Response(
       JSON.stringify({ error: "Error al actualizar contraseña" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 
@@ -277,6 +293,6 @@ async function handleRecovery(
       success: true, 
       message: "Contraseña actualizada correctamente"
     }),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    { status: 200, headers: { ...headers, "Content-Type": "application/json" } }
   );
 }

@@ -1,13 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIP, rateLimitedResponse, publicRateLimit } from '../_shared/rateLimit.ts';
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const headers = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers });
+  }
+
+  // Rate limiting
+  const clientIP = getClientIP(req);
+  const rateResult = checkRateLimit(clientIP, publicRateLimit);
+  if (!rateResult.allowed) {
+    return rateLimitedResponse(rateResult, headers);
   }
 
   try {
@@ -21,7 +28,7 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Optional: ensure user session exists (not strictly required for public config)
+    // Optional: check user session
     const { data: { user } } = await supabaseClient.auth.getUser();
 
     const googleMapsApiKey = Deno.env.get('VITE_GOOGLE_MAPS_API_KEY') || '';
@@ -29,24 +36,22 @@ Deno.serve(async (req) => {
     if (!googleMapsApiKey) {
       return new Response(
         JSON.stringify({ error: 'GOOGLE_MAPS_API_KEY_NOT_CONFIGURED' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
       );
     }
 
     return new Response(
       JSON.stringify({
-        // Public, safe to expose to clients
         googleMapsApiKey,
-        // Optionally include other publishable config here later
         authenticated: !!user,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   } catch (e) {
     console.error('public-config error', e);
     return new Response(
       JSON.stringify({ error: 'INTERNAL_ERROR' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
     );
   }
 });

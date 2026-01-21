@@ -82,7 +82,7 @@ SELECT cron.schedule(
   SELECT
     net.http_post(
         url:='https://jazjzwhbagwllensnkaz.supabase.co/functions/v1/send-admin-alerts',
-        headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imphemp6d2hiYWd3bGxlbnNua2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzODI0MDEsImV4cCI6MjA3Nzk1ODQwMX0.4w3SkvwsRp7KReYO859NdkqEKRl6fRMj68D_yImW6OE"}'::jsonb,
+        headers:='{"Content-Type": "application/json", "Authorization": "Bearer YOUR_SUPABASE_ANON_KEY_HERE"}'::jsonb,
         body:='{}'::jsonb
     ) as request_id;
   $$
