@@ -80,6 +80,9 @@ const Settings = () => {
   const [savingAccount, setSavingAccount] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deletePasswordError, setDeletePasswordError] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { userRole } = useUserRole();
 
   const accountForm = useForm<AccountFormData>({
@@ -211,24 +214,46 @@ const Settings = () => {
 
   const handleDeleteAccount = async () => {
     if (deletingAccount) return;
-    
+
+    // SECURITY: Require password verification before account deletion
+    if (!deletePassword.trim()) {
+      setDeletePasswordError("Debes ingresar tu contraseña para confirmar");
+      return;
+    }
+
+    setDeletePasswordError("");
     setDeletingAccount(true);
-    const loadingToast = toast.loading("Eliminando cuenta...");
 
     try {
+      // Verify password by attempting to sign in
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: user?.email || "",
+        password: deletePassword,
+      });
+
+      if (authError) {
+        setDeletePasswordError("Contraseña incorrecta");
+        setDeletingAccount(false);
+        return;
+      }
+
+      const loadingToast = toast.loading("Eliminando cuenta...");
+
       const { data, error } = await supabase.functions.invoke('delete-user-account');
 
       if (error) throw error;
 
       toast.dismiss(loadingToast);
       toast.success("Tu cuenta ha sido eliminada exitosamente");
-      
+
+      // Reset state and close dialog
+      setDeletePassword("");
+      setDeleteDialogOpen(false);
+
       // Sign out and redirect to home
       await signOut();
       navigate('/');
     } catch (error) {
-      console.error("Error deleting account:", error);
-      toast.dismiss(loadingToast);
       toast.error("Error al eliminar la cuenta. Por favor intenta de nuevo.");
     } finally {
       setDeletingAccount(false);
@@ -521,7 +546,13 @@ const Settings = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <AlertDialog>
+                  <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+                    setDeleteDialogOpen(open);
+                    if (!open) {
+                      setDeletePassword("");
+                      setDeletePasswordError("");
+                    }
+                  }}>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive">
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -537,14 +568,42 @@ const Settings = () => {
                           todas tus propiedades, favoritos y configuraciones.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
+                      <div className="py-4">
+                        <Label htmlFor="delete-password" className="text-sm font-medium">
+                          Ingresa tu contraseña para confirmar
+                        </Label>
+                        <Input
+                          id="delete-password"
+                          type="password"
+                          placeholder="Tu contraseña actual"
+                          value={deletePassword}
+                          onChange={(e) => {
+                            setDeletePassword(e.target.value);
+                            setDeletePasswordError("");
+                          }}
+                          className="mt-2"
+                          disabled={deletingAccount}
+                        />
+                        {deletePasswordError && (
+                          <p className="text-sm text-destructive mt-2">{deletePasswordError}</p>
+                        )}
+                      </div>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-destructive hover:bg-destructive/90"
+                        <AlertDialogCancel disabled={deletingAccount}>Cancelar</AlertDialogCancel>
+                        <Button
+                          variant="destructive"
                           onClick={handleDeleteAccount}
+                          disabled={deletingAccount || !deletePassword.trim()}
                         >
-                          Sí, eliminar mi cuenta
-                        </AlertDialogAction>
+                          {deletingAccount ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Eliminando...
+                            </>
+                          ) : (
+                            "Sí, eliminar mi cuenta"
+                          )}
+                        </Button>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>

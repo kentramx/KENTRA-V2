@@ -63,3 +63,22 @@ export function escapeHtml(text: string): string {
 export function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+/**
+ * SECURITY: Validates that a string is a valid UUID v4 format
+ * Prevents malformed IDs from being used in database queries
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isValidUUID(id: string | null | undefined): boolean {
+  if (!id) return false;
+  return UUID_REGEX.test(id);
+}
+
+/**
+ * SECURITY: Validates and returns the UUID if valid, null otherwise
+ */
+export function sanitizeUUID(id: string | null | undefined): string | null {
+  if (!id || !isValidUUID(id)) return null;
+  return id;
+}

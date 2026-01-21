@@ -61,6 +61,7 @@ import { useTracking } from "@/hooks/useTracking";
 import { monitoring } from '@/lib/monitoring';
 import type { AgentStats, PropertyAmenity, PropertyPriceHistory } from '@/types/property';
 import { useMemo } from 'react';
+import { isValidUUID } from '@/utils/sanitize';
 
 // Helper para normalizar amenities
 const normalizeAmenities = (amenities: Record<string, any> | null | undefined): PropertyAmenity[] => {
@@ -110,7 +111,7 @@ const normalizePriceHistory = (priceHistory: Record<string, any> | null | undefi
 };
 
 const PropertyDetail = () => {
-  const { id } = useParams();
+  const { id: rawId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
@@ -119,6 +120,9 @@ const PropertyDetail = () => {
   const { toast } = useToast();
   const { addToCompare, isInCompare, removeFromCompare } = usePropertyCompare();
   const { trackGA4Event } = useTracking();
+
+  // SECURITY: Validate UUID format to prevent malformed IDs
+  const id = isValidUUID(rawId) ? rawId : undefined;
 
   // Fetch con React Query
   const { data: property, isLoading: loading, error: propertyError } = useProperty(id);
@@ -208,13 +212,18 @@ const PropertyDetail = () => {
   };
 
   useEffect(() => {
+    // SECURITY: Redirect if invalid UUID provided
+    if (rawId && !id) {
+      navigate("/buscar", { replace: true });
+      return;
+    }
     if (id) {
       trackPropertyView();
       if (user) {
         checkFavorite();
       }
     }
-  }, [id, user]);
+  }, [id, rawId, user]);
 
   useEffect(() => {
     if (property?.agent_id) {

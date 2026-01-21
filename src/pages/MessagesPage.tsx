@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { DynamicBreadcrumbs } from '@/components/DynamicBreadcrumbs';
+import { isValidUUID } from '@/utils/sanitize';
 
 interface Conversation {
   id: string;
@@ -30,8 +31,9 @@ const MessagesPage = () => {
 
   useEffect(() => {
     const conversationId = searchParams.get('conversation');
-    if (conversationId) {
-      // Si hay un ID en la URL, seleccionar esa conversación
+    // SECURITY: Validate UUID format before using conversation ID
+    if (conversationId && isValidUUID(conversationId)) {
+      // Si hay un ID válido en la URL, seleccionar esa conversación
       setSelectedConversation({ id: conversationId } as Conversation);
       setShowMobileChat(true);
     }

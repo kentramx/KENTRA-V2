@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { isValidUUID } from "@/utils/sanitize";
 import { getWhatsAppUrl, WhatsAppTemplates } from "@/utils/whatsapp";
 import Navbar from "@/components/Navbar";
 import PropertyCard from "@/components/PropertyCard";
@@ -50,9 +51,12 @@ interface AgentStats {
 }
 
 const AgentProfile = () => {
-  const { id } = useParams();
+  const { id: rawId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // SECURITY: Validate UUID format to prevent malformed IDs
+  const id = isValidUUID(rawId) ? rawId : undefined;
   const [agent, setAgent] = useState<any>(null);
   const [agentPlanName, setAgentPlanName] = useState<string | null>(null);
   const [properties, setProperties] = useState<any[]>([]);
@@ -68,10 +72,15 @@ const AgentProfile = () => {
   const [reviewsKey, setReviewsKey] = useState(0);
 
   useEffect(() => {
+    // SECURITY: Redirect if invalid UUID provided
+    if (rawId && !id) {
+      navigate("/buscar", { replace: true });
+      return;
+    }
     if (id) {
       fetchAgentData();
     }
-  }, [id]);
+  }, [id, rawId]);
 
   const fetchAgentData = async () => {
     try {

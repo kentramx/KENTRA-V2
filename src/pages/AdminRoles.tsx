@@ -12,11 +12,12 @@ const AdminRoles = () => {
   const { isSuperAdmin, loading } = useAdminCheck();
   const { requirementMet, checking: checking2FA } = useRequire2FA();
 
+  // SECURITY: Redirect if not super admin OR if 2FA requirement not met
   useEffect(() => {
-    if (!loading && !isSuperAdmin) {
+    if (!loading && !checking2FA && (!isSuperAdmin || !requirementMet)) {
       navigate("/");
     }
-  }, [isSuperAdmin, loading, navigate]);
+  }, [isSuperAdmin, loading, navigate, requirementMet, checking2FA]);
 
   if (loading || checking2FA) {
     return (
