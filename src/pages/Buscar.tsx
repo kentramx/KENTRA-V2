@@ -92,7 +92,7 @@ export default function Buscar() {
 
   // Filtros desde URL
   const filters: MapFilters = useMemo(() => ({
-    listing_type: (searchParams.get('operacion') as 'venta' | 'renta') || 'venta',
+    listing_type: (searchParams.get('operacion') as 'venta' | 'renta' | undefined) || undefined,
     property_type: searchParams.get('tipo') || undefined,
     min_price: searchParams.get('precioMin') ? Number(searchParams.get('precioMin')) : undefined,
     max_price: searchParams.get('precioMax') ? Number(searchParams.get('precioMax')) : undefined,
@@ -172,7 +172,7 @@ export default function Buscar() {
   }, [searchParams, setSearchParams]);
 
   const clearFilters = useCallback(() => {
-    setSearchParams({ operacion: 'venta' }, { replace: true });
+    setSearchParams({}, { replace: true });
     setPage(1);
   }, [setSearchParams]);
 
@@ -206,13 +206,14 @@ export default function Buscar() {
 
               {/* Tipo de operación */}
               <Select
-                value={filters.listing_type || 'venta'}
-                onValueChange={(v) => handleFilterChange('operacion', v)}
+                value={filters.listing_type || 'todos'}
+                onValueChange={(v) => handleFilterChange('operacion', v === 'todos' ? undefined : v)}
               >
                 <SelectTrigger className="w-[110px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="venta">Venta</SelectItem>
                   <SelectItem value="renta">Renta</SelectItem>
                 </SelectContent>
