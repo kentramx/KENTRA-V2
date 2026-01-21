@@ -492,8 +492,10 @@ Deno.serve(withSentry(async (req) => {
       console.log('🔄 Reactivating subscription - removing pending cancellation');
     }
 
+    // SECURITY: Idempotency key prevents duplicate operations on retries
+    const idempotencyKey = `plan-change-${currentSub.stripe_subscription_id}-${newPlanId}-${Date.now()}`;
     const updatedSubscription = await withRetry(
-      () => stripe.subscriptions.update(currentSub.stripe_subscription_id, updateParams),
+      () => stripe.subscriptions.update(currentSub.stripe_subscription_id, updateParams, { idempotencyKey }),
       {
         maxAttempts: 3,
         retryOn: isRetryableStripeError,

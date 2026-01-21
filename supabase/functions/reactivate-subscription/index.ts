@@ -159,12 +159,15 @@ Deno.serve(async (req) => {
     }
 
     // Update Stripe subscription to cancel the cancellation
+    // SECURITY: Idempotency key prevents duplicate operations on retries
+    const idempotencyKey = `reactivate-${subscription.stripe_subscription_id}-${Date.now()}`;
     console.log('🔄 Reactivating Stripe subscription:', subscription.stripe_subscription_id);
     const updatedStripeSubscription = await stripe.subscriptions.update(
       subscription.stripe_subscription_id,
       {
         cancel_at_period_end: false,
-      }
+      },
+      { idempotencyKey }
     );
 
     console.log('✅ Stripe subscription reactivated');

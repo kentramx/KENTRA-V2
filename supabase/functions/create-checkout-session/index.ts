@@ -401,10 +401,12 @@ Deno.serve(withSentry(async (req) => {
         sessionParams.discounts = [{ coupon: validatedCoupon.stripe_coupon_id }];
       }
 
+      // SECURITY: Idempotency key prevents duplicate charges on retries
+      const idempotencyKey = `upsell-${user.id}-${Date.now()}`;
       const session = await withCircuitBreaker(
         'stripe-checkout',
         () => withRetry(
-          () => stripe.checkout.sessions.create(sessionParams),
+          () => stripe.checkout.sessions.create(sessionParams, { idempotencyKey }),
           {
             maxAttempts: 3,
             retryOn: isRetryableStripeError,
@@ -413,7 +415,7 @@ Deno.serve(withSentry(async (req) => {
         )
       ) as Stripe.Checkout.Session;
 
-      logger.info('Upsell checkout session created', { sessionId: session.id, userId: user.id, duration: Date.now() - startTime });
+      logger.info('Upsell checkout session created', { sessionId: session.id, userId: user.id, idempotencyKey, duration: Date.now() - startTime });
 
       return new Response(
         JSON.stringify({ 
@@ -486,14 +488,16 @@ Deno.serve(withSentry(async (req) => {
 
     // Create or retrieve customer
     if (!customerId) {
+      // SECURITY: Idempotency key prevents duplicate customer creation
+      const customerIdempotencyKey = `customer-${user.id}-${Date.now()}`;
       const customer = await stripe.customers.create({
         email: user.email,
         metadata: {
           user_id: user.id,
         },
-      });
+      }, { idempotencyKey: customerIdempotencyKey });
       customerId = customer.id;
-      console.log('Created new Stripe customer:', customerId);
+      logger.info('Created new Stripe customer', { customerId, userId: user.id });
     }
 
     // Build line items (plan + upsells)
@@ -613,10 +617,12 @@ Deno.serve(withSentry(async (req) => {
       sessionParams.discounts = [{ coupon: validatedCoupon.stripe_coupon_id }];
     }
 
+    // SECURITY: Idempotency key prevents duplicate charges on retries
+    const idempotencyKey = `checkout-${user.id}-${plan.id}-${billingCycle}-${Date.now()}`;
     const session = await withCircuitBreaker(
       'stripe-checkout',
       () => withRetry(
-        () => stripe.checkout.sessions.create(sessionParams),
+        () => stripe.checkout.sessions.create(sessionParams, { idempotencyKey }),
         {
           maxAttempts: 3,
           retryOn: isRetryableStripeError,
@@ -625,11 +631,12 @@ Deno.serve(withSentry(async (req) => {
       )
     ) as Stripe.Checkout.Session;
 
-    logger.info('Checkout session created', { 
-      sessionId: session.id, 
-      userId: user.id, 
+    logger.info('Checkout session created', {
+      sessionId: session.id,
+      userId: user.id,
       planSlug: plan.name,
       billingCycle,
+      idempotencyKey,
       duration: Date.now() - startTime,
     });
 

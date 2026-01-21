@@ -148,9 +148,11 @@ serve(async (req) => {
       case "cancel": {
         if (subscription.stripe_subscription_id) {
           // Cancel at period end in Stripe
+          // SECURITY: Idempotency key prevents duplicate operations on retries
+          const idempotencyKey = `admin-cancel-${subscription.stripe_subscription_id}-${Date.now()}`;
           await stripe.subscriptions.update(subscription.stripe_subscription_id, {
             cancel_at_period_end: true,
-          });
+          }, { idempotencyKey });
         }
 
         // Update database
@@ -184,9 +186,11 @@ serve(async (req) => {
       case "reactivate": {
         if (subscription.stripe_subscription_id) {
           // Reactivate in Stripe (remove cancel at period end)
+          // SECURITY: Idempotency key prevents duplicate operations on retries
+          const idempotencyKey = `admin-reactivate-${subscription.stripe_subscription_id}-${Date.now()}`;
           await stripe.subscriptions.update(subscription.stripe_subscription_id, {
             cancel_at_period_end: false,
-          });
+          }, { idempotencyKey });
         }
 
         // Update database
@@ -257,6 +261,8 @@ serve(async (req) => {
           );
 
           // Update subscription in Stripe
+          // SECURITY: Idempotency key prevents duplicate operations on retries
+          const idempotencyKey = `admin-change-plan-${subscription.stripe_subscription_id}-${params.newPlanId}-${Date.now()}`;
           await stripe.subscriptions.update(subscription.stripe_subscription_id, {
             items: [
               {
@@ -265,7 +271,7 @@ serve(async (req) => {
               },
             ],
             proration_behavior: "create_prorations",
-          });
+          }, { idempotencyKey });
         }
 
         // Update database
@@ -314,9 +320,9 @@ serve(async (req) => {
     });
   } catch (error: unknown) {
     console.error("[admin-subscription-action] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    // SECURITY: Don't expose internal error details to clients
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: "Internal server error" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

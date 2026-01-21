@@ -117,11 +117,14 @@ Deno.serve(withSentry(async (req) => {
     }
 
     // Cancel at period end (no immediate cancellation)
+    // SECURITY: Idempotency key prevents duplicate operations on retries
+    const idempotencyKey = `cancel-${subscription.stripe_subscription_id}-${Date.now()}`;
     const updatedSubscription = await stripe.subscriptions.update(
       subscription.stripe_subscription_id,
       {
         cancel_at_period_end: true,
-      }
+      },
+      { idempotencyKey }
     );
 
     // Update database
