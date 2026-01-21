@@ -20,10 +20,10 @@ export const useArchivedConversations = () => {
   return useQuery({
     queryKey: ['archived-conversations'],
     queryFn: async (): Promise<ArchivedConversation[]> => {
-      const { data, error } = await supabase.rpc('get_archived_conversations');
+      const { data, error } = await (supabase.rpc as any)('get_archived_conversations');
 
       if (error) throw error;
-      return data || [];
+      return (data as ArchivedConversation[]) || [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -35,7 +35,7 @@ export const useArchiveConversation = () => {
 
   return useMutation({
     mutationFn: async (conversationId: string): Promise<ArchiveResult> => {
-      const { data, error } = await supabase.rpc('archive_conversation', {
+      const { data, error } = await (supabase.rpc as any)('archive_conversation', {
         p_conversation_id: conversationId,
       });
 
@@ -77,7 +77,7 @@ export const useUnarchiveConversation = () => {
 
   return useMutation({
     mutationFn: async (conversationId: string): Promise<ArchiveResult> => {
-      const { data, error } = await supabase.rpc('unarchive_conversation', {
+      const { data, error } = await (supabase.rpc as any)('unarchive_conversation', {
         p_conversation_id: conversationId,
       });
 

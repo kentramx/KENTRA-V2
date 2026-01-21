@@ -38,7 +38,7 @@ export const useSimilarProperties = (
           images (url, position)
         `)
         .eq('status', 'activa')
-        .eq('type', propertyType)
+        .eq('type', propertyType as any)
         .eq('state', propertyState)
         .neq('id', propertyId)
         .order('created_at', { ascending: false })

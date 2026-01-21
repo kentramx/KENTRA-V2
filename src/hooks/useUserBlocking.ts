@@ -18,10 +18,10 @@ export const useBlockedUsers = () => {
   return useQuery({
     queryKey: ['blocked-users'],
     queryFn: async (): Promise<BlockedUser[]> => {
-      const { data, error } = await supabase.rpc('get_blocked_users');
+      const { data, error } = await (supabase.rpc as any)('get_blocked_users');
 
       if (error) throw error;
-      return data || [];
+      return (data as BlockedUser[]) || [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -36,7 +36,7 @@ export const useIsUserBlocked = (otherUserId: string | null) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
 
-      const { data, error } = await supabase.rpc('is_user_blocked', {
+      const { data, error } = await (supabase.rpc as any)('is_user_blocked', {
         p_user_id: user.id,
         p_other_user_id: otherUserId,
       });
@@ -46,7 +46,7 @@ export const useIsUserBlocked = (otherUserId: string | null) => {
         return false;
       }
 
-      return data || false;
+      return Boolean(data);
     },
     enabled: !!otherUserId,
     staleTime: 1000 * 60, // 1 minute
@@ -59,7 +59,7 @@ export const useBlockUser = () => {
 
   return useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason?: string }): Promise<BlockUserResult> => {
-      const { data, error } = await supabase.rpc('block_user', {
+      const { data, error } = await (supabase.rpc as any)('block_user', {
         p_user_id_to_block: userId,
         p_reason: reason || null,
       });
@@ -102,7 +102,7 @@ export const useUnblockUser = () => {
 
   return useMutation({
     mutationFn: async (userId: string): Promise<BlockUserResult> => {
-      const { data, error } = await supabase.rpc('unblock_user', {
+      const { data, error } = await (supabase.rpc as any)('unblock_user', {
         p_user_id_to_unblock: userId,
       });
 
