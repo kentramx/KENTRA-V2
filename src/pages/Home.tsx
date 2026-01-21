@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal, Briefcase, Store, Warehouse, Building, Tractor, Sparkles, ChevronDown } from "lucide-react";
+import { Search, Home as HomeIcon, Building2, TreePine, ArrowRight, SlidersHorizontal, Briefcase, Store, Warehouse, Building, Tractor, Sparkles } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import heroBackground from "@/assets/hero-background.jpg";
 import { SearchBar } from "@/components/SearchBar";
@@ -96,8 +96,8 @@ const Home = () => {
       />
       <Navbar />
 
-      {/* TIER S: Hero Section - Immersive Design */}
-      <section className="relative min-h-[50vh] md:min-h-[55vh] flex items-center justify-center overflow-hidden">
+      {/* ULTRA COMPACT Hero Section - properties visible above fold */}
+      <section className="relative min-h-[38vh] md:min-h-[42vh] flex items-start overflow-hidden">
         {/* Background mesh gradient */}
         <div className="absolute inset-0 gradient-mesh-olive" />
         
@@ -112,37 +112,37 @@ const Home = () => {
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }} />
 
-        <div className="container relative z-10 text-center text-white px-4 pt-8 md:pt-12">
-          {/* Trust badge - VISIBLE */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-sm font-medium mb-4 md:mb-6 animate-fade-in-up shadow-lg">
-            <Sparkles className="w-4 h-4 text-amber-300" />
+        <div className="container relative z-10 text-center text-white px-4 pt-20 md:pt-24 pb-6">
+          {/* Trust badge - compact */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-xs font-medium mb-3 animate-fade-in-up shadow-lg">
+            <Sparkles className="w-3 h-3 text-amber-300" />
             Plataforma inmobiliaria #1 en México
           </div>
           
-          {/* TIER S: Display heading - STRIPE STYLE - VISIBLE IMMEDIATELY */}
+          {/* Compact heading */}
           <h1 
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white text-balance max-w-4xl mx-auto mb-3 md:mb-4 animate-fade-in-up drop-shadow-lg" 
+            className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white text-balance max-w-3xl mx-auto mb-2 animate-fade-in-up drop-shadow-lg" 
             style={{ animationDelay: '100ms', letterSpacing: '-0.025em' }}
           >
             Tu próximo hogar,
-            <span className="block bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">a un clic</span>
+            <span className="bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent"> a un clic</span>
           </h1>
           
-          {/* Subtitle - More visible - NO OPACITY-0 */}
-          <p className="text-lg md:text-xl lg:text-2xl text-white/90 max-w-2xl mx-auto mb-4 md:mb-5 animate-fade-in-up font-medium" style={{ animationDelay: '200ms' }}>
-            Miles de propiedades verificadas en todo México. Compra, vende o renta con confianza.
+          {/* Short subtitle - hidden on mobile */}
+          <p className="hidden sm:block text-base md:text-lg text-white/85 max-w-xl mx-auto mb-3 animate-fade-in-up font-medium" style={{ animationDelay: '200ms' }}>
+            Miles de propiedades verificadas en todo México
           </p>
           
-          {/* TIER S: Glass Search Card - MUCH MORE VISIBLE - NO OPACITY-0 */}
-          <div className="max-w-3xl mx-auto mb-4 md:mb-6 animate-scale-in" style={{ animationDelay: '300ms' }}>
-            <div className="bg-white/30 backdrop-blur-xl rounded-3xl shadow-2xl shadow-black/30 border-2 border-white/40 p-4 md:p-6">
-              {/* Listing Type Toggle - TIER S prominent */}
-              <div className="inline-flex p-2 bg-black/40 rounded-2xl mb-4 backdrop-blur-sm">
+          {/* Compact Glass Search Card */}
+          <div className="max-w-2xl mx-auto animate-scale-in" style={{ animationDelay: '300ms' }}>
+            <div className="bg-white/25 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 p-3 md:p-4">
+              {/* Listing Type Toggle - compact */}
+              <div className="inline-flex p-1 bg-black/30 rounded-xl mb-3 backdrop-blur-sm">
                 <Button 
                   type="button" 
                   variant={listingType === "venta" ? "default" : "ghost"} 
                   onClick={() => setListingType("venta")}
-                  className={`px-8 py-3 rounded-xl font-bold text-base transition-all ${listingType !== "venta" ? "text-white/90 hover:text-white hover:bg-white/20" : "bg-white text-gray-900 shadow-lg"}`}
+                  className={`px-5 py-2 rounded-lg font-semibold text-sm transition-all ${listingType !== "venta" ? "text-white/90 hover:text-white hover:bg-white/20" : "bg-white text-gray-900 shadow-md"}`}
                 >
                   Venta
                 </Button>
@@ -150,16 +150,16 @@ const Home = () => {
                   type="button" 
                   variant={listingType === "renta" ? "default" : "ghost"} 
                   onClick={() => setListingType("renta")}
-                  className={`px-8 py-3 rounded-xl font-bold text-base transition-all ${listingType !== "renta" ? "text-white/90 hover:text-white hover:bg-white/20" : "bg-white text-gray-900 shadow-lg"}`}
+                  className={`px-5 py-2 rounded-lg font-semibold text-sm transition-all ${listingType !== "renta" ? "text-white/90 hover:text-white hover:bg-white/20" : "bg-white text-gray-900 shadow-md"}`}
                 >
                   Renta
                 </Button>
               </div>
 
-              {/* Property Type - Glass style with visible text */}
-              <div className="flex justify-center mb-3">
+              {/* Property Type - compact */}
+              <div className="flex justify-center mb-2">
                 <Select value={propertyType} onValueChange={setPropertyType}>
-                  <SelectTrigger className="w-full max-w-xs h-12 bg-white/30 border-2 border-white/50 text-white font-medium [&>span]:text-white rounded-xl">
+                  <SelectTrigger className="w-full max-w-xs h-10 bg-white/25 border border-white/40 text-white font-medium [&>span]:text-white rounded-xl text-sm">
                     <SelectValue placeholder="Tipo de propiedad" className="text-white" />
                   </SelectTrigger>
                   <SelectContent>
@@ -176,29 +176,29 @@ const Home = () => {
                 </Select>
               </div>
 
-              {/* Advanced Filters */}
+              {/* Advanced Filters - compact */}
               <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
                 <CollapsibleTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm" className="mx-auto mb-3 text-white/80 hover:text-white hover:bg-white/15 font-medium">
-                    <SlidersHorizontal className="mr-2 h-4 w-4" />
+                  <Button type="button" variant="ghost" size="sm" className="mx-auto mb-2 text-white/75 hover:text-white hover:bg-white/15 font-medium text-xs h-7">
+                    <SlidersHorizontal className="mr-1.5 h-3 w-3" />
                     Más filtros
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mb-3">
-                  <div className="bg-white/20 rounded-2xl p-5 space-y-4 text-left border border-white/30 backdrop-blur-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="priceMin" className="text-sm font-semibold text-white">Precio Mínimo</Label>
-                        <Input id="priceMin" type="number" placeholder="$0" value={priceMin} onChange={e => setPriceMin(e.target.value)} className="h-12 bg-white/30 border-2 border-white/50 text-white placeholder:text-white/60 rounded-xl font-medium" />
+                <CollapsibleContent className="mb-2">
+                  <div className="bg-white/15 rounded-xl p-3 space-y-3 text-left border border-white/20 backdrop-blur-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="priceMin" className="text-xs font-semibold text-white">Precio Mínimo</Label>
+                        <Input id="priceMin" type="number" placeholder="$0" value={priceMin} onChange={e => setPriceMin(e.target.value)} className="h-9 bg-white/25 border border-white/40 text-white placeholder:text-white/60 rounded-lg font-medium text-sm" />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="priceMax" className="text-sm font-semibold text-white">Precio Máximo</Label>
-                        <Input id="priceMax" type="number" placeholder="Sin límite" value={priceMax} onChange={e => setPriceMax(e.target.value)} className="h-12 bg-white/30 border-2 border-white/50 text-white placeholder:text-white/60 rounded-xl font-medium" />
+                      <div className="space-y-1">
+                        <Label htmlFor="priceMax" className="text-xs font-semibold text-white">Precio Máximo</Label>
+                        <Input id="priceMax" type="number" placeholder="Sin límite" value={priceMax} onChange={e => setPriceMax(e.target.value)} className="h-9 bg-white/25 border border-white/40 text-white placeholder:text-white/60 rounded-lg font-medium text-sm" />
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-2">
                       <Select value={bedrooms} onValueChange={setBedrooms}>
-                        <SelectTrigger className="h-12 bg-white/30 border-2 border-white/50 text-white [&>span]:text-white rounded-xl font-medium"><SelectValue placeholder="Recámaras" /></SelectTrigger>
+                        <SelectTrigger className="h-9 bg-white/25 border border-white/40 text-white [&>span]:text-white rounded-lg font-medium text-sm"><SelectValue placeholder="Recámaras" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Cualquiera</SelectItem>
                           <SelectItem value="1">1+</SelectItem>
@@ -208,7 +208,7 @@ const Home = () => {
                         </SelectContent>
                       </Select>
                       <Select value={bathrooms} onValueChange={setBathrooms}>
-                        <SelectTrigger className="h-12 bg-white/30 border-2 border-white/50 text-white [&>span]:text-white rounded-xl font-medium"><SelectValue placeholder="Baños" /></SelectTrigger>
+                        <SelectTrigger className="h-9 bg-white/25 border border-white/40 text-white [&>span]:text-white rounded-lg font-medium text-sm"><SelectValue placeholder="Baños" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Cualquiera</SelectItem>
                           <SelectItem value="1">1+</SelectItem>
@@ -217,7 +217,7 @@ const Home = () => {
                         </SelectContent>
                       </Select>
                       <Select value={parking} onValueChange={setParking}>
-                        <SelectTrigger className="h-12 bg-white/30 border-2 border-white/50 text-white [&>span]:text-white rounded-xl font-medium"><SelectValue placeholder="Estacionamiento" /></SelectTrigger>
+                        <SelectTrigger className="h-9 bg-white/25 border border-white/40 text-white [&>span]:text-white rounded-lg font-medium text-sm"><SelectValue placeholder="Parking" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Cualquiera</SelectItem>
                           <SelectItem value="1">1+</SelectItem>
@@ -235,31 +235,55 @@ const Home = () => {
             </div>
           </div>
         </div>
-        
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-float">
-          <ChevronDown className="w-6 h-6 text-white/50" />
+      </section>
+
+      {/* QUICK PROPERTIES - Immediately visible after hero */}
+      <section className="py-6 md:py-8 bg-background border-b border-border/50">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg md:text-xl font-bold tracking-tight">Propiedades Destacadas</h2>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/buscar")} className="text-primary text-sm">
+              Ver todas <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+          
+          {isLoadingProperties ? (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-5 w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <VirtualizedPropertyGrid 
+              properties={(featuredProperties.length > 0 ? featuredProperties : recentProperties).slice(0, 6)} 
+              onPropertyClick={handlePropertyClick} 
+            />
+          )}
         </div>
       </section>
 
-      {/* Trust Indicators */}
+      {/* Trust Indicators - MOVED after quick properties */}
       <TrustedBy />
 
-      {/* Stats Counter */}
+      {/* Stats Counter - MOVED after TrustedBy */}
       <StatsCounter />
 
-      {/* TIER S: Featured Properties */}
+      {/* TIER S: Featured Properties - Full section (if has featured) */}
       {featuredProperties.length > 0 && (
-        <section className="py-20 md:py-28 lg:py-32 bg-background">
+        <section className="py-12 md:py-16 lg:py-20 bg-background">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-3">
               <div className="decorative-line" />
               <span className="section-badge">Destacadas</span>
             </div>
-            <div className="flex items-end justify-between mb-12">
+            <div className="flex items-end justify-between mb-8">
               <div>
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>Propiedades Destacadas</h2>
-                <p className="mt-3 text-lg text-muted-foreground max-w-xl">
+                <h2 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>Propiedades Destacadas</h2>
+                <p className="mt-2 text-base text-muted-foreground max-w-xl">
                   Selección curada de las mejores propiedades del mercado
                 </p>
               </div>
@@ -282,7 +306,7 @@ const Home = () => {
             ) : (
               <>
                 <VirtualizedPropertyGrid properties={featuredProperties.slice(0, 6)} onPropertyClick={handlePropertyClick} />
-                <div className="mt-10 text-center md:hidden">
+                <div className="mt-8 text-center md:hidden">
                   <Button variant="outline" size="lg" onClick={() => navigate("/buscar")}>
                     Ver Todas las Propiedades <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -294,16 +318,16 @@ const Home = () => {
       )}
 
       {/* TIER S: Recent Properties */}
-      <section className="py-20 md:py-28 lg:py-32 bg-muted/30">
+      <section className="py-12 md:py-16 lg:py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-3">
             <div className="decorative-line" />
             <span className="section-badge">Recientes</span>
           </div>
-          <div className="flex items-end justify-between mb-12">
+          <div className="flex items-end justify-between mb-8">
             <div>
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>Propiedades Recientes</h2>
-              <p className="mt-4 text-lg text-muted-foreground max-w-xl">
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>Propiedades Recientes</h2>
+              <p className="mt-2 text-base text-muted-foreground max-w-xl">
                 Últimas propiedades agregadas a la plataforma
               </p>
             </div>
@@ -326,7 +350,7 @@ const Home = () => {
           ) : recentProperties.length > 0 ? (
             <>
               <VirtualizedPropertyGrid properties={recentProperties.slice(0, 8)} onPropertyClick={handlePropertyClick} />
-              <div className="mt-10 text-center md:hidden">
+              <div className="mt-8 text-center md:hidden">
                 <Button variant="outline" onClick={() => navigate("/buscar")}>
                   Ver Todas <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -341,15 +365,15 @@ const Home = () => {
       </section>
 
       {/* TIER S: Property Types */}
-      <section className="section-padding bg-background">
+      <section className="py-12 md:py-16 bg-background">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-10">
-            <div className="flex justify-center mb-3">
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-2">
               <div className="decorative-line" />
             </div>
-            <h2 className="heading-section">Explora por Tipo de Propiedad</h2>
+            <h2 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight">Explora por Tipo de Propiedad</h2>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {[
               { icon: HomeIcon, label: "Casas", desc: "Encuentra tu casa perfecta", type: "casa" },
               { icon: Building2, label: "Departamentos", desc: "Vida urbana moderna", type: "departamento" },
@@ -363,13 +387,13 @@ const Home = () => {
               <button 
                 key={item.type}
                 onClick={() => navigate(`/buscar?tipo_listado=${listingType}&tipo=${item.type}`)} 
-                className="group flex flex-col items-center rounded-2xl border border-border bg-background p-5 md:p-8 transition-all duration-300 hover:border-primary hover:shadow-xl hover:-translate-y-2"
+                className="group flex flex-col items-center rounded-xl border border-border bg-background p-4 md:p-6 transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1"
               >
-                <div className="mb-4 p-4 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                  <item.icon className="h-8 w-8 md:h-10 md:w-10 text-primary transition-transform duration-300 group-hover:scale-110" />
+                <div className="mb-3 p-3 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <item.icon className="h-6 w-6 md:h-8 md:w-8 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
-                <h3 className="text-base md:text-lg font-semibold">{item.label}</h3>
-                <p className="mt-1 text-xs md:text-sm text-muted-foreground text-center">{item.desc}</p>
+                <h3 className="text-sm md:text-base font-semibold">{item.label}</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground text-center hidden md:block">{item.desc}</p>
               </button>
             ))}
           </div>
@@ -377,7 +401,7 @@ const Home = () => {
       </section>
 
       {/* TIER S: CTA Section */}
-      <section className="relative section-padding overflow-hidden">
+      <section className="relative py-12 md:py-16 overflow-hidden">
         <div className="absolute inset-0 gradient-hero-olive" />
         <div className="absolute inset-0 opacity-10" style={{ 
           backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
@@ -385,16 +409,16 @@ const Home = () => {
         }} />
         
         <div className="container relative z-10 text-center text-white mx-auto px-4">
-          <h2 className="heading-section text-white mb-4">¿Listo para vender tu propiedad?</h2>
-          <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-10">
+          <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-3">¿Listo para vender tu propiedad?</h2>
+          <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto mb-6">
             Únete a miles de agentes que ya confían en Kentra para conectar con compradores calificados
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" onClick={() => navigate("/publicar")} className="bg-white text-primary hover:bg-white/90 px-8">
+          <div className="flex flex-wrap justify-center gap-3">
+            <Button size="lg" onClick={() => navigate("/publicar")} className="bg-white text-primary hover:bg-white/90 px-6">
               Publicar Gratis
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="ghost" onClick={() => navigate("/pricing-agente")} className="border border-white/30 text-white hover:bg-white/10 px-8">
+            <Button size="lg" variant="ghost" onClick={() => navigate("/pricing-agente")} className="border border-white/30 text-white hover:bg-white/10 px-6">
               Ver Planes
             </Button>
           </div>
@@ -405,11 +429,11 @@ const Home = () => {
       <Testimonials />
 
       {/* Newsletter Section */}
-      <section className="section-padding bg-primary/5">
+      <section className="py-12 md:py-16 bg-primary/5">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="heading-section mb-4">Suscríbete a Nuestro Newsletter</h2>
-            <p className="mb-8 text-lg text-muted-foreground">
+            <h2 className="text-xl md:text-2xl lg:text-3xl font-bold mb-3">Suscríbete a Nuestro Newsletter</h2>
+            <p className="mb-6 text-base text-muted-foreground">
               Recibe las últimas novedades del mercado inmobiliario, consejos y propiedades destacadas
             </p>
             <div className="flex justify-center">
