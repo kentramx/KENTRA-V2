@@ -44,21 +44,41 @@ interface AgencyInventoryProps {
   subscriptionInfo?: SubscriptionInfo;
 }
 
+interface PropertyData {
+  id: string;
+  title: string;
+  status: string;
+  price: number;
+  type: string;
+  municipality: string;
+  state: string;
+  colonia?: string;
+  agent_id?: string;
+  created_at: string;
+  images?: { id: string; url: string; position?: number }[];
+  profiles?: { id: string; name: string } | null;
+}
+
+interface AgentData {
+  agent_id: string;
+  profiles: { id: string; name: string } | null;
+}
+
 export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryProps) => {
   const { toast } = useToast();
   const { error: logError, warn, captureException } = useMonitoring();
   const navigate = useNavigate();
-  const [properties, setProperties] = useState<Record<string, unknown>[]>([]);
-  const [agents, setAgents] = useState<Record<string, unknown>[]>([]);
+  const [properties, setProperties] = useState<PropertyData[]>([]);
+  const [agents, setAgents] = useState<AgentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterAgent, setFilterAgent] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<Record<string, unknown> | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<PropertyData | null>(null);
   const [selectedNewAgent, setSelectedNewAgent] = useState<string>('');
   const [assigning, setAssigning] = useState(false);
   const [featuredProperties, setFeaturedProperties] = useState<Set<string>>(new Set());
-  const [featureProperty, setFeatureProperty] = useState<Record<string, unknown> | null>(null);
+  const [featureProperty, setFeatureProperty] = useState<PropertyData | null>(null);
   
   // Estados para compartir rápido
   const [selectionMode, setSelectionMode] = useState(false);
@@ -78,7 +98,7 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
     }
   };
 
-  const fetchFeaturedProperties = async (propertiesToCheck: Record<string, unknown>[] = properties) => {
+  const fetchFeaturedProperties = async (propertiesToCheck: PropertyData[] = properties) => {
     if (propertiesToCheck.length === 0) return;
 
     try {
@@ -107,18 +127,29 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
     try {
       const { data, error } = await supabase
         .from('agency_agents')
-        .select(`
-          agent_id,
-          profiles:agent_id (
-            id,
-            name
-          )
-        `)
+        .select('agent_id')
         .eq('agency_id', agencyId)
         .eq('status', 'active');
 
       if (error) throw error;
-      setAgents(data || []);
+      
+      // Fetch profile data separately
+      const agentIds = data?.map(a => a.agent_id) || [];
+      if (agentIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', agentIds);
+        
+        const agentsWithProfiles: AgentData[] = data?.map(a => ({
+          agent_id: a.agent_id,
+          profiles: profilesData?.find(p => p.id === a.agent_id) || null
+        })) || [];
+        
+        setAgents(agentsWithProfiles);
+      } else {
+        setAgents([]);
+      }
     } catch (error) {
       warn('Error fetching agency agents', {
         component: 'AgencyInventory',
@@ -148,8 +179,9 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProperties(data || []);
-      return data || [];
+      const typedData = (data || []) as PropertyData[];
+      setProperties(typedData);
+      return typedData;
     } catch (error) {
       warn('Error fetching agency properties', {
         component: 'AgencyInventory',
@@ -203,7 +235,7 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
   };
 
   // WhatsApp individual
-  const handleWhatsAppShare = (property: Record<string, unknown>) => {
+  const handleWhatsAppShare = (property: PropertyData) => {
     const url = `${window.location.origin}/propiedad/${property.id}`;
     const location = property.colonia 
       ? `${property.colonia}, ${property.municipality}` 
@@ -240,7 +272,7 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
     handleCancelSelection();
   };
 
-  const handleOpenAssignDialog = (property: Record<string, unknown>) => {
+  const handleOpenAssignDialog = (property: PropertyData) => {
     setSelectedProperty(property);
     setSelectedNewAgent(property.agent_id || '');
     setAssignDialogOpen(true);
@@ -623,7 +655,11 @@ export const AgencyInventory = ({ agencyId, subscriptionInfo }: AgencyInventoryP
           fetchProperties();
           fetchFeaturedProperties();
         }}
-        subscriptionInfo={subscriptionInfo}
+        subscriptionInfo={subscriptionInfo ? {
+          featured_used: subscriptionInfo.featured_used || 0,
+          featured_limit: subscriptionInfo.featured_limit || 0,
+          plan_display_name: 'Plan Actual'
+        } : null}
       />
     </div>
   );

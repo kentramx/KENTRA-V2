@@ -116,7 +116,7 @@ export const MarketingMetrics = () => {
       const endDate = new Date();
       const startDate = subDays(endDate, parseInt(dateRange));
 
-      const { data, error } = await supabase.rpc("get_marketing_metrics" as 'get_agency_statistics', {
+      const { data, error } = await (supabase.rpc as any)("get_marketing_metrics", {
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
       });

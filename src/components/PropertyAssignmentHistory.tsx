@@ -14,6 +14,15 @@ interface PropertyAssignmentHistoryProps {
   limit?: number;
 }
 
+interface HistoryEntry {
+  id: string;
+  assigned_at: string;
+  properties?: { id?: string; title?: string; municipality?: string; state?: string } | null;
+  previous_agent?: { id?: string; name?: string } | null;
+  new_agent?: { id?: string; name?: string } | null;
+  assigner?: { id?: string; name?: string } | null;
+}
+
 export const PropertyAssignmentHistory = ({ 
   propertyId, 
   agencyId,
@@ -21,7 +30,7 @@ export const PropertyAssignmentHistory = ({
 }: PropertyAssignmentHistoryProps) => {
   const { toast } = useToast();
   const { error: logError, captureException } = useMonitoring();
-  const [history, setHistory] = useState<Record<string, unknown>[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

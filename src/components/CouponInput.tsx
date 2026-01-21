@@ -56,7 +56,7 @@ export function CouponInput({ onCouponApplied, onDiscountDetails, planType }: Co
         return;
       }
 
-      const { data, error } = await supabase.rpc('validate_coupon' as 'get_agency_statistics', {
+      const { data, error } = await (supabase.rpc as any)('validate_coupon', {
         p_code: couponCode.toUpperCase(),
         p_user_id: user.user.id,
         p_plan_type: planType || null,

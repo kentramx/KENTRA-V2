@@ -162,9 +162,10 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
     active: properties.filter(p => p.status === 'activa').length,
     featured: featuredProperties.size,
     pending: properties.filter(p => p.status === 'pendiente_aprobacion').length,
-    rejected: properties.filter(p =>
-      p.status === 'pausada' && (p as unknown as { rejection_history?: RejectionRecord[] }).rejection_history?.length
-    ).length,
+    rejected: properties.filter(p => {
+      const prop = p as unknown as PropertyRecord;
+      return p.status === 'pausada' && (prop.rejection_history?.length || 0) > 0;
+    }).length,
     expiring: properties.filter(p => 
       p.status === 'activa' && getDaysUntilExpiration(p.expires_at) <= 7
     ).length,
@@ -177,10 +178,11 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
         // Text search
         if (searchQuery) {
           const query = searchQuery.toLowerCase();
+          const prop = p as unknown as PropertyRecord;
           return (
             p.title.toLowerCase().includes(query) ||
-            (p as PropertyRecord).property_code?.toLowerCase().includes(query) ||
-            (p as PropertyRecord).colonia?.toLowerCase().includes(query) ||
+            prop.property_code?.toLowerCase().includes(query) ||
+            prop.colonia?.toLowerCase().includes(query) ||
             p.municipality?.toLowerCase().includes(query) ||
             p.state?.toLowerCase().includes(query) ||
             p.type?.toLowerCase().includes(query)
@@ -189,12 +191,13 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
         return true;
       })
       .filter(p => {
+        const prop = p as unknown as PropertyRecord;
         // Filter by status
         switch (activeFilter) {
           case 'active': return p.status === 'activa';
           case 'featured': return featuredProperties.has(p.id);
           case 'pending': return p.status === 'pendiente_aprobacion';
-          case 'rejected': return p.status === 'pausada' && (p as PropertyRecord).rejection_history?.length > 0;
+          case 'rejected': return p.status === 'pausada' && (prop.rejection_history?.length || 0) > 0;
           case 'expiring': return p.status === 'activa' && getDaysUntilExpiration(p.expires_at) <= 7;
           default: return true;
         }
@@ -245,7 +248,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleRenewProperty = async (propertyId: string) => {
     try {
-      const { error } = await supabase.rpc('renew_property' as 'get_agency_statistics', {
+      const { error } = await (supabase.rpc as any)('renew_property', {
         property_id: propertyId
       });
       
@@ -266,7 +269,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleResubmitProperty = async (propertyId: string) => {
     try {
-      const { data, error } = await supabase.rpc('resubmit_property' as 'get_agency_statistics', { property_id: propertyId } as unknown as { agency_id: string });
+      const { data, error } = await (supabase.rpc as any)('resubmit_property', { property_id: propertyId });
       
       if (error) {
         toast({ title: 'Error', description: error.message || 'No se pudo conectar', variant: 'destructive' });
@@ -306,7 +309,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleReactivateProperty = async (propertyId: string) => {
     try {
-      const { error } = await supabase.rpc('reactivate_property' as 'get_agency_statistics', { property_id: propertyId } as unknown as { agency_id: string });
+      const { error } = await (supabase.rpc as any)('reactivate_property', { property_id: propertyId });
       
       if (error) throw error;
       
@@ -390,7 +393,8 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
     
     selected.forEach((p, i) => {
       const url = `${window.location.origin}/propiedad/${p.id}`;
-      const location = (p as PropertyRecord).colonia ? `${(p as PropertyRecord).colonia}, ${p.municipality}` : p.municipality;
+      const prop = p as unknown as PropertyRecord;
+      const location = prop.colonia ? `${prop.colonia}, ${p.municipality}` : p.municipality;
       message += `${i + 1}. *${p.title}*\n`;
       message += `   📍 ${location}\n`;
       message += `   💰 ${formatPrice(p.price)}\n`;
@@ -597,42 +601,48 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
       ) : viewMode === 'grid' ? (
         /* Grid view */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProperties.map((property) => (
-            <PropertyCardAgent
-              key={property.id}
-              property={{
-                ...property,
-                colonia: (property as PropertyRecord).colonia,
-                property_code: (property as PropertyRecord).property_code,
-                rejection_history: (property as PropertyRecord).rejection_history,
-                resubmission_count: (property as PropertyRecord & { resubmission_count?: number }).resubmission_count,
-              }}
-              isFeatured={featuredProperties.has(property.id)}
-              subscriptionInfo={subscriptionInfo}
-              onView={() => {
-                setViewPropertyId(property.id);
-                setSheetOpen(true);
-              }}
-              onEdit={() => onEdit(property)}
-              onDelete={() => setDeleteId(property.id)}
-              onToggleFeatured={() => handleToggleFeatured(property)}
-              onRenew={() => handleRenewProperty(property.id)}
-              onResubmit={
-                property.status === 'pausada' && (property as PropertyRecord).rejection_history?.length > 0
-                  ? () => handleResubmitProperty(property.id)
-                  : undefined
-              }
-              onReactivate={
-                property.status === 'pausada' && !(property as PropertyRecord).rejection_history?.length
-                  ? () => handleReactivateProperty(property.id)
-                  : undefined
-              }
-              isTogglingFeatured={togglingFeaturedId === property.id}
-              selectionMode={selectionMode}
-              isSelected={selectedProperties.has(property.id)}
-              onSelect={handleSelectProperty}
-            />
-          ))}
+          {filteredProperties.map((property) => {
+            const propRecord = property as unknown as PropertyRecord;
+            return (
+              <PropertyCardAgent
+                key={property.id}
+                property={{
+                  ...property,
+                  colonia: propRecord.colonia,
+                  property_code: propRecord.property_code,
+                  rejection_history: propRecord.rejection_history as RejectionRecord[] | undefined,
+                  resubmission_count: propRecord.resubmission_count,
+                }}
+                isFeatured={featuredProperties.has(property.id)}
+                subscriptionInfo={subscriptionInfo ? {
+                  featured_used: subscriptionInfo.featured_used || 0,
+                  featured_limit: subscriptionInfo.featured_limit || 0,
+                } : undefined}
+                onView={() => {
+                  setViewPropertyId(property.id);
+                  setSheetOpen(true);
+                }}
+                onEdit={() => onEdit(propRecord)}
+                onDelete={() => setDeleteId(property.id)}
+                onToggleFeatured={() => handleToggleFeatured(propRecord)}
+                onRenew={() => handleRenewProperty(property.id)}
+                onResubmit={
+                  property.status === 'pausada' && (propRecord.rejection_history?.length || 0) > 0
+                    ? () => handleResubmitProperty(property.id)
+                    : undefined
+                }
+                onReactivate={
+                  property.status === 'pausada' && !(propRecord.rejection_history?.length || 0)
+                    ? () => handleReactivateProperty(property.id)
+                    : undefined
+                }
+                isTogglingFeatured={togglingFeaturedId === property.id}
+                selectionMode={selectionMode}
+                isSelected={selectedProperties.has(property.id)}
+                onSelect={handleSelectProperty}
+              />
+            );
+          })}
         </div>
       ) : (
         /* List/Table view */
@@ -672,14 +682,14 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                             )}
                           </div>
                           <Badge variant="outline" className="font-mono text-xs mt-1">
-                            {(property as PropertyRecord).property_code || property.id.slice(0, 8)}
+                            {(property as unknown as PropertyRecord).property_code || property.id.slice(0, 8)}
                           </Badge>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <span className="text-sm text-muted-foreground">
-                        {(property as PropertyRecord).colonia ? `${(property as PropertyRecord).colonia}, ` : ''}
+                        {(() => { const p = property as unknown as PropertyRecord; return p.colonia ? `${p.colonia}, ` : ''; })()}
                         {property.municipality}
                       </span>
                     </TableCell>
@@ -700,7 +710,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                         <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
                           ⏳ Pendiente
                         </Badge>
-                      ) : (property as PropertyRecord).rejection_history?.length > 0 ? (
+                      ) : ((property as unknown as PropertyRecord).rejection_history?.length || 0) > 0 ? (
                         <Badge variant="destructive">❌ Rechazada</Badge>
                       ) : (
                         <Badge variant="secondary">{property.status}</Badge>
@@ -710,8 +720,8 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                       <Button
                         variant={isFeatured ? 'default' : 'outline'}
                         size="sm"
-                        onClick={() => handleToggleFeatured(property)}
-                        disabled={togglingFeaturedId === property.id || (!isFeatured && subscriptionInfo?.featured_used >= subscriptionInfo?.featured_limit)}
+                        onClick={() => handleToggleFeatured(property as unknown as PropertyRecord)}
+                        disabled={togglingFeaturedId === property.id || (!isFeatured && (subscriptionInfo?.featured_used || 0) >= (subscriptionInfo?.featured_limit || 0))}
                         className={cn("gap-1", isFeatured && "bg-amber-500 hover:bg-amber-600")}
                       >
                         {togglingFeaturedId === property.id ? (
@@ -737,7 +747,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(property)} disabled={property.status === 'pendiente_aprobacion'}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(property as unknown as PropertyRecord)} disabled={property.status === 'pendiente_aprobacion'}>
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                             </Button>
                           </TooltipTrigger>
@@ -769,7 +779,11 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
           queryClient.invalidateQueries({ queryKey: ['agent-properties', effectiveAgentId] });
           fetchFeaturedProperties();
         }}
-        subscriptionInfo={subscriptionInfo ? { ...subscriptionInfo, featured_used: featuredProperties.size } : null}
+        subscriptionInfo={subscriptionInfo ? { 
+          featured_used: subscriptionInfo.featured_used || featuredProperties.size, 
+          featured_limit: subscriptionInfo.featured_limit || 0,
+          plan_display_name: 'Plan Actual'
+        } : null}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
