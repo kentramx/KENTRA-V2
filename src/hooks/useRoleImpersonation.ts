@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { monitoring } from '@/lib/monitoring';
-
-// SECURITY: Key prefix - actual key includes user ID to prevent cross-user data leakage
-const IMPERSONATION_KEY_PREFIX = 'kentra_impersonated_role';
+import {
+  IMPERSONATION_KEY_PREFIX,
+  VALID_IMPERSONATION_ROLES,
+  DEMO_USER_IDS,
+  DEMO_AGENCY_ID,
+  DEMO_DEVELOPER_ID,
+} from '@/config/constants';
 
 export type ImpersonatedRole = 'buyer' | 'agent' | 'agency' | 'developer' | 'moderator' | null;
 
@@ -89,8 +93,7 @@ export const useRoleImpersonation = () => {
 
     const stored = localStorage.getItem(storageKey);
     // Validate the stored role is a valid value
-    const validRoles: ImpersonatedRole[] = ['buyer', 'agent', 'agency', 'developer', 'moderator'];
-    if (stored && validRoles.includes(stored as ImpersonatedRole)) {
+    if (stored && (VALID_IMPERSONATION_ROLES as readonly string[]).includes(stored)) {
       setImpersonatedRole(stored as ImpersonatedRole);
       setIsImpersonating(true);
     } else if (stored) {
@@ -136,11 +139,11 @@ export const useRoleImpersonation = () => {
 
     switch (impersonatedRole) {
       case 'agent':
-        return '00000000-0000-0000-0000-000000000001';
+        return DEMO_USER_IDS.agent;
       case 'agency':
-        return '00000000-0000-0000-0000-000000000010';
+        return DEMO_USER_IDS.agency;
       case 'developer':
-        return '00000000-0000-0000-0000-000000000020';
+        return DEMO_USER_IDS.developer;
       default:
         return null;
     }
@@ -148,12 +151,12 @@ export const useRoleImpersonation = () => {
 
   const getDemoAgencyId = useCallback((): string | null => {
     if (!isImpersonating || impersonatedRole !== 'agency') return null;
-    return '20000000-0000-0000-0000-000000000001';
+    return DEMO_AGENCY_ID;
   }, [isImpersonating, impersonatedRole]);
 
   const getDemoDeveloperId = useCallback((): string | null => {
     if (!isImpersonating || impersonatedRole !== 'developer') return null;
-    return '30000000-0000-0000-0000-000000000001';
+    return DEMO_DEVELOPER_ID;
   }, [isImpersonating, impersonatedRole]);
 
   return {

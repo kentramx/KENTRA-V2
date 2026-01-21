@@ -390,7 +390,7 @@ Deno.serve(withSentry(async (req) => {
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
-        console.log('Payment failed:', invoice.id);
+        console.log('Payment failed:', invoice.id, 'Attempt:', invoice.attempt_count);
 
         if (!invoice.subscription) {
           console.error('No subscription found in failed invoice');
@@ -416,31 +416,92 @@ Deno.serve(withSentry(async (req) => {
           .single();
 
         if (subRecord) {
-          // Update to past_due status with grace period tracking
-          await supabaseClient
+          const now = new Date();
+          const firstFailedAt = subRecord.metadata?.first_payment_failed_at
+            ? new Date(subRecord.metadata.first_payment_failed_at)
+            : now;
+          const daysSinceFirstFailure = Math.floor((now.getTime() - firstFailedAt.getTime()) / (1000 * 60 * 60 * 24));
+          const gracePeriodDays = 7;
+          const graceDaysRemaining = Math.max(0, gracePeriodDays - daysSinceFirstFailure);
+          const failureCount = (subRecord.metadata?.payment_failure_count || 0) + 1;
+
+          // Update to past_due status with enhanced tracking
+          const { error: updateError } = await supabaseClient
             .from('user_subscriptions')
-            .update({ 
+            .update({
               status: 'past_due',
               metadata: {
                 ...subRecord.metadata,
-                first_payment_failed_at: subRecord.metadata?.first_payment_failed_at || new Date().toISOString(),
-                payment_failure_count: (subRecord.metadata?.payment_failure_count || 0) + 1,
+                first_payment_failed_at: subRecord.metadata?.first_payment_failed_at || now.toISOString(),
+                payment_failure_count: failureCount,
+                last_payment_failed_at: now.toISOString(),
+                stripe_attempt_count: invoice.attempt_count,
+                grace_days_remaining: graceDaysRemaining,
+                next_retry_at: invoice.next_payment_attempt
+                  ? new Date(invoice.next_payment_attempt * 1000).toISOString()
+                  : null,
               }
             })
             .eq('id', subRecord.id);
 
-          // Send failure notification
-          await supabaseClient.functions.invoke('send-subscription-notification', {
-            body: {
-              userId: subRecord.user_id,
-              type: 'payment_failed',
+          if (updateError) {
+            console.error('Error updating subscription status:', updateError);
+          }
+
+          // Record in payment history
+          await supabaseClient
+            .from('payment_history')
+            .insert({
+              user_id: subRecord.user_id,
+              stripe_payment_intent_id: invoice.payment_intent as string,
+              amount: invoice.amount_due / 100,
+              currency: invoice.currency.toUpperCase(),
+              status: 'failed',
+              description: `Intento de pago fallido #${failureCount}`,
               metadata: {
-                planName: subRecord.subscription_plans.display_name,
-                amount: (invoice.amount_due / 100).toFixed(2),
-                graceDaysRemaining: 7,
+                invoice_id: invoice.id,
+                attempt_count: failureCount,
+                stripe_attempt_count: invoice.attempt_count,
+                failure_reason: invoice.last_finalization_error?.message || 'Unknown',
               },
-            },
-          });
+            });
+
+          // Determine notification type based on retry count
+          const notificationType = failureCount === 1
+            ? 'payment_failed'
+            : graceDaysRemaining <= 2
+              ? 'payment_failed_urgent'
+              : 'payment_failed_retry';
+
+          // Send failure notification with retry info
+          try {
+            await supabaseClient.functions.invoke('send-subscription-notification', {
+              body: {
+                userId: subRecord.user_id,
+                type: notificationType,
+                metadata: {
+                  planName: subRecord.subscription_plans.display_name,
+                  amount: (invoice.amount_due / 100).toLocaleString('es-MX'),
+                  currency: invoice.currency.toUpperCase(),
+                  graceDaysRemaining,
+                  failureCount,
+                  nextRetryDate: invoice.next_payment_attempt
+                    ? new Date(invoice.next_payment_attempt * 1000).toLocaleDateString('es-MX', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })
+                    : 'No programado',
+                  updatePaymentUrl: `${Deno.env.get('PUBLIC_URL') || 'https://kentra.com.mx'}/perfil?tab=billing`,
+                },
+              },
+            });
+          } catch (notifError) {
+            console.error('Error sending payment failure notification:', notifError);
+          }
+
+          console.log(`Payment failure recorded: attempt ${failureCount}, ${graceDaysRemaining} grace days remaining`);
         }
 
         break;
@@ -851,6 +912,204 @@ Deno.serve(withSentry(async (req) => {
         } else {
           console.log('Dispute closed successfully');
         }
+
+        break;
+      }
+
+      // ============================================================================
+      // REFUND AND CHARGEBACK HANDLERS
+      // ============================================================================
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge;
+        console.log(`💰 REEMBOLSO: ${charge.id}, Amount: ${charge.amount_refunded}`);
+
+        // Find user by stripe_customer_id
+        const { data: userSub } = await supabaseClient
+          .from('user_subscriptions')
+          .select('user_id, status')
+          .eq('stripe_customer_id', charge.customer as string)
+          .single();
+
+        // Record refund in payment history
+        const { error: refundError } = await supabaseClient
+          .from('payment_history')
+          .insert({
+            user_id: userSub?.user_id || null,
+            stripe_payment_intent_id: charge.payment_intent as string,
+            amount: -(charge.amount_refunded / 100), // Negative amount for refund
+            currency: charge.currency.toUpperCase(),
+            status: 'refunded',
+            description: `Reembolso: ${charge.refunds?.data?.[0]?.reason || 'Sin razón especificada'}`,
+            metadata: {
+              charge_id: charge.id,
+              refund_id: charge.refunds?.data?.[0]?.id,
+              refund_reason: charge.refunds?.data?.[0]?.reason,
+              original_amount: charge.amount / 100,
+            },
+          });
+
+        if (refundError) {
+          console.error('Error recording refund:', refundError);
+        }
+
+        // If full refund, suspend subscription access
+        if (charge.refunded && userSub?.user_id) {
+          console.log(`Full refund detected, suspending access for user ${userSub.user_id}`);
+
+          const { error: suspendError } = await supabaseClient
+            .from('user_subscriptions')
+            .update({
+              status: 'suspended',
+              metadata: {
+                suspended_reason: 'full_refund',
+                suspended_at: new Date().toISOString(),
+                original_charge_id: charge.id,
+              },
+            })
+            .eq('user_id', userSub.user_id);
+
+          if (suspendError) {
+            console.error('Error suspending subscription after refund:', suspendError);
+          }
+
+          // Pause all active properties
+          await supabaseClient
+            .from('properties')
+            .update({ status: 'pausada' })
+            .eq('agent_id', userSub.user_id)
+            .eq('status', 'activa');
+        }
+
+        // Notify admin
+        const resendKeyRefund = Deno.env.get('RESEND_API_KEY');
+        if (resendKeyRefund) {
+          try {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${resendKeyRefund}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: 'Kentra Alertas <alertas@kentra.com.mx>',
+                to: ['admin@kentra.com.mx'],
+                subject: `💰 REEMBOLSO: $${(charge.amount_refunded / 100).toLocaleString('es-MX')} ${charge.currency.toUpperCase()}`,
+                html: `
+                  <h2>Se ha procesado un reembolso</h2>
+                  <p><strong>Monto reembolsado:</strong> $${(charge.amount_refunded / 100).toLocaleString('es-MX')} ${charge.currency.toUpperCase()}</p>
+                  <p><strong>Monto original:</strong> $${(charge.amount / 100).toLocaleString('es-MX')} ${charge.currency.toUpperCase()}</p>
+                  <p><strong>Razón:</strong> ${charge.refunds?.data?.[0]?.reason || 'Sin razón especificada'}</p>
+                  <p><strong>Usuario:</strong> ${userSub?.user_id || 'No identificado'}</p>
+                  <p><strong>Reembolso completo:</strong> ${charge.refunded ? 'Sí' : 'No'}</p>
+                  <p><a href="https://dashboard.stripe.com/payments/${charge.payment_intent}">Ver en Stripe Dashboard</a></p>
+                `,
+              }),
+            });
+          } catch (emailError) {
+            console.error('Error sending refund email:', emailError);
+          }
+        }
+
+        break;
+      }
+
+      case 'charge.refund.updated': {
+        const refund = event.data.object as Stripe.Refund;
+        console.log(`🔄 REFUND UPDATE: ${refund.id}, Status: ${refund.status}`);
+
+        // Update payment history if refund failed
+        if (refund.status === 'failed' || refund.status === 'canceled') {
+          // Find and update the refund record
+          await supabaseClient
+            .from('payment_history')
+            .update({
+              status: refund.status === 'failed' ? 'refund_failed' : 'refund_canceled',
+              metadata: {
+                refund_failure_reason: refund.failure_reason,
+                updated_at: new Date().toISOString(),
+              },
+            })
+            .eq('stripe_payment_intent_id', refund.payment_intent as string)
+            .eq('status', 'refunded');
+        }
+
+        break;
+      }
+
+      case 'review.opened': {
+        const review = event.data.object as Stripe.Review;
+        console.log(`🔍 FRAUD REVIEW OPENED: ${review.id}, Reason: ${review.reason}`);
+
+        // Find user by payment intent
+        const paymentIntent = review.payment_intent as string;
+        const { data: paymentRecord } = await supabaseClient
+          .from('payment_history')
+          .select('user_id')
+          .eq('stripe_payment_intent_id', paymentIntent)
+          .single();
+
+        // Log fraud review
+        await supabaseClient
+          .from('admin_audit_log')
+          .insert({
+            admin_id: '00000000-0000-0000-0000-000000000000', // System action
+            action: 'fraud_review_opened',
+            resource_type: 'payment',
+            resource_id: paymentIntent,
+            new_data: {
+              review_id: review.id,
+              reason: review.reason,
+              user_id: paymentRecord?.user_id,
+            },
+          });
+
+        // Notify admin
+        const resendKeyReview = Deno.env.get('RESEND_API_KEY');
+        if (resendKeyReview) {
+          try {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${resendKeyReview}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: 'Kentra Alertas <alertas@kentra.com.mx>',
+                to: ['admin@kentra.com.mx'],
+                subject: `🔍 REVISIÓN DE FRAUDE: ${review.reason}`,
+                html: `
+                  <h2>Se ha abierto una revisión de fraude</h2>
+                  <p><strong>Razón:</strong> ${review.reason}</p>
+                  <p><strong>Usuario:</strong> ${paymentRecord?.user_id || 'No identificado'}</p>
+                  <p><a href="https://dashboard.stripe.com/radar/reviews/${review.id}">Ver en Stripe Dashboard</a></p>
+                `,
+              }),
+            });
+          } catch (emailError) {
+            console.error('Error sending fraud review email:', emailError);
+          }
+        }
+
+        break;
+      }
+
+      case 'review.closed': {
+        const review = event.data.object as Stripe.Review;
+        console.log(`✅ FRAUD REVIEW CLOSED: ${review.id}, Closed reason: ${review.closed_reason}`);
+
+        // Log review closure
+        await supabaseClient
+          .from('admin_audit_log')
+          .insert({
+            admin_id: '00000000-0000-0000-0000-000000000000', // System action
+            action: 'fraud_review_closed',
+            resource_type: 'payment',
+            resource_id: review.payment_intent as string,
+            new_data: {
+              review_id: review.id,
+              closed_reason: review.closed_reason,
+            },
+          });
 
         break;
       }

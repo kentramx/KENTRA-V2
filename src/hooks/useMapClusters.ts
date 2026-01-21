@@ -6,6 +6,7 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useDebouncedValue } from './useDebouncedValue';
+import { monitoring } from '@/lib/monitoring';
 import type { MapViewport, MapFilters, PropertyMarker, PropertyCluster, MapBounds } from '@/types/map';
 
 interface MapClustersResponse {
@@ -54,7 +55,7 @@ export function useMapClusters({
 
     queryFn: async (): Promise<MapClustersResponse> => {
       if (!debouncedViewport || !isValidBounds(debouncedViewport.bounds)) {
-        console.warn('[useMapClusters] Invalid bounds:', debouncedViewport?.bounds);
+        // Silent return for invalid bounds - this is expected during initial load
         return { clusters: [], properties: [], total: 0, is_clustered: false };
       }
 
@@ -78,7 +79,7 @@ export function useMapClusters({
       });
 
       if (error) {
-        console.error('[useMapClusters] Error:', error);
+        monitoring.error('Failed to fetch map clusters', { hook: 'useMapClusters', error });
         throw new Error(error.message || 'Failed to fetch map data');
       }
 

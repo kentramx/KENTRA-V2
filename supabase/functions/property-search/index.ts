@@ -95,7 +95,14 @@ Deno.serve(async (req) => {
         totalPages,
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          // Cache for 60 seconds to reduce database load
+          "Cache-Control": "public, max-age=60, s-maxage=60",
+          // Add Vary header for proper CDN caching
+          "Vary": "Accept, Accept-Encoding",
+        },
       }
     );
   } catch (err) {

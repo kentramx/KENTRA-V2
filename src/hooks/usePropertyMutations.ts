@@ -98,9 +98,17 @@ export const useDeleteProperty = () => {
 
   return useMutation({
     mutationFn: async (propertyId: string) => {
+      // Soft delete: set deleted_at instead of hard delete
+      // This preserves data for audit trails and potential restoration
+      const { data: { user } } = await supabase.auth.getUser();
+
       const { error } = await supabase
         .from('properties')
-        .delete()
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: user?.id || null,
+          status: 'eliminada' as const,
+        })
         .eq('id', propertyId);
 
       if (error) throw error;
@@ -110,10 +118,24 @@ export const useDeleteProperty = () => {
       queryClient.removeQueries({ queryKey: ['property', propertyId] });
       queryClient.invalidateQueries({ queryKey: ['properties'] });
       queryClient.invalidateQueries({ queryKey: ['agent-properties'] });
-      
+
       toast({
         title: '🗑️ Propiedad eliminada',
-        description: 'La propiedad ha sido eliminada permanentemente',
+        description: 'La propiedad ha sido archivada',
+      });
+    },
+    onError: (error) => {
+      monitoring.error('Error deleting property', {
+        hook: 'useDeleteProperty',
+        error,
+      });
+      monitoring.captureException(error as Error, {
+        hook: 'useDeleteProperty',
+      });
+      toast({
+        title: 'Error',
+        description: 'No se pudo eliminar la propiedad',
+        variant: 'destructive',
       });
     },
   });

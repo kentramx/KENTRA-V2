@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const FALLBACK_RATE = 20.15;
+// Refresh rate every 5 minutes to keep data fresh
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 interface ExchangeRateValue {
   rate: number;
@@ -14,6 +16,8 @@ export const useCurrencyConversion = () => {
   const [rateSource, setRateSource] = useState<'manual' | 'banxico'>('manual');
   const [rateUpdatedAt, setRateUpdatedAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isUsingFallback, setIsUsingFallback] = useState(false);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -21,7 +25,7 @@ export const useCurrencyConversion = () => {
 
     const fetchRate = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error: fetchError } = await supabase
           .from('app_settings')
           .select('value, updated_at')
           .eq('key', 'exchange_rate_usd_mxn')
@@ -30,8 +34,9 @@ export const useCurrencyConversion = () => {
         // Check if component is still mounted before updating state
         if (!mountedRef.current) return;
 
-        if (error) {
-          console.warn('[useCurrencyConversion] Error fetching rate, using fallback:', error.message);
+        if (fetchError) {
+          setError(`Error fetching exchange rate: ${fetchError.message}`);
+          setIsUsingFallback(true);
           return;
         }
 
@@ -40,10 +45,16 @@ export const useCurrencyConversion = () => {
           setExchangeRate(value.rate);
           setRateSource(value.source || 'manual');
           setRateUpdatedAt(data.updated_at);
+          setError(null);
+          setIsUsingFallback(false);
+        } else {
+          setError('Invalid exchange rate data');
+          setIsUsingFallback(true);
         }
       } catch (err) {
         if (!mountedRef.current) return;
-        console.warn('[useCurrencyConversion] Error:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        setIsUsingFallback(true);
       } finally {
         if (mountedRef.current) {
           setIsLoading(false);
@@ -51,10 +62,43 @@ export const useCurrencyConversion = () => {
       }
     };
 
+    // Initial fetch
     fetchRate();
+
+    // Set up periodic refresh to keep rate fresh
+    const refreshInterval = setInterval(() => {
+      if (mountedRef.current) {
+        fetchRate();
+      }
+    }, REFRESH_INTERVAL_MS);
+
+    // Set up realtime subscription for immediate updates
+    const channel = supabase
+      .channel('exchange-rate-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'app_settings',
+          filter: 'key=eq.exchange_rate_usd_mxn',
+        },
+        (payload) => {
+          if (!mountedRef.current) return;
+          const value = payload.new.value as unknown as ExchangeRateValue;
+          if (value?.rate) {
+            setExchangeRate(value.rate);
+            setRateSource(value.source || 'manual');
+            setRateUpdatedAt(payload.new.updated_at);
+          }
+        }
+      )
+      .subscribe();
 
     return () => {
       mountedRef.current = false;
+      clearInterval(refreshInterval);
+      supabase.removeChannel(channel);
     };
   }, []);
 
@@ -89,5 +133,7 @@ export const useCurrencyConversion = () => {
     rateSource,
     rateUpdatedAt,
     isLoading,
+    error,
+    isUsingFallback,
   };
 };

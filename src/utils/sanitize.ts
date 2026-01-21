@@ -1,6 +1,59 @@
 /**
  * Security utilities for sanitizing user-generated content
  */
+import DOMPurify from 'dompurify';
+
+// Configure DOMPurify with strict settings
+const DOMPURIFY_CONFIG: DOMPurify.Config = {
+  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'span'],
+  ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+  ALLOW_DATA_ATTR: false,
+  ADD_ATTR: ['target'], // Allow target for links
+  FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'input', 'object', 'embed'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'],
+};
+
+// Stricter config for plain text (no HTML allowed)
+const DOMPURIFY_TEXT_ONLY: DOMPurify.Config = {
+  ALLOWED_TAGS: [],
+  ALLOWED_ATTR: [],
+};
+
+/**
+ * SECURITY: Sanitizes HTML content to prevent XSS attacks
+ * Use this for rich text content from user input
+ */
+export function sanitizeHtml(html: string | null | undefined): string {
+  if (!html) return '';
+  return DOMPurify.sanitize(html, DOMPURIFY_CONFIG);
+}
+
+/**
+ * SECURITY: Strips all HTML tags and returns plain text
+ * Use this for text-only contexts
+ */
+export function stripHtml(html: string | null | undefined): string {
+  if (!html) return '';
+  return DOMPurify.sanitize(html, DOMPURIFY_TEXT_ONLY);
+}
+
+/**
+ * SECURITY: Sanitizes user message content before storing/displaying
+ * Removes dangerous content while preserving basic formatting
+ */
+export function sanitizeMessage(message: string | null | undefined): string {
+  if (!message) return '';
+
+  // First strip HTML tags
+  const textOnly = stripHtml(message);
+
+  // Normalize whitespace (prevent excessive line breaks)
+  return textOnly
+    .replace(/\n{3,}/g, '\n\n')  // Max 2 consecutive newlines
+    .replace(/\s{2,}/g, ' ')     // Max 1 consecutive space
+    .trim()
+    .slice(0, 5000);             // Limit message length
+}
 
 /**
  * SECURITY: Validates and sanitizes URLs to prevent XSS via javascript: or data: URLs

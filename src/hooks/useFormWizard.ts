@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { monitoring } from '@/lib/monitoring';
 import { useAuth } from '@/contexts/AuthContext';
+import { STORAGE_KEYS, DEBOUNCE } from '@/config/constants';
 
 export interface PropertyFormData {
   // Opciones de listado
@@ -36,14 +37,18 @@ export interface PropertyFormData {
   amenities: Array<{ category: string; items: string[] }>;
 }
 
-const DRAFT_KEY_PREFIX = 'propertyFormDraft';
-
 export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
   const { user } = useAuth();
   // SECURITY: Draft key includes user ID to prevent cross-user data leakage
-  const draftKey = user?.id ? `${DRAFT_KEY_PREFIX}_${user.id}` : null;
+  const draftKey = user?.id ? `${STORAGE_KEYS.PROPERTY_FORM_DRAFT}_${user.id}` : null;
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [isLoadingDraft, setIsLoadingDraft] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [hasDraft, setHasDraft] = useState(false);
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [formData, setFormData] = useState<PropertyFormData>({
     for_sale: true,
     for_rent: false,
@@ -68,25 +73,55 @@ export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
 
   // Cargar borrador guardado al montar (solo si hay usuario autenticado)
   useEffect(() => {
-    if (!draftKey) return; // No cargar sin user ID
-    const savedDraft = localStorage.getItem(draftKey);
-    if (savedDraft && !initialData) {
-      try {
+    if (!draftKey) {
+      setIsLoadingDraft(false);
+      return;
+    }
+
+    try {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft && !initialData) {
         const parsed = JSON.parse(savedDraft);
         setFormData(parsed);
-      } catch (error) {
-        monitoring.warn('Error loading draft', { hook: 'useFormWizard', error });
+        setHasDraft(true);
       }
+    } catch (error) {
+      monitoring.warn('Error loading draft', { hook: 'useFormWizard', error });
+      // Clear corrupted draft
+      localStorage.removeItem(draftKey);
+    } finally {
+      setIsLoadingDraft(false);
     }
-  }, [draftKey]);
+  }, [draftKey, initialData]);
 
-  // Auto-save cada 30 segundos (solo si hay usuario autenticado)
+  // Auto-save with debounce (solo si hay usuario autenticado)
   useEffect(() => {
-    if (!draftKey) return; // No guardar sin user ID
-    const timer = setTimeout(() => {
-      localStorage.setItem(draftKey, JSON.stringify(formData));
-    }, 30000);
-    return () => clearTimeout(timer);
+    if (!draftKey) return;
+
+    // Clear any existing timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    // Set new timeout for auto-save
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      setIsSaving(true);
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(formData));
+        setLastSavedAt(new Date());
+        setHasDraft(true);
+      } catch (error) {
+        monitoring.warn('Error auto-saving draft', { hook: 'useFormWizard', error });
+      } finally {
+        setIsSaving(false);
+      }
+    }, DEBOUNCE.FORM_AUTOSAVE);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
   }, [formData, draftKey]);
 
   const updateFormData = (updates: Partial<PropertyFormData>) => {
@@ -179,5 +214,10 @@ export const useFormWizard = (initialData?: Partial<PropertyFormData>) => {
     isStepComplete,
     saveDraft,
     clearDraft,
+    // Loading/saving states
+    isLoadingDraft,
+    isSaving,
+    lastSavedAt,
+    hasDraft,
   };
 };

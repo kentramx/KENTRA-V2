@@ -6,6 +6,7 @@ import { withRetry, isRetryableStripeError } from '../_shared/retry.ts';
 import { withSentry } from '../_shared/sentry.ts';
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, getClientIP, rateLimitedResponse, paymentRateLimit } from "../_shared/rateLimit.ts";
+import { checkRateLimit as checkRedisRateLimit } from '../_shared/redis.ts';
 
 Deno.serve(withSentry(async (req) => {
   const origin = req.headers.get("origin");
@@ -18,9 +19,18 @@ Deno.serve(withSentry(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Rate limiting for payment operations
+  // Rate limiting for payment operations (Redis with in-memory fallback)
   const clientIP = getClientIP(req);
-  const rateResult = checkRateLimit(clientIP, paymentRateLimit);
+  let rateResult: { allowed: boolean; remaining: number; resetTime: number };
+
+  try {
+    const redisResult = await checkRedisRateLimit(`plan-change:${clientIP}`, 5, 60); // 5 per minute
+    rateResult = { allowed: redisResult.allowed, remaining: redisResult.remaining, resetTime: redisResult.resetAt };
+  } catch {
+    // Fallback to in-memory if Redis unavailable
+    rateResult = checkRateLimit(clientIP, paymentRateLimit);
+  }
+
   if (!rateResult.allowed) {
     return rateLimitedResponse(rateResult, corsHeaders);
   }

@@ -51,6 +51,51 @@ CREATE INDEX IF NOT EXISTS idx_messages_conversation_created
 ON messages(conversation_id, created_at DESC);
 
 -- ============================================================================
+-- HIGH: Missing index on properties for search and filtering
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_properties_state_city
+ON properties(state, city)
+WHERE status = 'activa';
+
+CREATE INDEX IF NOT EXISTS idx_properties_property_type
+ON properties(property_type, status)
+WHERE status = 'activa';
+
+CREATE INDEX IF NOT EXISTS idx_properties_location_geo
+ON properties USING GIST (location)
+WHERE status = 'activa' AND location IS NOT NULL;
+
+-- ============================================================================
+-- HIGH: Missing index on properties.deleted_at for soft delete queries
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_properties_deleted_at
+ON properties(deleted_at)
+WHERE deleted_at IS NOT NULL;
+
+-- ============================================================================
+-- HIGH: Missing index on conversations for user lookups
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_conversations_buyer_id
+ON conversations(buyer_id, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_agent_id
+ON conversations(agent_id, updated_at DESC);
+
+-- ============================================================================
+-- HIGH: Missing index on user_subscriptions for active subscription lookups
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_active
+ON user_subscriptions(user_id, status)
+WHERE status = 'active';
+
+-- ============================================================================
+-- MEDIUM: Index for property expiration queries
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_properties_expires_at
+ON properties(expires_at)
+WHERE status = 'activa' AND expires_at IS NOT NULL;
+
+-- ============================================================================
 -- Analyze tables after adding indexes for query planner
 -- ============================================================================
 ANALYZE properties;
@@ -59,3 +104,5 @@ ANALYZE payment_history;
 ANALYZE conversion_events;
 ANALYZE property_views;
 ANALYZE messages;
+ANALYZE conversations;
+ANALYZE user_subscriptions;

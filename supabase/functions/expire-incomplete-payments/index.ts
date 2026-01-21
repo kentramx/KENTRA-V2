@@ -9,9 +9,14 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
+import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
 import { MAX_PENDING_PAYMENT_HOURS } from '../_shared/subscriptionStates.ts';
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, getClientIP, rateLimitedResponse, apiRateLimit } from "../_shared/rateLimit.ts";
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
+  apiVersion: '2023-10-16',
+});
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -46,7 +51,7 @@ Deno.serve(async (req) => {
     // Buscar suscripciones incompletas que excedan el tiempo límite
     const { data: expiredSubs, error: fetchError } = await supabaseClient
       .from('user_subscriptions')
-      .select('id, user_id, created_at, subscription_plans(display_name)')
+      .select('id, user_id, created_at, stripe_subscription_id, plan_id, subscription_plans(display_name)')
       .eq('status', 'incomplete')
       .lt('created_at', cutoffISO);
 
@@ -67,10 +72,26 @@ Deno.serve(async (req) => {
 
     let expiredCount = 0;
     let errorCount = 0;
+    let stripeCanceledCount = 0;
 
     for (const sub of expiredSubs) {
       try {
-        // Marcar como expirada
+        // 1. Cancel Stripe subscription if exists
+        if (sub.stripe_subscription_id) {
+          try {
+            const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+            if (stripeSub.status === 'incomplete' || stripeSub.status === 'incomplete_expired') {
+              await stripe.subscriptions.cancel(sub.stripe_subscription_id);
+              stripeCanceledCount++;
+              console.log(`Canceled Stripe subscription ${sub.stripe_subscription_id}`);
+            }
+          } catch (stripeError) {
+            console.warn(`Could not cancel Stripe subscription ${sub.stripe_subscription_id}:`, stripeError);
+            // Continue even if Stripe cancellation fails
+          }
+        }
+
+        // 2. Marcar como expirada en la base de datos
         const { error: updateError } = await supabaseClient
           .from('user_subscriptions')
           .update({
@@ -80,6 +101,7 @@ Deno.serve(async (req) => {
               expired_reason: 'payment_timeout',
               expired_at: new Date().toISOString(),
               max_pending_hours: MAX_PENDING_PAYMENT_HOURS,
+              payment_method: 'oxxo_spei',
             },
           })
           .eq('id', sub.id);
@@ -90,7 +112,24 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Enviar notificación al usuario
+        // 3. Record in payment history for audit trail
+        await supabaseClient
+          .from('payment_history')
+          .insert({
+            user_id: sub.user_id,
+            amount: 0,
+            currency: 'MXN',
+            status: 'expired',
+            description: 'Pago pendiente OXXO/SPEI expirado',
+            metadata: {
+              subscription_id: sub.id,
+              plan_id: sub.plan_id,
+              max_pending_hours: MAX_PENDING_PAYMENT_HOURS,
+              stripe_subscription_id: sub.stripe_subscription_id,
+            },
+          });
+
+        // 4. Enviar notificación al usuario
         try {
           await supabaseClient.functions.invoke('send-subscription-notification', {
             body: {
@@ -116,12 +155,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`✅ Job complete: ${expiredCount} expired, ${errorCount} errors`);
+    console.log(`✅ Job complete: ${expiredCount} expired, ${stripeCanceledCount} Stripe canceled, ${errorCount} errors`);
 
     return new Response(
       JSON.stringify({
         success: true,
         expired: expiredCount,
+        stripeCanceled: stripeCanceledCount,
         errors: errorCount,
         cutoffDate: cutoffISO,
       }),

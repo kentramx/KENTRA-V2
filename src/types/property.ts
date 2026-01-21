@@ -222,7 +222,8 @@ export type PropertyStatus =
   | 'expirada'
   | 'vendida'
   | 'rentada'
-  | 'pausada';
+  | 'pausada'
+  | 'eliminada';
 
 export type AIModerationStatus =
   | 'pending'

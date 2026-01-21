@@ -21,13 +21,13 @@ export interface SimilarProperty {
 
 export const useSimilarProperties = (
   propertyId: string | undefined,
-  propertyType: string | undefined,
+  propertyType: PropertyType | string | undefined,
   propertyState: string | undefined,
   limit: number = 4
 ) => {
   return useQuery({
     queryKey: ['similar-properties', propertyId, propertyType, propertyState, limit],
-    queryFn: async () => {
+    queryFn: async (): Promise<SimilarProperty[]> => {
       if (!propertyId || !propertyType || !propertyState) return [];
 
       const { data, error } = await supabase
@@ -38,7 +38,7 @@ export const useSimilarProperties = (
           images (url, position)
         `)
         .eq('status', 'activa')
-        .eq('type', propertyType as any)
+        .eq('type', propertyType)
         .eq('state', propertyState)
         .neq('id', propertyId)
         .order('created_at', { ascending: false })
@@ -46,12 +46,15 @@ export const useSimilarProperties = (
 
       if (error) throw error;
 
-      return data?.map(property => ({
+      return (data || []).map(property => ({
         ...property,
-        images: (property.images || []).sort((a: PropertyImage, b: PropertyImage) => a.position - b.position)
-      })) as SimilarProperty[] || [];
+        images: (property.images || []).sort(
+          (a: PropertyImage, b: PropertyImage) => a.position - b.position
+        ),
+      })) as SimilarProperty[];
     },
     enabled: !!propertyId && !!propertyType && !!propertyState,
     staleTime: 10 * 60 * 1000,
+    retry: 2,
   });
 };

@@ -7,6 +7,7 @@ import { withCircuitBreaker } from '../_shared/circuitBreaker.ts';
 import { withSentry } from '../_shared/sentry.ts';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkBodySize, bodySizeLimitResponse, BODY_SIZE_LIMITS } from '../_shared/validation.ts';
+import { checkRateLimit as checkRedisRateLimit } from '../_shared/redis.ts';
 
 /**
  * Validates that a redirect URL is safe (on allowed domain)
@@ -135,13 +136,22 @@ Deno.serve(withSentry(async (req) => {
       return bodySizeLimitResponse(corsHeaders);
     }
 
-    // Rate limiting: 10 requests per hour
+    // Rate limiting: 10 requests per hour (using Redis for distributed limiting)
     const clientId = getClientIdentifier(req);
-    const limit = checkRateLimit(clientId, { maxRequests: 10, windowMs: 60 * 60 * 1000 });
-    
+    let limit: { allowed: boolean; remaining: number; resetAt: number };
+
+    try {
+      limit = await checkRedisRateLimit(`checkout:${clientId}`, 10, 3600); // 10 requests per hour
+    } catch (redisError) {
+      // Fallback to in-memory if Redis unavailable
+      logger.warn('Redis rate limit unavailable, using in-memory fallback', { error: redisError });
+      const memLimit = checkRateLimit(clientId, { maxRequests: 10, windowMs: 60 * 60 * 1000 });
+      limit = { allowed: memLimit.allowed, remaining: memLimit.remaining, resetAt: memLimit.resetTime };
+    }
+
     if (!limit.allowed) {
       const origin = req.headers.get('origin');
-      return createRateLimitResponse(limit.resetTime, 10, origin);
+      return createRateLimitResponse(limit.resetAt, 10, origin);
     }
 
     const supabaseClient = createClient(

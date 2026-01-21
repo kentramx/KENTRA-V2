@@ -2,10 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { monitoring } from '@/lib/monitoring';
+import { IMPERSONATION_KEY_PREFIX } from '@/config/constants';
 import type { AppRole } from '@/types/user';
-
-// SECURITY: Key prefix - actual key includes user ID to prevent cross-user data leakage
-const IMPERSONATION_KEY_PREFIX = 'kentra_impersonated_role';
 
 export const useAdminCheck = () => {
   const { user } = useAuth();

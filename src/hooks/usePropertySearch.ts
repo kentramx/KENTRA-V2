@@ -5,6 +5,7 @@
 
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { monitoring } from '@/lib/monitoring';
 import type { MapFilters, MapBounds } from '@/types/map';
 import type { PropertySummary } from '@/types/property';
 
@@ -77,7 +78,7 @@ export function usePropertySearch({
       });
 
       if (error) {
-        console.error('[usePropertySearch] Error:', error);
+        monitoring.error('Failed to search properties', { hook: 'usePropertySearch', error });
         throw new Error(error.message || 'Failed to search properties');
       }
 

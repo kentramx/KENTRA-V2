@@ -17,92 +17,128 @@ const DEFAULT_OPTIONS: CompressionOptions = {
   format: 'webp',
 };
 
+// Maximum compression iterations to prevent infinite loops
+const MAX_COMPRESSION_ITERATIONS = 5;
+// Minimum quality to prevent over-compression
+const MIN_QUALITY = 0.4;
+
+/**
+ * Loads an image from a File
+ */
+function loadImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Error al cargar imagen'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Error al leer archivo'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Converts canvas to blob with given quality
+ */
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  format: string,
+  quality: number
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Error al comprimir imagen'));
+          return;
+        }
+        resolve(blob);
+      },
+      `image/${format}`,
+      quality
+    );
+  });
+}
+
 /**
  * Comprime una imagen usando Canvas API
+ * Uses iterative approach to prevent stack overflow
  */
 export async function compressImage(
   file: File,
   options: CompressionOptions = {}
 ): Promise<File> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
+  const maxSizeBytes = opts.maxSizeMB! * 1024 * 1024;
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      const img = new Image();
-      
-      img.onload = () => {
-        // Calcular nuevas dimensiones
-        let { width, height } = img;
-        const maxDim = opts.maxWidthOrHeight!;
-        
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = (height / width) * maxDim;
-            width = maxDim;
-          } else {
-            width = (width / height) * maxDim;
-            height = maxDim;
-          }
-        }
+  // Load the image
+  const img = await loadImage(file);
 
-        // Crear canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('No se pudo crear contexto de canvas'));
-          return;
-        }
+  // Calculate dimensions
+  let { width, height } = img;
+  const maxDim = opts.maxWidthOrHeight!;
 
-        // Dibujar imagen redimensionada
-        ctx.drawImage(img, 0, 0, width, height);
+  if (width > maxDim || height > maxDim) {
+    if (width > height) {
+      height = (height / width) * maxDim;
+      width = maxDim;
+    } else {
+      width = (width / height) * maxDim;
+      height = maxDim;
+    }
+  }
 
-        // Convertir a Blob
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error('Error al comprimir imagen'));
-              return;
-            }
+  // Create canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
 
-            // Verificar si la compresión redujo el tamaño
-            if (blob.size > opts.maxSizeMB! * 1024 * 1024) {
-              // Si aún es muy grande, reducir calidad
-              const newQuality = Math.max(0.5, opts.quality! * 0.8);
-              compressImage(file, { ...opts, quality: newQuality })
-                .then(resolve)
-                .catch(reject);
-              return;
-            }
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('No se pudo crear contexto de canvas');
+  }
 
-            // Crear nuevo archivo
-            const compressedFile = new File(
-              [blob],
-              file.name.replace(/\.[^/.]+$/, `.${opts.format}`),
-              {
-                type: `image/${opts.format}`,
-                lastModified: Date.now(),
-              }
-            );
+  // Draw resized image
+  ctx.drawImage(img, 0, 0, width, height);
 
-            resolve(compressedFile);
-          },
-          `image/${opts.format}`,
-          opts.quality
-        );
-      };
+  // Iterative compression with quality reduction
+  let currentQuality = opts.quality!;
+  let blob: Blob | null = null;
 
-      img.onerror = () => reject(new Error('Error al cargar imagen'));
-      img.src = e.target?.result as string;
-    };
+  for (let i = 0; i < MAX_COMPRESSION_ITERATIONS; i++) {
+    blob = await canvasToBlob(canvas, opts.format!, currentQuality);
 
-    reader.onerror = () => reject(new Error('Error al leer archivo'));
-    reader.readAsDataURL(file);
-  });
+    // Check if size is acceptable
+    if (blob.size <= maxSizeBytes) {
+      break;
+    }
+
+    // Reduce quality for next iteration
+    currentQuality = Math.max(MIN_QUALITY, currentQuality * 0.8);
+
+    // If we've hit minimum quality, stop
+    if (currentQuality <= MIN_QUALITY) {
+      break;
+    }
+  }
+
+  if (!blob) {
+    throw new Error('Error al comprimir imagen');
+  }
+
+  // Create new file
+  const compressedFile = new File(
+    [blob],
+    file.name.replace(/\.[^/.]+$/, `.${opts.format}`),
+    {
+      type: `image/${opts.format}`,
+      lastModified: Date.now(),
+    }
+  );
+
+  return compressedFile;
 }
 
 /**
@@ -121,12 +157,12 @@ export function validateImageFile(file: File): {
     };
   }
 
-  // Límite de 20MB para archivo original
-  const maxSize = 20 * 1024 * 1024;
+  // Límite de 5MB para archivo original (reduced from 20MB for better performance)
+  const maxSize = 5 * 1024 * 1024;
   if (file.size > maxSize) {
     return {
       valid: false,
-      error: 'La imagen es demasiado grande (máximo 20MB)',
+      error: 'La imagen es demasiado grande (máximo 5MB)',
     };
   }
 

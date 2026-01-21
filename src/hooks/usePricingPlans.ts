@@ -68,6 +68,8 @@ export function usePricingPlans(planType: PlanType) {
       return data as PricingPlan[];
     },
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    retry: 3, // Retry up to 3 times on failure
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 }
 
