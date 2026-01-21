@@ -24,28 +24,36 @@ interface SearchMapProps {
   clusters: PropertyCluster[];
   totalCount: number;
   isClustered: boolean;
-  
+
   // Estados de carga
   isLoading: boolean;
   isIdle?: boolean; // Query deshabilitado (esperando viewport válido)
   isFetching?: boolean;
   isPending?: boolean; // Viewport esperando debounce
-  
+
   // Configuración
   initialCenter?: { lat: number; lng: number };
   initialZoom?: number;
   height?: string;
   className?: string;
-  
+
   // Estados de interacción
   selectedPropertyId?: string | null;
   hoveredPropertyId?: string | null;
   visitedPropertyIds?: Set<string>;
-  
+
   // Auto-zoom to results
   fitToBounds?: boolean;
   onFitComplete?: () => void;
-  
+
+  // Búsqueda por ubicación
+  searchLocation?: {
+    center: { lat: number; lng: number };
+    bounds?: google.maps.LatLngBounds;
+    zoom?: number;
+  } | null;
+  onSearchLocationApplied?: () => void;
+
   // Callbacks
   onPropertyClick?: (id: string) => void;
   onPropertyHover?: (property: PropertyMarker | null) => void;
@@ -75,6 +83,8 @@ export function SearchMap({
   visitedPropertyIds = new Set(),
   fitToBounds = false,
   onFitComplete,
+  searchLocation,
+  onSearchLocationApplied,
   onPropertyClick,
   onPropertyHover,
   onViewportChange,
@@ -184,6 +194,41 @@ export function SearchMap({
     }
   }, [fitToBounds]);
 
+  // ═══════════════════════════════════════════════════════════
+  // BÚSQUEDA POR UBICACIÓN - Pan/Zoom a ubicación buscada
+  // ═══════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (!map || !searchLocation) return;
+
+    // Si hay bounds específicos del lugar, usarlos
+    if (searchLocation.bounds) {
+      map.fitBounds(searchLocation.bounds, {
+        top: 60,
+        right: 40,
+        bottom: 40,
+        left: 40,
+      });
+    } else {
+      // Si no hay bounds, usar center + zoom
+      map.panTo(searchLocation.center);
+      if (searchLocation.zoom) {
+        setTimeout(() => {
+          map.setZoom(searchLocation.zoom!);
+        }, 150);
+      } else {
+        // Zoom por defecto para búsquedas: 12 (nivel de ciudad)
+        setTimeout(() => {
+          map.setZoom(12);
+        }, 150);
+      }
+    }
+
+    // Notificar que se aplicó la búsqueda
+    setTimeout(() => {
+      onSearchLocationApplied?.();
+    }, 500);
+  }, [map, searchLocation, onSearchLocationApplied]);
+
   // Handler de click en cluster - zoom suave animado estilo Zillow
   const handleClusterClick = useCallback((cluster: PropertyCluster) => {
     if (onClusterClick) {
@@ -250,19 +295,14 @@ export function SearchMap({
   }, [clusters, cachedClusters]);
 
   // ═══════════════════════════════════════════════════════════
-  // CONTADOR DE PROPIEDADES VISIBLES EN VIEWPORT
-  // En modo cluster: suma de todas las propiedades en clusters
-  // En modo individual: cantidad de propiedades visibles
+  // CONTADOR DE PROPIEDADES EN ESTA ÁREA
+  // Usa totalCount que viene sincronizado con la lista
   // ═══════════════════════════════════════════════════════════
   const visibleCount = useMemo(() => {
-    if (isClustered && clusters.length > 0) {
-      // Modo cluster: sumar propiedades de clusters + individuales sueltas
-      const clusterTotal = clusters.reduce((sum, c) => sum + (c.count || 0), 0);
-      return clusterTotal + properties.length;
-    }
-    // Modo individual: usar total_count del backend (no limitado a 50)
-    return totalCount || properties.length;
-  }, [properties, clusters, isClustered, totalCount]);
+    // Siempre usar totalCount si está disponible (viene de property-search)
+    // Esto asegura que mapa y lista muestren el mismo número
+    return totalCount || 0;
+  }, [totalCount]);
 
   // Formatear contador elegante
   const countDisplay = useMemo(() => {
@@ -340,7 +380,7 @@ export function SearchMap({
               <MapPin className="h-3.5 w-3.5 mr-1.5 text-primary" />
               <span className="font-bold text-foreground">{countDisplay}</span>
               <span className="ml-1 text-muted-foreground font-normal">
-                {visibleCount === 1 ? 'propiedad' : 'propiedades'}
+                en esta área
               </span>
             </>
           )}

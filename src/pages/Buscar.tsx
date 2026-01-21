@@ -1,14 +1,17 @@
 /**
- * Página de búsqueda estilo Zillow
- * Arquitectura limpia: ~400 líneas
- * - Hooks separados para mapa y lista
- * - Estado mínimo derivado de URL
- * - Sin useEffects problemáticos
+ * Página de búsqueda estilo Zillow - Enterprise Edition
+ *
+ * Features:
+ * - Búsqueda por ubicación con Google Places Autocomplete
+ * - Mapa sincronizado con lista de propiedades
+ * - Filtros avanzados desde URL
+ * - Viewport real de Google Maps (no hardcoded)
  */
 
 import { useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SearchMap } from '@/components/maps/SearchMap';
+import { LocationSearchInput, type LocationResult } from '@/components/maps/LocationSearchInput';
 import { useMapClusters } from '@/hooks/useMapClusters';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -21,18 +24,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MapIcon, List, Loader2, SlidersHorizontal, X, Home, Building2, TreePine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MapViewport, MapFilters } from '@/types/map';
+import { GOOGLE_MAPS_CONFIG } from '@/config/googleMaps';
 
-// Viewport inicial (México)
-const INITIAL_VIEWPORT: MapViewport = {
-  center: { lat: 23.6345, lng: -102.5528 },
-  zoom: 6,
-  bounds: {
-    north: 32.72,
-    south: 14.53,
-    east: -86.7,
-    west: -118.4,
-  },
-};
+// Centro inicial de México (solo center y zoom, NO bounds hardcoded)
+const INITIAL_CENTER = GOOGLE_MAPS_CONFIG.defaultCenter;
+const INITIAL_ZOOM = GOOGLE_MAPS_CONFIG.zoom.default;
 
 // Tipos de propiedad
 const PROPERTY_TYPES = [
@@ -46,9 +42,16 @@ export default function Buscar() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { favorites, toggleFavorite } = useFavorites();
 
-  // Estado del mapa
-  const [viewport, setViewport] = useState<MapViewport>(INITIAL_VIEWPORT);
+  // Estado del mapa - viewport NULL hasta que Google Maps lo emita
+  const [viewport, setViewport] = useState<MapViewport | null>(null);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
+
+  // Estado de búsqueda por ubicación
+  const [searchLocation, setSearchLocation] = useState<{
+    center: { lat: number; lng: number };
+    bounds?: google.maps.LatLngBounds;
+    zoom?: number;
+  } | null>(null);
 
   // Estado de UI
   const [mobileView, setMobileView] = useState<'map' | 'list'>('list');
@@ -68,6 +71,7 @@ export default function Buscar() {
   }), [searchParams]);
 
   // Datos del mapa (clusters + propiedades visibles)
+  // Solo habilitar cuando tenemos viewport real de Google Maps
   const {
     clusters,
     properties: mapProperties,
@@ -75,7 +79,11 @@ export default function Buscar() {
     isClustered,
     isLoading: mapLoading,
     isFetching: mapFetching,
-  } = useMapClusters({ viewport, filters });
+  } = useMapClusters({
+    viewport,
+    filters,
+    enabled: viewport !== null, // Solo query cuando hay viewport real
+  });
 
   // Datos de la lista (paginados, sincronizados con viewport)
   const {
@@ -87,15 +95,33 @@ export default function Buscar() {
     hasNextPage,
   } = usePropertySearch({
     filters,
-    bounds: viewport.bounds,
+    bounds: viewport?.bounds || null,
     page,
     limit: 20,
+    enabled: viewport !== null, // Solo query cuando hay viewport real
   });
 
   // Handlers
   const handleViewportChange = useCallback((newViewport: MapViewport) => {
     setViewport(newViewport);
     setPage(1); // Reset página al mover mapa
+  }, []);
+
+  // Handler para búsqueda de ubicación
+  const handleLocationSelect = useCallback((location: LocationResult) => {
+    if (location.location) {
+      setSearchLocation({
+        center: location.location,
+        bounds: location.bounds,
+        zoom: location.bounds ? undefined : 13, // Si hay bounds, fitBounds los usa. Si no, zoom 13
+      });
+    }
+    setPage(1);
+  }, []);
+
+  // Limpiar searchLocation después de aplicar
+  const handleSearchLocationApplied = useCallback(() => {
+    setSearchLocation(null);
   }, []);
 
   const handlePropertyClick = useCallback((id: string) => {
@@ -140,6 +166,13 @@ export default function Buscar() {
         <div className="sticky top-16 z-30 border-b bg-background">
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Búsqueda por ubicación */}
+              <LocationSearchInput
+                onLocationSelect={handleLocationSelect}
+                placeholder="Buscar ciudad o zona..."
+                className="w-[200px] lg:w-[280px]"
+              />
+
               {/* Tipo de operación */}
               <Select
                 value={filters.listing_type || 'venta'}
@@ -258,17 +291,20 @@ export default function Buscar() {
             <SearchMap
               properties={mapProperties}
               clusters={clusters}
-              totalCount={mapTotal}
+              totalCount={listTotal}
               isClustered={isClustered}
               isLoading={mapLoading}
+              isIdle={viewport === null}
               isFetching={mapFetching}
               hoveredPropertyId={hoveredPropertyId}
               selectedPropertyId={selectedPropertyId}
               onPropertyClick={handlePropertyClick}
               onPropertyHover={(p) => setHoveredPropertyId(p?.id || null)}
               onViewportChange={handleViewportChange}
-              initialCenter={INITIAL_VIEWPORT.center}
-              initialZoom={INITIAL_VIEWPORT.zoom}
+              initialCenter={INITIAL_CENTER}
+              initialZoom={INITIAL_ZOOM}
+              searchLocation={searchLocation}
+              onSearchLocationApplied={handleSearchLocationApplied}
             />
           </div>
 
