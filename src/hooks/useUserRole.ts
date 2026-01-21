@@ -1,18 +1,36 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { monitoring } from '@/lib/monitoring';
 import type { AppRole } from '@/types/user';
 
-const IMPERSONATION_KEY = 'kentra_impersonated_role';
+// SECURITY: Key prefix - actual key includes user ID to prevent cross-user data leakage
+const IMPERSONATION_KEY_PREFIX = 'kentra_impersonated_role';
 
 export type UserRole = AppRole;
+
+// Role priority: super_admin > admin > moderator > agency/developer > agent > buyer
+const ROLE_PRIORITY: Record<UserRole, number> = {
+  super_admin: 6,
+  admin: 5,
+  moderator: 4,
+  agency: 3,
+  developer: 3,
+  agent: 2,
+  buyer: 1,
+};
 
 export const useUserRole = () => {
   const { user } = useAuth();
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
+
+  // Get user-specific impersonation key
+  const getImpersonationKey = useCallback(
+    () => (user ? `${IMPERSONATION_KEY_PREFIX}_${user.id}` : null),
+    [user]
+  );
 
   const fetchUserRole = useCallback(async () => {
     if (!user) {
@@ -24,24 +42,8 @@ export const useUserRole = () => {
     }
 
     try {
-      // Check if impersonating
-      const impersonatedRole = localStorage.getItem(IMPERSONATION_KEY);
-      if (impersonatedRole) {
-        // Verify user is actually super admin
-        const { data: isSuperData } = await supabase.rpc('is_super_admin' as any, {
-          user_uuid: user.id,
-        });
-
-        if (!mountedRef.current) return;
-
-        if (isSuperData) {
-          setUserRole(impersonatedRole as UserRole);
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Get ALL roles for the user
+      // OPTIMIZATION: Single query to get all roles, then determine impersonation
+      // This avoids sequential RPC calls (was: check impersonation -> check is_super_admin -> get roles)
       const { data: allRoles, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -62,24 +64,24 @@ export const useUserRole = () => {
         return;
       }
 
-      // Role priority: super_admin > admin > moderator > agency/developer > agent > buyer
-      const rolePriority: Record<UserRole, number> = {
-        super_admin: 6,
-        admin: 5,
-        moderator: 4,
-        agency: 3,
-        developer: 3,
-        agent: 2,
-        buyer: 1,
-      };
-
       // Find the highest priority role
       const highestRole = allRoles.reduce((highest, current) => {
         const currentRole = current.role as UserRole;
-        const currentPriority = rolePriority[currentRole] || 0;
-        const highestPriority = rolePriority[highest] || 0;
+        const currentPriority = ROLE_PRIORITY[currentRole] || 0;
+        const highestPriority = ROLE_PRIORITY[highest] || 0;
         return currentPriority > highestPriority ? currentRole : highest;
       }, 'buyer' as UserRole);
+
+      // Check impersonation only if user has super_admin role
+      const impersonationKey = getImpersonationKey();
+      if (highestRole === 'super_admin' && impersonationKey) {
+        const impersonatedRole = localStorage.getItem(impersonationKey);
+        if (impersonatedRole && ROLE_PRIORITY[impersonatedRole as UserRole]) {
+          setUserRole(impersonatedRole as UserRole);
+          setLoading(false);
+          return;
+        }
+      }
 
       setUserRole(highestRole);
     } catch (error) {
@@ -91,7 +93,7 @@ export const useUserRole = () => {
         setLoading(false);
       }
     }
-  }, [user]);
+  }, [user, getImpersonationKey]);
 
   useEffect(() => {
     mountedRef.current = true;

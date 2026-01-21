@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { invokeWithTimeout } from '@/utils/supabaseHelpers';
 
 interface SubscriptionState {
   status?: string;
@@ -26,8 +26,9 @@ export function useSubscriptionActions(options: UseSubscriptionActionsOptions = 
     onOptimisticUpdate?.({ cancel_at_period_end: true });
     
     try {
-      const { data, error } = await supabase.functions.invoke('cancel-subscription');
-      
+      // SECURITY: Use timeout to prevent indefinite hang
+      const { data, error } = await invokeWithTimeout('cancel-subscription', { timeout: 30000 });
+
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       
@@ -56,8 +57,9 @@ export function useSubscriptionActions(options: UseSubscriptionActionsOptions = 
     onOptimisticUpdate?.({ cancel_at_period_end: false, status: 'active' });
     
     try {
-      const { data, error } = await supabase.functions.invoke('reactivate-subscription');
-      
+      // SECURITY: Use timeout to prevent indefinite hang
+      const { data, error } = await invokeWithTimeout('reactivate-subscription', { timeout: 30000 });
+
       if (error) throw error;
       
       if (data?.code === 'SUBSCRIPTION_ALREADY_CANCELED') {
@@ -90,8 +92,9 @@ export function useSubscriptionActions(options: UseSubscriptionActionsOptions = 
     setLoading('portal');
     
     try {
-      const { data, error } = await supabase.functions.invoke('create-portal-session');
-      
+      // SECURITY: Use timeout to prevent indefinite hang
+      const { data, error } = await invokeWithTimeout('create-portal-session', { timeout: 30000 });
+
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       

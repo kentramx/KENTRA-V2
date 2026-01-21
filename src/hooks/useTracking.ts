@@ -1,6 +1,7 @@
 import { useFacebookPixel, FacebookPixelEvent } from './useFacebookPixel';
 import { useGoogleAnalytics, GoogleAnalyticsEvent } from './useGoogleAnalytics';
 import { useGTM, GTMEvent } from './useGTM';
+import { monitoring } from '@/lib/monitoring';
 
 interface TrackingParameters {
   content_name?: string;
@@ -29,12 +30,25 @@ export const useTracking = () => {
   ) => {
     // Trackear mediante GTM (centralizado)
     trackGTMEvent(eventName as GTMEvent, parameters);
-    
-    // También trackear directamente por redundancia
-    await Promise.all([
+
+    // SECURITY: Use Promise.allSettled to prevent single tracker failure from breaking others
+    // Each tracker logs its own errors independently
+    const results = await Promise.allSettled([
       trackFBEvent(eventName, parameters),
       trackGAEvent(eventName, parameters),
     ]);
+
+    // Log any failures for debugging (non-blocking)
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const tracker = index === 0 ? 'Facebook Pixel' : 'Google Analytics';
+        monitoring.warn(`${tracker} tracking failed`, {
+          hook: 'useTracking',
+          eventName,
+          error: result.reason,
+        });
+      }
+    });
   };
 
   // Trackear pageview mediante GTM

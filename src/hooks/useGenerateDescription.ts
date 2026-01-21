@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PropertyFormData } from '@/hooks/useFormWizard';
+import { invokeWithTimeout } from '@/utils/supabaseHelpers';
 
 interface GenerateDescriptionResult {
   description: string;
@@ -20,9 +20,11 @@ export const useGenerateDescription = () => {
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke<GenerateDescriptionResult>(
+      // SECURITY: Use 60s timeout for AI generation (longer than standard operations)
+      const { data, error: fnError } = await invokeWithTimeout<GenerateDescriptionResult>(
         'generate-property-description',
         {
+          timeout: 60000, // 60 seconds for AI generation
           body: {
             propertyData: {
               type: formData.type,
@@ -40,8 +42,8 @@ export const useGenerateDescription = () => {
               sale_price: formData.sale_price,
               rent_price: formData.rent_price,
               currency: formData.currency,
-            }
-          }
+            },
+          },
         }
       );
 
