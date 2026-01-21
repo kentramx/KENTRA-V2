@@ -4,6 +4,7 @@
  */
 
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import type { PropertySummary } from '@/types/property';
 
 interface SearchResponse {
@@ -36,32 +37,24 @@ export function usePropertiesInfinite({
     initialPageParam: 1,
 
     queryFn: async ({ pageParam = 1 }): Promise<SearchResponse> => {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/property-search`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      const { data, error } = await supabase.functions.invoke('property-search', {
+        body: {
+          filters: {
+            listing_type: listing_type || null,
+            property_type: property_type || null,
           },
-          body: JSON.stringify({
-            filters: {
-              listing_type: listing_type || null,
-              property_type: property_type || null,
-            },
-            sort: 'newest',
-            page: pageParam,
-            limit,
-          }),
-        }
-      );
+          sort: 'newest',
+          page: pageParam,
+          limit,
+        },
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch properties');
+      if (error) {
+        console.error('[usePropertiesInfinite] Error:', error);
+        throw new Error(error.message || 'Failed to fetch properties');
       }
 
-      return response.json();
+      return data as SearchResponse;
     },
 
     getNextPageParam: (lastPage) => {

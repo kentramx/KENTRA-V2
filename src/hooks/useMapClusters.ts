@@ -4,6 +4,7 @@
  */
 
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useDebouncedValue } from './useDebouncedValue';
 import type { MapViewport, MapFilters, PropertyMarker, PropertyCluster } from '@/types/map';
 
@@ -41,36 +42,28 @@ export function useMapClusters({
         return { clusters: [], properties: [], total: 0, is_clustered: false };
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cluster-properties`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      const { data, error } = await supabase.functions.invoke('cluster-properties', {
+        body: {
+          bounds: debouncedViewport.bounds,
+          zoom: debouncedViewport.zoom,
+          filters: {
+            listing_type: filters.listing_type || null,
+            property_type: filters.property_type || null,
+            min_price: filters.min_price || null,
+            max_price: filters.max_price || null,
+            min_bedrooms: filters.min_bedrooms || null,
+            state: filters.state || null,
+            municipality: filters.municipality || null,
           },
-          body: JSON.stringify({
-            bounds: debouncedViewport.bounds,
-            zoom: debouncedViewport.zoom,
-            filters: {
-              listing_type: filters.listing_type || null,
-              property_type: filters.property_type || null,
-              min_price: filters.min_price || null,
-              max_price: filters.max_price || null,
-              min_bedrooms: filters.min_bedrooms || null,
-              state: filters.state || null,
-              municipality: filters.municipality || null,
-            },
-          }),
-        }
-      );
+        },
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch map data');
+      if (error) {
+        console.error('[useMapClusters] Error:', error);
+        throw new Error(error.message || 'Failed to fetch map data');
       }
 
-      return response.json();
+      return data as MapClustersResponse;
     },
   });
 

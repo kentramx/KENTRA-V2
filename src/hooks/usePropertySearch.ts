@@ -4,6 +4,7 @@
  */
 
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import type { MapFilters, MapBounds } from '@/types/map';
 import type { PropertySummary } from '@/types/property';
 
@@ -40,38 +41,30 @@ export function usePropertySearch({
     refetchOnWindowFocus: false,
 
     queryFn: async (): Promise<SearchResponse> => {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/property-search`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      const { data, error } = await supabase.functions.invoke('property-search', {
+        body: {
+          filters: {
+            listing_type: filters.listing_type || null,
+            property_type: filters.property_type || null,
+            min_price: filters.min_price || null,
+            max_price: filters.max_price || null,
+            min_bedrooms: filters.min_bedrooms || null,
+            state: filters.state || null,
+            municipality: filters.municipality || null,
           },
-          body: JSON.stringify({
-            filters: {
-              listing_type: filters.listing_type || null,
-              property_type: filters.property_type || null,
-              min_price: filters.min_price || null,
-              max_price: filters.max_price || null,
-              min_bedrooms: filters.min_bedrooms || null,
-              state: filters.state || null,
-              municipality: filters.municipality || null,
-            },
-            bounds,
-            sort,
-            page,
-            limit,
-          }),
-        }
-      );
+          bounds,
+          sort,
+          page,
+          limit,
+        },
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to search properties');
+      if (error) {
+        console.error('[usePropertySearch] Error:', error);
+        throw new Error(error.message || 'Failed to search properties');
       }
 
-      return response.json();
+      return data as SearchResponse;
     },
   });
 
