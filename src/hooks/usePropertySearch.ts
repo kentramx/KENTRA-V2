@@ -24,6 +24,17 @@ interface UsePropertySearchOptions {
   enabled?: boolean;
 }
 
+// Validate that bounds has all four required values
+function isValidBounds(bounds: MapBounds | null | undefined): bounds is MapBounds {
+  if (!bounds) return false;
+  return (
+    typeof bounds.north === 'number' && !isNaN(bounds.north) &&
+    typeof bounds.south === 'number' && !isNaN(bounds.south) &&
+    typeof bounds.east === 'number' && !isNaN(bounds.east) &&
+    typeof bounds.west === 'number' && !isNaN(bounds.west)
+  );
+}
+
 export function usePropertySearch({
   filters = {},
   bounds = null,
@@ -32,8 +43,11 @@ export function usePropertySearch({
   limit = 20,
   enabled = true,
 }: UsePropertySearchOptions) {
+  // Only use bounds if they're valid and complete
+  const validBounds = isValidBounds(bounds) ? bounds : null;
+
   const query = useQuery({
-    queryKey: ['property-search', filters, bounds, sort, page, limit],
+    queryKey: ['property-search', filters, validBounds, sort, page, limit],
     enabled,
     staleTime: 60_000, // 1 minuto
     gcTime: 5 * 60_000, // 5 minutos
@@ -41,6 +55,8 @@ export function usePropertySearch({
     refetchOnWindowFocus: false,
 
     queryFn: async (): Promise<SearchResponse> => {
+      console.log('[usePropertySearch] Fetching with bounds:', validBounds);
+
       const { data, error } = await supabase.functions.invoke('property-search', {
         body: {
           filters: {
@@ -52,7 +68,7 @@ export function usePropertySearch({
             state: filters.state || null,
             municipality: filters.municipality || null,
           },
-          bounds,
+          bounds: validBounds,
           sort,
           page,
           limit,
@@ -64,6 +80,7 @@ export function usePropertySearch({
         throw new Error(error.message || 'Failed to search properties');
       }
 
+      console.log('[usePropertySearch] Response total:', data?.total);
       return data as SearchResponse;
     },
   });

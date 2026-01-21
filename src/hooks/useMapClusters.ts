@@ -6,7 +6,7 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useDebouncedValue } from './useDebouncedValue';
-import type { MapViewport, MapFilters, PropertyMarker, PropertyCluster } from '@/types/map';
+import type { MapViewport, MapFilters, PropertyMarker, PropertyCluster, MapBounds } from '@/types/map';
 
 interface MapClustersResponse {
   clusters: PropertyCluster[];
@@ -21,6 +21,17 @@ interface UseMapClustersOptions {
   enabled?: boolean;
 }
 
+// Validate that bounds has all four required values
+function isValidBounds(bounds: MapBounds | null | undefined): bounds is MapBounds {
+  if (!bounds) return false;
+  return (
+    typeof bounds.north === 'number' && !isNaN(bounds.north) &&
+    typeof bounds.south === 'number' && !isNaN(bounds.south) &&
+    typeof bounds.east === 'number' && !isNaN(bounds.east) &&
+    typeof bounds.west === 'number' && !isNaN(bounds.west)
+  );
+}
+
 export function useMapClusters({
   viewport,
   filters = {},
@@ -29,18 +40,25 @@ export function useMapClusters({
   // Debounce de 200ms para UX más responsive
   const debouncedViewport = useDebouncedValue(viewport, 200);
 
+  // Validate bounds are complete
+  const hasValidBounds = debouncedViewport !== null && isValidBounds(debouncedViewport.bounds);
+
   const query = useQuery({
     queryKey: ['map-clusters', debouncedViewport, filters],
-    enabled: enabled && debouncedViewport !== null && debouncedViewport.zoom >= 4,
+    // Only enable when we have valid, complete bounds
+    enabled: enabled && hasValidBounds && debouncedViewport!.zoom >= 4,
     staleTime: 60_000, // 1 minuto
     gcTime: 5 * 60_000, // 5 minutos
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
 
     queryFn: async (): Promise<MapClustersResponse> => {
-      if (!debouncedViewport) {
+      if (!debouncedViewport || !isValidBounds(debouncedViewport.bounds)) {
+        console.warn('[useMapClusters] Invalid bounds:', debouncedViewport?.bounds);
         return { clusters: [], properties: [], total: 0, is_clustered: false };
       }
+
+      console.log('[useMapClusters] Fetching with bounds:', debouncedViewport.bounds);
 
       const { data, error } = await supabase.functions.invoke('cluster-properties', {
         body: {
@@ -63,6 +81,7 @@ export function useMapClusters({
         throw new Error(error.message || 'Failed to fetch map data');
       }
 
+      console.log('[useMapClusters] Response:', data);
       return data as MapClustersResponse;
     },
   });
