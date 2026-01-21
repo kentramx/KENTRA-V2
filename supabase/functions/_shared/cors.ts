@@ -12,8 +12,9 @@ const ALLOWED_ORIGINS = [
 ];
 
 // Pattern for Lovable preview URLs (e.g., https://id--project.lovable.app)
-const LOVABLE_PATTERN = /^https:\/\/[a-z0-9-]+--[a-z0-9-]+\.lovable\.app$/;
-const GPT_PATTERN = /^https:\/\/[a-z0-9-]+\.gptengineer\.app$/;
+// Using case-insensitive flag for flexibility
+const LOVABLE_PATTERN = /^https:\/\/[a-z0-9-]+--[a-z0-9-]+\.lovable\.app$/i;
+const GPT_PATTERN = /^https:\/\/[a-z0-9-]+\.gptengineer\.app$/i;
 
 /**
  * Check if origin is allowed
