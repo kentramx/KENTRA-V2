@@ -18,7 +18,8 @@ export const useBlockedUsers = () => {
   return useQuery({
     queryKey: ['blocked-users'],
     queryFn: async (): Promise<BlockedUser[]> => {
-      const { data, error } = await (supabase.rpc as any)('get_blocked_users');
+      // @ts-expect-error - RPC function not typed in generated schema
+      const { data, error } = await supabase.rpc('get_blocked_users');
 
       if (error) throw error;
       return (data as BlockedUser[]) || [];
@@ -36,7 +37,8 @@ export const useIsUserBlocked = (otherUserId: string | null) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
 
-      const { data, error } = await (supabase.rpc as any)('is_user_blocked', {
+      // @ts-expect-error - RPC function not typed in generated schema
+      const { data, error } = await supabase.rpc('is_user_blocked', {
         p_user_id: user.id,
         p_other_user_id: otherUserId,
       });
@@ -59,7 +61,8 @@ export const useBlockUser = () => {
 
   return useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason?: string }): Promise<BlockUserResult> => {
-      const { data, error } = await (supabase.rpc as any)('block_user', {
+      // @ts-expect-error - RPC function not typed in generated schema
+      const { data, error } = await supabase.rpc('block_user', {
         p_user_id_to_block: userId,
         p_reason: reason || null,
       });
@@ -102,7 +105,8 @@ export const useUnblockUser = () => {
 
   return useMutation({
     mutationFn: async (userId: string): Promise<BlockUserResult> => {
-      const { data, error } = await (supabase.rpc as any)('unblock_user', {
+      // @ts-expect-error - RPC function not typed in generated schema
+      const { data, error } = await supabase.rpc('unblock_user', {
         p_user_id_to_unblock: userId,
       });
 

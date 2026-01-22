@@ -136,7 +136,7 @@ const flushEvents = async (sync = false): Promise<void> => {
       const blob = new Blob([payload], { type: 'application/json' });
       navigator.sendBeacon(url, blob);
     } else {
-      const { error } = await supabase.from('conversion_events').insert(eventsToFlush as any);
+      const { error } = await supabase.from('conversion_events').insert(eventsToFlush as QueuedEvent[]);
 
       if (error) {
         eventQueue = [...eventsToFlush, ...eventQueue];
