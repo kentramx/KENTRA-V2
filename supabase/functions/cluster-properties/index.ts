@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       p_min_bedrooms: filters.min_bedrooms || null,
       p_state: filters.state || null,
       p_municipality: filters.municipality || null,
-      p_limit: 50000,
+      p_limit: 5000, // SCALABILITY: Reduced from 50K to prevent memory issues at 500K properties
     });
 
     if (error) {
