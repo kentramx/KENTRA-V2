@@ -45,7 +45,7 @@ export function CouponManagement() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewRedemptionsId, setViewRedemptionsId] = useState<string | null>(null);
-  const [redemptions, setRedemptions] = useState<any[]>([]);
+  const [redemptions, setRedemptions] = useState<Array<Record<string, unknown>>>([]);
 
   // Form state
   const [formData, setFormData] = useState({

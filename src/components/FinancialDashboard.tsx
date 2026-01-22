@@ -132,7 +132,8 @@ export function FinancialDashboard() {
       setLoading(true);
       const { start, end } = getDateRange();
 
-      const { data, error } = await (supabase.rpc as any)('get_financial_metrics', {
+      const { data, error } = // @ts-expect-error - RPC function not typed in generated schema
+      await supabase.rpc('get_financial_metrics', {
         start_date: start.toISOString(),
         end_date: end.toISOString(),
       });

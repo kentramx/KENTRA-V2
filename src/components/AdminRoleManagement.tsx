@@ -138,7 +138,8 @@ export const AdminRoleManagement = ({ currentUserId, isSuperAdmin }: AdminRoleMa
       const foundUser = searchResult.user;
 
       // Promover usando la función RPC
-      const { error: promoteError } = await (supabase.rpc as any)('promote_user_to_admin', {
+      const { error: promoteError } = // @ts-expect-error - RPC function not typed in generated schema
+      await supabase.rpc('promote_user_to_admin', {
         target_user_id: foundUser.id,
         new_admin_role: selectedRole,
       });

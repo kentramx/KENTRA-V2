@@ -248,7 +248,8 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleRenewProperty = async (propertyId: string) => {
     try {
-      const { error } = await (supabase.rpc as any)('renew_property', {
+      const { error } = // @ts-expect-error - RPC function not typed in generated schema
+      await supabase.rpc('renew_property', {
         property_id: propertyId
       });
       
@@ -269,7 +270,8 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleResubmitProperty = async (propertyId: string) => {
     try {
-      const { data, error } = await (supabase.rpc as any)('resubmit_property', { property_id: propertyId });
+      const { data, error } = // @ts-expect-error - RPC function not typed in generated schema
+      await supabase.rpc('resubmit_property', { property_id: propertyId });
       
       if (error) {
         toast({ title: 'Error', description: error.message || 'No se pudo conectar', variant: 'destructive' });
@@ -309,7 +311,8 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleReactivateProperty = async (propertyId: string) => {
     try {
-      const { error } = await (supabase.rpc as any)('reactivate_property', { property_id: propertyId });
+      const { error } = // @ts-expect-error - RPC function not typed in generated schema
+      await supabase.rpc('reactivate_property', { property_id: propertyId });
       
       if (error) throw error;
       

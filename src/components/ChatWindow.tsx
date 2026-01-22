@@ -451,7 +451,8 @@ export const ChatWindow = ({
 
     try {
       // Llamar a la función de base de datos para marcar mensajes como leídos
-      const { error } = await (supabase.rpc as any)('mark_messages_as_read', {
+      const { error } = // @ts-expect-error - RPC function not typed in generated schema
+      await supabase.rpc('mark_messages_as_read', {
         p_conversation_id: conversationId,
         p_user_id: user.id,
       });

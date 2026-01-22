@@ -30,7 +30,7 @@ export const PropertyAssignmentHistory = ({
 }: PropertyAssignmentHistoryProps) => {
   const { toast } = useToast();
   const { error: logError, captureException } = useMonitoring();
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

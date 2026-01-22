@@ -204,7 +204,8 @@ export const AgentAnalytics = ({ agentId }: { agentId: string }) => {
   const fetchAnalytics = async () => {
     try {
       // Fetch overall stats
-      const { data: statsData, error: statsError } = await (supabase.rpc as any)("get_agent_stats", { agent_uuid: agentId });
+      const { data: statsData, error: statsError } = // @ts-expect-error - RPC function not typed in generated schema
+      await supabase.rpc("get_agent_stats", { agent_uuid: agentId });
 
       if (statsError) throw statsError;
       setStats(statsData?.[0] || null);
