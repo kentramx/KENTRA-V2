@@ -29,6 +29,23 @@ interface ConversationListProps {
   onSelect: (conversation: Conversation) => void;
 }
 
+// Response type from RPC
+interface ConversationRPCResult {
+  id: string;
+  property_id: string;
+  buyer_id: string;
+  agent_id: string;
+  created_at: string;
+  updated_at: string;
+  property_title: string | null;
+  property_address: string | null;
+  last_message_content: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+  other_user_name: string | null;
+  other_user_avatar: string | null;
+}
+
 export const ConversationList = ({ selectedId, onSelect }: ConversationListProps) => {
   const { user } = useAuth();
   const { error: logError, captureException } = useMonitoring();
@@ -77,7 +94,57 @@ export const ConversationList = ({ selectedId, onSelect }: ConversationListProps
     if (!user) return;
 
     try {
-      // Fetch conversaciones con datos relacionados
+      // SCALABILITY: Use RPC to eliminate N+1 queries
+      // Single query with JOINs instead of 3N additional queries
+      const { data, error } = await supabase.rpc('get_user_conversations', {
+        p_user_id: user.id,
+        p_limit: 50,
+        p_offset: 0,
+      });
+
+      if (error) {
+        // Fallback to old method if RPC not available
+        console.warn('Falling back to legacy conversation fetch:', error.message);
+        await fetchConversationsLegacy();
+        return;
+      }
+
+      const rpcResults = data as ConversationRPCResult[];
+      const conversationsWithDetails: Conversation[] = rpcResults.map((convo) => ({
+        id: convo.id,
+        property_id: convo.property_id,
+        buyer_id: convo.buyer_id,
+        agent_id: convo.agent_id,
+        updated_at: convo.updated_at,
+        property_title: convo.property_title || undefined,
+        property_address: convo.property_address || undefined,
+        other_user_name: convo.other_user_name || 'Usuario',
+        last_message: convo.last_message_content || undefined,
+        last_message_time: convo.last_message_at || undefined,
+        unread_count: Number(convo.unread_count) || 0,
+      }));
+
+      setConversations(conversationsWithDetails);
+    } catch (error) {
+      logError('Error fetching conversations', {
+        component: 'ConversationList',
+        userId: user?.id,
+        error,
+      });
+      captureException(error as Error, {
+        component: 'ConversationList',
+        action: 'fetchConversations',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Legacy fallback method (N+1 queries) - only used if RPC not available
+  const fetchConversationsLegacy = async () => {
+    if (!user) return;
+
+    try {
       const { data: convos, error: convosError } = await supabase
         .from('conversations')
         .select(`
@@ -88,14 +155,14 @@ export const ConversationList = ({ selectedId, onSelect }: ConversationListProps
           )
         `)
         .or(`buyer_id.eq.${user.id},agent_id.eq.${user.id}`)
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .limit(50); // SCALABILITY: Add limit to prevent loading thousands
 
       if (convosError) throw convosError;
 
       // Para cada conversación, obtener el último mensaje y el otro usuario
       const conversationsWithDetails = await Promise.all(
         (convos || []).map(async (convo) => {
-          // Obtener último mensaje
           const { data: lastMsg } = await supabase
             .from('messages')
             .select('content, created_at, message_type')
@@ -104,7 +171,6 @@ export const ConversationList = ({ selectedId, onSelect }: ConversationListProps
             .limit(1)
             .single();
 
-          // Obtener datos del otro usuario
           const otherUserId = convo.buyer_id === user.id ? convo.agent_id : convo.buyer_id;
           const { data: otherUser } = await supabase
             .from('profiles')
@@ -112,7 +178,6 @@ export const ConversationList = ({ selectedId, onSelect }: ConversationListProps
             .eq('id', otherUserId)
             .single();
 
-          // Obtener unread count
           const { data: participant } = await supabase
             .from('conversation_participants')
             .select('unread_count')
@@ -135,17 +200,12 @@ export const ConversationList = ({ selectedId, onSelect }: ConversationListProps
 
       setConversations(conversationsWithDetails);
     } catch (error) {
-      logError('Error fetching conversations', {
+      logError('Error in legacy conversation fetch', {
         component: 'ConversationList',
         userId: user?.id,
         error,
       });
-      captureException(error as Error, {
-        component: 'ConversationList',
-        action: 'fetchConversations',
-      });
-    } finally {
-      setLoading(false);
+      throw error;
     }
   };
 
@@ -208,8 +268,8 @@ export const ConversationList = ({ selectedId, onSelect }: ConversationListProps
                     <Image className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   )}
                   <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
-                    {conversation.last_message_type === 'image' 
-                      ? 'Imagen' 
+                    {conversation.last_message_type === 'image'
+                      ? 'Imagen'
                       : conversation.last_message}
                   </p>
                 </div>

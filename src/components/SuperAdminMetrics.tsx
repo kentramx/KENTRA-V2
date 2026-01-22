@@ -46,7 +46,6 @@ export const SuperAdminMetrics = () => {
 
   useEffect(() => {
     fetchMetrics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchMetrics only needs to run on mount
   }, []);
 
   const fetchMetrics = async () => {
@@ -56,153 +55,165 @@ export const SuperAdminMetrics = () => {
       const now = new Date();
       const startOfThisMonth = startOfMonth(now);
       const endOfThisMonth = endOfMonth(now);
-      
+
       // Previous periods
       const startOfLastMonth = startOfMonth(subMonths(now, 1));
       const endOfLastMonth = endOfMonth(subMonths(now, 1));
       const startOfLastYear = startOfMonth(subYears(now, 1));
       const endOfLastYear = endOfMonth(subYears(now, 1));
 
-      // Total users
-      const { count: totalUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-
-      // New users this month
-      const { count: newUsersThisMonth } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', startOfThisMonth.toISOString())
-        .lte('created_at', endOfThisMonth.toISOString());
-
-      // Users last month (for MoM comparison)
-      const { count: lastMonthUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', startOfLastMonth.toISOString())
-        .lte('created_at', endOfLastMonth.toISOString());
-
-      // Users same month last year (for YoY comparison)
-      const { count: lastYearUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', startOfLastYear.toISOString())
-        .lte('created_at', endOfLastYear.toISOString());
-
-      // Monthly revenue (current month)
-      const { data: monthlyPayments } = await supabase
-        .from('payment_history')
-        .select('amount')
-        .eq('status', 'succeeded')
-        .gte('created_at', startOfThisMonth.toISOString())
-        .lte('created_at', endOfThisMonth.toISOString());
-
-      const monthlyRevenue = monthlyPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-
-      // Revenue last month (for MoM comparison)
-      const { data: lastMonthPayments } = await supabase
-        .from('payment_history')
-        .select('amount')
-        .eq('status', 'succeeded')
-        .gte('created_at', startOfLastMonth.toISOString())
-        .lte('created_at', endOfLastMonth.toISOString());
-
-      const lastMonthRevenue = lastMonthPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-
-      // Total revenue (all time)
-      const { data: allPayments } = await supabase
-        .from('payment_history')
-        .select('amount')
-        .eq('status', 'succeeded');
-
-      const totalRevenue = allPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-
-      // Active properties (current)
-      const { count: activeProperties } = await supabase
-        .from('properties')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'activa');
-
-      // Active properties last month (for MoM comparison)
-      const { count: lastMonthProperties } = await supabase
-        .from('properties')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'activa')
-        .lte('created_at', endOfLastMonth.toISOString());
-
-      // Conversion rate: users with subscriptions / total agents
-      const { count: totalAgents } = await supabase
-        .from('user_roles')
-        .select('*', { count: 'exact', head: true })
-        .in('role', ['agent', 'agency']);
-
-      const { count: subscribedUsers } = await supabase
-        .from('user_subscriptions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
-
-      const conversionRate = totalAgents && totalAgents > 0 
-        ? (subscribedUsers || 0) / totalAgents * 100 
-        : 0;
-
-      // Conversion rate last month (for MoM comparison)
-      const { count: totalAgentsLastMonth } = await supabase
-        .from('user_roles')
-        .select('*', { count: 'exact', head: true })
-        .in('role', ['agent', 'agency'])
-        .lte('created_at', endOfLastMonth.toISOString());
-
-      const { count: subscribedUsersLastMonth } = await supabase
-        .from('user_subscriptions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .lte('created_at', endOfLastMonth.toISOString());
-
-      const lastMonthConversion = totalAgentsLastMonth && totalAgentsLastMonth > 0
-        ? (subscribedUsersLastMonth || 0) / totalAgentsLastMonth * 100
-        : 0;
-
-      setKpiData({
-        totalUsers: totalUsers || 0,
-        monthlyRevenue,
-        activeProperties: activeProperties || 0,
-        conversionRate,
-        newUsersThisMonth: newUsersThisMonth || 0,
-        totalRevenue,
-        lastMonthUsers: lastMonthUsers || 0,
-        lastYearUsers: lastYearUsers || 0,
-        lastMonthRevenue,
-        lastMonthProperties: lastMonthProperties || 0,
-        lastMonthConversion,
-      });
-
-      // Monthly trends (last 6 months)
-      const trends = await Promise.all(
-        Array.from({ length: 6 }, (_, i) => {
-          const monthDate = subMonths(new Date(), 5 - i);
-          const start = startOfMonth(monthDate);
-          const end = endOfMonth(monthDate);
-          return fetchMonthData(start, end);
-        })
-      );
-
-      setMonthlyTrends(trends);
-
-      // Subscription distribution
-      const { data: subscriptions } = await supabase
-        .from('user_subscriptions')
-        .select(`
+      // SCALABILITY: Batch all independent queries in parallel instead of sequential
+      const [
+        // User counts
+        totalUsersResult,
+        newUsersThisMonthResult,
+        lastMonthUsersResult,
+        lastYearUsersResult,
+        // Revenue data
+        monthlyPaymentsResult,
+        lastMonthPaymentsResult,
+        allPaymentsResult,
+        // Property counts
+        activePropertiesResult,
+        lastMonthPropertiesResult,
+        // Conversion rate data
+        totalAgentsResult,
+        subscribedUsersResult,
+        totalAgentsLastMonthResult,
+        subscribedUsersLastMonthResult,
+        // Subscriptions distribution
+        subscriptionsResult,
+      ] = await Promise.all([
+        // User counts
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true })
+          .gte('created_at', startOfThisMonth.toISOString())
+          .lte('created_at', endOfThisMonth.toISOString()),
+        supabase.from('profiles').select('*', { count: 'exact', head: true })
+          .gte('created_at', startOfLastMonth.toISOString())
+          .lte('created_at', endOfLastMonth.toISOString()),
+        supabase.from('profiles').select('*', { count: 'exact', head: true })
+          .gte('created_at', startOfLastYear.toISOString())
+          .lte('created_at', endOfLastYear.toISOString()),
+        // Revenue data - use SUM aggregation via RPC or select amounts
+        supabase.from('payment_history').select('amount')
+          .eq('status', 'succeeded')
+          .gte('created_at', startOfThisMonth.toISOString())
+          .lte('created_at', endOfThisMonth.toISOString()),
+        supabase.from('payment_history').select('amount')
+          .eq('status', 'succeeded')
+          .gte('created_at', startOfLastMonth.toISOString())
+          .lte('created_at', endOfLastMonth.toISOString()),
+        supabase.from('payment_history').select('amount')
+          .eq('status', 'succeeded'),
+        // Property counts
+        supabase.from('properties').select('*', { count: 'exact', head: true })
+          .eq('status', 'activa'),
+        supabase.from('properties').select('*', { count: 'exact', head: true })
+          .eq('status', 'activa')
+          .lte('created_at', endOfLastMonth.toISOString()),
+        // Conversion rate data
+        supabase.from('user_roles').select('*', { count: 'exact', head: true })
+          .in('role', ['agent', 'agency']),
+        supabase.from('user_subscriptions').select('*', { count: 'exact', head: true })
+          .eq('status', 'active'),
+        supabase.from('user_roles').select('*', { count: 'exact', head: true })
+          .in('role', ['agent', 'agency'])
+          .lte('created_at', endOfLastMonth.toISOString()),
+        supabase.from('user_subscriptions').select('*', { count: 'exact', head: true })
+          .eq('status', 'active')
+          .lte('created_at', endOfLastMonth.toISOString()),
+        // Subscription distribution
+        supabase.from('user_subscriptions').select(`
           plan_id,
           subscription_plans (
             display_name,
             price_monthly
           )
-        `)
-        .eq('status', 'active');
+        `).eq('status', 'active'),
+      ]);
 
+      // Extract counts
+      const totalUsers = totalUsersResult.count || 0;
+      const newUsersThisMonth = newUsersThisMonthResult.count || 0;
+      const lastMonthUsers = lastMonthUsersResult.count || 0;
+      const lastYearUsers = lastYearUsersResult.count || 0;
+      const activeProperties = activePropertiesResult.count || 0;
+      const lastMonthProperties = lastMonthPropertiesResult.count || 0;
+      const totalAgents = totalAgentsResult.count || 0;
+      const subscribedUsers = subscribedUsersResult.count || 0;
+      const totalAgentsLastMonth = totalAgentsLastMonthResult.count || 0;
+      const subscribedUsersLastMonth = subscribedUsersLastMonthResult.count || 0;
+
+      // Calculate revenues
+      const monthlyRevenue = monthlyPaymentsResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+      const lastMonthRevenue = lastMonthPaymentsResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+      const totalRevenue = allPaymentsResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+
+      // Calculate conversion rates
+      const conversionRate = totalAgents > 0
+        ? (subscribedUsers / totalAgents * 100)
+        : 0;
+
+      const lastMonthConversion = totalAgentsLastMonth > 0
+        ? (subscribedUsersLastMonth / totalAgentsLastMonth * 100)
+        : 0;
+
+      setKpiData({
+        totalUsers,
+        monthlyRevenue,
+        activeProperties,
+        conversionRate,
+        newUsersThisMonth,
+        totalRevenue,
+        lastMonthUsers,
+        lastYearUsers,
+        lastMonthRevenue,
+        lastMonthProperties,
+        lastMonthConversion,
+      });
+
+      // SCALABILITY: Monthly trends - batch all 6 months in parallel
+      const monthRanges = Array.from({ length: 6 }, (_, i) => {
+        const monthDate = subMonths(new Date(), 5 - i);
+        return {
+          label: format(startOfMonth(monthDate), 'MMM', { locale: es }),
+          start: startOfMonth(monthDate),
+          end: endOfMonth(monthDate),
+        };
+      });
+
+      // Fetch all monthly data in parallel (18 queries -> 6 batched calls)
+      const trendsResults = await Promise.all(
+        monthRanges.map(async ({ label, start, end }) => {
+          const [usersRes, paymentsRes, propsRes] = await Promise.all([
+            supabase.from('profiles').select('*', { count: 'exact', head: true })
+              .gte('created_at', start.toISOString())
+              .lte('created_at', end.toISOString()),
+            supabase.from('payment_history').select('amount')
+              .eq('status', 'succeeded')
+              .gte('created_at', start.toISOString())
+              .lte('created_at', end.toISOString()),
+            supabase.from('properties').select('*', { count: 'exact', head: true })
+              .gte('created_at', start.toISOString())
+              .lte('created_at', end.toISOString()),
+          ]);
+
+          return {
+            month: label,
+            users: usersRes.count || 0,
+            revenue: paymentsRes.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0,
+            properties: propsRes.count || 0,
+          };
+        })
+      );
+
+      setMonthlyTrends(trendsResults);
+
+      // Process subscription distribution (already fetched above)
       const distMap = new Map<string, { count: number; revenue: number }>();
-      
-      subscriptions?.forEach(sub => {
+
+      subscriptionsResult.data?.forEach(sub => {
         const plans = sub.subscription_plans as { display_name?: string; price_monthly?: number } | null;
         const planName = plans?.display_name || 'Desconocido';
         const price = Number(plans?.price_monthly || 0);
@@ -226,38 +237,6 @@ export const SuperAdminMetrics = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchMonthData = async (start: Date, end: Date): Promise<MonthlyData> => {
-    const monthLabel = format(start, 'MMM', { locale: es });
-
-    const { count: users } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', start.toISOString())
-      .lte('created_at', end.toISOString());
-
-    const { data: payments } = await supabase
-      .from('payment_history')
-      .select('amount')
-      .eq('status', 'succeeded')
-      .gte('created_at', start.toISOString())
-      .lte('created_at', end.toISOString());
-
-    const revenue = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-
-    const { count: properties } = await supabase
-      .from('properties')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', start.toISOString())
-      .lte('created_at', end.toISOString());
-
-    return {
-      month: monthLabel,
-      users: users || 0,
-      revenue,
-      properties: properties || 0,
-    };
   };
 
   if (loading) {

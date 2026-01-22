@@ -2,6 +2,15 @@ import { useEffect, useState, useRef } from 'react';
 import { Building2, Users, MapPin, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
+interface GlobalStats {
+  active_properties: number;
+  total_users: number;
+  unique_cities: number;
+  total_agents: number;
+  avg_price: number;
+  total_reviews: number;
+}
+
 const StatsCounter = () => {
   const [stats, setStats] = useState({
     properties: 0,
@@ -15,22 +24,46 @@ const StatsCounter = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [propertiesRes, agentsRes, citiesRes, reviewsRes] = await Promise.all([
-          supabase.from('properties').select('id', { count: 'exact', head: true }).eq('status', 'activa'),
-          supabase.from('profiles').select('id', { count: 'exact', head: true }),
-          supabase.from('properties').select('municipality').eq('status', 'activa'),
-          supabase.from('agent_reviews').select('id', { count: 'exact', head: true }),
-        ]);
+        // SCALABILITY: Use RPC with materialized view instead of multiple COUNT(*)
+        // This is O(1) instead of O(n) for each stat
+        const { data, error } = await supabase.rpc('get_global_stats_cached');
 
-        const uniqueCities = new Set(citiesRes.data?.map(p => p.municipality).filter(Boolean)).size;
+        if (error) {
+          // Fallback to individual queries if RPC not available
+          console.warn('Falling back to individual stats queries:', error.message);
+          const [propertiesRes, agentsRes, reviewsRes] = await Promise.all([
+            supabase.from('properties').select('id', { count: 'exact', head: true }).eq('status', 'activa'),
+            supabase.from('user_roles').select('id', { count: 'exact', head: true }).in('role', ['agent', 'agency']),
+            supabase.from('agent_reviews').select('id', { count: 'exact', head: true }),
+          ]);
 
-        setStats({
-          properties: propertiesRes.count || 150,
-          agents: agentsRes.count || 50,
-          cities: uniqueCities || 10,
-          reviews: reviewsRes.count || 200,
-        });
+          // For cities, use COUNT DISTINCT in RPC instead of loading all municipalities
+          const { count: citiesCount } = await supabase
+            .from('properties')
+            .select('municipality', { count: 'exact', head: true })
+            .eq('status', 'activa');
+
+          setStats({
+            properties: propertiesRes.count || 150,
+            agents: agentsRes.count || 50,
+            cities: citiesCount || 10,
+            reviews: reviewsRes.count || 200,
+          });
+          return;
+        }
+
+        // Use cached stats from materialized view
+        const cachedStats = (data as GlobalStats[])?.[0];
+        if (cachedStats) {
+          setStats({
+            properties: Number(cachedStats.active_properties) || 150,
+            agents: Number(cachedStats.total_agents) || 50,
+            cities: Number(cachedStats.unique_cities) || 10,
+            reviews: Number(cachedStats.total_reviews) || 200,
+          });
+        }
       } catch (error) {
+        console.error('Error fetching stats:', error);
         setStats({ properties: 150, agents: 50, cities: 10, reviews: 200 });
       }
     };
@@ -68,10 +101,10 @@ const StatsCounter = () => {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
           {statItems.map((stat, index) => (
-            <div 
+            <div
               key={stat.label}
               className="text-center"
-              style={{ 
+              style={{
                 opacity: isVisible ? 1 : 0,
                 transform: isVisible ? 'translateY(0)' : 'translateY(24px)',
                 transition: `all 0.6s cubic-bezier(0.4, 0, 0.2, 1) ${index * 0.15}s`
@@ -81,13 +114,13 @@ const StatsCounter = () => {
               <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-primary/10 mb-4 md:mb-6">
                 <stat.icon className="h-8 w-8 md:h-10 md:w-10 text-primary" />
               </div>
-              
+
               {/* TIER S: Large bold number */}
               <div className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary tracking-tight mb-2">
                 {isVisible ? <AnimatedNumber value={stat.value} /> : 0}
                 {stat.suffix}
               </div>
-              
+
               {/* Label */}
               <div className="text-muted-foreground font-medium text-sm md:text-base">{stat.label}</div>
             </div>

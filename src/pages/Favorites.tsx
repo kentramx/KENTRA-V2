@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Heart } from 'lucide-react';
 import { DynamicBreadcrumbs } from '@/components/DynamicBreadcrumbs';
 import { useFavorites } from '@/hooks/useFavorites';
+import { Button } from '@/components/ui/button';
 import type { PropertySummary } from '@/types/property';
 
 // Tipo para los datos que vienen de la DB con relación de properties
@@ -41,6 +42,31 @@ interface FavoriteWithProperty {
   properties: DBProperty;
 }
 
+// Response type from RPC
+interface FavoriteRPCResult {
+  favorite_id: string;
+  created_at: string;
+  property_id: string;
+  property: {
+    id: string;
+    title: string;
+    address: string;
+    municipality: string;
+    state: string;
+    price: number;
+    currency: string;
+    bedrooms: number | null;
+    bathrooms: number | null;
+    sqft: number | null;
+    listing_type: string;
+    type: string;
+    status: string;
+    image_url: string | null;
+  };
+}
+
+const PAGE_SIZE = 20;
+
 const Favorites = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -48,6 +74,10 @@ const Favorites = () => {
   const { favorites, toggleFavorite } = useFavorites();
   const [favoritesData, setFavoritesData] = useState<FavoriteWithProperty[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -57,13 +87,85 @@ const Favorites = () => {
 
   useEffect(() => {
     if (user) {
-      fetchFavorites();
+      fetchFavorites(0, true);
     }
   }, [user]);
 
-  const fetchFavorites = async () => {
+  const fetchFavorites = useCallback(async (pageNum: number, reset: boolean = false) => {
+    if (!user) return;
+
     try {
-      const { data, error } = await supabase
+      if (reset) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      // SCALABILITY: Try RPC first for paginated favorites
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_user_favorites', {
+        p_user_id: user.id,
+        p_limit: PAGE_SIZE,
+        p_offset: pageNum * PAGE_SIZE,
+      });
+
+      if (!rpcError && rpcData) {
+        // RPC available - use paginated data
+        const rpcResults = rpcData as FavoriteRPCResult[];
+
+        // Convert RPC results to expected format
+        const newFavorites: FavoriteWithProperty[] = rpcResults.map((fav) => ({
+          id: fav.favorite_id,
+          property_id: fav.property_id,
+          properties: {
+            id: fav.property.id,
+            title: fav.property.title,
+            price: fav.property.price,
+            currency: fav.property.currency,
+            type: fav.property.type,
+            listing_type: fav.property.listing_type,
+            for_sale: fav.property.listing_type === 'sale',
+            for_rent: fav.property.listing_type === 'rent',
+            sale_price: fav.property.listing_type === 'sale' ? fav.property.price : null,
+            rent_price: fav.property.listing_type === 'rent' ? fav.property.price : null,
+            address: fav.property.address,
+            colonia: null,
+            municipality: fav.property.municipality,
+            state: fav.property.state,
+            bedrooms: fav.property.bedrooms,
+            bathrooms: fav.property.bathrooms,
+            parking: null,
+            sqft: fav.property.sqft,
+            agent_id: '',
+            created_at: fav.created_at,
+            images: fav.property.image_url ? [{ url: fav.property.image_url, position: 0 }] : [],
+          },
+        }));
+
+        if (reset) {
+          setFavoritesData(newFavorites);
+        } else {
+          setFavoritesData(prev => [...prev, ...newFavorites]);
+        }
+
+        setHasMore(rpcResults.length === PAGE_SIZE);
+        setPage(pageNum);
+
+        // Get total count
+        if (reset) {
+          const { count } = await supabase
+            .from('favorites')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+          setTotalCount(count || 0);
+        }
+
+        return;
+      }
+
+      // Fallback to legacy query with pagination
+      console.warn('Falling back to legacy favorites query:', rpcError?.message);
+
+      const { data, error, count } = await supabase
         .from('favorites')
         .select(`
           id,
@@ -91,12 +193,22 @@ const Favorites = () => {
             created_at,
             images (url, position)
           )
-        `)
-        .order('created_at', { ascending: false });
+        `, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(pageNum * PAGE_SIZE, (pageNum + 1) * PAGE_SIZE - 1);
 
       if (error) throw error;
 
-      setFavoritesData(data || []);
+      if (reset) {
+        setFavoritesData(data || []);
+        setTotalCount(count || 0);
+      } else {
+        setFavoritesData(prev => [...prev, ...(data || [])]);
+      }
+
+      setHasMore((data?.length || 0) === PAGE_SIZE);
+      setPage(pageNum);
+
     } catch (error) {
       console.error('Error fetching favorites:', error);
       toast({
@@ -106,14 +218,22 @@ const Favorites = () => {
       });
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  };
+  }, [user, toast]);
+
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore) {
+      fetchFavorites(page + 1, false);
+    }
+  }, [loadingMore, hasMore, page, fetchFavorites]);
 
   // Manejar toggle de favorito y actualizar lista local
   const handleToggleFavorite = async (propertyId: string, title: string) => {
     await toggleFavorite(propertyId, title);
     // Remover de la lista local después de toggle (solo si estaba en favoritos)
     setFavoritesData(prev => prev.filter(fav => fav.property_id !== propertyId));
+    setTotalCount(prev => Math.max(0, prev - 1));
   };
 
   // Convertir datos a PropertySummary
@@ -139,7 +259,7 @@ const Favorites = () => {
         bathrooms: fav.properties.bathrooms,
         parking: fav.properties.parking,
         sqft: fav.properties.sqft,
-        images: fav.properties.images.sort((a, b) => a.position - b.position),
+        images: fav.properties.images?.sort((a, b) => a.position - b.position) || [],
         agent_id: fav.properties.agent_id,
         is_featured: false,
         created_at: fav.properties.created_at,
@@ -158,14 +278,14 @@ const Favorites = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
-        <DynamicBreadcrumbs 
+        <DynamicBreadcrumbs
           items={[
             { label: 'Inicio', href: '/', active: false },
             { label: 'Favoritos', href: '', active: true }
-          ]} 
-          className="mb-4" 
+          ]}
+          className="mb-4"
         />
 
         <div className="mb-6 md:mb-8">
@@ -173,8 +293,8 @@ const Favorites = () => {
             Mis Favoritos
           </h1>
           <p className="text-muted-foreground">
-            {properties.length > 0 
-              ? `${properties.length} propiedad${properties.length !== 1 ? 'es' : ''} guardada${properties.length !== 1 ? 's' : ''}`
+            {totalCount > 0
+              ? `${totalCount} propiedad${totalCount !== 1 ? 'es' : ''} guardada${totalCount !== 1 ? 's' : ''}`
               : 'Propiedades que has guardado para ver más tarde'
             }
           </p>
@@ -201,11 +321,34 @@ const Favorites = () => {
             </button>
           </div>
         ) : (
-          <VirtualizedPropertyGrid 
-            properties={properties}
-            favoriteIds={favoriteIds}
-            onToggleFavorite={handleToggleFavorite}
-          />
+          <>
+            <VirtualizedPropertyGrid
+              properties={properties}
+              favoriteIds={favoriteIds}
+              onToggleFavorite={handleToggleFavorite}
+            />
+
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="flex justify-center mt-8">
+                <Button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  variant="outline"
+                  size="lg"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Cargando...
+                    </>
+                  ) : (
+                    `Cargar más (${properties.length} de ${totalCount})`
+                  )}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>

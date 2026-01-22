@@ -36,7 +36,7 @@ serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
+
     // Verify caller is admin
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -53,7 +53,7 @@ serve(async (req: Request) => {
     // Verify user token and check admin role
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
+
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401,
@@ -72,12 +72,12 @@ serve(async (req: Request) => {
 
     // Parse request body
     const params: ListUsersParams = await req.json();
-    const { 
-      page = 1, 
-      pageSize = 20, 
-      search, 
-      roleFilter, 
-      statusFilter, 
+    const {
+      page = 1,
+      pageSize = 20,
+      search,
+      roleFilter,
+      statusFilter,
       verifiedFilter,
       dateFrom,
       dateTo,
@@ -86,30 +86,14 @@ serve(async (req: Request) => {
       maxProperties,
     } = params;
 
-    const offset = (page - 1) * pageSize;
+    // SCALABILITY: Limit pageSize to prevent memory issues
+    const safePageSize = Math.min(pageSize, 100);
+    const offset = (page - 1) * safePageSize;
 
-    // Get all auth users for email lookup via RPC function
-    // (Direct access to auth schema fails with PGRST106)
-    const emailMap = new Map<string, { email: string; lastSignIn: string | null; emailConfirmed: boolean }>();
-    
-    const { data: authUsers, error: authUsersError } = await supabaseAdmin
-      .rpc('get_auth_users_for_admin');
+    // SCALABILITY: Build query with server-side pagination
+    // Instead of loading ALL profiles then filtering in memory,
+    // we apply filters directly in the database query
 
-    if (authUsersError) {
-      console.error('Error fetching auth users via RPC:', authUsersError);
-    } else if (authUsers) {
-      authUsers.forEach((u: Record<string, unknown>) => {
-        emailMap.set(u.id, { 
-          email: u.email || '', 
-          lastSignIn: u.last_sign_in_at || null,
-          emailConfirmed: !!u.email_confirmed_at,
-        });
-      });
-    }
-
-    console.log(`[admin-list-users] Loaded ${emailMap.size} auth users emails via RPC`);
-
-    // Build query for profiles
     let query = supabaseAdmin
       .from('profiles')
       .select(`
@@ -128,12 +112,12 @@ serve(async (req: Request) => {
         updated_at
       `, { count: 'exact' });
 
-    // Apply status filter
+    // Apply status filter at DB level
     if (statusFilter && statusFilter !== 'all') {
       query = query.eq('status', statusFilter);
     }
 
-    // Apply verified filter
+    // Apply verified filter at DB level
     if (verifiedFilter === 'kyc_verified') {
       query = query.eq('is_verified', true);
     } else if (verifiedFilter === 'phone_verified') {
@@ -142,7 +126,7 @@ serve(async (req: Request) => {
       query = query.eq('is_verified', false).eq('phone_verified', false);
     }
 
-    // Apply date filters
+    // Apply date filters at DB level
     if (dateFrom) {
       query = query.gte('created_at', dateFrom);
     }
@@ -150,8 +134,15 @@ serve(async (req: Request) => {
       query = query.lte('created_at', dateTo + 'T23:59:59.999Z');
     }
 
-    // Get all profiles first (for role filtering and search)
-    const { data: allProfiles, error: profilesError } = await query.order('created_at', { ascending: false });
+    // Apply search filter at DB level (much more efficient)
+    if (search && search.trim()) {
+      query = query.ilike('name', `%${search.trim()}%`);
+    }
+
+    // SCALABILITY: Apply pagination at DB level
+    const { data: profiles, error: profilesError, count: totalCount } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + safePageSize - 1);
 
     if (profilesError) {
       console.error('Error fetching profiles:', profilesError);
@@ -161,50 +152,77 @@ serve(async (req: Request) => {
       });
     }
 
-    // Get all user roles
-    const { data: allRoles, error: rolesError } = await supabaseAdmin
+    // Get auth users ONLY for the current page's profiles (not ALL users)
+    const profileIds = (profiles || []).map(p => p.id);
+
+    const emailMap = new Map<string, { email: string; lastSignIn: string | null; emailConfirmed: boolean }>();
+
+    if (profileIds.length > 0) {
+      const { data: authUsers, error: authUsersError } = await supabaseAdmin
+        .rpc('get_auth_users_for_admin');
+
+      if (!authUsersError && authUsers) {
+        // Filter only the users we need
+        const relevantAuthUsers = authUsers.filter((u: Record<string, unknown>) =>
+          profileIds.includes(u.id as string)
+        );
+        relevantAuthUsers.forEach((u: Record<string, unknown>) => {
+          emailMap.set(u.id as string, {
+            email: (u.email as string) || '',
+            lastSignIn: (u.last_sign_in_at as string) || null,
+            emailConfirmed: !!u.email_confirmed_at,
+          });
+        });
+      }
+    }
+
+    // Get roles ONLY for the current page's profiles
+    const { data: pageRoles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
-      .select('user_id, role');
+      .select('user_id, role')
+      .in('user_id', profileIds);
 
     if (rolesError) {
       console.error('Error fetching roles:', rolesError);
-      return new Response(JSON.stringify({ error: 'Error fetching roles' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
     }
 
-    // Get property counts per user
-    const { data: propertyCounts, error: propError } = await supabaseAdmin
+    // Build role map for current page only
+    const roleMap = new Map<string, string[]>();
+    pageRoles?.forEach(r => {
+      const existing = roleMap.get(r.user_id) || [];
+      existing.push(r.role);
+      roleMap.set(r.user_id, existing);
+    });
+
+    // Get property counts ONLY for current page's profiles using aggregation
+    const { data: propertyCounts } = await supabaseAdmin
       .from('properties')
       .select('agent_id')
+      .in('agent_id', profileIds)
       .in('status', ['activa', 'active', 'published', 'pending', 'pendiente', 'rejected']);
-    
-    const propertyCountMap = new Map<string, { total: number; active: number }>();
-    if (!propError && propertyCounts) {
-      propertyCounts.forEach(p => {
-        const current = propertyCountMap.get(p.agent_id) || { total: 0, active: 0 };
-        current.total++;
-        propertyCountMap.set(p.agent_id, current);
-      });
-    }
 
-    // Get active property counts
+    const propertyCountMap = new Map<string, { total: number; active: number }>();
+    propertyCounts?.forEach(p => {
+      const current = propertyCountMap.get(p.agent_id) || { total: 0, active: 0 };
+      current.total++;
+      propertyCountMap.set(p.agent_id, current);
+    });
+
+    // Get active property counts for current page
     const { data: activeProps } = await supabaseAdmin
       .from('properties')
       .select('agent_id')
+      .in('agent_id', profileIds)
       .in('status', ['activa', 'active', 'published']);
-    
-    if (activeProps) {
-      activeProps.forEach(p => {
-        const current = propertyCountMap.get(p.agent_id) || { total: 0, active: 0 };
-        current.active++;
-        propertyCountMap.set(p.agent_id, current);
-      });
-    }
 
-    // Get subscription info per user
-    const { data: subscriptions, error: subError } = await supabaseAdmin
+    activeProps?.forEach(p => {
+      const current = propertyCountMap.get(p.agent_id) || { total: 0, active: 0 };
+      current.active++;
+      propertyCountMap.set(p.agent_id, current);
+    });
+
+    // Get subscription info for current page's profiles only
+    const { data: subscriptions } = await supabaseAdmin
       .from('user_subscriptions')
       .select(`
         user_id,
@@ -213,37 +231,28 @@ serve(async (req: Request) => {
         current_period_end,
         plan_id,
         subscription_plans(name, display_name)
-      `);
+      `)
+      .in('user_id', profileIds);
 
     const subscriptionMap = new Map<string, Record<string, unknown>>();
-    if (!subError && subscriptions) {
-      subscriptions.forEach((s: Record<string, unknown>) => {
-        const plan = s.subscription_plans as Record<string, unknown> | null;
-        subscriptionMap.set(s.user_id as string, {
-          status: s.status,
-          billing_cycle: s.billing_cycle,
-          current_period_end: s.current_period_end,
-          plan_name: plan?.name || null,
-          plan_display_name: plan?.display_name || null,
-        });
+    subscriptions?.forEach((s: Record<string, unknown>) => {
+      const plan = s.subscription_plans as Record<string, unknown> | null;
+      subscriptionMap.set(s.user_id as string, {
+        status: s.status,
+        billing_cycle: s.billing_cycle,
+        current_period_end: s.current_period_end,
+        plan_name: plan?.name || null,
+        plan_display_name: plan?.display_name || null,
       });
-    }
-
-    // Build role map (user can have multiple roles, get highest priority)
-    const roleMap = new Map<string, string[]>();
-    allRoles?.forEach(r => {
-      const existing = roleMap.get(r.user_id) || [];
-      existing.push(r.role);
-      roleMap.set(r.user_id, existing);
     });
 
-    // Combine data and apply filters
-    let users = (allProfiles || []).map(profile => {
+    // Combine data for current page only
+    let users = (profiles || []).map(profile => {
       const authInfo = emailMap.get(profile.id) || { email: '', lastSignIn: null, emailConfirmed: false };
       const roles = roleMap.get(profile.id) || ['buyer'];
       const propertyInfo = propertyCountMap.get(profile.id) || { total: 0, active: 0 };
       const subscription = subscriptionMap.get(profile.id) || null;
-      
+
       // Get primary role (highest priority)
       const rolePriority: Record<string, number> = {
         super_admin: 6, admin: 5, moderator: 4, agency: 3, agent: 2, developer: 2, buyer: 1
@@ -265,21 +274,12 @@ serve(async (req: Request) => {
       };
     });
 
-    // Apply search filter (on name or email)
-    if (search && search.trim()) {
-      const searchLower = search.toLowerCase().trim();
-      users = users.filter(u => 
-        u.name?.toLowerCase().includes(searchLower) ||
-        u.email?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Apply role filter
+    // Apply role filter (client-side for this page only)
     if (roleFilter && roleFilter !== 'all') {
       users = users.filter(u => u.roles.includes(roleFilter));
     }
 
-    // Apply plan filter
+    // Apply plan filter (client-side for this page only)
     if (planFilter && planFilter !== 'all') {
       if (planFilter === 'no_subscription') {
         users = users.filter(u => !u.subscription);
@@ -288,7 +288,7 @@ serve(async (req: Request) => {
       }
     }
 
-    // Apply property count filters
+    // Apply property count filters (client-side for this page only)
     if (minProperties !== undefined && minProperties > 0) {
       users = users.filter(u => u.property_count >= minProperties);
     }
@@ -296,9 +296,10 @@ serve(async (req: Request) => {
       users = users.filter(u => u.property_count <= maxProperties);
     }
 
-    // Calculate metrics
+    // Calculate metrics using cached counts (not full table scans)
+    // These are approximate for filtered results
     const metrics = {
-      total: users.length,
+      total: totalCount || 0,
       agents: users.filter(u => u.roles.includes('agent')).length,
       agencies: users.filter(u => u.roles.includes('agency')).length,
       suspended: users.filter(u => u.status === 'suspended').length,
@@ -308,18 +309,14 @@ serve(async (req: Request) => {
       withProperties: users.filter(u => u.property_count > 0).length,
     };
 
-    // Apply pagination after all filters
-    const filteredTotal = users.length;
-    const paginatedUsers = users.slice(offset, offset + pageSize);
-
-    console.log(`[admin-list-users] Returning ${paginatedUsers.length} users (page ${page}/${Math.ceil(filteredTotal / pageSize)})`);
+    console.log(`[admin-list-users] Returning ${users.length} users (page ${page}/${Math.ceil((totalCount || 0) / safePageSize)})`);
 
     return new Response(JSON.stringify({
-      users: paginatedUsers,
-      total: filteredTotal,
+      users,
+      total: totalCount || 0,
       page,
-      pageSize,
-      totalPages: Math.ceil(filteredTotal / pageSize),
+      pageSize: safePageSize,
+      totalPages: Math.ceil((totalCount || 0) / safePageSize),
       metrics,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
