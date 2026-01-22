@@ -6,6 +6,12 @@ verify_jwt = true
 [functions.refresh-stats-views]
 verify_jwt = false
 
+[functions.refresh-materialized-views]
+verify_jwt = false
+
+[functions.database-health]
+verify_jwt = false
+
 [functions.send-admin-alerts]
 verify_jwt = false
 
