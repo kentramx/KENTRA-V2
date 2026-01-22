@@ -64,7 +64,6 @@ BEGIN
   SELECT COUNT(*) INTO v_total
   FROM properties p
   WHERE p.status::text = p_status
-    AND (p.deleted_at IS NULL)
     AND (p_listing_type IS NULL OR p.listing_type = p_listing_type)
     AND (p_property_type IS NULL OR p.type::text = p_property_type)
     AND (p_min_price IS NULL OR p.price >= p_min_price)
@@ -105,7 +104,6 @@ BEGIN
       p.created_at
     FROM properties p
     WHERE p.status::text = p_status
-      AND (p.deleted_at IS NULL)
       AND (p_listing_type IS NULL OR p.listing_type = p_listing_type)
       AND (p_property_type IS NULL OR p.type::text = p_property_type)
       AND (p_min_price IS NULL OR p.price >= p_min_price)
@@ -203,8 +201,8 @@ DROP POLICY IF EXISTS "Public read access for active properties" ON properties;
 CREATE POLICY "properties_select_public" ON properties
   FOR SELECT
   USING (
-    -- Public can only see active properties that aren't deleted
-    (status = 'activa' AND deleted_at IS NULL)
+    -- Public can only see active properties
+    (status = 'activa')
     OR
     -- Or the user is the owner (agent)
     (auth.uid() = agent_id)
@@ -244,39 +242,37 @@ CREATE POLICY "properties_admin_all" ON properties
 
 -- Index for state + municipality + status (location drilldown)
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_properties_location_status
-  ON properties (state, municipality, status)
-  WHERE deleted_at IS NULL;
+  ON properties (state, municipality, status);
 
 -- Index for price range queries with status
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_properties_price_status
   ON properties (price, status)
-  WHERE deleted_at IS NULL AND status = 'activa';
+  WHERE status = 'activa';
 
 -- Index for bedrooms filter (common search)
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_properties_bedrooms_status
   ON properties (bedrooms, status)
-  WHERE deleted_at IS NULL AND status = 'activa';
+  WHERE status = 'activa';
 
 -- Index for listing_type + type (venta/renta + property type)
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_properties_listing_type_combo
-  ON properties (listing_type, type, status)
-  WHERE deleted_at IS NULL;
+  ON properties (listing_type, type, status);
 
 -- Index for newest sort with cursor pagination
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_properties_created_id_desc
   ON properties (created_at DESC, id DESC)
-  WHERE deleted_at IS NULL AND status = 'activa';
+  WHERE status = 'activa';
 
 -- Index for featured properties priority
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_properties_featured_created
   ON properties (is_featured DESC, created_at DESC)
-  WHERE deleted_at IS NULL AND status = 'activa';
+  WHERE status = 'activa';
 
 -- Composite index for the most common search pattern
 -- (state + type + listing_type + price range + status)
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_properties_common_search
   ON properties (state, type, listing_type, price, status)
-  WHERE deleted_at IS NULL AND status = 'activa';
+  WHERE status = 'activa';
 
 -- ============================================================================
 -- 4. REDUCE DEFAULT LIMIT IN get_properties_in_viewport
@@ -352,7 +348,6 @@ BEGIN
     p.created_at
   FROM properties p
   WHERE p.status::text = p_status
-    AND p.deleted_at IS NULL  -- ADDED: Filter deleted
     AND (
       (bounds_north IS NULL OR bounds_south IS NULL OR bounds_east IS NULL OR bounds_west IS NULL)
       OR p.geom && ST_MakeEnvelope(bounds_west, bounds_south, bounds_east, bounds_north, 4326)
