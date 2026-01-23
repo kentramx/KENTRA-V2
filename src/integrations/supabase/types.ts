@@ -2507,6 +2507,28 @@ export type Database = {
         }
         Relationships: []
       }
+      mv_global_stats: {
+        Row: {
+          active_properties: number | null
+          avg_price: number | null
+          refreshed_at: string | null
+          total_agents: number | null
+          total_reviews: number | null
+          total_users: number | null
+          unique_cities: number | null
+        }
+        Relationships: []
+      }
+      mv_property_counts_by_status: {
+        Row: {
+          count: number | null
+          new_count: number | null
+          old_count: number | null
+          resubmitted_count: number | null
+          status: Database["public"]["Enums"]["property_status"] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _postgis_deprecate: {
@@ -2637,6 +2659,15 @@ export type Database = {
             Returns: string
           }
       auto_assign_badges: { Args: { p_user_id: string }; Returns: undefined }
+      batch_update_property_status: {
+        Args: {
+          p_new_status: string
+          p_property_ids: string[]
+          p_reason?: string
+          p_updated_by: string
+        }
+        Returns: Json
+      }
       can_create_property: { Args: { user_id: string }; Returns: boolean }
       can_create_property_with_upsells: {
         Args: { user_uuid: string }
@@ -2711,6 +2742,10 @@ export type Database = {
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       expire_old_invitations: { Args: never; Returns: undefined }
       generate_property_code: { Args: never; Returns: string }
+      generate_test_properties: {
+        Args: { p_batch_size?: number; p_total_count?: number }
+        Returns: Json
+      }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -2809,12 +2844,53 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
+      get_agent_property_counts: {
+        Args: { p_agent_id: string }
+        Returns: {
+          active_count: number
+          featured_count: number
+          pending_count: number
+          total_count: number
+        }[]
+      }
       get_avg_review_time_minutes: { Args: never; Returns: number }
       get_churn_metrics: {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
       }
+      get_database_health: { Args: never; Returns: Json }
       get_featured_limit: { Args: { user_id: string }; Returns: number }
+      get_global_stats_cached: {
+        Args: never
+        Returns: {
+          active_properties: number
+          avg_price: number
+          refreshed_at: string
+          total_agents: number
+          total_reviews: number
+          total_users: number
+          unique_cities: number
+        }[]
+      }
+      get_map_data: {
+        Args: {
+          p_bounds_east: number
+          p_bounds_north: number
+          p_bounds_south: number
+          p_bounds_west: number
+          p_limit?: number
+          p_listing_type?: string
+          p_max_price?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_property_type?: string
+        }
+        Returns: {
+          clusters: Json
+          properties: Json
+          total_count: number
+        }[]
+      }
       get_marketing_metrics: {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
@@ -2871,7 +2947,44 @@ export type Database = {
         }[]
       }
       get_property_limit: { Args: { user_id: string }; Returns: number }
+      get_slow_queries: {
+        Args: { min_duration_ms?: number }
+        Returns: {
+          calls: number
+          mean_time_ms: number
+          query: string
+          rows_returned: number
+          total_time_ms: number
+        }[]
+      }
       get_system_health_metrics: { Args: never; Returns: Json }
+      get_user_conversations: {
+        Args: { p_limit?: number; p_offset?: number; p_user_id: string }
+        Returns: {
+          agent_id: string
+          buyer_id: string
+          created_at: string
+          id: string
+          last_message_at: string
+          last_message_content: string
+          other_user_avatar: string
+          other_user_name: string
+          property_address: string
+          property_id: string
+          property_title: string
+          unread_count: number
+          updated_at: string
+        }[]
+      }
+      get_user_favorites: {
+        Args: { p_limit?: number; p_offset?: number; p_user_id: string }
+        Returns: {
+          created_at: string
+          favorite_id: string
+          property: Json
+          property_id: string
+        }[]
+      }
       gettransactionid: { Args: never; Returns: unknown }
       has_admin_access: { Args: { user_uuid: string }; Returns: boolean }
       has_any_role: {
@@ -2888,6 +3001,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_or_moderator: { Args: { user_uuid: string }; Returns: boolean }
       is_super_admin: { Args: { user_uuid: string }; Returns: boolean }
       longtransactionsenabled: { Args: never; Returns: boolean }
       populate_geometry_columns:
@@ -2932,6 +3046,8 @@ export type Database = {
       postgis_wagyu_version: { Args: never; Returns: string }
       reactivate_property: { Args: { property_id: string }; Returns: undefined }
       refresh_agent_performance_stats: { Args: never; Returns: undefined }
+      refresh_all_materialized_views: { Args: never; Returns: Json }
+      refresh_global_stats: { Args: never; Returns: undefined }
       search_properties: {
         Args: {
           p_bounds_east?: number
@@ -2954,6 +3070,50 @@ export type Database = {
           properties: Json
           total_count: number
         }[]
+      }
+      search_properties_cursor: {
+        Args: {
+          p_bounds_east?: number
+          p_bounds_north?: number
+          p_bounds_south?: number
+          p_bounds_west?: number
+          p_cursor_created_at?: string
+          p_cursor_id?: string
+          p_direction?: string
+          p_limit?: number
+          p_listing_type?: string
+          p_max_price?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_municipality?: string
+          p_property_type?: string
+          p_sort?: string
+          p_state?: string
+          p_status?: string
+        }
+        Returns: {
+          has_more: boolean
+          next_cursor: Json
+          prev_cursor: Json
+          properties: Json
+          total_count: number
+        }[]
+      }
+      search_properties_with_cache_key: {
+        Args: {
+          p_limit?: number
+          p_listing_type?: string
+          p_max_price?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_municipality?: string
+          p_offset?: number
+          p_property_type?: string
+          p_sort?: string
+          p_state?: string
+          p_status?: string
+        }
+        Returns: Json
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
