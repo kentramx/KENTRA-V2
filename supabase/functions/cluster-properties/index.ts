@@ -2,7 +2,10 @@
  * Edge Function: cluster-properties
  * Clustering con Supercluster + PostGIS optimizado
  *
- * Usa RPC get_properties_in_viewport para queries O(log n)
+ * ESCALA: Diseñado para 10 - 1,000,000 propiedades
+ * - Zoom bajo (0-8): Solo clusters, límite 10K propiedades
+ * - Zoom medio (9-12): Clusters + algunas individuales, límite 5K
+ * - Zoom alto (13+): Propiedades individuales, límite 500
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -54,23 +57,54 @@ interface PropertyFromDB {
   created_at: string;
 }
 
-// Configuración premium de Supercluster - optimizada para UX tipo Zillow
-// CLAVE: Evitar clusters pequeños (2-10) que saturan el mapa
-const SUPERCLUSTER_OPTIONS = {
-  radius: 120,       // Radio grande = menos clusters, más limpios
-  maxZoom: 14,       // Dejar de agrupar a zoom 14+ para ver precios individuales
-  minZoom: 0,
-  minPoints: 8,      // Mínimo 8 puntos para cluster - evita clusters pequeños
-  extent: 512,
-  nodeSize: 64,
-  map: (props: PropertyFromDB) => ({
-    price: props.price || 0,
-    count: 1,
-  }),
-  reduce: (accumulated: { price: number; count: number }, props: { price: number; count: number }) => {
-    accumulated.price = (accumulated.price || 0) + (props.price || 0);
-    accumulated.count = (accumulated.count || 0) + (props.count || 1);
-  },
+// Configuración dinámica basada en zoom para estabilidad y velocidad
+const getClusterConfig = (zoom: number) => {
+  // Zoom muy bajo (país): menos datos, clusters muy grandes
+  if (zoom <= 4) {
+    return { radius: 200, minPoints: 50, limit: 2000 };
+  }
+  // Zoom bajo: clusters grandes y estables
+  if (zoom <= 6) {
+    return { radius: 160, minPoints: 20, limit: 3000 };
+  }
+  // Zoom medio-bajo
+  if (zoom <= 8) {
+    return { radius: 120, minPoints: 10, limit: 4000 };
+  }
+  // Zoom medio: balance entre clusters y detalle
+  if (zoom <= 10) {
+    return { radius: 80, minPoints: 6, limit: 3000 };
+  }
+  // Zoom medio-alto
+  if (zoom <= 12) {
+    return { radius: 60, minPoints: 4, limit: 2000 };
+  }
+  // Zoom alto: más detalle, menos agrupación
+  if (zoom <= 14) {
+    return { radius: 40, minPoints: 3, limit: 1000 };
+  }
+  // Zoom muy alto: propiedades individuales
+  return { radius: 30, minPoints: 2, limit: 500 };
+};
+
+const createSuperclusterOptions = (zoom: number) => {
+  const config = getClusterConfig(zoom);
+  return {
+    radius: config.radius,
+    maxZoom: 16,
+    minZoom: 0,
+    minPoints: config.minPoints,
+    extent: 512,
+    nodeSize: 64,
+    map: (props: PropertyFromDB) => ({
+      price: props.price || 0,
+      count: 1,
+    }),
+    reduce: (accumulated: { price: number; count: number }, props: { price: number; count: number }) => {
+      accumulated.price = (accumulated.price || 0) + (props.price || 0);
+      accumulated.count = (accumulated.count || 0) + (props.count || 1);
+    },
+  };
 };
 
 Deno.serve(async (req) => {
@@ -91,6 +125,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Configuración dinámica basada en zoom
+    const clusterConfig = getClusterConfig(zoom);
+
     // Usar RPC de PostGIS - UNA query optimizada con índice GIST
     const { data: properties, error } = await supabase.rpc('get_properties_in_viewport', {
       bounds_north: bounds.north,
@@ -105,7 +142,7 @@ Deno.serve(async (req) => {
       p_min_bedrooms: filters.min_bedrooms || null,
       p_state: filters.state || null,
       p_municipality: filters.municipality || null,
-      p_limit: 5000, // SCALABILITY: Reduced from 50K to prevent memory issues at 500K properties
+      p_limit: clusterConfig.limit,
     });
 
     if (error) {
@@ -114,7 +151,7 @@ Deno.serve(async (req) => {
     }
 
     const propertiesArray = (properties || []) as PropertyFromDB[];
-    console.log(`[cluster-properties] PostGIS returned ${propertiesArray.length} properties in ${Date.now() - startTime}ms`);
+    console.log(`[cluster-properties] zoom=${zoom} limit=${clusterConfig.limit} returned=${propertiesArray.length} in ${Date.now() - startTime}ms`);
 
     // Convertir a GeoJSON para Supercluster
     const points = propertiesArray.map((p) => ({
@@ -126,8 +163,9 @@ Deno.serve(async (req) => {
       properties: p,
     }));
 
-    // Clustering
-    const index = new Supercluster(SUPERCLUSTER_OPTIONS);
+    // Clustering con configuración dinámica
+    const superclusterOptions = createSuperclusterOptions(zoom);
+    const index = new Supercluster(superclusterOptions);
     index.load(points);
 
     const bbox: [number, number, number, number] = [
@@ -167,15 +205,23 @@ Deno.serve(async (req) => {
     const duration = Date.now() - startTime;
     console.log(`[cluster-properties] ${clusters.length} clusters, ${individualProperties.length} individual, ${duration}ms`);
 
+    // Limitar propiedades individuales basado en zoom
+    const maxIndividual = zoom >= 14 ? 100 : zoom >= 12 ? 50 : 20;
+
     return new Response(
       JSON.stringify({
         clusters,
-        properties: individualProperties.slice(0, 200),
+        properties: individualProperties.slice(0, maxIndividual),
         total: propertiesArray.length,
         is_clustered: clusters.length > 0,
+        _meta: { zoom, limit: clusterConfig.limit, radius: clusterConfig.radius }
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=30, s-maxage=60",
+        },
       }
     );
   } catch (err) {
