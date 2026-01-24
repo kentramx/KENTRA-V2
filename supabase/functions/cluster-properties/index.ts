@@ -8,7 +8,6 @@
  * - Zoom alto (13+): Propiedades individuales, límite 500
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Supercluster from "https://esm.sh/supercluster@8";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
@@ -120,37 +119,50 @@ Deno.serve(async (req) => {
   try {
     const { bounds, zoom, filters = {} }: RequestBody = await req.json();
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error("Missing Supabase environment variables");
+    }
 
     // Configuración dinámica basada en zoom
     const clusterConfig = getClusterConfig(zoom);
 
-    // Usar RPC de PostGIS - UNA query optimizada con índice GIST
-    const { data: properties, error } = await supabase.rpc('get_properties_in_viewport', {
-      bounds_north: bounds.north,
-      bounds_south: bounds.south,
-      bounds_east: bounds.east,
-      bounds_west: bounds.west,
-      p_status: 'activa',
-      p_listing_type: filters.listing_type || null,
-      p_property_type: filters.property_type || null,
-      p_min_price: filters.min_price || null,
-      p_max_price: filters.max_price || null,
-      p_min_bedrooms: filters.min_bedrooms || null,
-      p_state: filters.state || null,
-      p_municipality: filters.municipality || null,
-      p_limit: clusterConfig.limit,
+    // Usar fetch directamente para evitar el límite de 1000 filas de PostgREST
+    const rpcResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/get_properties_in_viewport`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Range': `0-${clusterConfig.limit - 1}`,  // Bypass 1000 row limit
+        'Prefer': 'count=none',  // Don't count total (faster)
+      },
+      body: JSON.stringify({
+        bounds_north: bounds.north,
+        bounds_south: bounds.south,
+        bounds_east: bounds.east,
+        bounds_west: bounds.west,
+        p_status: 'activa',
+        p_listing_type: filters.listing_type || null,
+        p_property_type: filters.property_type || null,
+        p_min_price: filters.min_price || null,
+        p_max_price: filters.max_price || null,
+        p_min_bedrooms: filters.min_bedrooms || null,
+        p_state: filters.state || null,
+        p_municipality: filters.municipality || null,
+        p_limit: clusterConfig.limit,
+      }),
     });
 
-    if (error) {
-      console.error("[cluster-properties] RPC error:", error);
-      throw new Error(`Database error: ${error.message}`);
+    if (!rpcResponse.ok) {
+      const errorText = await rpcResponse.text();
+      console.error("[cluster-properties] RPC error:", errorText);
+      throw new Error(`Database error: ${rpcResponse.status}`);
     }
 
-    const propertiesArray = (properties || []) as PropertyFromDB[];
+    const propertiesArray = (await rpcResponse.json()) as PropertyFromDB[];
     console.log(`[cluster-properties] zoom=${zoom} limit=${clusterConfig.limit} returned=${propertiesArray.length} in ${Date.now() - startTime}ms`);
 
     // Convertir a GeoJSON para Supercluster

@@ -1,6 +1,11 @@
 /**
  * Hook para obtener clusters/propiedades del mapa
- * Usa la Edge Function cluster-properties con PostGIS
+ * ENTERPRISE: Enfoque híbrido para 1M+ propiedades
+ *
+ * ARQUITECTURA:
+ * - zoom < 10: Usa get-clusters con clusters pre-computados (rápido, 155K props)
+ * - zoom >= 10: Usa cluster-properties con Supercluster (más detalle, área pequeña)
+ * - Cache de 60s client-side, 300s CDN
  */
 
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
@@ -14,6 +19,11 @@ interface MapClustersResponse {
   properties: PropertyMarker[];
   total: number;
   is_clustered: boolean;
+  _meta?: {
+    zoom: number;
+    duration: number;
+    source: 'properties' | 'pre-computed' | 'synthetic';
+  };
 }
 
 interface UseMapClustersOptions {
@@ -33,6 +43,26 @@ function isValidBounds(bounds: MapBounds | null | undefined): bounds is MapBound
   );
 }
 
+// Calculate viewport area in degrees squared
+function getViewportArea(bounds: MapBounds): number {
+  return Math.abs(bounds.north - bounds.south) * Math.abs(bounds.east - bounds.west);
+}
+
+/**
+ * ENTERPRISE ARCHITECTURE FOR 1M+ PROPERTIES
+ *
+ * Zoom Level Strategy:
+ * - zoom < 4: Don't query (too zoomed out to be useful)
+ * - zoom 4-9: Use get-clusters (pre-computed OR synthetic fallback)
+ * - zoom 10-13: Use cluster-properties with Supercluster (small area)
+ * - zoom 14+: Show individual properties (very small area)
+ *
+ * This prevents timeout at country level and provides Zillow-like performance
+ */
+const ZOOM_THRESHOLD_MIN = 4;  // Below this, don't query at all
+const ZOOM_THRESHOLD_PRECOMPUTED = 10;  // Below this, use pre-computed/synthetic
+const MAX_AREA_FOR_REALTIME = 5;  // Maximum area (degrees²) for real-time clustering
+
 export function useMapClusters({
   viewport,
   filters = {},
@@ -43,44 +73,69 @@ export function useMapClusters({
 
   // Validate bounds are complete
   const hasValidBounds = debouncedViewport !== null && isValidBounds(debouncedViewport.bounds);
+  const zoom = debouncedViewport?.zoom || 0;
+  const area = hasValidBounds ? getViewportArea(debouncedViewport!.bounds) : 0;
+
+  // At very low zoom (< 4), don't query - too zoomed out
+  const shouldQuery = enabled && hasValidBounds && zoom >= ZOOM_THRESHOLD_MIN;
 
   const query = useQuery({
     queryKey: ['map-clusters', debouncedViewport, filters],
-    // Only enable when we have valid, complete bounds
-    enabled: enabled && hasValidBounds && debouncedViewport!.zoom >= 4,
-    staleTime: 60_000, // 1 minuto
+    enabled: shouldQuery,
+    staleTime: 60_000, // 1 minuto - clusters pre-computados no cambian frecuentemente
     gcTime: 5 * 60_000, // 5 minutos
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
 
     queryFn: async (): Promise<MapClustersResponse> => {
       if (!debouncedViewport || !isValidBounds(debouncedViewport.bounds)) {
-        // Silent return for invalid bounds - this is expected during initial load
         return { clusters: [], properties: [], total: 0, is_clustered: false };
       }
 
-      // When we have valid bounds, don't use state/municipality filters
-      // The bounds already provide accurate geographic filtering
-      const { data, error } = await supabase.functions.invoke('cluster-properties', {
+      const startTime = performance.now();
+      const currentZoom = debouncedViewport.zoom;
+      const currentArea = getViewportArea(debouncedViewport.bounds);
+
+      // ENTERPRISE STRATEGY:
+      // - zoom < 10 OR area > 5: use get-clusters (pre-computed, fast)
+      // - zoom >= 10 AND area <= 5: use cluster-properties (real-time, accurate)
+      const usePrecomputed = currentZoom < ZOOM_THRESHOLD_PRECOMPUTED || currentArea > MAX_AREA_FOR_REALTIME;
+      const functionName = usePrecomputed ? 'get-clusters' : 'cluster-properties';
+
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
           bounds: debouncedViewport.bounds,
-          zoom: debouncedViewport.zoom,
+          zoom: currentZoom,
           filters: {
             listing_type: filters.listing_type || null,
             property_type: filters.property_type || null,
             min_price: filters.min_price || null,
             max_price: filters.max_price || null,
             min_bedrooms: filters.min_bedrooms || null,
-            // Skip state/municipality when using bounds - they can cause mismatches
-            state: null,
-            municipality: null,
           },
         },
       });
 
       if (error) {
-        monitoring.error('Failed to fetch map clusters', { hook: 'useMapClusters', error });
+        monitoring.error('Failed to fetch map clusters', {
+          hook: 'useMapClusters',
+          error,
+          function: functionName
+        });
         throw new Error(error.message || 'Failed to fetch map data');
+      }
+
+      const duration = performance.now() - startTime;
+
+      // Log performance for monitoring
+      if (duration > 500) {
+        monitoring.warn('Slow cluster fetch', {
+          duration,
+          zoom: currentZoom,
+          area: currentArea,
+          function: functionName,
+          source: data?._meta?.source
+        });
       }
 
       return data as MapClustersResponse;
@@ -94,6 +149,10 @@ export function useMapClusters({
     isClustered: query.data?.is_clustered || false,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
+    isPending: query.isPending,
+    isIdle: !query.isFetching && !query.isLoading && !query.data,
     error: query.error as Error | null,
+    // Metadata para debugging
+    _meta: query.data?._meta,
   };
 }

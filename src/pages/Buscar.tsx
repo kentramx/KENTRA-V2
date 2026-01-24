@@ -1,16 +1,16 @@
 /**
  * Página de búsqueda estilo Zillow - Enterprise Edition
  *
- * Features:
- * - Búsqueda por ubicación con Google Places Autocomplete
- * - Mapa sincronizado con lista de propiedades
- * - Filtros avanzados desde URL
- * - Viewport real de Google Maps (no hardcoded)
+ * ARQUITECTURA ENTERPRISE:
+ * - MapLibre GL JS ($0/mes) en lugar de Google Maps ($200-500/mes)
+ * - Clusters pre-computados por Geohash (O(1) lookup)
+ * - search_properties RPC optimizado con estimated counts
+ * - WebGL nativo para renderizado de 1M+ propiedades
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SearchMap } from '@/components/maps/SearchMap';
+import { SearchMapLibre } from '@/components/maps/SearchMapLibre';
 import { LocationSearchInput, type LocationResult } from '@/components/maps/LocationSearchInput';
 import { useMapClusters } from '@/hooks/useMapClusters';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
@@ -24,11 +24,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MapIcon, List, Loader2, SlidersHorizontal, X, Home, Building2, TreePine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MapViewport, MapFilters } from '@/types/map';
-import { GOOGLE_MAPS_CONFIG } from '@/config/googleMaps';
+import { MAPLIBRE_CONFIG } from '@/config/mapLibre';
 
-// Centro inicial de México (solo center y zoom, NO bounds hardcoded)
-const INITIAL_CENTER = GOOGLE_MAPS_CONFIG.defaultCenter;
-const INITIAL_ZOOM = GOOGLE_MAPS_CONFIG.zoom.default;
+// Centro inicial de México
+const INITIAL_CENTER = MAPLIBRE_CONFIG.defaultCenter;
+const INITIAL_ZOOM = MAPLIBRE_CONFIG.zoom.default;
 const LOCATION_ZOOM = 12; // Zoom para cuando hay lat/lng en URL
 
 // Tipos de propiedad
@@ -39,20 +39,23 @@ const PROPERTY_TYPES = [
   { value: 'terreno', label: 'Terreno', icon: TreePine },
 ];
 
+// Interfaz para ubicación de búsqueda (compatible con MapLibre)
+interface SearchLocation {
+  center: { lat: number; lng: number };
+  bounds?: { north: number; south: number; east: number; west: number };
+  zoom?: number;
+}
+
 export default function Buscar() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { favorites, toggleFavorite } = useFavorites();
 
-  // Estado del mapa - viewport NULL hasta que Google Maps lo emita
+  // Estado del mapa - viewport NULL hasta que MapLibre lo emita
   const [viewport, setViewport] = useState<MapViewport | null>(null);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
 
-  // Estado de búsqueda por ubicación
-  const [searchLocation, setSearchLocation] = useState<{
-    center: { lat: number; lng: number };
-    bounds?: google.maps.LatLngBounds;
-    zoom?: number;
-  } | null>(null);
+  // Estado de búsqueda por ubicación (formato compatible con MapLibre)
+  const [searchLocation, setSearchLocation] = useState<SearchLocation | null>(null);
 
   // Flag para evitar re-aplicar ubicación de URL después del primer render
   const hasAppliedUrlLocation = useRef(false);
@@ -102,7 +105,7 @@ export default function Buscar() {
   }), [searchParams]);
 
   // Datos del mapa (clusters + propiedades visibles)
-  // Solo habilitar cuando tenemos viewport real de Google Maps
+  // Solo habilitar cuando tenemos viewport real de MapLibre
   const {
     clusters,
     properties: mapProperties,
@@ -110,6 +113,8 @@ export default function Buscar() {
     isClustered,
     isLoading: mapLoading,
     isFetching: mapFetching,
+    isPending: mapPending,
+    isIdle: mapIdle,
   } = useMapClusters({
     viewport,
     filters,
@@ -138,13 +143,30 @@ export default function Buscar() {
     setPage(1); // Reset página al mover mapa
   }, []);
 
-  // Handler para búsqueda de ubicación
+  // Handler para búsqueda de ubicación - convierte Google bounds a formato simple
   const handleLocationSelect = useCallback((location: LocationResult) => {
     if (location.location) {
+      // Convertir google.maps.LatLngBounds a formato simple
+      let bounds: SearchLocation['bounds'] | undefined;
+      if (location.bounds) {
+        try {
+          const ne = location.bounds.getNorthEast();
+          const sw = location.bounds.getSouthWest();
+          bounds = {
+            north: ne.lat(),
+            south: sw.lat(),
+            east: ne.lng(),
+            west: sw.lng(),
+          };
+        } catch {
+          // Si falla la conversión, ignorar bounds
+        }
+      }
+
       setSearchLocation({
         center: location.location,
-        bounds: location.bounds,
-        zoom: location.bounds ? undefined : 13, // Si hay bounds, fitBounds los usa. Si no, zoom 13
+        bounds,
+        zoom: bounds ? undefined : 13, // Si hay bounds, fitBounds los usa. Si no, zoom 13
       });
     }
     setPage(1);
@@ -320,14 +342,15 @@ export default function Buscar() {
               mobileView === 'map' ? 'h-[calc(100vh-200px)]' : 'hidden lg:block'
             )}
           >
-            <SearchMap
+            <SearchMapLibre
               properties={mapProperties}
               clusters={clusters}
               totalCount={listTotal}
               isClustered={isClustered}
               isLoading={mapLoading}
-              isIdle={viewport === null}
+              isIdle={mapIdle}
               isFetching={mapFetching}
+              isPending={mapPending}
               hoveredPropertyId={hoveredPropertyId}
               selectedPropertyId={selectedPropertyId}
               onPropertyClick={handlePropertyClick}

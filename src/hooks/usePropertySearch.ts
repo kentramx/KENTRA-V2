@@ -1,6 +1,10 @@
 /**
  * Hook para búsqueda paginada de propiedades
- * Usa la Edge Function property-search con PostGIS
+ * ENTERPRISE: Usa search_properties RPC optimizado con:
+ * - Estimated count desde materialized views (evita COUNT(*) timeout)
+ * - Spatial index para filtrado geográfico O(log n)
+ * - Sorting en base de datos (no en memoria)
+ * - Paginación eficiente con LIMIT/OFFSET
  */
 
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
@@ -36,6 +40,13 @@ function isValidBounds(bounds: MapBounds | null | undefined): bounds is MapBound
   );
 }
 
+/**
+ * ENTERPRISE OPTIMIZATION:
+ * At country level (large bounds), the ORDER BY on 745K rows is slow.
+ * Skip the spatial filter for very large bounds and use indexed sorting.
+ */
+const LARGE_BOUNDS_THRESHOLD = 100; // degrees squared (all of Mexico is ~300)
+
 export function usePropertySearch({
   filters = {},
   bounds = null,
@@ -47,8 +58,16 @@ export function usePropertySearch({
   // Only use bounds if they're valid and complete
   const validBounds = isValidBounds(bounds) ? bounds : null;
 
+  // Calculate bounds area to determine if we should use spatial filtering
+  const boundsArea = validBounds
+    ? Math.abs(validBounds.north - validBounds.south) * Math.abs(validBounds.east - validBounds.west)
+    : 0;
+
+  // At country level (large bounds), don't use spatial filtering - too slow
+  const useSpatialFilter = validBounds && boundsArea < LARGE_BOUNDS_THRESHOLD;
+
   const query = useQuery({
-    queryKey: ['property-search', filters, validBounds, sort, page, limit],
+    queryKey: ['property-search', filters, useSpatialFilter ? validBounds : null, sort, page, limit],
     enabled,
     staleTime: 60_000, // 1 minuto
     gcTime: 5 * 60_000, // 5 minutos
@@ -56,25 +75,31 @@ export function usePropertySearch({
     refetchOnWindowFocus: false,
 
     queryFn: async (): Promise<SearchResponse> => {
-      // When we have valid bounds, don't use state/municipality filters
-      // The bounds already provide accurate geographic filtering
-      const { data, error } = await supabase.functions.invoke('property-search', {
-        body: {
-          filters: {
-            listing_type: filters.listing_type || null,
-            property_type: filters.property_type || null,
-            min_price: filters.min_price || null,
-            max_price: filters.max_price || null,
-            min_bedrooms: filters.min_bedrooms || null,
-            // Skip state/municipality when using bounds - they can cause mismatches
-            state: validBounds ? null : (filters.state || null),
-            municipality: validBounds ? null : (filters.municipality || null),
-          },
-          bounds: validBounds,
-          sort,
-          page,
-          limit,
-        },
+      const startTime = performance.now();
+      const offset = (page - 1) * limit;
+
+      // ENTERPRISE: Usar search_properties RPC optimizado
+      // Esta función usa:
+      // - Estimated count desde mv_property_counts_by_status (O(1))
+      // - Spatial index con ST_MakeEnvelope para bounds (O(log n)) - only for small areas
+      // - Sorting en DB, no en memoria
+      const { data, error } = await supabase.rpc('search_properties', {
+        p_status: 'activa',
+        p_listing_type: filters.listing_type || null,
+        p_property_type: filters.property_type || null,
+        p_min_price: filters.min_price || null,
+        p_max_price: filters.max_price || null,
+        p_min_bedrooms: filters.min_bedrooms || null,
+        p_state: useSpatialFilter ? null : (filters.state || null),
+        p_municipality: useSpatialFilter ? null : (filters.municipality || null),
+        // Only pass bounds if area is small enough for efficient spatial query
+        p_bounds_north: useSpatialFilter ? validBounds?.north ?? null : null,
+        p_bounds_south: useSpatialFilter ? validBounds?.south ?? null : null,
+        p_bounds_east: useSpatialFilter ? validBounds?.east ?? null : null,
+        p_bounds_west: useSpatialFilter ? validBounds?.west ?? null : null,
+        p_sort: sort,
+        p_limit: limit,
+        p_offset: offset,
       });
 
       if (error) {
@@ -82,7 +107,33 @@ export function usePropertySearch({
         throw new Error(error.message || 'Failed to search properties');
       }
 
-      return data as SearchResponse;
+      const duration = performance.now() - startTime;
+
+      // Log slow queries for monitoring
+      if (duration > 1000) {
+        monitoring.warn('Slow property search', {
+          duration,
+          page,
+          limit,
+          hasFilters: Object.keys(filters).length > 0,
+          hasBounds: !!validBounds,
+          boundsArea,
+          useSpatialFilter,
+        });
+      }
+
+      // search_properties returns: { properties: jsonb, total_count: bigint }
+      const result = data?.[0] || { properties: [], total_count: 0 };
+      const properties = (result.properties || []) as PropertySummary[];
+      const total = Number(result.total_count) || 0;
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        properties,
+        total,
+        page,
+        totalPages,
+      };
     },
   });
 
@@ -93,6 +144,7 @@ export function usePropertySearch({
     totalPages: query.data?.totalPages || 0,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
+    isPending: query.isPending,
     error: query.error as Error | null,
     hasNextPage: (query.data?.page || 1) < (query.data?.totalPages || 0),
   };
