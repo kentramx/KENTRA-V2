@@ -115,26 +115,27 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
   useEffect(() => {
     if (property) {
+      const p = property as Record<string, unknown>;
       setFormData({
-        description: property.description || '',
-        price: property.price?.toString() || '',
-        type: property.type || 'casa',
-        listing_type: property.listing_type || 'venta',
-        address: property.address || '',
-        colonia: property.colonia || '',
-        municipality: property.municipality || '',
-        state: property.state || '',
-        bedrooms: property.bedrooms?.toString() || '',
-        bathrooms: property.bathrooms?.toString() || '',
-        parking: property.parking?.toString() || '',
-        sqft: property.sqft?.toString() || '',
-        lot_size: property.lot_size?.toString() || '',
-        lat: property.lat,
-        lng: property.lng,
-        video_url: property.video_url || '',
+        description: (p.description as string) || '',
+        price: p.price ? String(p.price) : '',
+        type: (p.type as string) || 'casa',
+        listing_type: (p.listing_type as string) || 'venta',
+        address: (p.address as string) || '',
+        colonia: (p.colonia as string) || '',
+        municipality: (p.municipality as string) || '',
+        state: (p.state as string) || '',
+        bedrooms: p.bedrooms ? String(p.bedrooms) : '',
+        bathrooms: p.bathrooms ? String(p.bathrooms) : '',
+        parking: p.parking ? String(p.parking) : '',
+        sqft: p.sqft ? String(p.sqft) : '',
+        lot_size: p.lot_size ? String(p.lot_size) : '',
+        lat: p.lat as number | undefined,
+        lng: p.lng as number | undefined,
+        video_url: (p.video_url as string) || '',
       });
-      setExistingImages(property.images || []);
-      setAmenities(property.amenities || []);
+      setExistingImages((p.images as { id: string; url: string }[]) || []);
+      setAmenities((p.amenities as { category: string; items: string[] }[]) || []);
     }
   }, [property]);
 
@@ -382,11 +383,11 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
         if (error) throw error;
       } else {
-        const propertyData: Record<string, unknown> = {
+        const propertyData = {
           ...validatedData,
           title: autoTitle,
-          agent_id: user?.id,
-          status: 'pendiente_aprobacion', // Enviar a cola de moderación
+          agent_id: user?.id ?? '',
+          status: 'pendiente_aprobacion' as const, // Enviar a cola de moderación
           last_renewed_at: new Date().toISOString(),
           duplicate_warning: titleValidation.isDuplicate,
           duplicate_warning_data: duplicateWarningData,
@@ -395,6 +396,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
         const { data, error } = await supabase
           .from('properties')
+          // @ts-expect-error - propertyData has correct structure but TS can't verify
           .insert([propertyData])
           .select()
           .single();
@@ -499,26 +501,29 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {property?.status === 'pausada' && property?.rejection_reason && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Propiedad Rechazada</AlertTitle>
-          <AlertDescription className="space-y-2">
-            <p>
-              <strong>Motivo:</strong> {property.rejection_reason.label}
-            </p>
-            {property.rejection_reason.details && (
-              <p className="text-sm">{property.rejection_reason.details}</p>
-            )}
-            <p className="text-sm font-medium mt-2">
-              Por favor corrige los problemas mencionados y reenvía la propiedad para una nueva revisión.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Reenvíos: {property.resubmission_count || 0}/3
-            </p>
-          </AlertDescription>
-        </Alert>
-      )}
+      {property?.status === 'pausada' && property?.rejection_reason && (() => {
+        const rejectionReason = property.rejection_reason as { label?: string; details?: string } | undefined;
+        return (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Propiedad Rechazada</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>
+                <strong>Motivo:</strong> {rejectionReason?.label ?? 'Sin especificar'}
+              </p>
+              {rejectionReason?.details && (
+                <p className="text-sm">{rejectionReason.details}</p>
+              )}
+              <p className="text-sm font-medium mt-2">
+                Por favor corrige los problemas mencionados y reenvía la propiedad para una nueva revisión.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Reenvíos: {(property.resubmission_count as number) || 0}/3
+              </p>
+            </AlertDescription>
+          </Alert>
+        );
+      })()}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">

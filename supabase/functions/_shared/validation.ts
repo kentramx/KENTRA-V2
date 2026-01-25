@@ -38,36 +38,38 @@ export function validateCheckoutRequest(body: unknown): ValidationResult<Checkou
     return { success: false, errors: ['Request body must be an object'] };
   }
 
+  const b = body as Record<string, unknown>;
+
   // planSlug - can be empty for upsellOnly
-  if (body.upsellOnly !== true) {
-    if (!isString(body.planSlug) || body.planSlug.length === 0) {
+  if (b.upsellOnly !== true) {
+    if (!isString(b.planSlug) || (b.planSlug as string).length === 0) {
       errors.push('planSlug is required and must be a non-empty string');
-    } else if (!/^(agente|inmobiliaria|desarrolladora)_/.test(body.planSlug)) {
+    } else if (!/^(agente|inmobiliaria|desarrolladora)_/.test(b.planSlug as string)) {
       errors.push('planSlug must start with agente_, inmobiliaria_, or desarrolladora_');
     }
   }
 
   // billingCycle
-  if (!['monthly', 'yearly'].includes(body.billingCycle)) {
+  if (!['monthly', 'yearly'].includes(b.billingCycle as string)) {
     errors.push('billingCycle must be "monthly" or "yearly"');
   }
 
   // couponCode (optional)
-  if (body.couponCode !== undefined && body.couponCode !== null && !isString(body.couponCode)) {
+  if (b.couponCode !== undefined && b.couponCode !== null && !isString(b.couponCode)) {
     errors.push('couponCode must be a string');
   }
 
   // upsellOnly (optional)
-  if (body.upsellOnly !== undefined && !isBoolean(body.upsellOnly)) {
+  if (b.upsellOnly !== undefined && !isBoolean(b.upsellOnly)) {
     errors.push('upsellOnly must be a boolean');
   }
 
   // upsells (optional)
-  if (body.upsells !== undefined && body.upsells !== null) {
-    if (!Array.isArray(body.upsells)) {
+  if (b.upsells !== undefined && b.upsells !== null) {
+    if (!Array.isArray(b.upsells)) {
       errors.push('upsells must be an array');
     } else {
-      body.upsells.forEach((upsell: unknown, index: number) => {
+      (b.upsells as unknown[]).forEach((upsell: unknown, index: number) => {
         const upsellObj = upsell as Record<string, unknown> | null;
         if (!isUUID(upsellObj?.id)) {
           errors.push(`upsells[${index}].id must be a valid UUID`);
@@ -86,11 +88,11 @@ export function validateCheckoutRequest(body: unknown): ValidationResult<Checkou
   return {
     success: true,
     data: {
-      planSlug: body.planSlug || '',
-      billingCycle: body.billingCycle,
-      couponCode: body.couponCode,
-      upsellOnly: body.upsellOnly,
-      upsells: body.upsells,
+      planSlug: (b.planSlug as string) || '',
+      billingCycle: b.billingCycle as 'monthly' | 'yearly',
+      couponCode: b.couponCode as string | undefined,
+      upsellOnly: b.upsellOnly as boolean | undefined,
+      upsells: b.upsells as Array<{ id: string; quantity: number }> | undefined,
     },
   };
 }
@@ -110,19 +112,21 @@ export function validateChangePlanRequest(body: unknown): ValidationResult<Chang
     return { success: false, errors: ['Request body must be an object'] };
   }
 
-  if (!isString(body.newPlanId) || body.newPlanId.length === 0) {
+  const b = body as Record<string, unknown>;
+
+  if (!isString(b.newPlanId) || (b.newPlanId as string).length === 0) {
     errors.push('newPlanId is required and must be a non-empty string');
   }
 
-  if (!['monthly', 'yearly'].includes(body.billingCycle)) {
+  if (!['monthly', 'yearly'].includes(b.billingCycle as string)) {
     errors.push('billingCycle must be "monthly" or "yearly"');
   }
 
-  if (body.previewOnly !== undefined && !isBoolean(body.previewOnly)) {
+  if (b.previewOnly !== undefined && !isBoolean(b.previewOnly)) {
     errors.push('previewOnly must be a boolean');
   }
 
-  if (body.bypassCooldown !== undefined && !isBoolean(body.bypassCooldown)) {
+  if (b.bypassCooldown !== undefined && !isBoolean(b.bypassCooldown)) {
     errors.push('bypassCooldown must be a boolean');
   }
 
@@ -133,10 +137,10 @@ export function validateChangePlanRequest(body: unknown): ValidationResult<Chang
   return {
     success: true,
     data: {
-      newPlanId: body.newPlanId,
-      billingCycle: body.billingCycle,
-      previewOnly: body.previewOnly,
-      bypassCooldown: body.bypassCooldown,
+      newPlanId: b.newPlanId as string,
+      billingCycle: b.billingCycle as 'monthly' | 'yearly',
+      previewOnly: b.previewOnly as boolean | undefined,
+      bypassCooldown: b.bypassCooldown as boolean | undefined,
     },
   };
 }
@@ -155,16 +159,18 @@ export function validateAdminActionRequest(body: unknown): ValidationResult<Admi
     return { success: false, errors: ['Request body must be an object'] };
   }
 
+  const b = body as Record<string, unknown>;
+
   const validActions = ['cancel', 'reactivate', 'change-plan', 'extend-trial'];
-  if (!validActions.includes(body.action)) {
+  if (!validActions.includes(b.action as string)) {
     errors.push(`action must be one of: ${validActions.join(', ')}`);
   }
 
-  if (!isUUID(body.userId)) {
+  if (!isUUID(b.userId)) {
     errors.push('userId must be a valid UUID');
   }
 
-  if (body.params !== undefined && typeof body.params !== 'object') {
+  if (b.params !== undefined && typeof b.params !== 'object') {
     errors.push('params must be an object');
   }
 
@@ -175,9 +181,9 @@ export function validateAdminActionRequest(body: unknown): ValidationResult<Admi
   return {
     success: true,
     data: {
-      action: body.action,
-      userId: body.userId,
-      params: body.params,
+      action: b.action as 'cancel' | 'reactivate' | 'change-plan' | 'extend-trial',
+      userId: b.userId as string,
+      params: b.params as Record<string, unknown> | undefined,
     },
   };
 }
@@ -196,15 +202,17 @@ export function validateNotificationRequest(body: unknown): ValidationResult<Not
     return { success: false, errors: ['Request body must be an object'] };
   }
 
-  if (!isUUID(body.userId)) {
+  const b = body as Record<string, unknown>;
+
+  if (!isUUID(b.userId)) {
     errors.push('userId must be a valid UUID');
   }
 
-  if (!isString(body.type) || body.type.length === 0) {
+  if (!isString(b.type) || (b.type as string).length === 0) {
     errors.push('type is required and must be a non-empty string');
   }
 
-  if (body.metadata !== undefined && typeof body.metadata !== 'object') {
+  if (b.metadata !== undefined && typeof b.metadata !== 'object') {
     errors.push('metadata must be an object');
   }
 
@@ -215,9 +223,9 @@ export function validateNotificationRequest(body: unknown): ValidationResult<Not
   return {
     success: true,
     data: {
-      userId: body.userId,
-      type: body.type,
-      metadata: body.metadata,
+      userId: b.userId as string,
+      type: b.type as string,
+      metadata: b.metadata as Record<string, unknown> | undefined,
     },
   };
 }

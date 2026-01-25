@@ -40,8 +40,8 @@ const ComparePage = () => {
     bathrooms: number | null;
     parking: number | null;
     sqft: number | null;
-    lot_size: number | null;
-    amenities: Array<{ category: string; items: string[] }> | null;
+    lot_size?: number | null;
+    amenities?: Array<{ category: string; items: string[] }> | null;
     images: Array<{ url: string }> | null;
   }>>([]);
   const [loading, setLoading] = useState(true);
@@ -77,10 +77,11 @@ const ComparePage = () => {
 
       if (error) throw error;
 
-      // Sort by compareList order
+      // Sort by compareList order and add missing fields
       const sortedData = compareList
         .map((id) => data?.find((p) => p.id === id))
-        .filter(Boolean);
+        .filter(Boolean)
+        .map(p => ({ ...p!, lot_size: null, amenities: null }));
 
       setProperties(sortedData);
     } catch (error) {

@@ -35,8 +35,8 @@ const PricingInmobiliaria = () => {
     }
     // Fallback
     const features: string[] = [];
-    const limits = plan?.features?.limits || plan?.features || {};
-    const caps = plan?.features?.capabilities || plan?.features || {};
+    const limits = (plan?.features?.limits || plan?.features || {}) as Record<string, unknown>;
+    const caps = (plan?.features?.capabilities || plan?.features || {}) as Record<string, unknown>;
     if (limits.max_properties) features.push(`Hasta ${limits.max_properties} propiedades activas`);
     if (limits.max_agents) features.push(`Hasta ${limits.max_agents} agentes en tu equipo`);
     if (limits.featured_per_month) features.push(`${limits.featured_per_month} propiedades destacadas al mes`);
@@ -323,10 +323,10 @@ const PricingInmobiliaria = () => {
                 : (growPlan?.price_yearly || 44990);
               const { original, final, savings } = getDiscountedPrice(basePrice);
               return (
-                <Card className={`relative transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${growPlan?.features?.display?.highlight ? 'border-primary border-2 shadow-lg ring-2 ring-primary/20' : ''}`}>
-                  {growPlan?.features?.display?.badge && (
+                <Card className={`relative transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${(growPlan?.features?.display as Record<string, unknown>)?.highlight ? 'border-primary border-2 shadow-lg ring-2 ring-primary/20' : ''}`}>
+                  {(growPlan?.features?.display as Record<string, unknown>)?.badge && (
                     <Badge className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 text-sm font-semibold shadow-lg">
-                      {growPlan.features.display.badge === 'popular' ? 'Más elegido' : growPlan.features.display.badge}
+                      {(growPlan?.features?.display as Record<string, unknown>)?.badge === 'popular' ? 'Más elegido' : String((growPlan?.features?.display as Record<string, unknown>)?.badge)}
                     </Badge>
                   )}
                   <CardHeader className="pb-4">

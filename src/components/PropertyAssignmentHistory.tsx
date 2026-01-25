@@ -17,6 +17,7 @@ interface PropertyAssignmentHistoryProps {
 interface HistoryEntry {
   id: string;
   assigned_at: string;
+  notes?: string;
   properties?: { id?: string; title?: string; municipality?: string; state?: string } | null;
   previous_agent?: { id?: string; name?: string } | null;
   new_agent?: { id?: string; name?: string } | null;
@@ -30,7 +31,7 @@ export const PropertyAssignmentHistory = ({
 }: PropertyAssignmentHistoryProps) => {
   const { toast } = useToast();
   const { error: logError, captureException } = useMonitoring();
-  const [history, setHistory] = useState<Array<Record<string, unknown>>>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -92,7 +93,16 @@ export const PropertyAssignmentHistory = ({
       const { data, error } = await query;
 
       if (error) throw error;
-      setHistory(data || []);
+      const mappedHistory: HistoryEntry[] = (data || []).map((entry: Record<string, unknown>) => ({
+        id: entry.id as string,
+        assigned_at: entry.assigned_at as string,
+        notes: entry.notes as string | undefined,
+        properties: entry.properties as { id?: string; title?: string; municipality?: string; state?: string } | null,
+        previous_agent: entry.previous_agent as { id?: string; name?: string } | null,
+        new_agent: entry.new_agent as { id?: string; name?: string } | null,
+        assigner: entry.assigner as { id?: string; name?: string } | null,
+      }));
+      setHistory(mappedHistory);
     } catch (error) {
       logError('Error fetching assignment history', {
         component: 'PropertyAssignmentHistory',

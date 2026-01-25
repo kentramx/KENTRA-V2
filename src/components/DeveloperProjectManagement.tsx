@@ -256,7 +256,7 @@ export const DeveloperProjectManagement = ({ developerId, subscriptionInfo }: De
       });
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo guardar el proyecto',
+        description: error instanceof Error ? error.message : 'No se pudo guardar el proyecto',
         variant: 'destructive',
       });
     } finally {

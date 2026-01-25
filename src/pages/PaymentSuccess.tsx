@@ -118,7 +118,7 @@ const PaymentSuccess = () => {
             : Number(userSub.plan.price_monthly),
           billingCycle: userSub.billing_cycle,
           currentPeriodEnd: userSub.current_period_end,
-          features: userSub.plan.features,
+          features: userSub.plan.features as Record<string, unknown>,
           status: userSub.status,
         };
         
@@ -401,7 +401,7 @@ const PaymentSuccess = () => {
                       </span>
                     </li>
                   )}
-                  {subscription.features.featured_listings > 0 && (
+                  {(subscription.features.featured_listings as number) > 0 && (
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                       <span>

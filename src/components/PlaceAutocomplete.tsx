@@ -52,7 +52,9 @@ const extractColoniaFromComponents = (
   const primaryTypes = ['sublocality_level_1', 'sublocality', 'neighborhood'];
   for (const component of addressComponents) {
     if (primaryTypes.some(type => component.types.includes(type))) {
-      colonia = component.long_name || component.longText;
+      // Use type assertion to access either property safely
+      const comp = component as { types: string[]; long_name?: string; longText?: string };
+      colonia = comp.long_name || comp.longText || '';
       if (colonia) return colonia;
     }
   }
@@ -61,7 +63,8 @@ const extractColoniaFromComponents = (
   for (const component of addressComponents) {
     if (component.types.includes('route')) {
       // Only use route if it looks like a neighborhood name (not a street number)
-      const routeName = component.long_name || component.longText;
+      const comp = component as { types: string[]; long_name?: string; longText?: string };
+      const routeName = comp.long_name || comp.longText || '';
       if (routeName && !/^\d+/.test(routeName)) {
         colonia = routeName;
         break;

@@ -4,7 +4,7 @@ import { monitoring } from '@/lib/monitoring';
 // Extend Window interface for GTM dataLayer
 declare global {
   interface Window {
-    dataLayer?: Record<string, unknown>[];
+    dataLayer?: unknown[];
   }
 }
 

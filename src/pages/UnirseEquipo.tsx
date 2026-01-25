@@ -109,7 +109,7 @@ export default function UnirseEquipo() {
         return;
       }
 
-      setInvitation(data);
+      setInvitation(data as unknown as InvitationData);
     } catch (error) {
       console.error('Error loading invitation:', error);
       setError('Error al cargar la invitación');

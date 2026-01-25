@@ -127,7 +127,7 @@ export async function sendEmail({
   category = 'transactional',
   fromName,
   tags = [],
-}: SendEmailOptions): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+}: SendEmailOptions): Promise<{ success: boolean; data?: unknown; error?: string }> {
   try {
     const toArray = Array.isArray(to) ? to : [to];
     
@@ -186,7 +186,7 @@ export async function sendEmail({
  */
 export async function sendEmailWithFooter(
   options: SendEmailOptions
-): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+): Promise<{ success: boolean; data?: unknown; error?: string }> {
   // Insertar footer antes del cierre de body si existe
   let htmlWithFooter = options.htmlContent;
   

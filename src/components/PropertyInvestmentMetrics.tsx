@@ -44,8 +44,9 @@ export const PropertyInvestmentMetrics = ({
         .eq("status", "activa");
 
       // Only add type filter if it's a valid enum value
-      if (type) {
-        query = query.eq("type", type);
+      const validTypes = ['bodega', 'casa', 'departamento', 'edificio', 'local', 'oficina', 'otro', 'rancho', 'terreno'];
+      if (type && validTypes.includes(type)) {
+        query = query.eq("type", type as 'bodega' | 'casa' | 'departamento' | 'edificio' | 'local' | 'oficina' | 'otro' | 'rancho' | 'terreno');
       }
 
       const { data, error } = await query;

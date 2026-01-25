@@ -49,7 +49,7 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
     for_rent: property.listing_type === 'renta' || property.for_rent,
     sale_price: property.sale_price || (property.listing_type === 'venta' ? property.price : null),
     rent_price: property.rent_price || (property.listing_type === 'renta' ? property.price : null),
-    currency: property.currency || 'MXN',
+    currency: (property.currency === 'USD' ? 'USD' : 'MXN') as 'MXN' | 'USD',
     type: property.type,
     address: property.address,
     colonia: property.colonia,
@@ -64,7 +64,7 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
     lot_size: property.lot_size?.toString() || '',
     description: property.description || '',
     video_url: property.video_url || '',
-    amenities: property.amenities || [],
+    amenities: (Array.isArray(property.amenities) ? property.amenities : []) as Array<{ category: string; items: string[] }>,
   } : undefined);
 
   const createPropertyMutation = useCreateProperty();

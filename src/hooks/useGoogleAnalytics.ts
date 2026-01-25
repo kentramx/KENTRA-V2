@@ -90,7 +90,7 @@ const saveEventToDatabase = async (
       userRole = roleData?.role || null;
     }
 
-    await supabase.from('conversion_events').insert({
+    await supabase.from('conversion_events').insert([{
       event_type: originalEventName, // Guardar el nombre original (ej: CompleteRegistration)
       event_source: 'google_analytics',
       user_id: user?.id || null,
@@ -100,11 +100,11 @@ const saveEventToDatabase = async (
       content_category: parameters?.event_category || null,
       value: parameters?.value || null,
       currency: parameters?.currency || 'MXN',
-      metadata: parameters || {},
+      metadata: (parameters || null) as Record<string, string | number | boolean | null> | null,
       session_id: getSessionId(),
       referrer: typeof document !== 'undefined' ? document.referrer : null,
       user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-    });
+    }]);
   } catch (error) {
     monitoring.error('Error saving GA4 event to database', { error });
   }

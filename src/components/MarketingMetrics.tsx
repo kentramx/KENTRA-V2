@@ -116,8 +116,7 @@ export const MarketingMetrics = () => {
       const endDate = new Date();
       const startDate = subDays(endDate, parseInt(dateRange));
 
-      const { data, error } = // @ts-expect-error - RPC function not typed in generated schema
-      await supabase.rpc("get_marketing_metrics", {
+      const { data, error } = await (supabase.rpc as unknown as (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: Error | null }>)("get_marketing_metrics", {
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
       });

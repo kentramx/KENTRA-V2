@@ -52,8 +52,8 @@ const buildFeaturesArray = (plan: PlanData): string[] => {
   
   // Fallback: generar features dinámicamente desde limits/capabilities
   const features: string[] = [];
-  const propLimit = getPlanPropertyLimit(plan);
-  const featuredLimit = getPlanFeaturedLimit(plan);
+  const propLimit = getPlanPropertyLimit(plan as never);
+  const featuredLimit = getPlanFeaturedLimit(plan as never);
   
   if (propLimit === -1) {
     features.push('Propiedades ilimitadas');
@@ -184,7 +184,7 @@ const PricingAgente = () => {
       isFree,
       popular: slug === 'pro',
       buttonText: isFree ? 'Probar gratis' : slug === 'start' ? 'Comenzar con Start' : slug === 'pro' ? 'Continuar con Pro' : 'Actualizar a Elite',
-      features: buildFeaturesArray(plan),
+      features: buildFeaturesArray(plan as unknown as PlanData),
     };
   }) || [];
 

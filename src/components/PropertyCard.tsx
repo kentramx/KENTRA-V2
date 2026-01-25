@@ -191,10 +191,156 @@ const PropertyCardComponent = ({
     setCurrentImageIndex((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1));
   }, [displayImages.length]);
 
-  const Wrapper = onCardClick ? 'div' : Link;
-  const wrapperProps = onCardClick 
-    ? { onClick: handleCardClick, className: "cursor-pointer" }
-    : { to: `/propiedad/${id}`, onClick: handleCardClick };
+  // Use conditional rendering instead of dynamic component to avoid type issues
+  const isClickHandler = !!onCardClick;
+
+  const renderImageSection = () => (
+    <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
+      <LazyImage
+        src={getImageUrl(displayImages[currentImageIndex]?.url || propertyPlaceholder)}
+        alt={`${bedrooms} bd, ${bathrooms} ba - ${getTypeLabel()}`}
+        className="h-full w-full transition-transform duration-500 group-hover:scale-105"
+        blurDataURL={propertyPlaceholder}
+      />
+      
+      {/* Image navigation */}
+      {displayImages.length > 1 && (
+        <>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Imagen anterior"
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-full h-8 w-8"
+            onClick={handlePrevImage}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Siguiente imagen"
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-full h-8 w-8"
+            onClick={handleNextImage}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </>
+      )}
+      
+      {/* Badges */}
+      <div className="absolute top-3 left-3 flex flex-wrap gap-2 z-10">
+        {isFeatured && (
+          <Badge className="bg-amber-500/90 hover:bg-amber-500 text-white border-0 backdrop-blur-sm">
+            <Star className="w-3 h-3 mr-1 fill-current" />
+            Destacada
+          </Badge>
+        )}
+        {isNew() && (
+          <Badge className="bg-accent/90 hover:bg-accent text-accent-foreground border-0 backdrop-blur-sm">
+            Nuevo
+          </Badge>
+        )}
+      </div>
+      
+      {/* Listing type badge */}
+      <Badge className="absolute right-3 bottom-3 bg-background/90 text-foreground backdrop-blur-sm border-0 z-20">
+        {getListingBadge()}
+      </Badge>
+      
+      {/* Image indicators */}
+      {displayImages.length > 1 && (
+        <div className="absolute bottom-3 left-3 flex gap-1 z-20">
+          {displayImages.slice(0, 5).map((_, idx) => (
+            <div 
+              key={idx} 
+              className={cn(
+                "w-1.5 h-1.5 rounded-full transition-colors",
+                idx === currentImageIndex ? "bg-white" : "bg-white/60"
+              )}
+            />
+          ))}
+          {displayImages.length > 5 && (
+            <span className="text-xs text-white ml-1">+{displayImages.length - 5}</span>
+          )}
+        </div>
+      )}
+      
+      {/* Favorite button */}
+      {onToggleFavorite && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+          className="absolute right-3 top-3 bg-background/80 hover:bg-background z-20 rounded-full h-9 w-9"
+          onClick={(e) => {
+            e.preventDefault();
+            onToggleFavorite();
+          }}
+        >
+          <Heart
+            className={cn(
+              "h-5 w-5 transition-colors",
+              isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"
+            )}
+          />
+        </Button>
+      )}
+    </div>
+  );
+
+  const renderContentSection = () => (
+    <>
+      {/* Price - TIER S typography */}
+      <div className="mb-4">
+        {getDisplayPrice()}
+      </div>
+      
+      {/* Features with icons */}
+      <div className="flex items-center gap-4 text-sm mb-4">
+        {bedrooms && (
+          <div className="flex items-center gap-1.5">
+            <Bed className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{bedrooms}</span>
+          </div>
+        )}
+        {bathrooms && (
+          <div className="flex items-center gap-1.5">
+            <Bath className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{bathrooms}</span>
+          </div>
+        )}
+        {parking && parking > 0 && (
+          <div className="flex items-center gap-1.5">
+            <Car className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{parking}</span>
+          </div>
+        )}
+        {sqft && (
+          <div className="flex items-center gap-1.5">
+            <Square className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{sqft}m²</span>
+          </div>
+        )}
+      </div>
+
+      {/* Title */}
+      <h3 className="font-semibold text-base line-clamp-2 mb-2 text-foreground">
+        {title}
+      </h3>
+
+      {/* Location */}
+      <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
+        {municipality}, {state}
+      </p>
+      
+      {/* Days on market */}
+      {createdAt && (
+        <p className="text-xs text-muted-foreground/70">
+          {getDaysOnMarket()}
+        </p>
+      )}
+    </>
+  );
 
   return (
     <Card className={cn(
@@ -203,156 +349,26 @@ const PropertyCardComponent = ({
       "hover:shadow-xl hover:-translate-y-1 hover:border-primary/20",
       isHovered && 'ring-2 ring-primary shadow-xl scale-[1.02]'
     )}>
-      {/* @ts-expect-error - Wrapper component has dynamic props based on linkHref */}
-      <Wrapper {...wrapperProps}>
-        <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl">
-          <LazyImage
-            src={getImageUrl(displayImages[currentImageIndex]?.url || propertyPlaceholder)}
-            alt={`${bedrooms} bd, ${bathrooms} ba - ${getTypeLabel()}`}
-            className="h-full w-full transition-transform duration-500 group-hover:scale-105"
-            blurDataURL={propertyPlaceholder}
-          />
-          
-          {/* Image navigation */}
-          {displayImages.length > 1 && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Imagen anterior"
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-full h-8 w-8"
-                onClick={handlePrevImage}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Siguiente imagen"
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-full h-8 w-8"
-                onClick={handleNextImage}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-          
-          {/* Badges */}
-          <div className="absolute top-3 left-3 flex flex-wrap gap-2 z-10">
-            {isFeatured && (
-              <Badge className="bg-amber-500/90 hover:bg-amber-500 text-white border-0 backdrop-blur-sm">
-                <Star className="w-3 h-3 mr-1 fill-current" />
-                Destacada
-              </Badge>
-            )}
-            {isNew() && (
-              <Badge className="bg-accent/90 hover:bg-accent text-accent-foreground border-0 backdrop-blur-sm">
-                Nuevo
-              </Badge>
-            )}
-          </div>
-          
-          {/* Listing type badge */}
-          <Badge className="absolute right-3 bottom-3 bg-background/90 text-foreground backdrop-blur-sm border-0 z-20">
-            {getListingBadge()}
-          </Badge>
-          
-          {/* Image indicators */}
-          {displayImages.length > 1 && (
-            <div className="absolute bottom-3 left-3 flex gap-1 z-20">
-              {displayImages.slice(0, 5).map((_, idx) => (
-                <div 
-                  key={idx} 
-                  className={cn(
-                    "w-1.5 h-1.5 rounded-full transition-colors",
-                    idx === currentImageIndex ? "bg-white" : "bg-white/60"
-                  )}
-                />
-              ))}
-              {displayImages.length > 5 && (
-                <span className="text-xs text-white ml-1">+{displayImages.length - 5}</span>
-              )}
-            </div>
-          )}
-          
-          {/* Favorite button */}
-          {onToggleFavorite && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
-              className="absolute right-3 top-3 bg-background/80 hover:bg-background z-20 rounded-full h-9 w-9"
-              onClick={(e) => {
-                e.preventDefault();
-                onToggleFavorite();
-              }}
-            >
-              <Heart
-                className={cn(
-                  "h-5 w-5 transition-colors",
-                  isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"
-                )}
-              />
-            </Button>
-          )}
+      {isClickHandler ? (
+        <div onClick={handleCardClick} className="cursor-pointer">
+          {renderImageSection()}
         </div>
-      {/* @ts-expect-error - Wrapper component has dynamic props based on linkHref */}
-      </Wrapper>
+      ) : (
+        <Link to={`/propiedad/${id}`} onClick={handleCardClick}>
+          {renderImageSection()}
+        </Link>
+      )}
 
       <CardContent className="flex-1 p-5 space-y-3">
-        {/* @ts-expect-error - Wrapper component has dynamic props based on linkHref */}
-        <Wrapper {...wrapperProps}>
-          {/* Price - TIER S typography */}
-          <div className="mb-4">
-            {getDisplayPrice()}
+        {isClickHandler ? (
+          <div onClick={handleCardClick} className="cursor-pointer">
+            {renderContentSection()}
           </div>
-          
-          {/* Features with icons */}
-          <div className="flex items-center gap-4 text-sm mb-4">
-            {bedrooms && (
-              <div className="flex items-center gap-1.5">
-                <Bed className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{bedrooms}</span>
-              </div>
-            )}
-            {bathrooms && (
-              <div className="flex items-center gap-1.5">
-                <Bath className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{bathrooms}</span>
-              </div>
-            )}
-            {parking && parking > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Car className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{parking}</span>
-              </div>
-            )}
-            {sqft && (
-              <div className="flex items-center gap-1.5">
-                <Square className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{sqft}m²</span>
-              </div>
-            )}
-          </div>
-
-          {/* Title */}
-          <h3 className="font-semibold text-base line-clamp-2 mb-2 text-foreground">
-            {title}
-          </h3>
-
-          {/* Location */}
-          <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
-            {municipality}, {state}
-          </p>
-          
-          {/* Days on market */}
-          {createdAt && (
-            <p className="text-xs text-muted-foreground/70">
-              {getDaysOnMarket()}
-            </p>
-          )}
-        {/* @ts-expect-error - Wrapper component has dynamic props based on linkHref */}
-        </Wrapper>
+        ) : (
+          <Link to={`/propiedad/${id}`} onClick={handleCardClick}>
+            {renderContentSection()}
+          </Link>
+        )}
       </CardContent>
     </Card>
   );

@@ -253,7 +253,15 @@ const AdminDashboard = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      setProperties(data || []);
+      // Map the data to match PropertyData interface
+      const mappedProperties: PropertyData[] = (data || []).map(p => ({
+        ...p,
+        images: p.images as PropertyImage[] | null,
+        profiles: p.profiles as PropertyProfile | null,
+        rejection_history: (p.rejection_history as unknown as RejectionRecord[]) || null,
+        amenities: (p.amenities as Record<string, boolean>) || null,
+      }));
+      setProperties(mappedProperties);
   } catch (error: unknown) {
     console.error('Error fetching properties:', error);
     toast({
@@ -1330,10 +1338,27 @@ const AdminDashboard = () => {
                 </Alert>
               )}
 
-              <QualityChecklist property={viewProperty} />
+              <QualityChecklist property={{
+                description: viewProperty.description,
+                amenities: Array.isArray(viewProperty.amenities) ? viewProperty.amenities : [],
+                images: viewProperty.images,
+                price: viewProperty.price,
+                lat: viewProperty.lat,
+                lng: viewProperty.lng,
+              }} />
               
               {viewProperty.resubmission_count > 0 && (
-                <PropertyDiff property={viewProperty} />
+                <PropertyDiff property={{
+                  id: viewProperty.id,
+                  resubmission_count: viewProperty.resubmission_count,
+                  images: viewProperty.images,
+                  description: viewProperty.description,
+                  amenities: Array.isArray(viewProperty.amenities) 
+                    ? viewProperty.amenities.map(a => ({ items: [] }))
+                    : [],
+                  lat: viewProperty.lat,
+                  lng: viewProperty.lng,
+                }} />
               )}
 
               <Separator className="my-6" />

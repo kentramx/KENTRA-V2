@@ -161,7 +161,8 @@ const AgencyDashboard = () => {
 
         setAgency(agencyData || { name: 'Kentra Inmobiliaria Demo', owner_id: ownerId, id: agencyId });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { user_uuid: ownerId });
+        // @ts-expect-error - RPC function exists but is not typed in Supabase schema
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: ownerId });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
       } finally {
         setLoading(false);
@@ -187,7 +188,8 @@ const AgencyDashboard = () => {
         
         setAgency(agencyData || { name: 'Kentra Inmobiliaria Demo', owner_id: ownerId, id: agencyId });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { user_uuid: ownerId });
+        // @ts-expect-error - RPC function exists but is not typed in Supabase schema
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: ownerId });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
         
         setLoading(false);
@@ -224,7 +226,8 @@ const AgencyDashboard = () => {
       setAgency(agencyData);
 
       // Obtener información de suscripción
-      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", {
+      // @ts-expect-error - RPC function exists but is not typed in Supabase schema
+      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info', {
         user_uuid: user?.id,
       });
 
@@ -266,7 +269,8 @@ const AgencyDashboard = () => {
       
       // Refresh subscription info
       if (effectiveOwnerId) {
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { 
+        // @ts-expect-error - RPC function exists but is not typed in Supabase schema
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { 
           user_uuid: effectiveOwnerId 
         });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) {
@@ -377,7 +381,7 @@ const AgencyDashboard = () => {
             planName: subscriptionInfo?.name,
             currentPeriodEnd: subscriptionInfo?.current_period_end,
             maxProperties: subscriptionInfo?.properties_limit || 20,
-            maxAgents: subscriptionInfo?.max_agents || 5,
+            maxAgents: (subscriptionInfo as Record<string, unknown>)?.max_agents as number || 5,
           }}
         />
 
@@ -491,7 +495,7 @@ const AgencyDashboard = () => {
                 <TabsContent value="team" className="mt-0">
                   <AgencyTeamManagement 
                     agencyId={effectiveAgencyId || agency?.id || ''} 
-                    subscriptionInfo={subscriptionInfo}
+                    subscriptionInfo={subscriptionInfo as never}
                   />
                 </TabsContent>
 
@@ -508,7 +512,7 @@ const AgencyDashboard = () => {
                   <div className="grid gap-6 lg:grid-cols-3">
                     <div className="lg:col-span-1">
                       <PremiumSubscriptionCard
-                        subscriptionInfo={subscriptionInfo}
+                        subscriptionInfo={subscriptionInfo as never}
                         userRole="agency"
                         activePropertiesCount={inventoryCount}
                         featuredCount={0}
@@ -517,7 +521,7 @@ const AgencyDashboard = () => {
                     </div>
                     <div className="lg:col-span-2">
                       <PremiumMetricsCards
-                        subscriptionInfo={subscriptionInfo}
+                        subscriptionInfo={subscriptionInfo as never}
                         activePropertiesCount={inventoryCount}
                         featuredCount={0}
                       />
