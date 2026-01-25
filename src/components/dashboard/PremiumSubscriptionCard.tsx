@@ -15,8 +15,11 @@ import { getPlanTier, PLAN_TIER_CONFIG, METRIC_ICONS } from '@/config/planTierCo
 
 interface SubscriptionInfo {
   plan_type?: string;
+  plan_name?: string;
+  display_name?: string;
   status?: string;
   listing_limit?: number;
+  properties_limit?: number;
   featured_limit?: number;
   trial_ends_at?: string;
   current_period_end?: string;
@@ -61,7 +64,7 @@ export const PremiumSubscriptionCard = ({
     : null;
 
   // Calcular uso
-  const propertiesLimit = subscriptionInfo?.properties_limit || 0;
+  const propertiesLimit = subscriptionInfo?.properties_limit || subscriptionInfo?.listing_limit || 0;
   const featuredLimit = subscriptionInfo?.featured_limit || 0;
   const isUnlimited = propertiesLimit === -1;
   const propertiesUsage = isUnlimited ? 0 : propertiesLimit > 0 ? (activePropertiesCount / propertiesLimit) * 100 : 0;

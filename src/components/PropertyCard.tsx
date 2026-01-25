@@ -296,11 +296,9 @@ const PropertyCardComponent = ({
             </Button>
           )}
         </div>
-      {/* @ts-expect-error - Wrapper component has dynamic props based on linkHref */}
       </Wrapper>
 
       <CardContent className="flex-1 p-5 space-y-3">
-        {/* @ts-expect-error - Wrapper component has dynamic props based on linkHref */}
         <Wrapper {...wrapperProps}>
           {/* Price - TIER S typography */}
           <div className="mb-4">
@@ -351,7 +349,6 @@ const PropertyCardComponent = ({
               {getDaysOnMarket()}
             </p>
           )}
-        {/* @ts-expect-error - Wrapper component has dynamic props based on linkHref */}
         </Wrapper>
       </CardContent>
     </Card>

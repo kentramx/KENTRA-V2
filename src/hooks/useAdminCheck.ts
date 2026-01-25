@@ -40,7 +40,7 @@ export const useAdminCheck = () => {
     try {
       // OPTIMIZATION: Single query to get admin role - avoids multiple RPC calls
       // is_super_admin implies has_admin_access, so check super_admin first
-      const { data: isSuperData, error: superError } = await (supabase.rpc as (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)('is_super_admin', {
+      const { data: isSuperData, error: superError } = await (supabase.rpc as unknown as (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: Error | null }>)('is_super_admin', {
         user_uuid: user.id,
       });
 

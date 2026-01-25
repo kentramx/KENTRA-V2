@@ -115,26 +115,27 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
   useEffect(() => {
     if (property) {
+      const p = property as Record<string, unknown>;
       setFormData({
-        description: property.description || '',
-        price: property.price?.toString() || '',
-        type: property.type || 'casa',
-        listing_type: property.listing_type || 'venta',
-        address: property.address || '',
-        colonia: property.colonia || '',
-        municipality: property.municipality || '',
-        state: property.state || '',
-        bedrooms: property.bedrooms?.toString() || '',
-        bathrooms: property.bathrooms?.toString() || '',
-        parking: property.parking?.toString() || '',
-        sqft: property.sqft?.toString() || '',
-        lot_size: property.lot_size?.toString() || '',
-        lat: property.lat,
-        lng: property.lng,
-        video_url: property.video_url || '',
+        description: (p.description as string) || '',
+        price: p.price ? String(p.price) : '',
+        type: (p.type as string) || 'casa',
+        listing_type: (p.listing_type as string) || 'venta',
+        address: (p.address as string) || '',
+        colonia: (p.colonia as string) || '',
+        municipality: (p.municipality as string) || '',
+        state: (p.state as string) || '',
+        bedrooms: p.bedrooms ? String(p.bedrooms) : '',
+        bathrooms: p.bathrooms ? String(p.bathrooms) : '',
+        parking: p.parking ? String(p.parking) : '',
+        sqft: p.sqft ? String(p.sqft) : '',
+        lot_size: p.lot_size ? String(p.lot_size) : '',
+        lat: p.lat as number | undefined,
+        lng: p.lng as number | undefined,
+        video_url: (p.video_url as string) || '',
       });
-      setExistingImages(property.images || []);
-      setAmenities(property.amenities || []);
+      setExistingImages((p.images as { id: string; url: string }[]) || []);
+      setAmenities((p.amenities as { category: string; items: string[] }[]) || []);
     }
   }, [property]);
 

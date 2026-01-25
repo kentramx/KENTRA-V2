@@ -45,7 +45,7 @@ export function CouponManagement() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewRedemptionsId, setViewRedemptionsId] = useState<string | null>(null);
-  const [redemptions, setRedemptions] = useState<Array<Record<string, unknown>>>([]);
+  const [redemptions, setRedemptions] = useState<Redemption[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -163,7 +163,15 @@ export function CouponManagement() {
         .eq('coupon_id', couponId);
 
       if (error) throw error;
-      setRedemptions(data || []);
+      const mappedRedemptions: Redemption[] = (data || []).map((r: Record<string, unknown>) => ({
+        id: r.id as string,
+        discount_amount: r.discount_amount as number,
+        currency: (r.currency as string) || 'mxn',
+        redeemed_at: r.redeemed_at as string,
+        profiles: r.profiles as { name?: string; email?: string } | null,
+        subscription_plans: r.subscription_plans as { display_name?: string } | null,
+      }));
+      setRedemptions(mappedRedemptions);
       setViewRedemptionsId(couponId);
     } catch (error: unknown) {
       toast.error("Error al cargar canjes: " + (error instanceof Error ? error.message : String(error)));

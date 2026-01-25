@@ -167,7 +167,7 @@ export const IdentityVerification = () => {
       });
       toast({
         title: "Error",
-        description: error.message || "No se pudo enviar la solicitud",
+        description: error instanceof Error ? error.message : "No se pudo enviar la solicitud",
         variant: "destructive",
       });
     } finally {

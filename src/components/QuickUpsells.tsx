@@ -11,6 +11,7 @@ import { Badge } from './ui/badge';
 
 interface SubscriptionInfo {
   listing_limit?: number;
+  properties_limit?: number;
   featured_limit?: number;
   plan_id?: string;
 }
@@ -91,7 +92,7 @@ export const QuickUpsells = ({
   }
 
   // Determinar cuáles mostrar según contexto
-  const propertiesLimit = subscriptionInfo?.properties_limit || 0;
+  const propertiesLimit = subscriptionInfo?.properties_limit || subscriptionInfo?.listing_limit || 0;
   const usagePercent = propertiesLimit > 0 ? (activePropertiesCount / propertiesLimit) : 0;
   
   // Priorizar slot adicional si está cerca del límite

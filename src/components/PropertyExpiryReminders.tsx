@@ -174,8 +174,11 @@ export const PropertyExpiryReminders = ({ agentId }: PropertyExpiryRemindersProp
       if (error) throw error;
 
       // Formatear datos para acceso más fácil
-      const formattedData = data?.map((reminder: Record<string, unknown>) => ({
-        ...reminder,
+      const formattedData: ExpiryReminder[] = data?.map((reminder: Record<string, unknown>) => ({
+        id: reminder.id as string,
+        property_id: reminder.property_id as string,
+        days_before: reminder.days_before as number,
+        sent_at: reminder.sent_at as string,
         property: Array.isArray(reminder.properties) ? reminder.properties[0] : reminder.properties,
       })) || [];
 
