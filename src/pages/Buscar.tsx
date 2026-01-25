@@ -1,18 +1,16 @@
 /**
  * Página de búsqueda estilo Zillow - Enterprise Edition
  *
- * ARQUITECTURA ENTERPRISE:
- * - MapLibre GL JS ($0/mes) en lugar de Google Maps ($200-500/mes)
- * - Clusters pre-computados por Geohash (O(1) lookup)
- * - search_properties RPC optimizado con estimated counts
- * - WebGL nativo para renderizado de 1M+ propiedades
+ * 🚧 EN CONSTRUCCIÓN - Nueva arquitectura de mapas
+ * TODO: Implementar nueva arquitectura enterprise con:
+ * - PostGIS + GIST indexes
+ * - Martin vector tiles
+ * - Meilisearch para lista
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SearchMapLibre } from '@/components/maps/SearchMapLibre';
 import { LocationSearchInput, type LocationResult } from '@/components/maps/LocationSearchInput';
-import { useMapClusters } from '@/hooks/useMapClusters';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useFavorites } from '@/hooks/useFavorites';
 import PropertyCard from '@/components/PropertyCard';
@@ -21,14 +19,29 @@ import { PropertyDetailSheet } from '@/components/PropertyDetailSheet';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapIcon, List, Loader2, SlidersHorizontal, X, Home, Building2, TreePine } from 'lucide-react';
+import { MapIcon, List, Loader2, SlidersHorizontal, X, Home, Building2, TreePine, Construction } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { MapViewport, MapFilters } from '@/types/map';
-import { MAPLIBRE_CONFIG } from '@/config/mapLibre';
+
+// Tipos temporales hasta implementar nueva arquitectura
+interface MapViewport {
+  bounds: { north: number; south: number; east: number; west: number };
+  zoom: number;
+  center: { lat: number; lng: number };
+}
+
+interface MapFilters {
+  listing_type?: 'venta' | 'renta';
+  property_type?: string;
+  min_price?: number;
+  max_price?: number;
+  min_bedrooms?: number;
+  state?: string;
+  municipality?: string;
+}
 
 // Centro inicial de México
-const INITIAL_CENTER = MAPLIBRE_CONFIG.defaultCenter;
-const INITIAL_ZOOM = MAPLIBRE_CONFIG.zoom.default;
+const INITIAL_CENTER = { lat: 23.6345, lng: -102.5528 };
+const INITIAL_ZOOM = 6;
 const LOCATION_ZOOM = 12; // Zoom para cuando hay lat/lng en URL
 
 // Tipos de propiedad
@@ -104,22 +117,16 @@ export default function Buscar() {
     municipality: searchParams.get('municipio') || undefined,
   }), [searchParams]);
 
-  // Datos del mapa (clusters + propiedades visibles)
-  // Solo habilitar cuando tenemos viewport real de MapLibre
-  const {
-    clusters,
-    properties: mapProperties,
-    total: mapTotal,
-    isClustered,
-    isLoading: mapLoading,
-    isFetching: mapFetching,
-    isPending: mapPending,
-    isIdle: mapIdle,
-  } = useMapClusters({
-    viewport,
-    filters,
-    enabled: viewport !== null, // Solo query cuando hay viewport real
-  });
+  // TODO: Implementar nueva arquitectura de mapas
+  // Por ahora, valores placeholder
+  const clusters: never[] = [];
+  const mapProperties: never[] = [];
+  const mapTotal = 0;
+  const isClustered = false;
+  const mapLoading = false;
+  const mapFetching = false;
+  const mapPending = false;
+  const mapIdle = true;
 
   // Datos de la lista (paginados, sincronizados con viewport)
   const {
@@ -335,32 +342,28 @@ export default function Buscar() {
             </div>
           </div>
 
-          {/* Mapa */}
+          {/* Mapa - PLACEHOLDER mientras se implementa nueva arquitectura */}
           <div
             className={cn(
               'lg:w-1/2 lg:h-full',
               mobileView === 'map' ? 'h-[calc(100vh-200px)]' : 'hidden lg:block'
             )}
           >
-            <SearchMapLibre
-              properties={mapProperties}
-              clusters={clusters}
-              totalCount={listTotal}
-              isClustered={isClustered}
-              isLoading={mapLoading}
-              isIdle={mapIdle}
-              isFetching={mapFetching}
-              isPending={mapPending}
-              hoveredPropertyId={hoveredPropertyId}
-              selectedPropertyId={selectedPropertyId}
-              onPropertyClick={handlePropertyClick}
-              onPropertyHover={(p) => setHoveredPropertyId(p?.id || null)}
-              onViewportChange={handleViewportChange}
-              initialCenter={INITIAL_CENTER}
-              initialZoom={INITIAL_ZOOM}
-              searchLocation={searchLocation}
-              onSearchLocationApplied={handleSearchLocationApplied}
-            />
+            <div className="h-full w-full bg-muted/50 flex flex-col items-center justify-center p-8">
+              <Construction className="h-16 w-16 text-muted-foreground/50 mb-4" />
+              <h2 className="text-xl font-semibold text-muted-foreground mb-2">
+                🚧 Mapa en construcción
+              </h2>
+              <p className="text-muted-foreground text-center max-w-md mb-4">
+                Estamos implementando una nueva arquitectura enterprise para mapas
+                con soporte para millones de propiedades.
+              </p>
+              <div className="text-sm text-muted-foreground/70 text-center space-y-1">
+                <p>• PostGIS + índices GIST</p>
+                <p>• Martin vector tiles</p>
+                <p>• Meilisearch para búsqueda</p>
+              </div>
+            </div>
           </div>
 
           {/* Lista */}
