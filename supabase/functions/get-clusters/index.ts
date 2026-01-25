@@ -6,13 +6,22 @@
  * 1. Intenta obtener clusters pre-computados de property_clusters
  * 2. Si no hay clusters (backfill pendiente), retorna estimación rápida
  * 3. Nunca hace queries pesadas que puedan timeout
+ *
+ * SECURITY:
+ * - Rate limiting: 60 req/min per IP
+ * - Timeout protection: 5s max per RPC call
+ * - Input validation: bounds, zoom range
+ * - CORS: whitelist-based
  */
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import {
+  checkRateLimit,
+  rateLimitedResponse,
+  addRateLimitHeaders,
+  getClientIP,
+  publicRateLimit
+} from "../_shared/rateLimit.ts";
 
 interface RequestBody {
   bounds: {
@@ -38,6 +47,65 @@ interface ClusterResult {
   count: number;
   avg_price: number | null;
   is_cluster: boolean;
+}
+
+// Mexico approximate bounds for validation
+const MEXICO_BOUNDS = { north: 33, south: 14, east: -86, west: -118 };
+
+// Fetch with timeout protection
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = 5000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// Validate bounds and zoom
+function validateInput(bounds: RequestBody["bounds"], zoom: number): string | null {
+  // Check bounds exist
+  if (!bounds || bounds.north == null || bounds.south == null ||
+      bounds.east == null || bounds.west == null) {
+    return "Invalid bounds: all coordinates required";
+  }
+
+  // Check bounds are numbers
+  if (!Number.isFinite(bounds.north) || !Number.isFinite(bounds.south) ||
+      !Number.isFinite(bounds.east) || !Number.isFinite(bounds.west)) {
+    return "Invalid bounds: must be finite numbers";
+  }
+
+  // Check bounds orientation
+  if (bounds.north <= bounds.south) {
+    return "Invalid bounds: north must be greater than south";
+  }
+  if (bounds.east <= bounds.west) {
+    return "Invalid bounds: east must be greater than west";
+  }
+
+  // Check zoom range
+  if (!Number.isFinite(zoom) || zoom < 0 || zoom > 20) {
+    return "Invalid zoom: must be 0-20";
+  }
+
+  // Warn if outside Mexico (but don't reject)
+  if (bounds.north > MEXICO_BOUNDS.north + 5 || bounds.south < MEXICO_BOUNDS.south - 5 ||
+      bounds.east > MEXICO_BOUNDS.east + 5 || bounds.west < MEXICO_BOUNDS.west - 5) {
+    console.warn("[get-clusters] Bounds outside expected Mexico range");
+  }
+
+  return null;
 }
 
 // Generate synthetic clusters for large viewports when pre-computed don't exist
@@ -76,8 +144,22 @@ function generateSyntheticClusters(
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting
+  const clientIP = getClientIP(req);
+  const rateLimitResult = checkRateLimit(clientIP, {
+    ...publicRateLimit,
+    keyPrefix: "get-clusters"
+  });
+
+  if (!rateLimitResult.allowed) {
+    return rateLimitedResponse(rateLimitResult, corsHeaders);
   }
 
   const startTime = Date.now();
@@ -85,12 +167,19 @@ Deno.serve(async (req) => {
   try {
     const { bounds, zoom, filters = {} }: RequestBody = await req.json();
 
-    // Validar bounds
-    if (!bounds || bounds.north == null || bounds.south == null ||
-        bounds.east == null || bounds.west == null) {
+    // Input validation
+    const validationError = validateInput(bounds, zoom);
+    if (validationError) {
       return new Response(
-        JSON.stringify({ error: "Invalid bounds", clusters: [], properties: [] }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: validationError, clusters: [], properties: [], total: 0 }),
+        {
+          status: 400,
+          headers: addRateLimitHeaders(
+            { ...corsHeaders, "Content-Type": "application/json" },
+            rateLimitResult,
+            publicRateLimit
+          )
+        }
       );
     }
 
@@ -101,24 +190,28 @@ Deno.serve(async (req) => {
       throw new Error("Missing Supabase environment variables");
     }
 
-    // STEP 1: Try to get pre-computed clusters
-    const rpcResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/get_clusters_in_viewport`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
+    // STEP 1: Try to get pre-computed clusters (with timeout)
+    const rpcResponse = await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/rpc/get_clusters_in_viewport`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          p_bounds_north: bounds.north,
+          p_bounds_south: bounds.south,
+          p_bounds_east: bounds.east,
+          p_bounds_west: bounds.west,
+          p_zoom: zoom,
+          p_listing_type: filters.listing_type || null,
+          p_limit: zoom >= 14 ? 500 : 200,
+        }),
       },
-      body: JSON.stringify({
-        p_bounds_north: bounds.north,
-        p_bounds_south: bounds.south,
-        p_bounds_east: bounds.east,
-        p_bounds_west: bounds.west,
-        p_zoom: zoom,
-        p_listing_type: filters.listing_type || null,
-        p_limit: zoom >= 14 ? 500 : 200,
-      }),
-    });
+      5000 // 5 second timeout
+    );
 
     if (!rpcResponse.ok) {
       const errorText = await rpcResponse.text();
@@ -157,21 +250,29 @@ Deno.serve(async (req) => {
     if (clusters.length === 0 && properties.length === 0 && zoom < 14) {
       console.log("[get-clusters] No pre-computed clusters found, fetching estimated count");
 
-      // Get estimated count from materialized view (O(1) query)
-      const countResponse = await fetch(`${supabaseUrl}/rest/v1/mv_property_counts_by_status?status=eq.activa&select=count`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-      });
+      // Get estimated count from materialized view (O(1) query) with timeout
+      try {
+        const countResponse = await fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/mv_property_counts_by_status?status=eq.activa&select=count`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+            },
+          },
+          3000 // 3 second timeout for count
+        );
 
-      if (countResponse.ok) {
-        const countData = await countResponse.json();
-        if (countData && countData.length > 0) {
-          totalCount = Number(countData[0].count) || 0;
+        if (countResponse.ok) {
+          const countData = await countResponse.json();
+          if (countData && countData.length > 0) {
+            totalCount = Number(countData[0].count) || 0;
+          }
         }
+      } catch (countError) {
+        console.warn("[get-clusters] Count fetch failed, using 0:", countError);
       }
 
       // Generate synthetic clusters for visualization
@@ -200,27 +301,33 @@ Deno.serve(async (req) => {
         },
       }),
       {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=60, s-maxage=300",
-        },
+        headers: addRateLimitHeaders(
+          {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Cache-Control": "public, max-age=60, s-maxage=300",
+          },
+          rateLimitResult,
+          publicRateLimit
+        ),
       }
     );
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Internal error";
+    const isTimeout = errorMessage.includes('aborted') || errorMessage.includes('timeout');
+
     console.error("[get-clusters] Error:", errorMessage);
 
     return new Response(
       JSON.stringify({
-        error: errorMessage,
+        error: isTimeout ? "Request timeout - try zooming in" : "Server error",
         clusters: [],
         properties: [],
         total: 0,
         is_clustered: false,
       }),
       {
-        status: 500,
+        status: isTimeout ? 504 : 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );

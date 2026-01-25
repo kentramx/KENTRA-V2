@@ -48,6 +48,22 @@ function getViewportArea(bounds: MapBounds): number {
   return Math.abs(bounds.north - bounds.south) * Math.abs(bounds.east - bounds.west);
 }
 
+// Expand bounds by a percentage for prefetching adjacent areas
+// This makes panning feel instant because nearby data is already cached
+function expandBounds(bounds: MapBounds, expandPercent: number): MapBounds {
+  const latDiff = bounds.north - bounds.south;
+  const lngDiff = bounds.east - bounds.west;
+  const latExpand = latDiff * expandPercent;
+  const lngExpand = lngDiff * expandPercent;
+
+  return {
+    north: Math.min(90, bounds.north + latExpand),
+    south: Math.max(-90, bounds.south - latExpand),
+    east: Math.min(180, bounds.east + lngExpand),
+    west: Math.max(-180, bounds.west - lngExpand),
+  };
+}
+
 /**
  * ENTERPRISE ARCHITECTURE FOR 1M+ PROPERTIES
  *
@@ -62,6 +78,29 @@ function getViewportArea(bounds: MapBounds): number {
 const ZOOM_THRESHOLD_MIN = 4;  // Below this, don't query at all
 const ZOOM_THRESHOLD_PRECOMPUTED = 10;  // Below this, use pre-computed/synthetic
 const MAX_AREA_FOR_REALTIME = 5;  // Maximum area (degrees²) for real-time clustering
+
+// Prefetch expansion by zoom level (Zillow-style instant panning)
+// Higher zoom = smaller viewport = more expansion benefit
+function getPrefetchExpansion(zoom: number): number {
+  if (zoom >= 14) return 0.5;  // 50% expansion at street level
+  if (zoom >= 12) return 0.4;  // 40% at neighborhood level
+  if (zoom >= 10) return 0.3;  // 30% at city level
+  return 0.2;  // 20% at region level (area already large)
+}
+
+// Snap bounds to a grid for better cache hits during small pans
+// The grid size is based on zoom level - smaller grids at higher zoom
+function snapBoundsToGrid(bounds: MapBounds, zoom: number): MapBounds {
+  // Grid size decreases as zoom increases
+  const gridSize = zoom >= 14 ? 0.01 : zoom >= 12 ? 0.05 : zoom >= 10 ? 0.1 : 0.5;
+
+  return {
+    north: Math.ceil(bounds.north / gridSize) * gridSize,
+    south: Math.floor(bounds.south / gridSize) * gridSize,
+    east: Math.ceil(bounds.east / gridSize) * gridSize,
+    west: Math.floor(bounds.west / gridSize) * gridSize,
+  };
+}
 
 export function useMapClusters({
   viewport,
@@ -79,8 +118,14 @@ export function useMapClusters({
   // At very low zoom (< 4), don't query - too zoomed out
   const shouldQuery = enabled && hasValidBounds && zoom >= ZOOM_THRESHOLD_MIN;
 
+  // Snap bounds to grid for better cache hits during panning
+  const snappedBounds = hasValidBounds
+    ? snapBoundsToGrid(debouncedViewport!.bounds, zoom)
+    : null;
+
   const query = useQuery({
-    queryKey: ['map-clusters', debouncedViewport, filters],
+    // Use snapped bounds for queryKey to maximize cache hits during small pans
+    queryKey: ['map-clusters', snappedBounds, zoom, filters],
     enabled: shouldQuery,
     staleTime: 60_000, // 1 minuto - clusters pre-computados no cambian frecuentemente
     gcTime: 5 * 60_000, // 5 minutos
@@ -94,7 +139,11 @@ export function useMapClusters({
 
       const startTime = performance.now();
       const currentZoom = debouncedViewport.zoom;
-      const currentArea = getViewportArea(debouncedViewport.bounds);
+
+      // PREFETCH: Expand bounds to cache adjacent areas for instant panning
+      const expansion = getPrefetchExpansion(currentZoom);
+      const expandedBounds = expandBounds(debouncedViewport.bounds, expansion);
+      const currentArea = getViewportArea(expandedBounds);
 
       // ENTERPRISE STRATEGY:
       // - zoom < 10 OR area > 5: use get-clusters (pre-computed, fast)
@@ -104,7 +153,7 @@ export function useMapClusters({
 
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
-          bounds: debouncedViewport.bounds,
+          bounds: expandedBounds, // Use expanded bounds for prefetching
           zoom: currentZoom,
           filters: {
             listing_type: filters.listing_type || null,

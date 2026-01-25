@@ -64,6 +64,9 @@ interface SearchMapProps {
 
 // Límite de markers para rendimiento óptimo
 const MAX_VISIBLE_MARKERS = 200;
+// Límite de cache para evitar memory leaks durante navegación extendida
+const MAX_CACHED_PROPERTIES = 500;
+const MAX_CACHED_CLUSTERS = 200;
 
 export function SearchMap({
   properties,
@@ -102,15 +105,30 @@ export function SearchMap({
   const [cachedClusters, setCachedClusters] = useState<PropertyCluster[]>([]);
   const hasLoadedOnce = useRef(false);
   
-  // Actualizar cache cuando hay datos válidos
+  // Actualizar cache cuando hay datos válidos (con límite de tamaño)
   useEffect(() => {
     if (!isFetching) {
       if (properties.length > 0) {
-        setCachedProperties(properties);
+        setCachedProperties(prev => {
+          // Merge new properties with cache, keeping most recent
+          const combined = new Map<string, PropertyMarker>();
+          // Add previous (oldest first, will be overwritten)
+          prev.slice(-MAX_CACHED_PROPERTIES / 2).forEach(p => combined.set(p.id, p));
+          // Add current (newest, will overwrite duplicates)
+          properties.forEach(p => combined.set(p.id, p));
+          // Limit total size
+          return Array.from(combined.values()).slice(-MAX_CACHED_PROPERTIES);
+        });
         hasLoadedOnce.current = true;
       }
       if (clusters.length > 0) {
-        setCachedClusters(clusters);
+        setCachedClusters(prev => {
+          // Merge new clusters with cache, keeping most recent
+          const combined = new Map<string, PropertyCluster>();
+          prev.slice(-MAX_CACHED_CLUSTERS / 2).forEach(c => combined.set(c.id, c));
+          clusters.forEach(c => combined.set(c.id, c));
+          return Array.from(combined.values()).slice(-MAX_CACHED_CLUSTERS);
+        });
         hasLoadedOnce.current = true;
       }
     }
@@ -282,16 +300,19 @@ export function SearchMap({
   // ═══════════════════════════════════════════════════════════
   const allProperties = useMemo(() => {
     const combined = new Map<string, PropertyMarker>();
+    // Prioritize current properties over cached
     cachedProperties.forEach(p => combined.set(p.id, p));
     properties.forEach(p => combined.set(p.id, p));
-    return Array.from(combined.values()).slice(0, MAX_VISIBLE_MARKERS * 2);
+    // Limit to prevent memory bloat
+    return Array.from(combined.values()).slice(0, MAX_CACHED_PROPERTIES);
   }, [properties, cachedProperties]);
 
   const allClusters = useMemo(() => {
     const combined = new Map<string, PropertyCluster>();
     cachedClusters.forEach(c => combined.set(c.id, c));
     clusters.forEach(c => combined.set(c.id, c));
-    return Array.from(combined.values());
+    // Limit to prevent memory bloat
+    return Array.from(combined.values()).slice(0, MAX_CACHED_CLUSTERS);
   }, [clusters, cachedClusters]);
 
   // ═══════════════════════════════════════════════════════════
