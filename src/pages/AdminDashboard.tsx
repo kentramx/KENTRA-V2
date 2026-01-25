@@ -253,7 +253,15 @@ const AdminDashboard = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      setProperties(data || []);
+      // Map the data to match PropertyData interface
+      const mappedProperties: PropertyData[] = (data || []).map(p => ({
+        ...p,
+        images: p.images as PropertyImage[] | null,
+        profiles: p.profiles as PropertyProfile | null,
+        rejection_history: (p.rejection_history as unknown as RejectionRecord[]) || null,
+        amenities: (p.amenities as Record<string, boolean>) || null,
+      }));
+      setProperties(mappedProperties);
   } catch (error: unknown) {
     console.error('Error fetching properties:', error);
     toast({

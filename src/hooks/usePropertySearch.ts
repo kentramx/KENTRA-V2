@@ -112,19 +112,19 @@ export function usePropertySearch({
       // Log slow queries for monitoring
       if (duration > 1000) {
         monitoring.warn('Slow property search', {
-          duration,
-          page,
-          limit,
+          duration: String(duration),
+          page: String(page),
+          limit: String(limit),
           hasFilters: Object.keys(filters).length > 0,
           hasBounds: !!validBounds,
-          boundsArea,
+          boundsArea: String(boundsArea),
           useSpatialFilter,
         });
       }
 
       // search_properties returns: { properties: jsonb, total_count: bigint }
       const result = data?.[0] || { properties: [], total_count: 0 };
-      const properties = (result.properties || []) as PropertySummary[];
+      const properties = (result.properties as unknown as PropertySummary[]) || [];
       const total = Number(result.total_count) || 0;
       const totalPages = Math.ceil(total / limit);
 

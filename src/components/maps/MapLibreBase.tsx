@@ -112,7 +112,7 @@ export function MapLibreBase({
   }, [onMapReady, emitViewport]);
 
   // Handler para errores
-  const handleError = useCallback((e: ErrorEvent) => {
+  const handleError = useCallback((e: { type: string; error: Error }) => {
     console.error('[MapLibreBase] Error:', e);
     setMapError('Error al cargar el mapa. Verifica tu conexión.');
   }, []);
@@ -168,7 +168,7 @@ export function MapLibreBase({
           [MAPLIBRE_CONFIG.bounds.west, MAPLIBRE_CONFIG.bounds.south],
           [MAPLIBRE_CONFIG.bounds.east, MAPLIBRE_CONFIG.bounds.north],
         ]}
-        attributionControl={true}
+        attributionControl={{ compact: true }}
         // Optimizaciones de performance
         fadeDuration={0}
         trackResize={true}

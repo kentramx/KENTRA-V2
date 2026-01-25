@@ -28,9 +28,10 @@ export function useSubscriptionActions(options: UseSubscriptionActionsOptions = 
     try {
       // SECURITY: Use timeout to prevent indefinite hang
       const { data, error } = await invokeWithTimeout('cancel-subscription', { timeout: 30000 });
+      const responseData = data as { error?: string } | null;
 
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (responseData?.error) throw new Error(responseData.error);
       
       toast.success('Suscripción cancelada. Tendrás acceso hasta el final de tu período de facturación.');
       onSuccess?.('cancel');
@@ -59,16 +60,17 @@ export function useSubscriptionActions(options: UseSubscriptionActionsOptions = 
     try {
       // SECURITY: Use timeout to prevent indefinite hang
       const { data, error } = await invokeWithTimeout('reactivate-subscription', { timeout: 30000 });
+      const responseData = data as { code?: string; error?: string } | null;
 
       if (error) throw error;
       
-      if (data?.code === 'SUBSCRIPTION_ALREADY_CANCELED') {
+      if (responseData?.code === 'SUBSCRIPTION_ALREADY_CANCELED') {
         toast.info('Tu suscripción ya expiró. Por favor inicia una nueva suscripción.');
         onRollback?.(previousState);
         return { success: false, code: 'SUBSCRIPTION_ALREADY_CANCELED' };
       }
       
-      if (data?.error) throw new Error(data.error);
+      if (responseData?.error) throw new Error(responseData.error);
       
       toast.success('¡Suscripción reactivada exitosamente!');
       onSuccess?.('reactivate');
@@ -94,12 +96,13 @@ export function useSubscriptionActions(options: UseSubscriptionActionsOptions = 
     try {
       // SECURITY: Use timeout to prevent indefinite hang
       const { data, error } = await invokeWithTimeout('create-portal-session', { timeout: 30000 });
+      const responseData = data as { url?: string; error?: string } | null;
 
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (responseData?.error) throw new Error(responseData.error);
       
-      if (data?.url) {
-        window.location.href = data.url;
+      if (responseData?.url) {
+        window.location.href = responseData.url;
       } else {
         throw new Error('No se recibió URL del portal');
       }

@@ -127,16 +127,16 @@ const flushEvents = async (sync = false): Promise<void> => {
       // Use sendBeacon for page unload (non-blocking)
       const payload = JSON.stringify(eventsToFlush);
       const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/conversion_events`;
-      const headers = {
-        'Content-Type': 'application/json',
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        'Prefer': 'return=minimal',
-      };
 
       const blob = new Blob([payload], { type: 'application/json' });
       navigator.sendBeacon(url, blob);
     } else {
-      const { error } = await supabase.from('conversion_events').insert(eventsToFlush as QueuedEvent[]);
+      // Cast metadata to Json compatible type for Supabase
+      const eventsForDb = eventsToFlush.map(e => ({
+        ...e,
+        metadata: (e.metadata || null) as Record<string, string | number | boolean | null> | null
+      }));
+      const { error } = await supabase.from('conversion_events').insert(eventsForDb);
 
       if (error) {
         eventQueue = [...eventsToFlush, ...eventQueue];

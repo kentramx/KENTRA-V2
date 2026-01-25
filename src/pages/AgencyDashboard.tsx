@@ -161,7 +161,7 @@ const AgencyDashboard = () => {
 
         setAgency(agencyData || { name: 'Kentra Inmobiliaria Demo', owner_id: ownerId, id: agencyId });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { user_uuid: ownerId });
+        const { data: subInfo } = await (supabase.rpc as (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown }>)('get_user_subscription_info', { user_uuid: ownerId });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
       } finally {
         setLoading(false);
@@ -187,7 +187,7 @@ const AgencyDashboard = () => {
         
         setAgency(agencyData || { name: 'Kentra Inmobiliaria Demo', owner_id: ownerId, id: agencyId });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { user_uuid: ownerId });
+        const { data: subInfo } = await (supabase.rpc as (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown }>)('get_user_subscription_info', { user_uuid: ownerId });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
         
         setLoading(false);
@@ -224,7 +224,7 @@ const AgencyDashboard = () => {
       setAgency(agencyData);
 
       // Obtener información de suscripción
-      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", {
+      const { data: subInfo, error: subError } = await (supabase.rpc as (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)('get_user_subscription_info', {
         user_uuid: user?.id,
       });
 
@@ -266,7 +266,7 @@ const AgencyDashboard = () => {
       
       // Refresh subscription info
       if (effectiveOwnerId) {
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { 
+        const { data: subInfo } = await (supabase.rpc as (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown }>)('get_user_subscription_info', { 
           user_uuid: effectiveOwnerId 
         });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) {

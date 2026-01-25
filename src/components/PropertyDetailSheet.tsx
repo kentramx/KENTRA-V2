@@ -637,7 +637,10 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
           <PropertyTimeline
             createdAt={property.created_at}
             updatedAt={property.updated_at}
-            priceHistory={(property.price_history as unknown as { date: string; price: number; change_type?: string }[] || []).map(item => ({ ...item, change_type: item.change_type || 'update' }))}
+            priceHistory={(property.price_history as unknown as { date: string; price: number; change_type?: string }[] || []).map(item => ({ 
+              ...item, 
+              change_type: (item.change_type as 'increase' | 'initial' | 'reduction') || 'initial' 
+            }))}
             currentPrice={property.price}
           />
 
