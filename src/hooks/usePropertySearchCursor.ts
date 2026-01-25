@@ -11,12 +11,11 @@ import { monitoring } from '@/lib/monitoring';
 import type { MapFilters, MapBounds } from '@/types/map';
 import type { PropertySummary } from '@/types/property';
 
-interface CursorSearchResponse {
+interface PageSearchResponse {
   properties: PropertySummary[];
   total: number;
-  nextCursor: { created_at: string; id: string } | null;
-  prevCursor: { created_at: string; id: string } | null;
-  hasMore: boolean;
+  page: number;
+  pages: number;
 }
 
 interface UsePropertySearchCursorOptions {
@@ -64,6 +63,14 @@ export function usePropertySearchCursor({
 }: UsePropertySearchCursorOptions) {
   const validBounds = isValidBounds(bounds) ? bounds : null;
 
+  // Map sort format
+  const sortMap: Record<string, string> = {
+    newest: '-created_at',
+    oldest: 'created_at',
+    price_asc: 'price',
+    price_desc: '-price',
+  };
+
   const query = useInfiniteQuery({
     queryKey: ['property-search-cursor', filters, validBounds, sort, limit],
     enabled,
@@ -71,9 +78,10 @@ export function usePropertySearchCursor({
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,
 
-    queryFn: async ({ pageParam }): Promise<CursorSearchResponse> => {
-      const { data, error } = await supabase.functions.invoke('property-search', {
+    queryFn: async ({ pageParam = 1 }): Promise<PageSearchResponse> => {
+      const { data, error } = await supabase.functions.invoke('search-properties', {
         body: {
+          query: '',
           filters: {
             listing_type: filters.listing_type || null,
             property_type: filters.property_type || null,
@@ -81,14 +89,12 @@ export function usePropertySearchCursor({
             max_price: filters.max_price || null,
             min_bedrooms: filters.min_bedrooms || null,
             state: validBounds ? null : (filters.state || null),
-            municipality: validBounds ? null : (filters.municipality || null),
+            city: validBounds ? null : (filters.municipality || null),
           },
-          bounds: validBounds,
-          sort,
+          bounds: validBounds || undefined,
+          sort: sortMap[sort] || '-created_at',
+          page: pageParam,
           limit,
-          // Cursor-based pagination
-          cursor: pageParam || undefined,
-          direction: 'next',
         },
       });
 
@@ -97,14 +103,24 @@ export function usePropertySearchCursor({
         throw new Error(error.message || 'Failed to search properties');
       }
 
-      return data as CursorSearchResponse;
+      return data as PageSearchResponse;
     },
 
-    initialPageParam: null as { created_at: string; id: string } | null,
+    initialPageParam: 1,
 
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.page < lastPage.pages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
 
-    getPreviousPageParam: (firstPage) => firstPage.prevCursor,
+    getPreviousPageParam: (firstPage) => {
+      if (firstPage.page > 1) {
+        return firstPage.page - 1;
+      }
+      return undefined;
+    },
   });
 
   // Flatten all pages into a single array of properties

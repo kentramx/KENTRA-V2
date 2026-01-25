@@ -76,30 +76,33 @@ export function usePropertySearch({
 
     queryFn: async (): Promise<SearchResponse> => {
       const startTime = performance.now();
-      const offset = (page - 1) * limit;
 
-      // ENTERPRISE: Usar search_properties RPC optimizado
-      // Esta función usa:
-      // - Estimated count desde mv_property_counts_by_status (O(1))
-      // - Spatial index con ST_MakeEnvelope para bounds (O(log n)) - only for small areas
-      // - Sorting en DB, no en memoria
-      const { data, error } = await supabase.rpc('search_properties', {
-        p_status: 'activa',
-        p_listing_type: filters.listing_type || null,
-        p_property_type: filters.property_type || null,
-        p_min_price: filters.min_price || null,
-        p_max_price: filters.max_price || null,
-        p_min_bedrooms: filters.min_bedrooms || null,
-        p_state: useSpatialFilter ? null : (filters.state || null),
-        p_municipality: useSpatialFilter ? null : (filters.municipality || null),
-        // Only pass bounds if area is small enough for efficient spatial query
-        p_bounds_north: useSpatialFilter ? validBounds?.north ?? null : null,
-        p_bounds_south: useSpatialFilter ? validBounds?.south ?? null : null,
-        p_bounds_east: useSpatialFilter ? validBounds?.east ?? null : null,
-        p_bounds_west: useSpatialFilter ? validBounds?.west ?? null : null,
-        p_sort: sort,
-        p_limit: limit,
-        p_offset: offset,
+      // Map sort format
+      const sortMap: Record<string, string> = {
+        newest: '-created_at',
+        oldest: 'created_at',
+        price_asc: 'price',
+        price_desc: '-price',
+      };
+
+      // ENTERPRISE: Usar search-properties Edge Function
+      const { data, error } = await supabase.functions.invoke('search-properties', {
+        body: {
+          query: '',
+          filters: {
+            listing_type: filters.listing_type || null,
+            property_type: filters.property_type || null,
+            min_price: filters.min_price || null,
+            max_price: filters.max_price || null,
+            min_bedrooms: filters.min_bedrooms || null,
+            state: filters.state || null,
+            city: filters.municipality || null,
+          },
+          bounds: useSpatialFilter ? validBounds : undefined,
+          sort: sortMap[sort] || '-created_at',
+          page,
+          limit,
+        },
       });
 
       if (error) {
@@ -122,17 +125,11 @@ export function usePropertySearch({
         });
       }
 
-      // search_properties returns: { properties: jsonb, total_count: bigint }
-      const result = data?.[0] || { properties: [], total_count: 0 };
-      const properties = (result.properties as unknown as PropertySummary[]) || [];
-      const total = Number(result.total_count) || 0;
-      const totalPages = Math.ceil(total / limit);
-
       return {
-        properties,
-        total,
-        page,
-        totalPages,
+        properties: data.properties || [],
+        total: data.total || 0,
+        page: data.page || page,
+        totalPages: data.pages || 0,
       };
     },
   });

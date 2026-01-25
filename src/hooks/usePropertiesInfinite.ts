@@ -37,13 +37,14 @@ export function usePropertiesInfinite({
     initialPageParam: 1,
 
     queryFn: async ({ pageParam = 1 }): Promise<SearchResponse> => {
-      const { data, error } = await supabase.functions.invoke('property-search', {
+      const { data, error } = await supabase.functions.invoke('search-properties', {
         body: {
+          query: '',
           filters: {
             listing_type: listing_type || null,
             property_type: property_type || null,
           },
-          sort: 'newest',
+          sort: '-created_at',
           page: pageParam,
           limit,
         },
@@ -54,7 +55,13 @@ export function usePropertiesInfinite({
         throw new Error(error.message || 'Failed to fetch properties');
       }
 
-      return data as SearchResponse;
+      // Map response format: 'pages' -> 'totalPages'
+      return {
+        properties: data.properties || [],
+        total: data.total || 0,
+        page: data.page || 1,
+        totalPages: data.pages || 0,
+      };
     },
 
     getNextPageParam: (lastPage) => {
