@@ -87,11 +87,15 @@ const normalizePriceHistory = (priceHistory: Record<string, unknown> | unknown[]
   
   if (Array.isArray(priceHistory)) {
     return priceHistory
-      .filter(item => item.price && item.date)
+      .filter(item => {
+        const i = item as Record<string, unknown>;
+        return i.price && i.date;
+      })
       .map(item => {
+        const i = item as Record<string, unknown>;
         // Normalizar change_type para que coincida con el tipo esperado
         let changeType: 'increase' | 'reduction' | 'initial' = 'initial';
-        const rawType = item.change_type || item.changeType;
+        const rawType = i.change_type || i.changeType;
         
         if (rawType === 'decrease' || rawType === 'reduction') {
           changeType = 'reduction';
@@ -100,8 +104,8 @@ const normalizePriceHistory = (priceHistory: Record<string, unknown> | unknown[]
         }
         
         return {
-          price: item.price,
-          date: item.date,
+          price: i.price as number,
+          date: i.date as string,
           change_type: changeType,
         };
       });

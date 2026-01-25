@@ -88,6 +88,13 @@ const UserProfile = () => {
     avatar_url: string | null;
     email_notifications: boolean | null;
     created_at: string;
+    is_verified?: boolean | null;
+    phone_verified?: boolean | null;
+    whatsapp_verified?: boolean | null;
+    whatsapp_number?: string | null;
+    whatsapp_enabled?: boolean | null;
+    whatsapp_business_hours?: string | null;
+    whatsapp_verified_at?: string | null;
   } | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
@@ -165,7 +172,10 @@ const UserProfile = () => {
         .order("created_at", { ascending: false });
 
       if (searchesError) throw searchesError;
-      setSavedSearches(searchesData || []);
+      setSavedSearches((searchesData || []).map(s => ({
+        ...s,
+        filters: (typeof s.filters === 'object' && s.filters !== null ? s.filters : {}) as Record<string, unknown>
+      })));
     } catch (error) {
       console.error("Error fetching user data:", error);
       toast({
@@ -237,14 +247,14 @@ const UserProfile = () => {
   const handleApplySearch = (filters: Record<string, unknown>) => {
     const searchParams = new URLSearchParams();
     
-    if (filters.listingType) searchParams.set("listingType", filters.listingType);
-    if (filters.type) searchParams.set("type", filters.type);
-    if (filters.state) searchParams.set("state", filters.state);
-    if (filters.municipality) searchParams.set("municipality", filters.municipality);
-    if (filters.minPrice) searchParams.set("minPrice", filters.minPrice);
-    if (filters.maxPrice) searchParams.set("maxPrice", filters.maxPrice);
-    if (filters.bedrooms) searchParams.set("bedrooms", filters.bedrooms);
-    if (filters.bathrooms) searchParams.set("bathrooms", filters.bathrooms);
+    if (filters.listingType) searchParams.set("listingType", String(filters.listingType));
+    if (filters.type) searchParams.set("type", String(filters.type));
+    if (filters.state) searchParams.set("state", String(filters.state));
+    if (filters.municipality) searchParams.set("municipality", String(filters.municipality));
+    if (filters.minPrice) searchParams.set("minPrice", String(filters.minPrice));
+    if (filters.maxPrice) searchParams.set("maxPrice", String(filters.maxPrice));
+    if (filters.bedrooms) searchParams.set("bedrooms", String(filters.bedrooms));
+    if (filters.bathrooms) searchParams.set("bathrooms", String(filters.bathrooms));
 
     navigate(`/buscar?${searchParams.toString()}`);
   };
@@ -770,12 +780,12 @@ const UserProfile = () => {
                                   </Badge>
                                 )}
                                 {search.filters.type && (
-                                  <Badge variant="outline">{search.filters.type}</Badge>
+                                  <Badge variant="outline">{String(search.filters.type)}</Badge>
                                 )}
                                 {search.filters.state && (
                                   <Badge variant="outline">
                                     <MapPin className="w-3 h-3 mr-1" />
-                                    {search.filters.state}
+                                    {String(search.filters.state)}
                                   </Badge>
                                 )}
                                 {search.filters.minPrice && search.filters.maxPrice && (

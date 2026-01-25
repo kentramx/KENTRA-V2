@@ -137,7 +137,7 @@ const Settings = () => {
 
       if (profileError) throw profileError;
 
-      setProfile(profileData);
+      setProfile({ ...profileData, role: userRole } as UserProfile);
       accountForm.reset({
         name: profileData.name || "",
         phone: profileData.phone || "",

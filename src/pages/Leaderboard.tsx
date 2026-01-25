@@ -99,7 +99,7 @@ const Leaderboard = () => {
 
       if (agentsError) throw agentsError;
 
-      const processedAgents: LeaderboardAgent[] = ((agentsData || []) as ProfileRow[]).map((profile) => {
+      const processedAgents: LeaderboardAgent[] = ((agentsData || []) as unknown as ProfileRow[]).map((profile) => {
         const properties = profile.properties || [];
         const activeProperties = properties.filter((p) => p.status === 'activa');
         const soldProperties = properties.filter((p) => p.status === 'vendida');

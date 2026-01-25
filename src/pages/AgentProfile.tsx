@@ -229,7 +229,7 @@ const AgentProfile = () => {
 
   // Generate SEO data
   const seoTitle = generateAgentTitle(agent);
-  const seoDescription = generateAgentDescription({ ...agent, activeProperties: stats.activeProperties });
+  const seoDescription = generateAgentDescription({ ...agent, propertiesCount: stats.activeProperties });
   const structuredData = generateAgentStructuredData({
     name: agent.name,
     bio: agent.bio,
