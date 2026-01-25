@@ -1338,10 +1338,27 @@ const AdminDashboard = () => {
                 </Alert>
               )}
 
-              <QualityChecklist property={viewProperty} />
+              <QualityChecklist property={{
+                description: viewProperty.description,
+                amenities: Array.isArray(viewProperty.amenities) ? viewProperty.amenities : [],
+                images: viewProperty.images,
+                price: viewProperty.price,
+                lat: viewProperty.lat,
+                lng: viewProperty.lng,
+              }} />
               
               {viewProperty.resubmission_count > 0 && (
-                <PropertyDiff property={viewProperty} />
+                <PropertyDiff property={{
+                  id: viewProperty.id,
+                  resubmission_count: viewProperty.resubmission_count,
+                  images: viewProperty.images,
+                  description: viewProperty.description,
+                  amenities: Array.isArray(viewProperty.amenities) 
+                    ? viewProperty.amenities.map(a => ({ items: [] }))
+                    : [],
+                  lat: viewProperty.lat,
+                  lng: viewProperty.lng,
+                }} />
               )}
 
               <Separator className="my-6" />

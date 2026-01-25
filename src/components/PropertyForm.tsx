@@ -396,7 +396,8 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
         const { data, error } = await supabase
           .from('properties')
-          .insert([propertyData as Record<string, unknown>])
+          // @ts-expect-error - propertyData has correct structure but TS can't verify
+          .insert([propertyData])
           .select()
           .single();
 

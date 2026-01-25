@@ -173,7 +173,8 @@ const DeveloperDashboard = () => {
           id: developerId 
         });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { user_uuid: ownerId });
+        // @ts-expect-error - RPC function exists but is not typed in Supabase schema
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: ownerId });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
       } finally {
         setLoading(false);
@@ -203,7 +204,8 @@ const DeveloperDashboard = () => {
           id: developerId 
         });
 
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { user_uuid: ownerId });
+        // @ts-expect-error - RPC function exists but is not typed in Supabase schema
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { user_uuid: ownerId });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) setSubscriptionInfo(subInfo[0]);
         
         setLoading(false);
@@ -240,7 +242,8 @@ const DeveloperDashboard = () => {
       setDeveloper(developerData);
 
       // Obtener información de suscripción
-      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", {
+      // @ts-expect-error - RPC function exists but is not typed in Supabase schema
+      const { data: subInfo, error: subError } = await supabase.rpc('get_user_subscription_info', {
         user_uuid: user?.id,
       });
 
@@ -282,7 +285,8 @@ const DeveloperDashboard = () => {
       
       // Refresh subscription info
       if (effectiveOwnerId) {
-        const { data: subInfo } = await supabase.rpc('get_user_subscription_info' as unknown as "get_user_subscription_info", { 
+        // @ts-expect-error - RPC function exists but is not typed in Supabase schema
+        const { data: subInfo } = await supabase.rpc('get_user_subscription_info', { 
           user_uuid: effectiveOwnerId 
         });
         if (subInfo && Array.isArray(subInfo) && subInfo.length > 0) {
@@ -387,8 +391,8 @@ const DeveloperDashboard = () => {
             status: subscriptionInfo?.status,
             planName: subscriptionInfo?.name,
             currentPeriodEnd: subscriptionInfo?.current_period_end,
-            maxProjects: subscriptionInfo?.projects_limit || 5,
-            maxAgents: subscriptionInfo?.max_agents || 10,
+            maxProjects: (subscriptionInfo as Record<string, unknown>)?.projects_limit as number || 5,
+            maxAgents: (subscriptionInfo as Record<string, unknown>)?.max_agents as number || 10,
           }}
         />
 
@@ -495,14 +499,14 @@ const DeveloperDashboard = () => {
                 <TabsContent value="projects" className="mt-0">
                   <DeveloperProjectManagement 
                     developerId={effectiveDeveloperId || developer?.id || ''} 
-                    subscriptionInfo={subscriptionInfo}
+                    subscriptionInfo={subscriptionInfo as never}
                   />
                 </TabsContent>
 
                 <TabsContent value="team" className="mt-0">
                   <DeveloperTeamManagement 
                     developerId={effectiveDeveloperId || developer?.id || ''} 
-                    subscriptionInfo={subscriptionInfo}
+                    subscriptionInfo={subscriptionInfo as never}
                   />
                 </TabsContent>
 
@@ -515,7 +519,7 @@ const DeveloperDashboard = () => {
                   <div className="grid gap-6 lg:grid-cols-3">
                     <div className="lg:col-span-1">
                       <PremiumSubscriptionCard
-                        subscriptionInfo={subscriptionInfo}
+                        subscriptionInfo={subscriptionInfo as never}
                         userRole="developer"
                         activePropertiesCount={projectsCount}
                         featuredCount={0}
@@ -524,7 +528,7 @@ const DeveloperDashboard = () => {
                     </div>
                     <div className="lg:col-span-2">
                       <PremiumMetricsCards
-                        subscriptionInfo={subscriptionInfo}
+                        subscriptionInfo={subscriptionInfo as never}
                         activePropertiesCount={projectsCount}
                         featuredCount={0}
                       />

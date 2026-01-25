@@ -36,8 +36,8 @@ const PricingDesarrolladora = () => {
     }
     // Fallback
     const features: string[] = [];
-    const limits = plan?.features?.limits || plan?.features || {};
-    const caps = plan?.features?.capabilities || plan?.features || {};
+    const limits = (plan?.features?.limits || plan?.features || {}) as Record<string, unknown>;
+    const caps = (plan?.features?.capabilities || plan?.features || {}) as Record<string, unknown>;
     if (limits.max_projects) {
       features.push(limits.max_projects === 1 ? '1 proyecto activo' : `Hasta ${limits.max_projects} proyectos activos`);
     }
@@ -326,10 +326,10 @@ const PricingDesarrolladora = () => {
                 : (growPlan?.price_yearly || 129000);
               const { original, final, savings } = getDiscountedPrice(basePrice);
               return (
-                <Card className={`relative ${growPlan?.features?.display?.highlight ? 'border-primary shadow-lg' : ''}`}>
-                  {growPlan?.features?.display?.badge && (
+                <Card className={`relative ${(growPlan?.features?.display as Record<string, unknown>)?.highlight ? 'border-primary shadow-lg' : ''}`}>
+                  {(growPlan?.features?.display as Record<string, unknown>)?.badge && (
                     <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      {growPlan.features.display.badge === 'popular' ? 'Más elegido' : growPlan.features.display.badge}
+                      {(growPlan?.features?.display as Record<string, unknown>)?.badge === 'popular' ? 'Más elegido' : String((growPlan?.features?.display as Record<string, unknown>)?.badge)}
                     </Badge>
                   )}
                   <CardHeader>
