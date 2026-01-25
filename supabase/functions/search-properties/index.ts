@@ -58,17 +58,16 @@ Deno.serve(async (req) => {
       .select(`
         id,
         title,
-        slug,
         price,
         listing_type,
         type,
         bedrooms,
         bathrooms,
-        construction_m2,
-        land_m2,
+        sqft,
+        lot_size,
         address,
-        neighborhood,
-        city,
+        colonia,
+        municipality,
         state,
         lat,
         lng,
@@ -93,7 +92,7 @@ Deno.serve(async (req) => {
       dbQuery = dbQuery.gte('bedrooms', filters.min_bedrooms);
     }
     if (filters.city) {
-      dbQuery = dbQuery.eq('city', filters.city);
+      dbQuery = dbQuery.eq('municipality', filters.city);
     }
 
     // Filtro por bounds (viewport del mapa)
@@ -126,10 +125,14 @@ Deno.serve(async (req) => {
       throw error;
     }
 
-    // Transform 'type' to 'property_type' for frontend consistency
+    // Transform columns for frontend consistency
     const properties = (data || []).map((p: any) => ({
       ...p,
       property_type: p.type,
+      neighborhood: p.colonia,
+      city: p.municipality,
+      construction_m2: p.sqft,
+      land_m2: p.lot_size,
     }));
 
     const duration = Date.now() - startTime;
