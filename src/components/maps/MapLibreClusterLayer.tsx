@@ -5,7 +5,7 @@
 
 import { useEffect } from 'react';
 import { useMap, Source, Layer } from 'react-map-gl/maplibre';
-import type { CircleLayer, SymbolLayer } from 'maplibre-gl';
+import type { CircleLayerSpecification, SymbolLayerSpecification } from 'maplibre-gl';
 import { CLUSTER_STYLES } from '@/config/mapLibre';
 
 interface ClusterData {
@@ -41,7 +41,7 @@ function clustersToGeoJSON(clusters: ClusterData[]): GeoJSON.FeatureCollection {
 }
 
 // Estilos de la capa de círculos
-const clusterCircleLayer: CircleLayer = {
+const clusterCircleLayer: CircleLayerSpecification = {
   id: 'clusters-circle',
   type: 'circle',
   source: 'clusters',
@@ -73,7 +73,7 @@ const clusterCircleLayer: CircleLayer = {
 };
 
 // Estilos del texto del contador
-const clusterCountLayer: SymbolLayer = {
+const clusterCountLayer: SymbolLayerSpecification = {
   id: 'clusters-count',
   type: 'symbol',
   source: 'clusters',

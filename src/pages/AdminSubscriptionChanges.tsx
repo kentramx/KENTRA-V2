@@ -27,6 +27,14 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 
+interface SubscriptionChangeMetadata {
+  bypassed_cooldown?: boolean;
+  changed_by_admin?: boolean;
+  previous_plan_name?: string;
+  new_plan_name?: string;
+  [key: string]: unknown;
+}
+
 interface SubscriptionChange {
   id: string;
   user_id: string;
@@ -37,7 +45,7 @@ interface SubscriptionChange {
   changed_at: string;
   change_type: string;
   prorated_amount: number | null;
-  metadata: Record<string, unknown> | null;
+  metadata: SubscriptionChangeMetadata | null;
   profiles?: {
     name: string;
   };
@@ -139,8 +147,9 @@ const AdminSubscriptionChanges = () => {
 
         // Map profiles to changes
         const profilesMap = new Map(profilesData?.map(p => [p.id, p.name]) || []);
-        const changesWithProfiles = changesData.map(change => ({
+        const changesWithProfiles: SubscriptionChange[] = changesData.map(change => ({
           ...change,
+          metadata: (change.metadata as SubscriptionChangeMetadata) || null,
           profiles: { name: profilesMap.get(change.user_id) || 'Usuario desconocido' }
         }));
 
@@ -185,8 +194,8 @@ const AdminSubscriptionChanges = () => {
       filtered = filtered.filter(change => 
         change.profiles?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         change.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        change.metadata?.previous_plan_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        change.metadata?.new_plan_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        (typeof change.metadata?.previous_plan_name === 'string' && change.metadata.previous_plan_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (typeof change.metadata?.new_plan_name === 'string' && change.metadata.new_plan_name.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -409,7 +418,7 @@ const AdminSubscriptionChanges = () => {
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="text-sm">
-                              {change.metadata?.previous_plan_name || 'N/A'}
+                              {(change.metadata?.previous_plan_name as string) || 'N/A'}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {change.previous_billing_cycle && 
@@ -421,7 +430,7 @@ const AdminSubscriptionChanges = () => {
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="text-sm font-medium">
-                              {change.metadata?.new_plan_name || 'N/A'}
+                              {(change.metadata?.new_plan_name as string) || 'N/A'}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {change.new_billing_cycle === 'yearly' ? 'Anual' : 'Mensual'}

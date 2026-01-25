@@ -383,11 +383,11 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
         if (error) throw error;
       } else {
-        const propertyData: Record<string, unknown> = {
+        const propertyData = {
           ...validatedData,
           title: autoTitle,
-          agent_id: user?.id,
-          status: 'pendiente_aprobacion', // Enviar a cola de moderación
+          agent_id: user?.id ?? '',
+          status: 'pendiente_aprobacion' as const, // Enviar a cola de moderación
           last_renewed_at: new Date().toISOString(),
           duplicate_warning: titleValidation.isDuplicate,
           duplicate_warning_data: duplicateWarningData,
@@ -396,7 +396,7 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
         const { data, error } = await supabase
           .from('properties')
-          .insert([propertyData])
+          .insert([propertyData as Record<string, unknown>])
           .select()
           .single();
 
@@ -500,26 +500,29 @@ const PropertyForm = ({ property, onSuccess, onCancel }: PropertyFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {property?.status === 'pausada' && property?.rejection_reason && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Propiedad Rechazada</AlertTitle>
-          <AlertDescription className="space-y-2">
-            <p>
-              <strong>Motivo:</strong> {property.rejection_reason.label}
-            </p>
-            {property.rejection_reason.details && (
-              <p className="text-sm">{property.rejection_reason.details}</p>
-            )}
-            <p className="text-sm font-medium mt-2">
-              Por favor corrige los problemas mencionados y reenvía la propiedad para una nueva revisión.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Reenvíos: {property.resubmission_count || 0}/3
-            </p>
-          </AlertDescription>
-        </Alert>
-      )}
+      {property?.status === 'pausada' && property?.rejection_reason && (() => {
+        const rejectionReason = property.rejection_reason as { label?: string; details?: string } | undefined;
+        return (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Propiedad Rechazada</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>
+                <strong>Motivo:</strong> {rejectionReason?.label ?? 'Sin especificar'}
+              </p>
+              {rejectionReason?.details && (
+                <p className="text-sm">{rejectionReason.details}</p>
+              )}
+              <p className="text-sm font-medium mt-2">
+                Por favor corrige los problemas mencionados y reenvía la propiedad para una nueva revisión.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Reenvíos: {(property.resubmission_count as number) || 0}/3
+              </p>
+            </AlertDescription>
+          </Alert>
+        );
+      })()}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
