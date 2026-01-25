@@ -13,6 +13,7 @@ interface PropertyData {
   description?: string;
   amenities?: unknown[];
   images?: unknown[];
+  price?: number;
   lat?: number;
   lng?: number;
 }

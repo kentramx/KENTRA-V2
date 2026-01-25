@@ -278,23 +278,25 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
         return;
       }
 
-      if (!data?.success) {
-        toast({ title: 'No se pudo reenviar', description: data?.error || 'Error desconocido', variant: 'destructive' });
+      const responseData = data as { success?: boolean; error?: string; remaining_attempts?: number; property_title?: string; agent_name?: string; resubmission_number?: number } | null;
+      
+      if (!responseData?.success) {
+        toast({ title: 'No se pudo reenviar', description: responseData?.error || 'Error desconocido', variant: 'destructive' });
         return;
       }
       
       toast({
         title: '✅ Reenviada para revisión',
-        description: `La propiedad está en revisión. Intentos restantes: ${data.remaining_attempts}`,
+        description: `La propiedad está en revisión. Intentos restantes: ${responseData.remaining_attempts}`,
       });
 
       try {
         await supabase.functions.invoke('notify-admin-resubmission', {
           body: {
             propertyId,
-            propertyTitle: data.property_title,
-            agentName: data.agent_name,
-            resubmissionNumber: data.resubmission_number
+            propertyTitle: responseData.property_title,
+            agentName: responseData.agent_name,
+            resubmissionNumber: responseData.resubmission_number
           }
         });
       } catch (notificationError) {
@@ -311,8 +313,7 @@ const AgentPropertyList = ({ onEdit, subscriptionInfo, agentId, onCreateProperty
 
   const handleReactivateProperty = async (propertyId: string) => {
     try {
-      const { error } = // @ts-expect-error - RPC function not typed in generated schema
-      await supabase.rpc('reactivate_property', { property_id: propertyId });
+      const { error } = await (supabase.rpc as unknown as (fn: string, params: Record<string, unknown>) => Promise<{ error: Error | null }>)('reactivate_property', { property_id: propertyId });
       
       if (error) throw error;
       

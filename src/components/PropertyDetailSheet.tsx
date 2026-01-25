@@ -617,7 +617,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
           {/* Amenidades */}
           {property.amenities && typeof property.amenities === 'object' && (
             <SectionErrorBoundary sectionName="PropertyAmenities" fallbackMessage="No se pudieron cargar las amenidades">
-              <PropertyAmenities amenities={property.amenities as string[] | { category: string; items: string[] }[]} />
+              <PropertyAmenities amenities={property.amenities as unknown as string[] | { category: string; items: string[] }[]} />
             </SectionErrorBoundary>
           )}
 
@@ -637,7 +637,7 @@ export function PropertyDetailSheet({ propertyId, open, onClose }: PropertyDetai
           <PropertyTimeline
             createdAt={property.created_at}
             updatedAt={property.updated_at}
-            priceHistory={property.price_history as { date: string; price: number }[] || []}
+            priceHistory={(property.price_history as unknown as { date: string; price: number; change_type?: string }[] || []).map(item => ({ ...item, change_type: item.change_type || 'update' }))}
             currentPrice={property.price}
           />
 

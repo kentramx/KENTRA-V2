@@ -112,7 +112,7 @@ export const PhoneVerification = ({ phoneNumber, phoneVerified, onPhoneVerified 
       });
       toast({
         title: "Error",
-        description: error.message || "Código incorrecto o expirado",
+        description: error instanceof Error ? error.message : "Código incorrecto o expirado",
         variant: "destructive",
       });
     } finally {

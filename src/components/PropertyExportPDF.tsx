@@ -18,6 +18,7 @@ interface PropertyData {
   parking?: number;
   sqft?: number;
   lot_size?: number;
+  address?: string;
   municipality?: string;
   state?: string;
   images?: (string | { url: string })[];
@@ -26,6 +27,7 @@ interface PropertyData {
 interface AgentData {
   name?: string;
   phone?: string;
+  email?: string;
   whatsapp_number?: string;
 }
 

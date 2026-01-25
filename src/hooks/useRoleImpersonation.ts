@@ -51,7 +51,7 @@ export const useRoleImpersonation = () => {
 
       setCurrentUserId(user.id);
 
-      const { data, error } = await (supabase.rpc as (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)('is_super_admin', {
+      const { data, error } = await (supabase.rpc as unknown as (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: Error | null }>)('is_super_admin', {
         _user_id: user.id,
       });
 

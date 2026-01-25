@@ -62,7 +62,9 @@ export async function withRetry<T>(
  */
 export function isRetryableStripeError(error: Error): boolean {
   const message = error.message.toLowerCase();
-  const statusCode = (error as Record<string, unknown>).statusCode || (error as Record<string, unknown>).status;
+  const err = error as unknown as Record<string, unknown>;
+  const statusCode = typeof err.statusCode === 'number' ? err.statusCode 
+                   : typeof err.status === 'number' ? err.status : undefined;
   
   // Retry on network errors
   if (message.includes('network') || message.includes('econnreset') || message.includes('timeout')) {
@@ -75,7 +77,7 @@ export function isRetryableStripeError(error: Error): boolean {
   }
   
   // Retry on server errors (500, 502, 503, 504)
-  if (statusCode >= 500 && statusCode < 600) {
+  if (statusCode !== undefined && statusCode >= 500 && statusCode < 600) {
     return true;
   }
   
@@ -88,13 +90,15 @@ export function isRetryableStripeError(error: Error): boolean {
  */
 export function isRetryableEmailError(error: Error): boolean {
   const message = error.message.toLowerCase();
-  const statusCode = (error as Record<string, unknown>).statusCode || (error as Record<string, unknown>).status;
+  const err = error as unknown as Record<string, unknown>;
+  const statusCode = typeof err.statusCode === 'number' ? err.statusCode 
+                   : typeof err.status === 'number' ? err.status : undefined;
 
   if (message.includes('network') || message.includes('timeout')) {
     return true;
   }
 
-  if (statusCode === 429 || (statusCode >= 500 && statusCode < 600)) {
+  if (statusCode === 429 || (statusCode !== undefined && statusCode >= 500 && statusCode < 600)) {
     return true;
   }
 

@@ -1561,6 +1561,10 @@ export type Database = {
           expires_at: string | null
           for_rent: boolean | null
           for_sale: boolean | null
+          geohash_3: string | null
+          geohash_4: string | null
+          geohash_5: string | null
+          geohash_6: string | null
           geom: unknown
           has_inappropriate_images: boolean | null
           has_manipulated_images: boolean | null
@@ -1616,6 +1620,10 @@ export type Database = {
           expires_at?: string | null
           for_rent?: boolean | null
           for_sale?: boolean | null
+          geohash_3?: string | null
+          geohash_4?: string | null
+          geohash_5?: string | null
+          geohash_6?: string | null
           geom?: unknown
           has_inappropriate_images?: boolean | null
           has_manipulated_images?: boolean | null
@@ -1671,6 +1679,10 @@ export type Database = {
           expires_at?: string | null
           for_rent?: boolean | null
           for_sale?: boolean | null
+          geohash_3?: string | null
+          geohash_4?: string | null
+          geohash_5?: string | null
+          geohash_6?: string | null
           geom?: unknown
           has_inappropriate_images?: boolean | null
           has_manipulated_images?: boolean | null
@@ -2135,6 +2147,24 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          key: string
+          updated_at: string | null
+          value: string | null
+        }
+        Insert: {
+          key: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Update: {
+          key?: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
       trial_tracking: {
         Row: {
           created_at: string
@@ -2522,10 +2552,7 @@ export type Database = {
       mv_property_counts_by_status: {
         Row: {
           count: number | null
-          new_count: number | null
-          old_count: number | null
-          resubmitted_count: number | null
-          status: Database["public"]["Enums"]["property_status"] | null
+          status: string | null
         }
         Relationships: []
       }
@@ -2872,6 +2899,23 @@ export type Database = {
           unique_cities: number
         }[]
       }
+      get_map_clusters: {
+        Args: {
+          p_east: number
+          p_listing_type?: string
+          p_max_bedrooms?: number
+          p_max_price?: number
+          p_min_bathrooms?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_north: number
+          p_property_type?: string
+          p_south: number
+          p_west: number
+          p_zoom: number
+        }
+        Returns: Json
+      }
       get_map_data: {
         Args: {
           p_bounds_east: number
@@ -2902,48 +2946,6 @@ export type Database = {
           avg_review_minutes: number
           pending_count: number
           rejected_today: number
-        }[]
-      }
-      get_properties_in_viewport: {
-        Args: {
-          bounds_east: number
-          bounds_north: number
-          bounds_south: number
-          bounds_west: number
-          p_limit?: number
-          p_listing_type?: string
-          p_max_price?: number
-          p_min_bedrooms?: number
-          p_min_price?: number
-          p_municipality?: string
-          p_property_type?: string
-          p_state?: string
-          p_status?: string
-        }
-        Returns: {
-          address: string
-          agent_id: string
-          bathrooms: number
-          bedrooms: number
-          colonia: string
-          created_at: string
-          currency: string
-          for_rent: boolean
-          for_sale: boolean
-          id: string
-          is_featured: boolean
-          lat: number
-          listing_type: string
-          lng: number
-          municipality: string
-          parking: number
-          price: number
-          rent_price: number
-          sale_price: number
-          sqft: number
-          state: string
-          title: string
-          type: string
         }[]
       }
       get_property_limit: { Args: { user_id: string }; Returns: number }
