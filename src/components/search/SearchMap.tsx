@@ -152,19 +152,20 @@ export const SearchMap = memo(function SearchMap() {
           .setLngLat([cluster.lng, cluster.lat])
           .addTo(m);
 
-        markersRef.current.set(cluster.id, marker);
+        // Usar geohash como ID (el backend no envía 'id')
+        const clusterId = (cluster as any).geohash || cluster.id || `cluster-${cluster.lat}-${cluster.lng}`;
+        markersRef.current.set(clusterId, marker);
       });
     } else {
       // Renderizar propiedades individuales
       mapProperties.forEach((property) => {
         const isSelected = property.id === selectedPropertyId;
-        const isHovered = property.id === hoveredPropertyId;
 
         const el = document.createElement('div');
         el.className = 'price-marker';
         el.style.cssText = `
           padding: 4px 8px;
-          background: ${isSelected ? '#0066FF' : isHovered ? '#E8F0FE' : 'white'};
+          background: ${isSelected ? '#0066FF' : 'white'};
           color: ${isSelected ? 'white' : '#1a1a1a'};
           border-radius: 4px;
           font-weight: 600;
@@ -194,7 +195,7 @@ export const SearchMap = memo(function SearchMap() {
         markersRef.current.set(property.id, marker);
       });
     }
-  }, [mode, clusters, mapProperties, selectedPropertyId, hoveredPropertyId, setSelectedPropertyId, setHoveredPropertyId]);
+  }, [mode, clusters, mapProperties, selectedPropertyId, setSelectedPropertyId, setHoveredPropertyId]);
 
   // ============================================
   // ACTUALIZAR MARKER SELECCIONADO/HOVERED

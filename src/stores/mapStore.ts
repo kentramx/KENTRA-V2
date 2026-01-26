@@ -29,10 +29,11 @@ export interface Filters {
 
 export interface Cluster {
   id: string;
+  geohash?: string;
   lat: number;
   lng: number;
   count: number;
-  avg_price: number;
+  avg_price?: number;
   min_price?: number;
   max_price?: number;
 }
@@ -164,12 +165,22 @@ export const useMapStore = create<MapState>()(
     listPages: 0,
 
     // Actions
-    setMapData: (data) => set({
-      mode: data.mode,
-      clusters: data.mode === 'clusters' ? data.data : [],
-      mapProperties: data.mode === 'properties' ? data.data : [],
-      totalInViewport: data.total,
-    }),
+    setMapData: (data) => {
+      // Mapear clusters para asegurar que tengan ID (backend envía geohash)
+      const clusters = data.mode === 'clusters'
+        ? data.data.map((c: any) => ({
+            ...c,
+            id: c.geohash || c.id || `${c.lat}-${c.lng}`,
+          }))
+        : [];
+
+      set({
+        mode: data.mode,
+        clusters,
+        mapProperties: data.mode === 'properties' ? data.data : [],
+        totalInViewport: data.total,
+      });
+    },
     setListData: (data) => set({
       listProperties: data.properties,
       listTotal: data.total,
