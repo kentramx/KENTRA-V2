@@ -1,57 +1,32 @@
-import { useEffect, useRef, useCallback, memo, useMemo } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore } from '@/stores/mapStore';
-import { supabase } from '@/integrations/supabase/client';
-import { useDebouncedCallback } from 'use-debounce';
+import { useMapData } from '@/hooks/useMapData';
 
 const MEXICO_CENTER: [number, number] = [-99.1332, 19.4326];
 const INITIAL_ZOOM = 11;
 
-interface ClusterData {
-  id: string;
-  geohash?: string;
-  lat: number;
-  lng: number;
-  count: number;
-}
-
-interface PropertyData {
-  id: string;
-  lat: number;
-  lng: number;
-  price: number;
-}
-
 export const SearchMap = memo(function SearchMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
-  const dataRef = useRef<{ mode: string; ids: Set<string> }>({ mode: '', ids: new Set() });
 
-  // Solo funciones del store (estables)
-  const setViewport = useMapStore((s) => s.setViewport);
-  const setSelectedPropertyId = useMapStore((s) => s.setSelectedPropertyId);
-  const setHoveredPropertyId = useMapStore((s) => s.setHoveredPropertyId);
+  const {
+    setViewport,
+    selectedPropertyId,
+    setSelectedPropertyId,
+    hoveredPropertyId,
+    setHoveredPropertyId,
+  } = useMapStore();
 
-  // Estado local para datos del mapa (evita re-renders del store)
-  const viewport = useMapStore((s) => s.viewport);
-  const filters = useMapStore((s) => s.filters);
-  const selectedPropertyId = useMapStore((s) => s.selectedPropertyId);
-  const hoveredPropertyId = useMapStore((s) => s.hoveredPropertyId);
-
-  // Estado local para datos del mapa
-  const modeRef = useRef<'clusters' | 'properties'>('clusters');
-  const clustersRef = useRef<ClusterData[]>([]);
-  const propertiesRef = useRef<PropertyData[]>([]);
-  const totalRef = useRef(0);
-  const loadingRef = useRef(false);
+  const { mode, clusters, mapProperties, totalInViewport, isLoading, hasActiveFilters } = useMapData();
 
   // ============================================
-  // INICIALIZAR MAPA (SOLO UNA VEZ)
+  // INICIALIZAR MAPA
   // ============================================
   useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return;
+    if (!mapContainer.current || map.current) return;
 
     const m = new maplibregl.Map({
       container: mapContainer.current,
@@ -84,7 +59,7 @@ export const SearchMap = memo(function SearchMap() {
 
     m.addControl(new maplibregl.NavigationControl(), 'top-right');
 
-    m.on('load', () => {
+    const updateViewport = () => {
       const bounds = m.getBounds();
       const center = m.getCenter();
       setViewport({
@@ -97,200 +72,112 @@ export const SearchMap = memo(function SearchMap() {
         zoom: Math.floor(m.getZoom()),
         center: { lat: center.lat, lng: center.lng },
       });
-    });
+    };
 
-    m.on('moveend', () => {
-      const bounds = m.getBounds();
-      const center = m.getCenter();
-      setViewport({
-        bounds: {
-          north: bounds.getNorth(),
-          south: bounds.getSouth(),
-          east: bounds.getEast(),
-          west: bounds.getWest(),
-        },
-        zoom: Math.floor(m.getZoom()),
-        center: { lat: center.lat, lng: center.lng },
-      });
-    });
-
-    mapRef.current = m;
+    m.on('load', updateViewport);
+    m.on('moveend', updateViewport);
+    map.current = m;
 
     return () => {
       markersRef.current.forEach(marker => marker.remove());
       markersRef.current.clear();
       m.remove();
-      mapRef.current = null;
+      map.current = null;
     };
   }, [setViewport]);
 
   // ============================================
-  // FETCH DATA (DEBOUNCED, NO CAUSA RE-RENDER)
+  // RENDERIZAR MARKERS
+  // Solo se ejecuta cuando cambian los DATOS, no el hover
   // ============================================
-  const fetchData = useCallback(async () => {
-    if (!viewport || !mapRef.current) return;
-
-    loadingRef.current = true;
-
-    try {
-      const { data, error } = await supabase.functions.invoke('map-clusters', {
-        body: {
-          bounds: viewport.bounds,
-          zoom: viewport.zoom,
-          filters,
-        },
-      });
-
-      if (error) throw error;
-
-      const newMode = data.mode as 'clusters' | 'properties';
-      const newData = data.data || [];
-
-      // Normalizar IDs
-      if (newMode === 'clusters') {
-        clustersRef.current = newData.map((c: any) => ({
-          ...c,
-          id: c.geohash || c.id || `${c.lat}-${c.lng}`,
-        }));
-        propertiesRef.current = [];
-      } else {
-        propertiesRef.current = newData;
-        clustersRef.current = [];
-      }
-
-      modeRef.current = newMode;
-      totalRef.current = data.total || 0;
-
-      // Sincronizar markers AQUÍ, no en useEffect
-      syncMarkers();
-
-    } catch (err) {
-      console.error('[SearchMap] Fetch error:', err);
-    } finally {
-      loadingRef.current = false;
-    }
-  }, [viewport, filters]);
-
-  const debouncedFetch = useDebouncedCallback(fetchData, 300);
-
-  // Fetch cuando cambia viewport o filters
   useEffect(() => {
-    debouncedFetch();
-  }, [viewport, filters, debouncedFetch]);
-
-  // ============================================
-  // SINCRONIZAR MARKERS (LLAMADO MANUALMENTE)
-  // ============================================
-  const syncMarkers = useCallback(() => {
-    const m = mapRef.current;
+    const m = map.current;
     if (!m) return;
 
-    const currentIds = new Set<string>();
-    const mode = modeRef.current;
-
-    // Si cambió el modo, limpiar todos los markers
-    if (dataRef.current.mode !== mode) {
-      markersRef.current.forEach(marker => marker.remove());
-      markersRef.current.clear();
-      dataRef.current.mode = mode;
-      dataRef.current.ids.clear();
-    }
+    // Limpiar markers anteriores
+    markersRef.current.forEach(marker => marker.remove());
+    markersRef.current.clear();
 
     if (mode === 'clusters') {
-      clustersRef.current.forEach((cluster) => {
-        const id = cluster.id;
-        currentIds.add(id);
+      clusters.forEach((cluster) => {
+        const size = Math.min(60, 30 + Math.log10(cluster.count + 1) * 15);
+        const el = document.createElement('div');
+        el.style.cssText = `
+          width: ${size}px;
+          height: ${size}px;
+          background: linear-gradient(180deg, #0066FF 0%, #0052CC 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: ${size > 40 ? '12px' : '10px'};
+          border: 2px solid white;
+          box-shadow: 0 2px 8px rgba(0,102,255,0.4);
+          cursor: pointer;
+        `;
+        el.textContent = cluster.count >= 1000
+          ? `${(cluster.count / 1000).toFixed(1)}K`
+          : String(cluster.count);
 
-        if (!markersRef.current.has(id)) {
-          // Crear nuevo marker
-          const size = Math.min(60, 30 + Math.log10(cluster.count + 1) * 15);
-          const el = document.createElement('div');
-          el.style.cssText = `
-            width: ${size}px;
-            height: ${size}px;
-            background: linear-gradient(180deg, #0066FF 0%, #0052CC 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: ${size > 40 ? '12px' : '10px'};
-            border: 2px solid white;
-            box-shadow: 0 2px 8px rgba(0,102,255,0.4);
-            cursor: pointer;
-          `;
-          el.textContent = cluster.count >= 1000
-            ? `${(cluster.count / 1000).toFixed(1)}K`
-            : String(cluster.count);
+        el.addEventListener('click', () => {
+          m.flyTo({
+            center: [cluster.lng, cluster.lat],
+            zoom: m.getZoom() + 3,
+            duration: 500,
+          });
+        });
 
-          el.onclick = () => {
-            m.flyTo({
-              center: [cluster.lng, cluster.lat],
-              zoom: m.getZoom() + 3,
-              duration: 500,
-            });
-          };
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([cluster.lng, cluster.lat])
+          .addTo(m);
 
-          const marker = new maplibregl.Marker({ element: el })
-            .setLngLat([cluster.lng, cluster.lat])
-            .addTo(m);
-
-          markersRef.current.set(id, marker);
-        }
+        markersRef.current.set(cluster.id, marker);
       });
     } else {
-      propertiesRef.current.forEach((property) => {
-        const id = property.id;
-        currentIds.add(id);
+      mapProperties.forEach((property) => {
+        const el = document.createElement('div');
+        el.dataset.propertyId = property.id;
+        el.style.cssText = `
+          padding: 4px 8px;
+          background: white;
+          color: #1a1a1a;
+          border-radius: 4px;
+          font-weight: 600;
+          font-size: 11px;
+          border: 1px solid #e0e0e0;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          cursor: pointer;
+          white-space: nowrap;
+        `;
 
-        if (!markersRef.current.has(id)) {
-          const el = document.createElement('div');
-          el.style.cssText = `
-            padding: 4px 8px;
-            background: white;
-            color: #1a1a1a;
-            border-radius: 4px;
-            font-weight: 600;
-            font-size: 11px;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            cursor: pointer;
-            white-space: nowrap;
-          `;
-          el.textContent = property.price >= 1000000
-            ? `${(property.price / 1000000).toFixed(1)}M`
-            : `${(property.price / 1000).toFixed(0)}K`;
+        const price = property.price >= 1000000
+          ? `${(property.price / 1000000).toFixed(1)}M`
+          : `${(property.price / 1000).toFixed(0)}K`;
+        el.textContent = price;
 
-          el.onclick = () => setSelectedPropertyId(property.id);
-          el.onmouseenter = () => setHoveredPropertyId(property.id);
-          el.onmouseleave = () => setHoveredPropertyId(null);
+        el.addEventListener('click', () => setSelectedPropertyId(property.id));
+        el.addEventListener('mouseenter', () => setHoveredPropertyId(property.id));
+        el.addEventListener('mouseleave', () => setHoveredPropertyId(null));
 
-          const marker = new maplibregl.Marker({ element: el })
-            .setLngLat([property.lng, property.lat])
-            .addTo(m);
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([property.lng, property.lat])
+          .addTo(m);
 
-          markersRef.current.set(id, marker);
-        }
+        markersRef.current.set(property.id, marker);
       });
     }
-
-    // Eliminar markers que ya no existen
-    markersRef.current.forEach((marker, id) => {
-      if (!currentIds.has(id)) {
-        marker.remove();
-        markersRef.current.delete(id);
-      }
-    });
-
-    dataRef.current.ids = currentIds;
-  }, [setSelectedPropertyId, setHoveredPropertyId]);
+    // IMPORTANTE: hoveredPropertyId NO está en las dependencias
+    // El hover se maneja en el useEffect de abajo
+  }, [mode, clusters, mapProperties, setSelectedPropertyId, setHoveredPropertyId]);
 
   // ============================================
-  // ACTUALIZAR ESTILOS HOVER/SELECTED (SIN TOCAR MARKERS)
+  // ACTUALIZAR ESTILOS (hover/selected)
+  // Este effect NO destruye markers, solo cambia estilos
   // ============================================
   useEffect(() => {
-    if (modeRef.current !== 'properties') return;
+    if (mode !== 'properties') return;
 
     markersRef.current.forEach((marker, id) => {
       const el = marker.getElement();
@@ -302,36 +189,33 @@ export const SearchMap = memo(function SearchMap() {
       el.style.borderColor = isSelected ? '#0052CC' : '#e0e0e0';
       el.style.zIndex = isSelected ? '10' : isHovered ? '5' : '1';
     });
-  }, [selectedPropertyId, hoveredPropertyId]);
-
-  // Calcular valores para UI
-  const isLoading = loadingRef.current;
-  const total = totalRef.current;
-  const mode = modeRef.current;
-  const hasActiveFilters = filters && Object.values(filters).some(v => v !== undefined && v !== null && v !== '');
+  }, [mode, selectedPropertyId, hoveredPropertyId]);
 
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
 
-      {/* Badge de conteo */}
       <div className="absolute top-3 left-3 z-10 bg-white px-3 py-2 rounded-lg shadow-md">
         <span className="font-medium text-gray-900">
-          {totalRef.current.toLocaleString()} propiedades
+          {isLoading ? 'Cargando...' : `${totalInViewport.toLocaleString()} propiedades`}
         </span>
       </div>
 
-      {/* Indicador de filtros */}
       {hasActiveFilters && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-blue-600 text-white px-3 py-1.5 rounded-full text-sm font-medium">
           Filtros activos
         </div>
       )}
 
-      {/* Indicador de modo */}
-      {modeRef.current === 'clusters' && (
+      {mode === 'clusters' && (
         <div className="absolute bottom-3 left-3 z-10 bg-black/70 text-white px-3 py-1.5 rounded text-sm">
           Acerca para ver precios
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="absolute top-3 right-3 z-10">
+          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
     </div>
