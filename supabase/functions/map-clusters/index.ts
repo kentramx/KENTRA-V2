@@ -166,54 +166,48 @@ Deno.serve(async (req) => {
         total: count || filtered.length,
       };
     } else {
-      // Return clusters using ST_GeoHash
+      // Return clusters using pre-computed geohash columns
       const precision = getGeohashPrecision(zoom);
 
-      // Use raw SQL for clustering with ST_GeoHash
-      const clusterQuery = `
-        SELECT
-          ST_GeoHash(geom, ${precision}) as geohash,
-          COUNT(*) as count,
-          AVG(lat) as lat,
-          AVG(lng) as lng,
-          MIN(price) as min_price,
-          MAX(price) as max_price
-        FROM properties
-        WHERE ${whereClause}
-          AND geom IS NOT NULL
-        GROUP BY ST_GeoHash(geom, ${precision})
-        ORDER BY count DESC
-        LIMIT 500
-      `;
+      // Select the appropriate RPC function based on precision
+      const rpcName = precision <= 3 ? 'get_clusters_gh3' :
+                      precision <= 4 ? 'get_clusters_gh4' : 'get_clusters_gh5';
 
-      const { data: clusters, error } = await supabase.rpc('exec_raw_sql', {
-        query: clusterQuery
+      // Call the optimized RPC function
+      // @ts-expect-error - RPC functions not in generated types
+      const { data: clusters, error } = await supabase.rpc(rpcName, {
+        p_north: bounds.north,
+        p_south: bounds.south,
+        p_east: bounds.east,
+        p_west: bounds.west,
+        p_listing_type: filters.listing_type || null,
+        p_property_type: filters.property_type || null,
+        p_min_price: filters.min_price || null,
+        p_max_price: filters.max_price || null,
+        p_min_bedrooms: filters.min_bedrooms || null,
       });
 
       if (error) {
-        // Fallback: if exec_raw_sql doesn't exist, use simple aggregation
-        console.log('Fallback to simple query');
+        // Fallback: fetch properties and cluster client-side
+        console.log('Fallback to client-side clustering:', error.message);
 
         const { data: properties, error: propError, count } = await supabase
           .from('properties')
-          .select('id, lat, lng, price', { count: 'exact' })
+          .select('id, lat, lng, price, geohash_4', { count: 'exact' })
           .gte('lat', bounds.south)
           .lte('lat', bounds.north)
           .gte('lng', bounds.west)
           .lte('lng', bounds.east)
           .eq('status', 'activa')
-          .limit(1000);
+          .limit(2000);
 
         if (propError) throw propError;
 
-        // Simple client-side clustering by grid
-        const gridSize = 0.1 / Math.pow(2, zoom - 10); // Adaptive grid
+        // Group by geohash_4 column
         const grid = new Map<string, { count: number; lat: number; lng: number; prices: number[] }>();
 
         for (const p of (properties || [])) {
-          const gridX = Math.floor(p.lng / gridSize);
-          const gridY = Math.floor(p.lat / gridSize);
-          const key = `${gridX},${gridY}`;
+          const key = (p as Record<string, unknown>).geohash_4 as string || 'unknown';
 
           if (!grid.has(key)) {
             grid.set(key, { count: 0, lat: 0, lng: 0, prices: [] });
