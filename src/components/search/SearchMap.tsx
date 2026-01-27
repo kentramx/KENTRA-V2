@@ -83,6 +83,9 @@ export const SearchMap = memo(function SearchMap() {
       border: 2px solid white;
       box-shadow: 0 2px 8px rgba(0,102,255,0.4);
       cursor: pointer;
+      pointer-events: auto !important;
+      position: relative;
+      z-index: 100;
     `;
     el.textContent = cluster.count >= 1000
       ? `${(cluster.count / 1000).toFixed(1)}K`
@@ -238,6 +241,9 @@ export const SearchMap = memo(function SearchMap() {
 
           // Crear nuevo cluster marker
           const el = createClusterElement(cluster);
+
+          // DEBUG: Simple click test
+          el.onclick = () => console.log('ONCLICK FIRED:', cluster.id || cluster.geohash);
 
           el.addEventListener('click', (e) => {
             e.stopPropagation();
