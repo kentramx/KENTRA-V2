@@ -243,8 +243,38 @@ export const SearchMap = memo(function SearchMap() {
             e.stopPropagation();
             const currentZoom = m.getZoom();
 
+            // DEBUG: Compare cluster center with geohash bounds
+            console.log('=== CLUSTER CLICK DEBUG ===');
+            console.log('Cluster geohash:', cluster.geohash);
+            console.log('Cluster visual center:', { lat: cluster.lat, lng: cluster.lng });
+
             if (cluster.geohash) {
               const bounds = geohashToBounds(cluster.geohash);
+              const geohashCenter = {
+                lat: (bounds.north + bounds.south) / 2,
+                lng: (bounds.east + bounds.west) / 2,
+              };
+
+              console.log('Geohash bounds:', bounds);
+              console.log('Geohash center:', geohashCenter);
+
+              // Check if centers match (within ~50km tolerance)
+              const latDiff = Math.abs(cluster.lat - geohashCenter.lat);
+              const lngDiff = Math.abs(cluster.lng - geohashCenter.lng);
+              console.log('Center difference:', { latDiff, lngDiff });
+
+              if (latDiff > 1 || lngDiff > 1) {
+                console.error('❌ GEOHASH MISMATCH! Cluster center does not match geohash bounds');
+                console.error('Using cluster.lat/lng instead of geohash bounds');
+                // Fallback to cluster center if geohash is wrong
+                m.flyTo({
+                  center: [cluster.lng, cluster.lat],
+                  zoom: Math.min(currentZoom + 3, 16),
+                  duration: 500,
+                });
+                return;
+              }
+
               const boundsArg: [[number, number], [number, number]] = [
                 [bounds.west, bounds.south],
                 [bounds.east, bounds.north]
@@ -271,6 +301,7 @@ export const SearchMap = memo(function SearchMap() {
                 }
               });
             } else {
+              console.log('No geohash, using flyTo fallback');
               // Fallback for clusters without geohash
               m.flyTo({
                 center: [cluster.lng, cluster.lat],
