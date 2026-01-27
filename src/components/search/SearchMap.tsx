@@ -241,43 +241,40 @@ export const SearchMap = memo(function SearchMap() {
 
           el.addEventListener('click', (e) => {
             e.stopPropagation();
-            console.log('=== CLUSTER CLICK DEBUG ===');
-            console.log('Cluster:', cluster);
-            console.log('Geohash:', cluster.geohash);
-            console.log('Current zoom:', m.getZoom());
-            console.log('Current center:', m.getCenter());
+            const currentZoom = m.getZoom();
 
-            // Use geohash bounds for precise zoom, fallback to +3 zoom
             if (cluster.geohash) {
               const bounds = geohashToBounds(cluster.geohash);
-              console.log('Decoded bounds:', {
-                north: bounds.north,
-                south: bounds.south,
-                east: bounds.east,
-                west: bounds.west,
-              });
-
               const boundsArg: [[number, number], [number, number]] = [
                 [bounds.west, bounds.south],
                 [bounds.east, bounds.north]
               ];
-              console.log('fitBounds arg:', boundsArg);
 
               m.fitBounds(boundsArg, {
                 padding: 50,
-                duration: 500,
+                duration: 400,
                 maxZoom: 16,
               });
 
+              // Check if zoom change was sufficient
               m.once('moveend', () => {
-                console.log('After fitBounds - zoom:', m.getZoom());
-                console.log('After fitBounds - center:', m.getCenter());
+                const newZoom = m.getZoom();
+                const zoomDiff = newZoom - currentZoom;
+
+                // If zoom changed less than 2 levels, force more zoom
+                if (zoomDiff < 2) {
+                  m.flyTo({
+                    center: [cluster.lng, cluster.lat],
+                    zoom: Math.min(newZoom + 3, 16),
+                    duration: 300,
+                  });
+                }
               });
             } else {
-              console.log('No geohash, using flyTo fallback');
+              // Fallback for clusters without geohash
               m.flyTo({
                 center: [cluster.lng, cluster.lat],
-                zoom: m.getZoom() + 3,
+                zoom: Math.min(currentZoom + 3, 16),
                 duration: 500,
               });
             }
