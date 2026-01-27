@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, memo } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import ngeohash from 'ngeohash';
 import { useMapStore } from '@/stores/mapStore';
 import { usePropertySearchUnified } from '@/hooks/usePropertySearchUnified';
 
@@ -213,41 +214,30 @@ export const SearchMap = memo(function SearchMap() {
           el.addEventListener('click', (e) => {
             e.stopPropagation();
 
-            // Use real bounds if available (from unified endpoint)
-            if (cluster.bounds) {
-              const { north, south, east, west } = cluster.bounds;
+            // ENTERPRISE: Use FIXED geohash bounds (no overlap by design)
+            // cluster.id is the geohash string (e.g., "9g3w4")
+            const geohashId = cluster.id;
 
-              // Calculate buffer to compensate for padding
-              // Expand bounds by 15% to ensure all properties remain visible after padding
-              const latSpan = north - south;
-              const lngSpan = east - west;
-              const latBuffer = Math.max(latSpan * 0.15, 0.002); // min 0.002 degrees
-              const lngBuffer = Math.max(lngSpan * 0.15, 0.002);
+            if (geohashId && geohashId !== 'unknown') {
+              // decode_bbox returns [minlat, minlon, maxlat, maxlon]
+              const [south, west, north, east] = ngeohash.decode_bbox(geohashId);
 
-              const expandedBounds: [[number, number], [number, number]] = [
-                [west - lngBuffer, south - latBuffer],
-                [east + lngBuffer, north + latBuffer],
-              ];
-
-              console.log('[CLUSTER CLICK]', {
-                id: cluster.id,
+              console.log('[CLUSTER CLICK - FIXED BOUNDS]', {
+                geohash: geohashId,
                 count: cluster.count,
-                originalBounds: { north, south, east, west },
-                expandedBounds: {
-                  north: north + latBuffer,
-                  south: south - latBuffer,
-                  east: east + lngBuffer,
-                  west: west - lngBuffer,
-                },
+                fixedBounds: { north, south, east, west },
               });
 
-              m.fitBounds(expandedBounds, {
-                padding: 40, // Reduced padding since we expanded bounds
-                maxZoom: 16,
-                duration: 500,
-              });
+              m.fitBounds(
+                [[west, south], [east, north]],
+                {
+                  padding: 20,
+                  maxZoom: 16,
+                  duration: 500,
+                }
+              );
             } else {
-              // Fallback: flyTo cluster center with +3 zoom
+              // Fallback for unknown geohash: zoom to center
               const currentZoom = m.getZoom();
               m.flyTo({
                 center: [cluster.lng, cluster.lat],
