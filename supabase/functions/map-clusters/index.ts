@@ -103,8 +103,8 @@ Deno.serve(async (req) => {
     let result: { mode: string; data: unknown[]; total: number };
 
     if (shouldShowProperties(zoom)) {
-      // Return individual properties (limit 500)
-      const { data: properties, error, count } = await supabase
+      // Return individual properties with ALL filters in PostgreSQL
+      let query = supabase
         .from('properties')
         .select(`
           id,
@@ -127,31 +127,34 @@ Deno.serve(async (req) => {
         .lte('lat', bounds.north)
         .gte('lng', bounds.west)
         .lte('lng', bounds.east)
-        .eq('status', 'activa')
-        .limit(500);
+        .eq('status', 'activa');
+
+      // Apply ALL filters in PostgreSQL (not JavaScript)
+      if (filters.listing_type) {
+        query = query.eq('listing_type', filters.listing_type);
+      }
+      if (filters.property_type) {
+        query = query.eq('type', filters.property_type);
+      }
+      if (filters.min_price) {
+        query = query.gte('price', filters.min_price);
+      }
+      if (filters.max_price) {
+        query = query.lte('price', filters.max_price);
+      }
+      if (filters.min_bedrooms) {
+        query = query.gte('bedrooms', filters.min_bedrooms);
+      }
+      if (filters.max_bathrooms) {
+        query = query.lte('bathrooms', filters.max_bathrooms);
+      }
+
+      const { data: properties, error, count } = await query.limit(500);
 
       if (error) throw error;
 
-      // Apply additional filters manually since we can't chain them all
-      let filtered = properties || [];
-      if (filters.listing_type) {
-        filtered = filtered.filter((p: Record<string, unknown>) => p.listing_type === filters.listing_type);
-      }
-      if (filters.property_type) {
-        filtered = filtered.filter((p: Record<string, unknown>) => p.type === filters.property_type);
-      }
-      if (filters.min_price) {
-        filtered = filtered.filter((p: Record<string, unknown>) => (p.price as number) >= filters.min_price!);
-      }
-      if (filters.max_price) {
-        filtered = filtered.filter((p: Record<string, unknown>) => (p.price as number) <= filters.max_price!);
-      }
-      if (filters.min_bedrooms) {
-        filtered = filtered.filter((p: Record<string, unknown>) => (p.bedrooms as number) >= filters.min_bedrooms!);
-      }
-
-      // Transform for frontend
-      const transformed = filtered.map((p: Record<string, unknown>) => ({
+      // Transform for frontend (no filtering needed - PostgreSQL did it all)
+      const transformed = (properties || []).map((p: Record<string, unknown>) => ({
         ...p,
         property_type: p.type,
         neighborhood: p.colonia,
@@ -162,8 +165,8 @@ Deno.serve(async (req) => {
 
       result = {
         mode: 'properties',
-        data: transformed.slice(0, 500),
-        total: count || filtered.length,
+        data: transformed,
+        total: count || 0,
       };
     } else {
       // Return clusters using pre-computed geohash columns
@@ -173,33 +176,84 @@ Deno.serve(async (req) => {
       const rpcName = precision <= 3 ? 'get_clusters_gh3' :
                       precision <= 4 ? 'get_clusters_gh4' : 'get_clusters_gh5';
 
-      // Call the optimized RPC function
-      // @ts-expect-error - RPC functions not in generated types
-      const { data: clusters, error } = await supabase.rpc(rpcName, {
-        p_north: bounds.north,
-        p_south: bounds.south,
-        p_east: bounds.east,
-        p_west: bounds.west,
-        p_listing_type: filters.listing_type || null,
-        p_property_type: filters.property_type || null,
-        p_min_price: filters.min_price || null,
-        p_max_price: filters.max_price || null,
-        p_min_bedrooms: filters.min_bedrooms || null,
-      });
+      // CRITICAL FIX: Get REAL COUNT with all filters applied (same as search-properties)
+      // This ensures mapa and lista show the same number
+      let countQuery = supabase
+        .from('properties')
+        .select('id', { count: 'exact', head: true })
+        .gte('lat', bounds.south)
+        .lte('lat', bounds.north)
+        .gte('lng', bounds.west)
+        .lte('lng', bounds.east)
+        .eq('status', 'activa');
+
+      if (filters.listing_type) {
+        countQuery = countQuery.eq('listing_type', filters.listing_type);
+      }
+      if (filters.property_type) {
+        countQuery = countQuery.eq('type', filters.property_type);
+      }
+      if (filters.min_price) {
+        countQuery = countQuery.gte('price', filters.min_price);
+      }
+      if (filters.max_price) {
+        countQuery = countQuery.lte('price', filters.max_price);
+      }
+      if (filters.min_bedrooms) {
+        countQuery = countQuery.gte('bedrooms', filters.min_bedrooms);
+      }
+
+      // Execute count query and cluster query in parallel
+      const [countResult, clusterResult] = await Promise.all([
+        countQuery,
+        // @ts-expect-error - RPC functions not in generated types
+        supabase.rpc(rpcName, {
+          p_north: bounds.north,
+          p_south: bounds.south,
+          p_east: bounds.east,
+          p_west: bounds.west,
+          p_listing_type: filters.listing_type || null,
+          p_property_type: filters.property_type || null,
+          p_min_price: filters.min_price || null,
+          p_max_price: filters.max_price || null,
+          p_min_bedrooms: filters.min_bedrooms || null,
+        }),
+      ]);
+
+      const realCount = countResult.count || 0;
+      const { data: clusters, error } = clusterResult;
 
       if (error) {
         // Fallback: fetch properties and cluster client-side
         console.log('Fallback to client-side clustering:', error.message);
 
-        const { data: properties, error: propError, count } = await supabase
+        let fallbackQuery = supabase
           .from('properties')
           .select('id, lat, lng, price, geohash_4', { count: 'exact' })
           .gte('lat', bounds.south)
           .lte('lat', bounds.north)
           .gte('lng', bounds.west)
           .lte('lng', bounds.east)
-          .eq('status', 'activa')
-          .limit(2000);
+          .eq('status', 'activa');
+
+        // Apply filters in fallback too
+        if (filters.listing_type) {
+          fallbackQuery = fallbackQuery.eq('listing_type', filters.listing_type);
+        }
+        if (filters.property_type) {
+          fallbackQuery = fallbackQuery.eq('type', filters.property_type);
+        }
+        if (filters.min_price) {
+          fallbackQuery = fallbackQuery.gte('price', filters.min_price);
+        }
+        if (filters.max_price) {
+          fallbackQuery = fallbackQuery.lte('price', filters.max_price);
+        }
+        if (filters.min_bedrooms) {
+          fallbackQuery = fallbackQuery.gte('bedrooms', filters.min_bedrooms);
+        }
+
+        const { data: properties, error: propError, count } = await fallbackQuery.limit(2000);
 
         if (propError) throw propError;
 
@@ -230,13 +284,13 @@ Deno.serve(async (req) => {
         result = {
           mode: 'clusters',
           data: clusterData.slice(0, 500),
-          total: count || (properties?.length || 0),
+          total: count || 0,
         };
       } else {
         result = {
           mode: 'clusters',
           data: clusters || [],
-          total: (clusters || []).reduce((sum: number, c: Record<string, unknown>) => sum + Number(c.count), 0),
+          total: realCount,  // Use REAL COUNT, not SUM of clusters
         };
       }
     }
