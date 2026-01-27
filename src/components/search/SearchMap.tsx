@@ -198,8 +198,9 @@ export const SearchMap = memo(function SearchMap() {
             el.textContent = cluster.count >= 1000
               ? `${(cluster.count / 1000).toFixed(1)}K`
               : String(cluster.count);
-            existing.data = cluster;
           }
+          // ALWAYS update the data reference (fixes stale closure bug)
+          existing.data = cluster;
         } else {
           // Eliminar marker anterior si era de otro tipo
           if (existing) {
@@ -211,14 +212,34 @@ export const SearchMap = memo(function SearchMap() {
           const el = createClusterElement(cluster);
 
           // SIMPLE CLICK HANDLER: flyTo cluster center, increase zoom
+          // Use a reference to get current data (not stale closure)
+          const markerId = id;
           el.addEventListener('click', (e) => {
             e.stopPropagation();
+
+            // Get the CURRENT cluster data from the marker ref
+            const currentMarkerData = markersRef.current.get(markerId);
+            const currentCluster = currentMarkerData?.data;
+
+            if (!currentCluster) {
+              console.error('[SearchMap] No cluster data found for marker:', markerId);
+              return;
+            }
+
+            console.log('[SearchMap] Cluster clicked:', {
+              id: markerId,
+              count: currentCluster.count,
+              lat: currentCluster.lat,
+              lng: currentCluster.lng,
+            });
 
             const currentZoom = m.getZoom();
             const targetZoom = Math.min(Math.max(currentZoom + 3, 14), 17);
 
+            console.log('[SearchMap] Flying to:', currentCluster.lng, currentCluster.lat, 'zoom:', targetZoom);
+
             m.flyTo({
-              center: [cluster.lng, cluster.lat],
+              center: [currentCluster.lng, currentCluster.lat],
               zoom: targetZoom,
               duration: 500,
             });
