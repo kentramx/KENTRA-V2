@@ -211,40 +211,52 @@ export const SearchMap = memo(function SearchMap() {
           // Crear nuevo cluster marker
           const el = createClusterElement(cluster);
 
-          // SIMPLE CLICK HANDLER: flyTo cluster center, increase zoom
-          // Use a reference to get current data (not stale closure)
+          // CLICK HANDLER: Use marker's ACTUAL position, not data coordinates
+          // This fixes the bug where data coordinates don't match visual position
           const markerId = id;
           el.addEventListener('click', (e) => {
             e.stopPropagation();
 
-            // Get the CURRENT cluster data from the marker ref
             const currentMarkerData = markersRef.current.get(markerId);
-            const currentCluster = currentMarkerData?.data;
-
-            if (!currentCluster) {
-              console.error('[SearchMap] No cluster data found for marker:', markerId);
+            if (!currentMarkerData) {
+              console.error('[SearchMap] No marker found:', markerId);
               return;
             }
 
-            // Zoom proporcional al tamaño del cluster (logarítmico)
-            // Fórmula: zoomIncrement = 4 - log10(count), clamped [0.5, 3]
-            // count=1000 → +1, count=100 → +2, count=10 → +3
-            const logCount = Math.log10(Math.max(currentCluster.count, 1));
+            // Get the marker's ACTUAL visual position
+            const markerPosition = currentMarkerData.marker.getLngLat();
+            const dataCoords = currentMarkerData.data;
+            const visualCount = el.textContent;
+
+            // DEBUG: Compare visual vs data
+            console.log('[SearchMap] CLICK DEBUG:', {
+              markerId,
+              visualCount,
+              dataCount: dataCoords?.count,
+              markerPos: { lat: markerPosition.lat.toFixed(4), lng: markerPosition.lng.toFixed(4) },
+              dataPos: dataCoords ? { lat: dataCoords.lat?.toFixed(4), lng: dataCoords.lng?.toFixed(4) } : null,
+              positionMatch: dataCoords ?
+                (Math.abs(markerPosition.lat - dataCoords.lat) < 0.001 &&
+                 Math.abs(markerPosition.lng - dataCoords.lng) < 0.001) : false,
+            });
+
+            // Use the VISUAL count for zoom calculation (what user clicked on)
+            const visualCountNum = parseInt(visualCount || '1', 10) || 1;
+            const logCount = Math.log10(visualCountNum);
             const zoomIncrement = Math.max(0.5, Math.min(3, 4 - logCount));
 
             const currentZoom = m.getZoom();
             const targetZoom = Math.min(currentZoom + zoomIncrement, 17);
 
-            console.log('[SearchMap] Cluster clicked:', {
-              id: markerId,
-              count: currentCluster.count,
-              zoomIncrement,
-              currentZoom: Math.floor(currentZoom),
-              targetZoom,
+            // FLY TO MARKER'S ACTUAL POSITION (not data coordinates!)
+            console.log('[SearchMap] Flying to MARKER position:', {
+              lng: markerPosition.lng.toFixed(4),
+              lat: markerPosition.lat.toFixed(4),
+              zoom: targetZoom,
             });
 
             m.flyTo({
-              center: [currentCluster.lng, currentCluster.lat],
+              center: [markerPosition.lng, markerPosition.lat],
               zoom: targetZoom,
               duration: 500,
             });
