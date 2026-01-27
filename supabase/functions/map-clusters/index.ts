@@ -169,111 +169,86 @@ Deno.serve(async (req) => {
         total: count || 0,
       };
     } else {
-      // Return clusters using pre-computed geohash columns
+      // Return clusters
       const precision = getGeohashPrecision(zoom);
+      const geohashColumn = `geohash_${precision}` as const;
 
-      // Select the appropriate RPC function based on precision
-      const rpcName = precision <= 3 ? 'get_clusters_gh3' :
-                      precision <= 4 ? 'get_clusters_gh4' : 'get_clusters_gh5';
+      // Detect if we have advanced filters that MVs don't support
+      const hasAdvancedFilters = !!(
+        filters.min_price ||
+        filters.max_price ||
+        filters.min_bedrooms ||
+        filters.max_bedrooms ||
+        filters.property_type
+      );
 
-      // CRITICAL FIX: Get REAL COUNT with all filters applied (same as search-properties)
-      // This ensures mapa and lista show the same number
-      let countQuery = supabase
-        .from('properties')
-        .select('id', { count: 'exact', head: true })
-        .gte('lat', bounds.south)
-        .lte('lat', bounds.north)
-        .gte('lng', bounds.west)
-        .lte('lng', bounds.east)
-        .eq('status', 'activa');
+      if (hasAdvancedFilters) {
+        // DYNAMIC CLUSTERING: Use when filters are active
+        // MVs only support listing_type, so we query properties directly
+        console.log(JSON.stringify({
+          level: 'info',
+          request_id: requestId,
+          message: 'Using dynamic clustering (advanced filters active)',
+          filters: Object.keys(filters).filter(k => filters[k as keyof typeof filters] !== undefined),
+        }));
 
-      if (filters.listing_type) {
-        countQuery = countQuery.eq('listing_type', filters.listing_type);
-      }
-      if (filters.property_type) {
-        countQuery = countQuery.eq('type', filters.property_type);
-      }
-      if (filters.min_price) {
-        countQuery = countQuery.gte('price', filters.min_price);
-      }
-      if (filters.max_price) {
-        countQuery = countQuery.lte('price', filters.max_price);
-      }
-      if (filters.min_bedrooms) {
-        countQuery = countQuery.gte('bedrooms', filters.min_bedrooms);
-      }
-
-      // Execute count query and cluster query in parallel
-      const [countResult, clusterResult] = await Promise.all([
-        countQuery,
-        // @ts-expect-error - RPC functions not in generated types
-        supabase.rpc(rpcName, {
-          p_north: bounds.north,
-          p_south: bounds.south,
-          p_east: bounds.east,
-          p_west: bounds.west,
-          p_listing_type: filters.listing_type || null,
-          p_property_type: filters.property_type || null,
-          p_min_price: filters.min_price || null,
-          p_max_price: filters.max_price || null,
-          p_min_bedrooms: filters.min_bedrooms || null,
-        }),
-      ]);
-
-      const realCount = countResult.count || 0;
-      const { data: clusters, error } = clusterResult;
-
-      if (error) {
-        // Fallback: fetch properties and cluster client-side
-        console.log('Fallback to client-side clustering:', error.message);
-
-        let fallbackQuery = supabase
+        let dynamicQuery = supabase
           .from('properties')
-          .select('id, lat, lng, price, geohash_4', { count: 'exact' })
+          .select(`id, lat, lng, price, geohash_${precision}`, { count: 'exact' })
           .gte('lat', bounds.south)
           .lte('lat', bounds.north)
           .gte('lng', bounds.west)
           .lte('lng', bounds.east)
           .eq('status', 'activa');
 
-        // Apply filters in fallback too
+        // Apply ALL filters in PostgreSQL
         if (filters.listing_type) {
-          fallbackQuery = fallbackQuery.eq('listing_type', filters.listing_type);
+          dynamicQuery = dynamicQuery.eq('listing_type', filters.listing_type);
         }
         if (filters.property_type) {
-          fallbackQuery = fallbackQuery.eq('type', filters.property_type);
+          dynamicQuery = dynamicQuery.eq('type', filters.property_type);
         }
         if (filters.min_price) {
-          fallbackQuery = fallbackQuery.gte('price', filters.min_price);
+          dynamicQuery = dynamicQuery.gte('price', filters.min_price);
         }
         if (filters.max_price) {
-          fallbackQuery = fallbackQuery.lte('price', filters.max_price);
+          dynamicQuery = dynamicQuery.lte('price', filters.max_price);
         }
         if (filters.min_bedrooms) {
-          fallbackQuery = fallbackQuery.gte('bedrooms', filters.min_bedrooms);
+          dynamicQuery = dynamicQuery.gte('bedrooms', filters.min_bedrooms);
+        }
+        if (filters.max_bedrooms) {
+          dynamicQuery = dynamicQuery.lte('bedrooms', filters.max_bedrooms);
         }
 
-        const { data: properties, error: propError, count } = await fallbackQuery.limit(2000);
+        const { data: properties, error: propError, count } = await dynamicQuery.limit(5000);
 
         if (propError) throw propError;
 
-        // Group by geohash_4 column
-        const grid = new Map<string, { count: number; lat: number; lng: number; prices: number[] }>();
+        // Group by geohash column (in JavaScript - fast for <5000 items)
+        const grid = new Map<string, {
+          geohash: string;
+          count: number;
+          lat: number;
+          lng: number;
+          prices: number[];
+        }>();
 
         for (const p of (properties || [])) {
-          const key = (p as Record<string, unknown>).geohash_4 as string || 'unknown';
+          const key = (p as Record<string, unknown>)[geohashColumn] as string || 'unknown';
 
           if (!grid.has(key)) {
-            grid.set(key, { count: 0, lat: 0, lng: 0, prices: [] });
+            grid.set(key, { geohash: key, count: 0, lat: 0, lng: 0, prices: [] });
           }
           const cell = grid.get(key)!;
           cell.count++;
-          cell.lat += p.lat;
-          cell.lng += p.lng;
-          cell.prices.push(p.price);
+          cell.lat += (p as Record<string, unknown>).lat as number;
+          cell.lng += (p as Record<string, unknown>).lng as number;
+          cell.prices.push((p as Record<string, unknown>).price as number);
         }
 
         const clusterData = Array.from(grid.values()).map(cell => ({
+          geohash: cell.geohash,
           count: cell.count,
           lat: cell.lat / cell.count,
           lng: cell.lng / cell.count,
@@ -286,11 +261,54 @@ Deno.serve(async (req) => {
           data: clusterData.slice(0, 500),
           total: count || 0,
         };
+
       } else {
+        // MATERIALIZED VIEWS: Use when no advanced filters (fast path)
+        const rpcName = precision <= 3 ? 'get_clusters_gh3' :
+                        precision <= 4 ? 'get_clusters_gh4' : 'get_clusters_gh5';
+
+        // Get COUNT (for consistency with lista)
+        let countQuery = supabase
+          .from('properties')
+          .select('id', { count: 'exact', head: true })
+          .gte('lat', bounds.south)
+          .lte('lat', bounds.north)
+          .gte('lng', bounds.west)
+          .lte('lng', bounds.east)
+          .eq('status', 'activa');
+
+        if (filters.listing_type) {
+          countQuery = countQuery.eq('listing_type', filters.listing_type);
+        }
+
+        // Execute count and clusters in parallel
+        const [countResult, clusterResult] = await Promise.all([
+          countQuery,
+          // @ts-expect-error - RPC functions not in generated types
+          supabase.rpc(rpcName, {
+            p_north: bounds.north,
+            p_south: bounds.south,
+            p_east: bounds.east,
+            p_west: bounds.west,
+            p_listing_type: filters.listing_type || null,
+            p_property_type: null,
+            p_min_price: null,
+            p_max_price: null,
+            p_min_bedrooms: null,
+          }),
+        ]);
+
+        const realCount = countResult.count || 0;
+        const { data: clusters, error } = clusterResult;
+
+        if (error) {
+          throw error;
+        }
+
         result = {
           mode: 'clusters',
           data: clusters || [],
-          total: realCount,  // Use REAL COUNT, not SUM of clusters
+          total: realCount,
         };
       }
     }
