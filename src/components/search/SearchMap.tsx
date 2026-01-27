@@ -226,17 +226,28 @@ export const SearchMap = memo(function SearchMap() {
               return;
             }
 
+            // Zoom proporcional al tamaño del cluster
+            // Clusters grandes → zoom suave (se dividen en sub-clusters)
+            // Clusters pequeños → zoom agresivo (van directo a propiedades)
+            let zoomIncrement: number;
+            if (currentCluster.count > 100) {
+              zoomIncrement = 1;  // Cluster grande, zoom suave
+            } else if (currentCluster.count > 30) {
+              zoomIncrement = 2;  // Cluster mediano
+            } else {
+              zoomIncrement = 3;  // Cluster pequeño, zoom agresivo
+            }
+
+            const currentZoom = m.getZoom();
+            const targetZoom = Math.min(currentZoom + zoomIncrement, 17);
+
             console.log('[SearchMap] Cluster clicked:', {
               id: markerId,
               count: currentCluster.count,
-              lat: currentCluster.lat,
-              lng: currentCluster.lng,
+              zoomIncrement,
+              currentZoom: Math.floor(currentZoom),
+              targetZoom,
             });
-
-            const currentZoom = m.getZoom();
-            const targetZoom = Math.min(Math.max(currentZoom + 3, 14), 17);
-
-            console.log('[SearchMap] Flying to:', currentCluster.lng, currentCluster.lat, 'zoom:', targetZoom);
 
             m.flyTo({
               center: [currentCluster.lng, currentCluster.lat],
