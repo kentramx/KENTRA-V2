@@ -111,6 +111,25 @@ export const MapDebugPanel = memo(function MapDebugPanel() {
                   </span>
                 </>
               )}
+
+              {/* DEBUG: Clustering path */}
+              {(lastRequestMeta as any).clustering_path && (
+                <>
+                  <span className="text-gray-400">Path:</span>
+                  <span className={(lastRequestMeta as any).clustering_path === 'DYNAMIC_CLUSTERING' ? 'text-green-400' : 'text-yellow-400'}>
+                    {(lastRequestMeta as any).clustering_path}
+                  </span>
+                </>
+              )}
+
+              {(lastRequestMeta as any).has_advanced_filters !== undefined && (
+                <>
+                  <span className="text-gray-400">Adv Filters:</span>
+                  <span className={(lastRequestMeta as any).has_advanced_filters ? 'text-green-400' : 'text-gray-500'}>
+                    {(lastRequestMeta as any).has_advanced_filters ? 'YES' : 'NO'}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         )}

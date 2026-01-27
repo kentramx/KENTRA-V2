@@ -179,8 +179,25 @@ Deno.serve(async (req) => {
         filters.max_price ||
         filters.min_bedrooms ||
         filters.max_bedrooms ||
+        filters.min_bathrooms ||
         filters.property_type
       );
+
+      // DEBUG: Log filter detection
+      console.log(JSON.stringify({
+        level: 'debug',
+        request_id: requestId,
+        message: 'CLUSTER PATH DECISION',
+        hasAdvancedFilters,
+        filters_received: filters,
+        active_filters: Object.entries(filters)
+          .filter(([_, v]) => v !== undefined && v !== null)
+          .map(([k, v]) => `${k}=${v}`),
+        path: hasAdvancedFilters ? 'DYNAMIC_CLUSTERING' : 'MATERIALIZED_VIEWS',
+        zoom,
+        precision,
+        geohashColumn,
+      }));
 
       if (hasAdvancedFilters) {
         // DYNAMIC CLUSTERING: Use when filters are active
@@ -256,11 +273,23 @@ Deno.serve(async (req) => {
           max_price: Math.max(...cell.prices),
         }));
 
+        // DEBUG: Log dynamic clustering results
+        console.log(JSON.stringify({
+          level: 'debug',
+          request_id: requestId,
+          message: 'DYNAMIC_CLUSTERING_RESULT',
+          properties_fetched: properties?.length || 0,
+          clusters_created: clusterData.length,
+          total_count: count,
+          sample_clusters: clusterData.slice(0, 3).map(c => ({ geohash: c.geohash, count: c.count })),
+        }));
+
         result = {
           mode: 'clusters',
           data: clusterData.slice(0, 500),
           total: count || 0,
-        };
+          _debug_path: 'DYNAMIC_CLUSTERING',
+        } as any;
 
       } else {
         // MATERIALIZED VIEWS: Use when no advanced filters (fast path)
@@ -305,11 +334,23 @@ Deno.serve(async (req) => {
           throw error;
         }
 
+        // DEBUG: Log MV results
+        console.log(JSON.stringify({
+          level: 'debug',
+          request_id: requestId,
+          message: 'MV_CLUSTERING_RESULT',
+          clusters_from_mv: clusters?.length || 0,
+          real_count: realCount,
+          sum_of_cluster_counts: (clusters || []).reduce((sum: number, c: any) => sum + Number(c.count), 0),
+          sample_clusters: (clusters || []).slice(0, 3).map((c: any) => ({ geohash: c.geohash, count: c.count })),
+        }));
+
         result = {
           mode: 'clusters',
           data: clusters || [],
           total: realCount,
-        };
+          _debug_path: 'MATERIALIZED_VIEWS',
+        } as any;
       }
     }
 
@@ -327,6 +368,10 @@ Deno.serve(async (req) => {
       total: result.total,
     }));
 
+    // Determine which path was used for debugging
+    const clusteringPath = shouldShowProperties(zoom) ? 'PROPERTIES_MODE' :
+      (result as any)._debug_path || 'UNKNOWN';
+
     return new Response(
       JSON.stringify({
         ...result,
@@ -335,6 +380,17 @@ Deno.serve(async (req) => {
           duration_ms: duration,
           db_query_ms: dbDuration,
           timestamp: new Date().toISOString(),
+          // DEBUG INFO
+          clustering_path: clusteringPath,
+          filters_received: filters,
+          has_advanced_filters: !!(
+            filters.min_price ||
+            filters.max_price ||
+            filters.min_bedrooms ||
+            filters.max_bedrooms ||
+            filters.min_bathrooms ||
+            filters.property_type
+          ),
         }
       }),
       {
