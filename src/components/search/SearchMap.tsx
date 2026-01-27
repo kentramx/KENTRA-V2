@@ -213,52 +213,39 @@ export const SearchMap = memo(function SearchMap() {
           el.addEventListener('click', (e) => {
             e.stopPropagation();
 
-            // DEBUG: Log cluster info before fitBounds
-            console.log('[CLUSTER CLICK]', {
-              id: cluster.id,
-              count: cluster.count,
-              center: { lat: cluster.lat, lng: cluster.lng },
-              bounds: cluster.bounds,
-            });
-
             // Use real bounds if available (from unified endpoint)
             if (cluster.bounds) {
               const { north, south, east, west } = cluster.bounds;
 
-              // DEBUG: Log the bounds we're fitting to
-              console.log('[CLUSTER BOUNDS]', {
-                north, south, east, west,
-                latSpan: north - south,
-                lngSpan: east - west,
+              // Calculate buffer to compensate for padding
+              // Expand bounds by 15% to ensure all properties remain visible after padding
+              const latSpan = north - south;
+              const lngSpan = east - west;
+              const latBuffer = Math.max(latSpan * 0.15, 0.002); // min 0.002 degrees
+              const lngBuffer = Math.max(lngSpan * 0.15, 0.002);
+
+              const expandedBounds: [[number, number], [number, number]] = [
+                [west - lngBuffer, south - latBuffer],
+                [east + lngBuffer, north + latBuffer],
+              ];
+
+              console.log('[CLUSTER CLICK]', {
+                id: cluster.id,
+                count: cluster.count,
+                originalBounds: { north, south, east, west },
+                expandedBounds: {
+                  north: north + latBuffer,
+                  south: south - latBuffer,
+                  east: east + lngBuffer,
+                  west: west - lngBuffer,
+                },
               });
 
-              m.fitBounds(
-                [[west, south], [east, north]],
-                {
-                  padding: 60,
-                  maxZoom: 16,
-                  duration: 500,
-                }
-              );
-
-              // DEBUG: Log viewport after animation completes
-              setTimeout(() => {
-                const newBounds = m.getBounds();
-                console.log('[VIEWPORT AFTER FITBOUNDS]', {
-                  north: newBounds.getNorth(),
-                  south: newBounds.getSouth(),
-                  east: newBounds.getEast(),
-                  west: newBounds.getWest(),
-                  zoom: m.getZoom(),
-                  comparison: {
-                    clusterBoundsContainedInViewport:
-                      newBounds.getNorth() >= north &&
-                      newBounds.getSouth() <= south &&
-                      newBounds.getEast() >= east &&
-                      newBounds.getWest() <= west,
-                  }
-                });
-              }, 600);
+              m.fitBounds(expandedBounds, {
+                padding: 40, // Reduced padding since we expanded bounds
+                maxZoom: 16,
+                duration: 500,
+              });
             } else {
               // Fallback: flyTo cluster center with +3 zoom
               const currentZoom = m.getZoom();
