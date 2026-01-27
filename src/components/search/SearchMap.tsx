@@ -239,10 +239,15 @@ export const SearchMap = memo(function SearchMap() {
           // Crear nuevo cluster marker
           const el = createClusterElement(cluster);
 
-          el.addEventListener('click', () => {
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('Cluster clicked:', cluster);
+            console.log('Geohash:', cluster.geohash);
+
             // Use geohash bounds for precise zoom, fallback to +3 zoom
             if (cluster.geohash) {
               const bounds = geohashToBounds(cluster.geohash);
+              console.log('Bounds:', bounds);
               m.fitBounds(
                 [[bounds.west, bounds.south], [bounds.east, bounds.north]],
                 {
@@ -253,6 +258,7 @@ export const SearchMap = memo(function SearchMap() {
                 }
               );
             } else {
+              console.log('No geohash, using flyTo fallback');
               // Fallback for clusters without geohash
               m.flyTo({
                 center: [cluster.lng, cluster.lat],
