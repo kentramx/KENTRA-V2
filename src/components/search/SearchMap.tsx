@@ -243,20 +243,28 @@ export const SearchMap = memo(function SearchMap() {
             e.stopPropagation();
             console.log('Cluster clicked:', cluster);
             console.log('Geohash:', cluster.geohash);
+            console.log('Current zoom:', m.getZoom());
 
             // Use geohash bounds for precise zoom, fallback to +3 zoom
             if (cluster.geohash) {
               const bounds = geohashToBounds(cluster.geohash);
-              console.log('Bounds:', bounds);
-              m.fitBounds(
-                [[bounds.west, bounds.south], [bounds.east, bounds.north]],
-                {
-                  padding: 50,
-                  duration: 500,
-                  maxZoom: 16,
-                  minZoom: m.getZoom(), // Never zoom out
-                }
-              );
+              console.log('Bounds values:', JSON.stringify(bounds));
+              console.log('fitBounds args:', [[bounds.west, bounds.south], [bounds.east, bounds.north]]);
+
+              try {
+                m.fitBounds(
+                  [[bounds.west, bounds.south], [bounds.east, bounds.north]],
+                  {
+                    padding: 50,
+                    duration: 500,
+                    maxZoom: 16,
+                    minZoom: m.getZoom(), // Never zoom out
+                  }
+                );
+                console.log('fitBounds called successfully');
+              } catch (err) {
+                console.error('fitBounds error:', err);
+              }
             } else {
               console.log('No geohash, using flyTo fallback');
               // Fallback for clusters without geohash
