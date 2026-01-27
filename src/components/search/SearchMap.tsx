@@ -241,33 +241,40 @@ export const SearchMap = memo(function SearchMap() {
 
           el.addEventListener('click', (e) => {
             e.stopPropagation();
-            console.log('Cluster clicked:', cluster);
+            console.log('=== CLUSTER CLICK DEBUG ===');
+            console.log('Cluster:', cluster);
             console.log('Geohash:', cluster.geohash);
             console.log('Current zoom:', m.getZoom());
+            console.log('Current center:', m.getCenter());
 
             // Use geohash bounds for precise zoom, fallback to +3 zoom
             if (cluster.geohash) {
               const bounds = geohashToBounds(cluster.geohash);
-              console.log('Bounds values:', JSON.stringify(bounds));
-              console.log('fitBounds args:', [[bounds.west, bounds.south], [bounds.east, bounds.north]]);
+              console.log('Decoded bounds:', {
+                north: bounds.north,
+                south: bounds.south,
+                east: bounds.east,
+                west: bounds.west,
+              });
 
-              try {
-                m.fitBounds(
-                  [[bounds.west, bounds.south], [bounds.east, bounds.north]],
-                  {
-                    padding: 50,
-                    duration: 500,
-                    maxZoom: 16,
-                    minZoom: m.getZoom(), // Never zoom out
-                  }
-                );
-                console.log('fitBounds called successfully');
-              } catch (err) {
-                console.error('fitBounds error:', err);
-              }
+              const boundsArg: [[number, number], [number, number]] = [
+                [bounds.west, bounds.south],
+                [bounds.east, bounds.north]
+              ];
+              console.log('fitBounds arg:', boundsArg);
+
+              m.fitBounds(boundsArg, {
+                padding: 50,
+                duration: 500,
+                maxZoom: 16,
+              });
+
+              m.once('moveend', () => {
+                console.log('After fitBounds - zoom:', m.getZoom());
+                console.log('After fitBounds - center:', m.getCenter());
+              });
             } else {
               console.log('No geohash, using flyTo fallback');
-              // Fallback for clusters without geohash
               m.flyTo({
                 center: [cluster.lng, cluster.lat],
                 zoom: m.getZoom() + 3,
