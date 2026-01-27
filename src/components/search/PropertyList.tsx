@@ -1,6 +1,5 @@
 import { memo, useRef, useEffect } from 'react';
 import { useMapStore } from '@/stores/mapStore';
-import { useListData } from '@/hooks/useListData';
 import { Loader2, Bed, Bath, Square, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const PropertyList = memo(function PropertyList() {
@@ -11,9 +10,14 @@ export const PropertyList = memo(function PropertyList() {
     setSelectedPropertyId,
     hoveredPropertyId,
     setHoveredPropertyId,
+    // List data from unified store (populated by usePropertySearchUnified in SearchMap)
+    listProperties: properties,
+    listTotal: total,
+    listPage: page,
+    listPages: pages,
+    isListLoading: isLoading,
+    setListPage: setPage,
   } = useMapStore();
-
-  const { properties, total, page, pages, isLoading, setPage } = useListData();
 
   // Scroll to selected property
   useEffect(() => {

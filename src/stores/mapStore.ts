@@ -27,6 +27,13 @@ export interface Filters {
   state?: string;
 }
 
+export interface ClusterBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
 export interface Cluster {
   id: string;
   geohash?: string;
@@ -36,6 +43,7 @@ export interface Cluster {
   avg_price?: number;
   min_price?: number;
   max_price?: number;
+  bounds?: ClusterBounds; // Real bounds of properties in this cluster
 }
 
 export interface MapProperty {
@@ -104,6 +112,16 @@ interface MapState {
     pages: number;
   }) => void;
   setListPage: (page: number) => void;
+
+  // Unified action for new endpoint
+  setUnifiedData: (data: {
+    mode: 'clusters' | 'properties';
+    mapData: any[];
+    listItems: MapProperty[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }) => void;
 
   // UI State
   selectedPropertyId: string | null;
@@ -188,6 +206,35 @@ export const useMapStore = create<MapState>()(
       listPages: data.pages,
     }),
     setListPage: (page) => set({ listPage: page }),
+
+    // Unified action - single source of truth
+    setUnifiedData: (data) => {
+      // Map clusters with bounds or properties
+      const clusters = data.mode === 'clusters'
+        ? data.mapData.map((c: any) => ({
+            id: c.id || c.geohash || `${c.lat}-${c.lng}`,
+            lat: c.lat,
+            lng: c.lng,
+            count: c.count,
+            min_price: c.min_price,
+            max_price: c.max_price,
+            bounds: c.bounds, // Real bounds from unified endpoint
+          }))
+        : [];
+
+      set({
+        // Map data
+        mode: data.mode,
+        clusters,
+        mapProperties: data.mode === 'properties' ? data.mapData : [],
+        totalInViewport: data.total,
+        // List data - same total, same source
+        listProperties: data.listItems,
+        listTotal: data.total,
+        listPage: data.page,
+        listPages: data.totalPages,
+      });
+    },
 
     // UI State
     selectedPropertyId: null,

@@ -130,6 +130,15 @@ export const MapDebugPanel = memo(function MapDebugPanel() {
                   </span>
                 </>
               )}
+
+              {(lastRequestMeta as any).clustering_method && (
+                <>
+                  <span className="text-gray-400">Clustering:</span>
+                  <span className={(lastRequestMeta as any).clustering_method === 'dynamic' ? 'text-green-400' : 'text-yellow-400'}>
+                    {(lastRequestMeta as any).clustering_method}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -156,6 +165,18 @@ W: ${viewport.bounds.west.toFixed(4)}` : 'null'}
             </summary>
             <pre className="mt-1 p-2 bg-gray-800/50 rounded overflow-auto text-gray-300">
               {JSON.stringify(filters, null, 2)}
+            </pre>
+          </details>
+        )}
+
+        {/* Cluster Bounds Info */}
+        {mode === 'clusters' && clusters.length > 0 && (
+          <details className="text-[10px]">
+            <summary className="cursor-pointer text-gray-400 hover:text-white">
+              📦 Cluster Bounds ({clusters.filter(c => c.bounds).length}/{clusters.length} with bounds)
+            </summary>
+            <pre className="mt-1 p-2 bg-gray-800/50 rounded overflow-auto text-gray-300 max-h-32">
+              {clusters.slice(0, 3).map(c => `${c.id?.slice(0,6)}: ${c.count} props${c.bounds ? ' ✓' : ' ✗'}`).join('\n')}
             </pre>
           </details>
         )}

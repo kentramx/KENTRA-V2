@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, memo } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore } from '@/stores/mapStore';
-import { useMapData } from '@/hooks/useMapData';
+import { usePropertySearchUnified } from '@/hooks/usePropertySearchUnified';
 
 const MEXICO_CENTER: [number, number] = [-99.1332, 19.4326];
 const INITIAL_ZOOM = 11;
@@ -27,8 +27,8 @@ export const SearchMap = memo(function SearchMap() {
   const hoveredPropertyId = useMapStore((s) => s.hoveredPropertyId);
   const setHoveredPropertyId = useMapStore((s) => s.setHoveredPropertyId);
 
-  // Data
-  const { mode, clusters, mapProperties, totalInViewport, isLoading, hasActiveFilters } = useMapData();
+  // Data from unified endpoint
+  const { mode, clusters, mapProperties, totalInViewport, isLoading, hasActiveFilters } = usePropertySearchUnified();
 
   // ============================================
   // CREAR ELEMENTO DE CLUSTER
@@ -212,14 +212,62 @@ export const SearchMap = memo(function SearchMap() {
 
           el.addEventListener('click', (e) => {
             e.stopPropagation();
-            const currentZoom = m.getZoom();
 
-            // Simple and reliable: flyTo cluster center with +3 zoom
-            m.flyTo({
-              center: [cluster.lng, cluster.lat],
-              zoom: Math.min(currentZoom + 3, 16),
-              duration: 500,
+            // DEBUG: Log cluster info before fitBounds
+            console.log('[CLUSTER CLICK]', {
+              id: cluster.id,
+              count: cluster.count,
+              center: { lat: cluster.lat, lng: cluster.lng },
+              bounds: cluster.bounds,
             });
+
+            // Use real bounds if available (from unified endpoint)
+            if (cluster.bounds) {
+              const { north, south, east, west } = cluster.bounds;
+
+              // DEBUG: Log the bounds we're fitting to
+              console.log('[CLUSTER BOUNDS]', {
+                north, south, east, west,
+                latSpan: north - south,
+                lngSpan: east - west,
+              });
+
+              m.fitBounds(
+                [[west, south], [east, north]],
+                {
+                  padding: 60,
+                  maxZoom: 16,
+                  duration: 500,
+                }
+              );
+
+              // DEBUG: Log viewport after animation completes
+              setTimeout(() => {
+                const newBounds = m.getBounds();
+                console.log('[VIEWPORT AFTER FITBOUNDS]', {
+                  north: newBounds.getNorth(),
+                  south: newBounds.getSouth(),
+                  east: newBounds.getEast(),
+                  west: newBounds.getWest(),
+                  zoom: m.getZoom(),
+                  comparison: {
+                    clusterBoundsContainedInViewport:
+                      newBounds.getNorth() >= north &&
+                      newBounds.getSouth() <= south &&
+                      newBounds.getEast() >= east &&
+                      newBounds.getWest() <= west,
+                  }
+                });
+              }, 600);
+            } else {
+              // Fallback: flyTo cluster center with +3 zoom
+              const currentZoom = m.getZoom();
+              m.flyTo({
+                center: [cluster.lng, cluster.lat],
+                zoom: Math.min(currentZoom + 3, 16),
+                duration: 500,
+              });
+            }
           });
 
           const marker = new maplibregl.Marker({ element: el })
