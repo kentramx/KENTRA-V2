@@ -33,9 +33,7 @@ AS $$
     CASE p_precision
       WHEN 3 THEN geohash_3
       WHEN 4 THEN geohash_4
-      WHEN 5 THEN geohash_5
       WHEN 6 THEN geohash_6
-      WHEN 7 THEN geohash_7
       ELSE geohash_5
     END as id,
     COUNT(*)::bigint as count,

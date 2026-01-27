@@ -75,7 +75,6 @@
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.462.0",
     "maplibre-gl": "^5.16.0",
-    "ngeohash": "^0.6.3",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
@@ -103,7 +102,6 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
-    "@types/ngeohash": "^0.6.8",
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
