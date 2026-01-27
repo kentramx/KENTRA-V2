@@ -219,6 +219,8 @@ export const SearchMap = memo(function SearchMap() {
 
         const existing = markersRef.current.get(id);
         if (existing && existing.type === 'cluster') {
+          // DEBUG: Log marker reuse
+          console.log('REUSING EXISTING CLUSTER MARKER:', id);
           // Cluster existe - actualizar posición si cambió
           const pos = existing.marker.getLngLat();
           if (Math.abs(pos.lng - cluster.lng) > 0.0001 || Math.abs(pos.lat - cluster.lat) > 0.0001) {
@@ -241,6 +243,9 @@ export const SearchMap = memo(function SearchMap() {
 
           // Crear nuevo cluster marker
           const el = createClusterElement(cluster);
+
+          // DEBUG: Log marker creation
+          console.log('CREATING CLUSTER MARKER:', cluster.id || cluster.geohash, 'at', cluster.lat, cluster.lng);
 
           // DEBUG: Simple click test
           el.onclick = () => console.log('ONCLICK FIRED:', cluster.id || cluster.geohash);
