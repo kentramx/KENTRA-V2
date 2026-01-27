@@ -70,21 +70,6 @@ export function usePropertySearchUnified() {
 
       if (error) throw error;
 
-      // DEBUG: Log API response for clusters
-      if (data.mode === 'clusters' && data.mapData?.length > 0) {
-        console.log('[API RESPONSE] Clusters received:', {
-          total: data.total,
-          clusterCount: data.mapData.length,
-          clusters: data.mapData.slice(0, 5).map((c: any) => ({
-            id: c.id,
-            count: c.count,
-            bounds: c.bounds,
-            center: { lat: c.lat, lng: c.lng },
-          })),
-          sumOfClusterCounts: data.mapData.reduce((sum: number, c: any) => sum + c.count, 0),
-        });
-      }
-
       // Single action updates everything
       setUnifiedData({
         mode: data.mode,

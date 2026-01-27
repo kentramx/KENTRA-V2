@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback, memo } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import ngeohash from 'ngeohash';
 import { useMapStore } from '@/stores/mapStore';
 import { usePropertySearchUnified } from '@/hooks/usePropertySearchUnified';
 
@@ -211,40 +210,18 @@ export const SearchMap = memo(function SearchMap() {
           // Crear nuevo cluster marker
           const el = createClusterElement(cluster);
 
+          // SIMPLE CLICK HANDLER: flyTo cluster center, increase zoom
           el.addEventListener('click', (e) => {
             e.stopPropagation();
 
-            // ENTERPRISE: Use FIXED geohash bounds (no overlap by design)
-            // cluster.id is the geohash string (e.g., "9g3w4")
-            const geohashId = cluster.id;
+            const currentZoom = m.getZoom();
+            const targetZoom = Math.min(Math.max(currentZoom + 3, 14), 17);
 
-            if (geohashId && geohashId !== 'unknown') {
-              // decode_bbox returns [minlat, minlon, maxlat, maxlon]
-              const [south, west, north, east] = ngeohash.decode_bbox(geohashId);
-
-              console.log('[CLUSTER CLICK - FIXED BOUNDS]', {
-                geohash: geohashId,
-                count: cluster.count,
-                fixedBounds: { north, south, east, west },
-              });
-
-              m.fitBounds(
-                [[west, south], [east, north]],
-                {
-                  padding: 20,
-                  maxZoom: 16,
-                  duration: 500,
-                }
-              );
-            } else {
-              // Fallback for unknown geohash: zoom to center
-              const currentZoom = m.getZoom();
-              m.flyTo({
-                center: [cluster.lng, cluster.lat],
-                zoom: Math.min(currentZoom + 3, 16),
-                duration: 500,
-              });
-            }
+            m.flyTo({
+              center: [cluster.lng, cluster.lat],
+              zoom: targetZoom,
+              duration: 500,
+            });
           });
 
           const marker = new maplibregl.Marker({ element: el })
