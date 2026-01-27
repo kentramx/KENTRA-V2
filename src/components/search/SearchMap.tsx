@@ -7,6 +7,38 @@ import { useMapData } from '@/hooks/useMapData';
 const MEXICO_CENTER: [number, number] = [-99.1332, 19.4326];
 const INITIAL_ZOOM = 11;
 
+// ============================================
+// GEOHASH DECODER
+// ============================================
+const BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+
+function geohashToBounds(geohash: string): { north: number; south: number; east: number; west: number } {
+  let latMin = -90, latMax = 90;
+  let lngMin = -180, lngMax = 180;
+  let isLng = true;
+
+  for (const char of geohash.toLowerCase()) {
+    const idx = BASE32.indexOf(char);
+    if (idx === -1) continue;
+
+    for (let bit = 4; bit >= 0; bit--) {
+      const mask = 1 << bit;
+      if (isLng) {
+        const mid = (lngMin + lngMax) / 2;
+        if (idx & mask) lngMin = mid;
+        else lngMax = mid;
+      } else {
+        const mid = (latMin + latMax) / 2;
+        if (idx & mask) latMin = mid;
+        else latMax = mid;
+      }
+      isLng = !isLng;
+    }
+  }
+
+  return { north: latMax, south: latMin, east: lngMax, west: lngMin };
+}
+
 // Tipo para marker interno
 interface MarkerData {
   marker: maplibregl.Marker;
@@ -208,11 +240,26 @@ export const SearchMap = memo(function SearchMap() {
           const el = createClusterElement(cluster);
 
           el.addEventListener('click', () => {
-            m.flyTo({
-              center: [cluster.lng, cluster.lat],
-              zoom: m.getZoom() + 3,
-              duration: 500,
-            });
+            // Use geohash bounds for precise zoom, fallback to +3 zoom
+            if (cluster.geohash) {
+              const bounds = geohashToBounds(cluster.geohash);
+              m.fitBounds(
+                [[bounds.west, bounds.south], [bounds.east, bounds.north]],
+                {
+                  padding: 50,
+                  duration: 500,
+                  maxZoom: 16,
+                  minZoom: m.getZoom(), // Never zoom out
+                }
+              );
+            } else {
+              // Fallback for clusters without geohash
+              m.flyTo({
+                center: [cluster.lng, cluster.lat],
+                zoom: m.getZoom() + 3,
+                duration: 500,
+              });
+            }
           });
 
           const marker = new maplibregl.Marker({ element: el })
