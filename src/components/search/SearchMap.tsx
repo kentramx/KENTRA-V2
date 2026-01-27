@@ -219,8 +219,6 @@ export const SearchMap = memo(function SearchMap() {
 
         const existing = markersRef.current.get(id);
         if (existing && existing.type === 'cluster') {
-          // DEBUG: Log marker reuse
-          console.log('REUSING EXISTING CLUSTER MARKER:', id);
           // Cluster existe - actualizar posición si cambió
           const pos = existing.marker.getLngLat();
           if (Math.abs(pos.lng - cluster.lng) > 0.0001 || Math.abs(pos.lat - cluster.lat) > 0.0001) {
@@ -244,82 +242,16 @@ export const SearchMap = memo(function SearchMap() {
           // Crear nuevo cluster marker
           const el = createClusterElement(cluster);
 
-          // DEBUG: Log marker creation
-          console.log('CREATING CLUSTER MARKER:', cluster.id || cluster.geohash, 'at', cluster.lat, cluster.lng);
-
-          // DEBUG: Simple click test
-          el.onclick = () => console.log('ONCLICK FIRED:', cluster.id || cluster.geohash);
-
           el.addEventListener('click', (e) => {
             e.stopPropagation();
             const currentZoom = m.getZoom();
 
-            // DEBUG: Compare cluster center with geohash bounds
-            console.log('=== CLUSTER CLICK DEBUG ===');
-            console.log('Cluster geohash:', cluster.geohash);
-            console.log('Cluster visual center:', { lat: cluster.lat, lng: cluster.lng });
-
-            if (cluster.geohash) {
-              const bounds = geohashToBounds(cluster.geohash);
-              const geohashCenter = {
-                lat: (bounds.north + bounds.south) / 2,
-                lng: (bounds.east + bounds.west) / 2,
-              };
-
-              console.log('Geohash bounds:', bounds);
-              console.log('Geohash center:', geohashCenter);
-
-              // Check if centers match (within ~50km tolerance)
-              const latDiff = Math.abs(cluster.lat - geohashCenter.lat);
-              const lngDiff = Math.abs(cluster.lng - geohashCenter.lng);
-              console.log('Center difference:', { latDiff, lngDiff });
-
-              if (latDiff > 1 || lngDiff > 1) {
-                console.error('❌ GEOHASH MISMATCH! Cluster center does not match geohash bounds');
-                console.error('Using cluster.lat/lng instead of geohash bounds');
-                // Fallback to cluster center if geohash is wrong
-                m.flyTo({
-                  center: [cluster.lng, cluster.lat],
-                  zoom: Math.min(currentZoom + 3, 16),
-                  duration: 500,
-                });
-                return;
-              }
-
-              const boundsArg: [[number, number], [number, number]] = [
-                [bounds.west, bounds.south],
-                [bounds.east, bounds.north]
-              ];
-
-              m.fitBounds(boundsArg, {
-                padding: 50,
-                duration: 400,
-                maxZoom: 16,
-              });
-
-              // Check if zoom change was sufficient
-              m.once('moveend', () => {
-                const newZoom = m.getZoom();
-                const zoomDiff = newZoom - currentZoom;
-
-                // If zoom changed less than 2 levels, force more zoom
-                if (zoomDiff < 2) {
-                  m.flyTo({
-                    center: [cluster.lng, cluster.lat],
-                    zoom: Math.min(newZoom + 3, 16),
-                    duration: 300,
-                  });
-                }
-              });
-            } else {
-              console.log('No geohash, using flyTo fallback');
-              // Fallback for clusters without geohash
-              m.flyTo({
-                center: [cluster.lng, cluster.lat],
-                zoom: Math.min(currentZoom + 3, 16),
-                duration: 500,
-              });
-            }
+            // Simple and reliable: flyTo cluster center with +3 zoom
+            m.flyTo({
+              center: [cluster.lng, cluster.lat],
+              zoom: Math.min(currentZoom + 3, 16),
+              duration: 500,
+            });
           });
 
           const marker = new maplibregl.Marker({ element: el })
