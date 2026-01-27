@@ -226,17 +226,11 @@ export const SearchMap = memo(function SearchMap() {
               return;
             }
 
-            // Zoom proporcional al tamaño del cluster
-            // Clusters grandes → zoom suave (se dividen en sub-clusters)
-            // Clusters pequeños → zoom agresivo (van directo a propiedades)
-            let zoomIncrement: number;
-            if (currentCluster.count > 100) {
-              zoomIncrement = 1;  // Cluster grande, zoom suave
-            } else if (currentCluster.count > 30) {
-              zoomIncrement = 2;  // Cluster mediano
-            } else {
-              zoomIncrement = 3;  // Cluster pequeño, zoom agresivo
-            }
+            // Zoom proporcional al tamaño del cluster (logarítmico)
+            // Fórmula: zoomIncrement = 4 - log10(count), clamped [0.5, 3]
+            // count=1000 → +1, count=100 → +2, count=10 → +3
+            const logCount = Math.log10(Math.max(currentCluster.count, 1));
+            const zoomIncrement = Math.max(0.5, Math.min(3, 4 - logCount));
 
             const currentZoom = m.getZoom();
             const targetZoom = Math.min(currentZoom + zoomIncrement, 17);
