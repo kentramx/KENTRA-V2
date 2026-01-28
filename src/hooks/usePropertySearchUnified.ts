@@ -38,6 +38,8 @@ export function usePropertySearchUnified() {
     listPages,
     hasActiveFilters,
     lastRequestMeta,
+    geohashFilter,
+    setGeohashFilter,
   } = useMapStore();
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -65,6 +67,8 @@ export function usePropertySearchUnified() {
           filters,
           page: listPage,
           limit: 20,
+          // Pass geohash for exact cluster drilling
+          geohash_filter: geohashFilter || undefined,
         },
       });
 
@@ -102,6 +106,7 @@ export function usePropertySearchUnified() {
     viewport,
     filters,
     listPage,
+    geohashFilter,
     setUnifiedData,
     setIsMapLoading,
     setIsListLoading,
@@ -115,7 +120,7 @@ export function usePropertySearchUnified() {
 
   useEffect(() => {
     debouncedFetch();
-  }, [viewport, filters, listPage, debouncedFetch]);
+  }, [viewport, filters, listPage, geohashFilter, debouncedFetch]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -147,6 +152,10 @@ export function usePropertySearchUnified() {
 
     // Filters
     hasActiveFilters: hasActiveFilters(),
+
+    // Geohash drilling
+    geohashFilter,
+    setGeohashFilter,
 
     // Meta
     lastRequestMeta,

@@ -87,6 +87,10 @@ interface MapState {
   resetFilters: () => void;
   hasActiveFilters: () => boolean;
 
+  // Geohash filter (for drilling into clusters)
+  geohashFilter: string | null;
+  setGeohashFilter: (geohash: string | null) => void;
+
   // Map Data
   mode: 'clusters' | 'properties';
   clusters: Cluster[];
@@ -169,6 +173,10 @@ export const useMapStore = create<MapState>()(
       const { filters } = get();
       return Object.values(filters).some(v => v !== undefined && v !== null && v !== '');
     },
+
+    // Geohash filter (for drilling into clusters)
+    geohashFilter: null,
+    setGeohashFilter: (geohash) => set({ geohashFilter: geohash, listPage: 1 }),
 
     // Map Data
     mode: 'clusters',

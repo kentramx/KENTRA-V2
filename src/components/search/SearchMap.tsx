@@ -28,7 +28,7 @@ export const SearchMap = memo(function SearchMap() {
   const setHoveredPropertyId = useMapStore((s) => s.setHoveredPropertyId);
 
   // Data from unified endpoint
-  const { mode, clusters, mapProperties, totalInViewport, isLoading, hasActiveFilters } = usePropertySearchUnified();
+  const { mode, clusters, mapProperties, totalInViewport, isLoading, hasActiveFilters, setGeohashFilter, geohashFilter } = usePropertySearchUnified();
 
   // ============================================
   // CREAR ELEMENTO DE CLUSTER
@@ -211,8 +211,8 @@ export const SearchMap = memo(function SearchMap() {
           // Crear nuevo cluster marker
           const el = createClusterElement(cluster);
 
-          // CLICK HANDLER: Robust cluster navigation
-          // Based on MapLibre best practices and bug workarounds
+          // CLICK HANDLER: Set geohash filter for EXACT count consistency
+          // This bypasses viewport bounds entirely - queries by geohash directly
           const markerId = id;
           el.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -224,110 +224,29 @@ export const SearchMap = memo(function SearchMap() {
             }
 
             const clusterData = currentMarkerData.data;
-            const currentZoom = m.getZoom();
+            const geohashId = clusterData?.id || markerId;
 
-            console.log('[SearchMap] Cluster click:', {
-              markerId,
+            console.log('[SearchMap] Cluster click - setting geohash filter:', {
+              geohash: geohashId,
               count: clusterData?.count,
-              hasBounds: !!clusterData?.bounds,
-              currentZoom: currentZoom.toFixed(1),
             });
 
+            // Set geohash filter - this triggers API call with exact geohash match
+            // GUARANTEES: count shown === properties returned
+            setGeohashFilter(geohashId);
+
+            // Also zoom to cluster location for visual context
             if (clusterData?.bounds) {
               const { north, south, east, west } = clusterData.bounds;
-              const latSpan = north - south;
-              const lngSpan = east - west;
-
-              // Validate bounds
-              if (!isFinite(north) || !isFinite(south) || !isFinite(east) || !isFinite(west)) {
-                console.warn('[SearchMap] Invalid bounds, using fallback');
-                m.flyTo({
-                  center: [clusterData.lng, clusterData.lat],
-                  zoom: Math.min(currentZoom + 2, 17),
-                  duration: 500,
-                });
-                return;
-              }
-
-              // Case 1: Single point or near-single point - use flyTo
-              if (latSpan < 0.0001 && lngSpan < 0.0001) {
-                console.log('[SearchMap] Single point bounds, using flyTo');
-                m.flyTo({
-                  center: [(west + east) / 2, (south + north) / 2],
-                  zoom: Math.min(currentZoom + 3, 17),
-                  duration: 500,
-                });
-                return;
-              }
-
-              // Case 2: Expand very small bounds to prevent over-zooming
-              const MIN_SPAN = 0.003; // ~300 meters
-              let effectiveBounds: [[number, number], [number, number]];
-
-              if (latSpan < MIN_SPAN || lngSpan < MIN_SPAN) {
-                const latExpand = Math.max(0, (MIN_SPAN - latSpan) / 2);
-                const lngExpand = Math.max(0, (MIN_SPAN - lngSpan) / 2);
-                effectiveBounds = [
-                  [west - lngExpand, south - latExpand],
-                  [east + lngExpand, north + latExpand]
-                ];
-              } else {
-                effectiveBounds = [[west, south], [east, north]];
-              }
-
-              // Clear accumulated padding (MapLibre bug workaround)
-              m.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
-
-              // Calculate optimal camera position
-              const cameraOptions = m.cameraForBounds(effectiveBounds, {
-                padding: 60,
-                maxZoom: 17,
-              });
-
-              if (!cameraOptions || !cameraOptions.center) {
-                console.warn('[SearchMap] cameraForBounds failed, using flyTo');
-                m.flyTo({
-                  center: [(west + east) / 2, (south + north) / 2],
-                  zoom: Math.min(currentZoom + 2, 17),
-                  duration: 500,
-                });
-                return;
-              }
-
-              // CRITICAL: Ensure we always zoom in at least 1 level
-              // (prevents the "only panning" issue)
-              const calculatedZoom = cameraOptions.zoom || currentZoom;
-              const targetZoom = Math.min(Math.max(calculatedZoom, currentZoom + 1), 17);
-
-              console.log('[SearchMap] Flying to bounds:', {
-                calculatedZoom: calculatedZoom.toFixed(1),
-                targetZoom: targetZoom.toFixed(1),
-                center: cameraOptions.center,
-              });
-
-              // Use flyTo instead of fitBounds (avoids minZoom bug)
-              m.flyTo({
-                center: cameraOptions.center,
-                zoom: targetZoom,
+              m.fitBounds([[west, south], [east, north]], {
+                padding: 50,
+                maxZoom: 16,
                 duration: 500,
               });
-
             } else {
-              // Fallback: fly to center with logarithmic zoom
-              const markerPosition = currentMarkerData.marker.getLngLat();
-              const count = clusterData?.count || 1;
-              const logCount = Math.log10(count);
-              const zoomIncrement = Math.max(1, Math.min(3, 4 - logCount));
-              const targetZoom = Math.min(currentZoom + zoomIncrement, 17);
-
-              console.log('[SearchMap] No bounds, using flyTo:', {
-                center: [markerPosition.lng.toFixed(4), markerPosition.lat.toFixed(4)],
-                zoom: targetZoom.toFixed(1),
-              });
-
               m.flyTo({
-                center: [markerPosition.lng, markerPosition.lat],
-                zoom: targetZoom,
+                center: [clusterData?.lng || 0, clusterData?.lat || 0],
+                zoom: Math.min(m.getZoom() + 2, 16),
                 duration: 500,
               });
             }
@@ -415,9 +334,25 @@ export const SearchMap = memo(function SearchMap() {
       </div>
 
       {/* Indicador de filtros */}
-      {hasActiveFilters && (
+      {hasActiveFilters && !geohashFilter && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-blue-600 text-white px-3 py-1.5 rounded-full text-sm font-medium">
           Filtros activos
+        </div>
+      )}
+
+      {/* Indicador de geohash filter (drilling into cluster) */}
+      {geohashFilter && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2">
+          <span>Viendo cluster: {totalInViewport} propiedades</span>
+          <button
+            onClick={() => setGeohashFilter(null)}
+            className="ml-1 hover:bg-green-700 rounded-full p-0.5"
+            title="Volver al mapa completo"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
       )}
 

@@ -32,6 +32,8 @@ interface RequestBody {
   filters?: Filters;
   page?: number;
   limit?: number;
+  // NEW: When drilling into a cluster, pass geohash for exact count
+  geohash_filter?: string;
 }
 
 // Zoom level → geohash precision
@@ -56,7 +58,7 @@ Deno.serve(async (req) => {
 
   try {
     const body: RequestBody = await req.json();
-    const { bounds, zoom, filters = {}, page = 1, limit = 20 } = body;
+    const { bounds, zoom, filters = {}, page = 1, limit = 20, geohash_filter } = body;
 
     if (!bounds || zoom === undefined) {
       return new Response(
@@ -69,6 +71,87 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
+
+    // =============================================
+    // GEOHASH FILTER MODE (drilling into a cluster)
+    // When user clicks cluster, pass geohash for EXACT count
+    // =============================================
+    if (geohash_filter) {
+      const precision = geohash_filter.length;
+      const geohashCol = `geohash_${precision}`;
+
+      console.log(`[GEOHASH FILTER] Drilling into ${geohash_filter} (precision ${precision})`);
+
+      // Query properties by geohash - GUARANTEED to match cluster count
+      let query = supabase
+        .from('properties')
+        .select('id, title, lat, lng, price, listing_type, type, bedrooms, bathrooms, sqft, colonia, municipality, state', { count: 'exact' })
+        .eq('status', 'activa')
+        .eq(geohashCol, geohash_filter);
+
+      // Apply filters
+      if (filters.listing_type) {
+        query = query.eq('listing_type', filters.listing_type);
+      }
+      if (filters.property_type) {
+        query = query.eq('type', filters.property_type);
+      }
+      if (filters.min_price) {
+        query = query.gte('price', filters.min_price);
+      }
+      if (filters.max_price) {
+        query = query.lte('price', filters.max_price);
+      }
+      if (filters.min_bedrooms) {
+        query = query.gte('bedrooms', filters.min_bedrooms);
+      }
+
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range((page - 1) * limit, page * limit - 1);
+
+      if (error) throw error;
+
+      const total = count || 0;
+
+      return new Response(
+        JSON.stringify({
+          mode: 'properties',
+          mapData: (data || []).map((p: any) => ({
+            id: p.id,
+            lat: p.lat,
+            lng: p.lng,
+            price: p.price,
+            listing_type: p.listing_type,
+          })),
+          listItems: (data || []).map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            lat: p.lat,
+            lng: p.lng,
+            price: p.price,
+            listing_type: p.listing_type,
+            property_type: p.type,
+            bedrooms: p.bedrooms,
+            bathrooms: p.bathrooms,
+            construction_m2: p.sqft,
+            neighborhood: p.colonia,
+            city: p.municipality,
+            state: p.state,
+          })),
+          total,
+          page,
+          totalPages: Math.ceil(total / limit),
+          _meta: {
+            duration_ms: Date.now() - startTime,
+            mode: 'geohash_filter',
+            geohash: geohash_filter,
+            precision,
+          },
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // =============================================
     // PROPERTIES MODE (zoom >= 14)
