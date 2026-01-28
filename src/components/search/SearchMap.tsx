@@ -28,8 +28,8 @@ export const SearchMap = memo(function SearchMap() {
   const hoveredPropertyId = useMapStore((s) => s.hoveredPropertyId);
   const setHoveredPropertyId = useMapStore((s) => s.setHoveredPropertyId);
 
-  // Data from unified endpoint
-  const { mode, clusters, mapProperties, totalInViewport, isLoading, hasActiveFilters, setGeohashFilter, geohashFilter } = usePropertySearchUnified();
+  // Data from unified endpoint (V2: Quadtree-based)
+  const { mode, clusters, mapProperties, totalInViewport, isLoading, hasActiveFilters, setSelectedNodeId, selectedNodeId } = usePropertySearchUnified();
 
   // ============================================
   // CREAR ELEMENTO DE CLUSTER
@@ -154,7 +154,7 @@ export const SearchMap = memo(function SearchMap() {
       });
     };
 
-    // Clear geohash filter when user manually interacts with map
+    // Clear node filter when user manually interacts with map
     const handleUserInteraction = () => {
       // Skip if this was a programmatic move (e.g., after cluster click)
       if (isProgrammaticMoveRef.current) {
@@ -163,11 +163,11 @@ export const SearchMap = memo(function SearchMap() {
         return;
       }
 
-      // Clear geohash filter on user-initiated map movement
+      // Clear node filter on user-initiated map movement
       // This returns to normal viewport-based browsing
-      if (useMapStore.getState().geohashFilter) {
-        console.log('[SearchMap] User interaction detected, clearing geohash filter');
-        useMapStore.getState().setGeohashFilter(null);
+      if (useMapStore.getState().selectedNodeId) {
+        console.log('[SearchMap] User interaction detected, clearing node filter');
+        useMapStore.getState().setSelectedNodeId(null);
       }
       updateViewport();
     };
@@ -233,8 +233,8 @@ export const SearchMap = memo(function SearchMap() {
           // Crear nuevo cluster marker
           const el = createClusterElement(cluster);
 
-          // CLICK HANDLER: Set geohash filter for EXACT count consistency
-          // This bypasses viewport bounds entirely - queries by geohash directly
+          // CLICK HANDLER: Drill into cluster using Quadtree node_id
+          // GUARANTEES: parent.count === SUM(children.count) by tree construction
           const markerId = id;
           el.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -246,21 +246,21 @@ export const SearchMap = memo(function SearchMap() {
             }
 
             const clusterData = currentMarkerData.data;
-            const geohashId = clusterData?.id || markerId;
+            const nodeId = clusterData?.id || markerId;
 
-            console.log('[SearchMap] Cluster click - setting geohash filter:', {
-              geohash: geohashId,
+            console.log('[SearchMap] Cluster click - drilling into node:', {
+              nodeId,
               count: clusterData?.count,
             });
 
-            // Set geohash filter - this triggers API call with exact geohash match
-            // GUARANTEES: count shown === properties returned
-            setGeohashFilter(geohashId);
+            // Set node filter - triggers API call with node_id
+            // GUARANTEES: count shown === properties returned (tree invariant)
+            setSelectedNodeId(nodeId);
 
-            // Mark as programmatic move so we don't clear geohash filter on zoomend
+            // Mark as programmatic move so we don't clear filter on zoomend
             isProgrammaticMoveRef.current = true;
 
-            // Also zoom to cluster location for visual context
+            // Zoom to cluster bounds for visual context
             if (clusterData?.bounds) {
               const { north, south, east, west } = clusterData.bounds;
               m.fitBounds([[west, south], [east, north]], {
@@ -329,7 +329,7 @@ export const SearchMap = memo(function SearchMap() {
         markersRef.current.delete(id);
       }
     });
-  }, [mode, clusters, mapProperties, selectedPropertyId, createClusterElement, createPropertyElement, setSelectedPropertyId, setHoveredPropertyId]);
+  }, [mode, clusters, mapProperties, selectedPropertyId, createClusterElement, createPropertyElement, setSelectedPropertyId, setHoveredPropertyId, setSelectedNodeId]);
 
   // ============================================
   // ACTUALIZAR ESTILOS DE HOVER/SELECTED
@@ -359,18 +359,18 @@ export const SearchMap = memo(function SearchMap() {
       </div>
 
       {/* Indicador de filtros */}
-      {hasActiveFilters && !geohashFilter && (
+      {hasActiveFilters && !selectedNodeId && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-blue-600 text-white px-3 py-1.5 rounded-full text-sm font-medium">
           Filtros activos
         </div>
       )}
 
-      {/* Indicador de geohash filter (drilling into cluster) */}
-      {geohashFilter && (
+      {/* Indicador de drill-down (viewing cluster contents) */}
+      {selectedNodeId && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2">
-          <span>Viendo cluster: {totalInViewport} propiedades</span>
+          <span>Viendo cluster: {totalInViewport.toLocaleString()} propiedades</span>
           <button
-            onClick={() => setGeohashFilter(null)}
+            onClick={() => setSelectedNodeId(null)}
             className="ml-1 hover:bg-green-700 rounded-full p-0.5"
             title="Volver al mapa completo"
           >

@@ -7,13 +7,12 @@ import toast from 'react-hot-toast';
 /**
  * Unified hook for property search on map view.
  *
- * This hook replaces useMapData + useListData by calling a single
- * endpoint that returns:
- * - Map data (clusters with real bounds OR individual properties)
- * - List data (paginated)
- * - Total count (single source of truth)
+ * V2: Uses Quadtree-based clustering with guaranteed count consistency.
+ * Invariant: parent.count === SUM(children.count) ALWAYS
  *
- * All data uses the same filters, same bounds, same total.
+ * Two modes:
+ * 1. Viewport mode: Pass bounds + zoom for initial clusters
+ * 2. Drill-down mode: Pass node_id for exact cluster expansion
  */
 export function usePropertySearchUnified() {
   const {
@@ -38,6 +37,10 @@ export function usePropertySearchUnified() {
     listPages,
     hasActiveFilters,
     lastRequestMeta,
+    // Node-based drilling (replaces geohashFilter)
+    selectedNodeId,
+    setSelectedNodeId,
+    // Keep geohashFilter for backward compatibility during transition
     geohashFilter,
     setGeohashFilter,
   } = useMapStore();
@@ -45,7 +48,8 @@ export function usePropertySearchUnified() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!viewport) return;
+    // Need viewport OR node_id
+    if (!viewport && !selectedNodeId) return;
 
     // Cancel previous request
     if (abortControllerRef.current) {
@@ -60,15 +64,17 @@ export function usePropertySearchUnified() {
     setListError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('property-search-unified', {
+      // Use new Quadtree endpoint
+      const { data, error } = await supabase.functions.invoke('property-search-tree', {
         body: {
-          bounds: viewport.bounds,
-          zoom: viewport.zoom,
+          // Viewport mode OR drill-down mode
+          ...(selectedNodeId
+            ? { node_id: selectedNodeId }
+            : { bounds: viewport?.bounds, zoom: viewport?.zoom }
+          ),
           filters,
           page: listPage,
           limit: 20,
-          // Pass geohash for exact cluster drilling
-          geohash_filter: geohashFilter || undefined,
         },
       });
 
@@ -106,7 +112,7 @@ export function usePropertySearchUnified() {
     viewport,
     filters,
     listPage,
-    geohashFilter,
+    selectedNodeId,
     setUnifiedData,
     setIsMapLoading,
     setIsListLoading,
@@ -120,7 +126,7 @@ export function usePropertySearchUnified() {
 
   useEffect(() => {
     debouncedFetch();
-  }, [viewport, filters, listPage, geohashFilter, debouncedFetch]);
+  }, [viewport, filters, listPage, selectedNodeId, debouncedFetch]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -153,7 +159,11 @@ export function usePropertySearchUnified() {
     // Filters
     hasActiveFilters: hasActiveFilters(),
 
-    // Geohash drilling
+    // Node-based drilling (new Quadtree system)
+    selectedNodeId,
+    setSelectedNodeId,
+
+    // Legacy geohash drilling (backward compatibility)
     geohashFilter,
     setGeohashFilter,
 

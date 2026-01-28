@@ -87,9 +87,13 @@ interface MapState {
   resetFilters: () => void;
   hasActiveFilters: () => boolean;
 
-  // Geohash filter (for drilling into clusters)
+  // Geohash filter (legacy - for backward compatibility)
   geohashFilter: string | null;
   setGeohashFilter: (geohash: string | null) => void;
+
+  // Node-based drilling (Quadtree system)
+  selectedNodeId: string | null;
+  setSelectedNodeId: (nodeId: string | null) => void;
 
   // Map Data
   mode: 'clusters' | 'properties';
@@ -174,9 +178,13 @@ export const useMapStore = create<MapState>()(
       return Object.values(filters).some(v => v !== undefined && v !== null && v !== '');
     },
 
-    // Geohash filter (for drilling into clusters)
+    // Geohash filter (legacy - for backward compatibility)
     geohashFilter: null,
     setGeohashFilter: (geohash) => set({ geohashFilter: geohash, listPage: 1 }),
+
+    // Node-based drilling (Quadtree system)
+    selectedNodeId: null,
+    setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId, listPage: 1 }),
 
     // Map Data
     mode: 'clusters',
