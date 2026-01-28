@@ -230,20 +230,35 @@ export const SearchMap = memo(function SearchMap() {
               markerId,
               visualCount,
               dataCount: clusterData?.count,
+              hasBounds: !!clusterData?.bounds,
               bounds: clusterData?.bounds,
+              fullClusterData: JSON.stringify(clusterData),
             });
 
             // If cluster has bounds, use fitBounds to show ALL properties
             if (clusterData?.bounds) {
               const { north, south, east, west } = clusterData.bounds;
 
-              console.log('[SearchMap] Using fitBounds:', { north, south, east, west });
+              // Calculate bounds span to determine if we should zoom more
+              const latSpan = north - south;
+              const lngSpan = east - west;
+
+              console.log('[SearchMap] Using fitBounds:', {
+                north, south, east, west,
+                latSpan: latSpan.toFixed(4),
+                lngSpan: lngSpan.toFixed(4),
+              });
+
+              // If bounds are very small, add minimum zoom
+              const currentZoom = m.getZoom();
+              const minZoom = latSpan < 0.01 && lngSpan < 0.01 ? currentZoom + 2 : undefined;
 
               m.fitBounds(
                 [[west, south], [east, north]],
                 {
                   padding: 50,
                   maxZoom: 17,
+                  minZoom,
                   duration: 500,
                 }
               );
