@@ -19,6 +19,7 @@ export const SearchMap = memo(function SearchMap() {
   const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<string, MarkerData>>(new Map());
   const isInitializedRef = useRef(false);
+  const isProgrammaticMoveRef = useRef(false); // Track programmatic movements
 
   // Store - solo lo necesario
   const setViewport = useMapStore((s) => s.setViewport);
@@ -153,11 +154,32 @@ export const SearchMap = memo(function SearchMap() {
       });
     };
 
+    // Clear geohash filter when user manually interacts with map
+    const handleUserInteraction = () => {
+      // Skip if this was a programmatic move (e.g., after cluster click)
+      if (isProgrammaticMoveRef.current) {
+        isProgrammaticMoveRef.current = false;
+        updateViewport();
+        return;
+      }
+
+      // Clear geohash filter on user-initiated map movement
+      // This returns to normal viewport-based browsing
+      if (useMapStore.getState().geohashFilter) {
+        console.log('[SearchMap] User interaction detected, clearing geohash filter');
+        useMapStore.getState().setGeohashFilter(null);
+      }
+      updateViewport();
+    };
+
     m.on('load', () => {
       updateViewport();
       isInitializedRef.current = true;
     });
-    m.on('moveend', updateViewport);
+
+    // Use dragend and zoomend for user-initiated movements
+    m.on('dragend', handleUserInteraction);
+    m.on('zoomend', handleUserInteraction);
 
     map.current = m;
 
@@ -234,6 +256,9 @@ export const SearchMap = memo(function SearchMap() {
             // Set geohash filter - this triggers API call with exact geohash match
             // GUARANTEES: count shown === properties returned
             setGeohashFilter(geohashId);
+
+            // Mark as programmatic move so we don't clear geohash filter on zoomend
+            isProgrammaticMoveRef.current = true;
 
             // Also zoom to cluster location for visual context
             if (clusterData?.bounds) {
