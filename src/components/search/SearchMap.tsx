@@ -52,7 +52,7 @@ export const SearchMap = memo(function SearchMap() {
       border: 2px solid white;
       box-shadow: 0 2px 8px rgba(0,102,255,0.4);
       cursor: pointer;
-      pointer-events: auto;
+      pointer-events: auto !important;
     `;
     el.textContent = cluster.count >= 1000
       ? `${(cluster.count / 1000).toFixed(1)}K`
@@ -173,6 +173,7 @@ export const SearchMap = memo(function SearchMap() {
     };
 
     m.on('load', () => {
+      console.log('[SearchMap] Map loaded, setting initialized');
       updateViewport();
       isInitializedRef.current = true;
     });
@@ -197,7 +198,19 @@ export const SearchMap = memo(function SearchMap() {
   // ============================================
   useEffect(() => {
     const m = map.current;
-    if (!m || !isInitializedRef.current) return;
+    if (!m || !isInitializedRef.current) {
+      console.log('[SearchMap] Skipping marker sync - map not ready', {
+        hasMap: !!m,
+        isInitialized: isInitializedRef.current
+      });
+      return;
+    }
+
+    console.log('[SearchMap] Syncing markers', {
+      mode,
+      clustersCount: clusters.length,
+      propertiesCount: mapProperties.length
+    });
 
     const currentIds = new Set<string>();
 
@@ -281,6 +294,7 @@ export const SearchMap = memo(function SearchMap() {
             .setLngLat([cluster.lng, cluster.lat])
             .addTo(m);
 
+          console.log('[SearchMap] Created cluster marker', { id, count: cluster.count, lat: cluster.lat, lng: cluster.lng });
           markersRef.current.set(id, { marker, type: 'cluster', data: cluster });
         }
       });

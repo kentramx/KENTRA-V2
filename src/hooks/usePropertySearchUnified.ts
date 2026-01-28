@@ -80,6 +80,12 @@ export function usePropertySearchUnified() {
 
       if (error) throw error;
 
+      console.log('[usePropertySearchUnified] Received data', {
+        mode: data.mode,
+        mapDataLength: data.mapData?.length || 0,
+        total: data.total,
+      });
+
       // Single action updates everything
       setUnifiedData({
         mode: data.mode,
