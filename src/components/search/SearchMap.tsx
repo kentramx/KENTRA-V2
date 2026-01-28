@@ -52,9 +52,7 @@ export const SearchMap = memo(function SearchMap() {
       border: 2px solid white;
       box-shadow: 0 2px 8px rgba(0,102,255,0.4);
       cursor: pointer;
-      pointer-events: auto !important;
-      position: relative;
-      z-index: 100;
+      pointer-events: auto;
     `;
     el.textContent = cluster.count >= 1000
       ? `${(cluster.count / 1000).toFixed(1)}K`
@@ -80,6 +78,7 @@ export const SearchMap = memo(function SearchMap() {
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       cursor: pointer;
       white-space: nowrap;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
     `;
 
     const price = property.price >= 1000000
@@ -97,7 +96,8 @@ export const SearchMap = memo(function SearchMap() {
     el.style.background = isSelected ? '#0066FF' : isHovered ? '#E8F0FE' : 'white';
     el.style.color = isSelected ? 'white' : '#1a1a1a';
     el.style.borderColor = isSelected ? '#0052CC' : '#e0e0e0';
-    el.style.zIndex = isSelected ? '10' : isHovered ? '5' : '1';
+    el.style.transform = isSelected ? 'scale(1.1)' : isHovered ? 'scale(1.05)' : 'scale(1)';
+    el.style.boxShadow = isSelected || isHovered ? '0 4px 8px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)';
   }, []);
 
   // ============================================
