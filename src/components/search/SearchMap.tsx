@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, memo } from 'react';
+import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore } from '@/stores/mapStore';
@@ -18,7 +18,7 @@ export const SearchMap = memo(function SearchMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<string, MarkerData>>(new Map());
-  const isInitializedRef = useRef(false);
+  const [isMapReady, setIsMapReady] = useState(false); // State to trigger re-render
   const isProgrammaticMoveRef = useRef(false); // Track programmatic movements
 
   // Store - solo lo necesario
@@ -175,7 +175,7 @@ export const SearchMap = memo(function SearchMap() {
     m.on('load', () => {
       console.log('[SearchMap] Map loaded, setting initialized');
       updateViewport();
-      isInitializedRef.current = true;
+      setIsMapReady(true); // This triggers re-render and marker sync
     });
 
     // Use dragend and zoomend for user-initiated movements
@@ -189,7 +189,7 @@ export const SearchMap = memo(function SearchMap() {
       markersRef.current.clear();
       m.remove();
       map.current = null;
-      isInitializedRef.current = false;
+      setIsMapReady(false);
     };
   }, [setViewport]);
 
@@ -198,10 +198,10 @@ export const SearchMap = memo(function SearchMap() {
   // ============================================
   useEffect(() => {
     const m = map.current;
-    if (!m || !isInitializedRef.current) {
+    if (!m || !isMapReady) {
       console.log('[SearchMap] Skipping marker sync - map not ready', {
         hasMap: !!m,
-        isInitialized: isInitializedRef.current
+        isMapReady
       });
       return;
     }
@@ -343,7 +343,7 @@ export const SearchMap = memo(function SearchMap() {
         markersRef.current.delete(id);
       }
     });
-  }, [mode, clusters, mapProperties, selectedPropertyId, createClusterElement, createPropertyElement, setSelectedPropertyId, setHoveredPropertyId, setSelectedNodeId]);
+  }, [mode, clusters, mapProperties, selectedPropertyId, createClusterElement, createPropertyElement, setSelectedPropertyId, setHoveredPropertyId, setSelectedNodeId, isMapReady]);
 
   // ============================================
   // ACTUALIZAR ESTILOS DE HOVER/SELECTED
