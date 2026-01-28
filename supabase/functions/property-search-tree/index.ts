@@ -187,9 +187,18 @@ Deno.serve(async (req) => {
     // MODE 1: VIEWPORT CLUSTERS (bounds + zoom)
     // =============================================
     if (!bounds || zoom === undefined) {
+      // Return empty result instead of error - frontend may call before map initializes
       return new Response(
-        JSON.stringify({ error: 'bounds and zoom required (or node_id for drill-down)' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          mode: 'clusters',
+          mapData: [],
+          listItems: [],
+          total: 0,
+          page: 1,
+          totalPages: 0,
+          _meta: { duration_ms: Date.now() - startTime, mode: 'no_viewport' },
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
