@@ -211,8 +211,8 @@ export const SearchMap = memo(function SearchMap() {
           // Crear nuevo cluster marker
           const el = createClusterElement(cluster);
 
-          // CLICK HANDLER: Use fitBounds with cluster's ACTUAL bounds
-          // This ensures all properties in the cluster are visible after click
+          // CLICK HANDLER: Robust cluster navigation
+          // Based on MapLibre best practices and bug workarounds
           const markerId = id;
           el.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -224,57 +224,105 @@ export const SearchMap = memo(function SearchMap() {
             }
 
             const clusterData = currentMarkerData.data;
-            const visualCount = el.textContent;
+            const currentZoom = m.getZoom();
 
-            console.log('[SearchMap] CLICK DEBUG:', {
+            console.log('[SearchMap] Cluster click:', {
               markerId,
-              visualCount,
-              dataCount: clusterData?.count,
+              count: clusterData?.count,
               hasBounds: !!clusterData?.bounds,
-              bounds: clusterData?.bounds,
-              fullClusterData: JSON.stringify(clusterData),
+              currentZoom: currentZoom.toFixed(1),
             });
 
-            // If cluster has bounds, use fitBounds to show ALL properties
             if (clusterData?.bounds) {
               const { north, south, east, west } = clusterData.bounds;
-
-              // Calculate bounds span to determine if we should zoom more
               const latSpan = north - south;
               const lngSpan = east - west;
 
-              console.log('[SearchMap] Using fitBounds:', {
-                north, south, east, west,
-                latSpan: latSpan.toFixed(4),
-                lngSpan: lngSpan.toFixed(4),
+              // Validate bounds
+              if (!isFinite(north) || !isFinite(south) || !isFinite(east) || !isFinite(west)) {
+                console.warn('[SearchMap] Invalid bounds, using fallback');
+                m.flyTo({
+                  center: [clusterData.lng, clusterData.lat],
+                  zoom: Math.min(currentZoom + 2, 17),
+                  duration: 500,
+                });
+                return;
+              }
+
+              // Case 1: Single point or near-single point - use flyTo
+              if (latSpan < 0.0001 && lngSpan < 0.0001) {
+                console.log('[SearchMap] Single point bounds, using flyTo');
+                m.flyTo({
+                  center: [(west + east) / 2, (south + north) / 2],
+                  zoom: Math.min(currentZoom + 3, 17),
+                  duration: 500,
+                });
+                return;
+              }
+
+              // Case 2: Expand very small bounds to prevent over-zooming
+              const MIN_SPAN = 0.003; // ~300 meters
+              let effectiveBounds: [[number, number], [number, number]];
+
+              if (latSpan < MIN_SPAN || lngSpan < MIN_SPAN) {
+                const latExpand = Math.max(0, (MIN_SPAN - latSpan) / 2);
+                const lngExpand = Math.max(0, (MIN_SPAN - lngSpan) / 2);
+                effectiveBounds = [
+                  [west - lngExpand, south - latExpand],
+                  [east + lngExpand, north + latExpand]
+                ];
+              } else {
+                effectiveBounds = [[west, south], [east, north]];
+              }
+
+              // Clear accumulated padding (MapLibre bug workaround)
+              m.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+
+              // Calculate optimal camera position
+              const cameraOptions = m.cameraForBounds(effectiveBounds, {
+                padding: 60,
+                maxZoom: 17,
               });
 
-              // If bounds are very small, add minimum zoom
-              const currentZoom = m.getZoom();
-              const minZoom = latSpan < 0.01 && lngSpan < 0.01 ? currentZoom + 2 : undefined;
-
-              m.fitBounds(
-                [[west, south], [east, north]],
-                {
-                  padding: 50,
-                  maxZoom: 17,
-                  minZoom,
+              if (!cameraOptions || !cameraOptions.center) {
+                console.warn('[SearchMap] cameraForBounds failed, using flyTo');
+                m.flyTo({
+                  center: [(west + east) / 2, (south + north) / 2],
+                  zoom: Math.min(currentZoom + 2, 17),
                   duration: 500,
-                }
-              );
+                });
+                return;
+              }
+
+              // CRITICAL: Ensure we always zoom in at least 1 level
+              // (prevents the "only panning" issue)
+              const calculatedZoom = cameraOptions.zoom || currentZoom;
+              const targetZoom = Math.min(Math.max(calculatedZoom, currentZoom + 1), 17);
+
+              console.log('[SearchMap] Flying to bounds:', {
+                calculatedZoom: calculatedZoom.toFixed(1),
+                targetZoom: targetZoom.toFixed(1),
+                center: cameraOptions.center,
+              });
+
+              // Use flyTo instead of fitBounds (avoids minZoom bug)
+              m.flyTo({
+                center: cameraOptions.center,
+                zoom: targetZoom,
+                duration: 500,
+              });
+
             } else {
               // Fallback: fly to center with logarithmic zoom
               const markerPosition = currentMarkerData.marker.getLngLat();
-              const visualCountNum = parseInt(visualCount || '1', 10) || 1;
-              const logCount = Math.log10(visualCountNum);
-              const zoomIncrement = Math.max(0.5, Math.min(3, 4 - logCount));
-              const currentZoom = m.getZoom();
+              const count = clusterData?.count || 1;
+              const logCount = Math.log10(count);
+              const zoomIncrement = Math.max(1, Math.min(3, 4 - logCount));
               const targetZoom = Math.min(currentZoom + zoomIncrement, 17);
 
-              console.log('[SearchMap] Fallback flyTo:', {
-                lng: markerPosition.lng.toFixed(4),
-                lat: markerPosition.lat.toFixed(4),
-                zoom: targetZoom,
+              console.log('[SearchMap] No bounds, using flyTo:', {
+                center: [markerPosition.lng.toFixed(4), markerPosition.lat.toFixed(4)],
+                zoom: targetZoom.toFixed(1),
               });
 
               m.flyTo({
