@@ -46,8 +46,46 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const body: RequestBody = await req.json();
+    let body: RequestBody;
+    try {
+      const rawBody = await req.text();
+      console.log('[property-search-tree] Raw request body:', rawBody);
+      body = JSON.parse(rawBody);
+      console.log('[property-search-tree] Parsed body:', JSON.stringify(body));
+    } catch (parseErr) {
+      console.error('[property-search-tree] JSON parse error:', parseErr);
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid JSON body',
+          mode: 'clusters',
+          mapData: [],
+          listItems: [],
+          total: 0,
+          page: 1,
+          totalPages: 0,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!body) {
+      console.log('[property-search-tree] Empty body received');
+      return new Response(
+        JSON.stringify({
+          mode: 'clusters',
+          mapData: [],
+          listItems: [],
+          total: 0,
+          page: 1,
+          totalPages: 0,
+          _meta: { mode: 'empty_body' },
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { bounds, zoom, node_id, filters = {}, page = 1, limit = 20 } = body;
+
+    console.log('[property-search-tree] Extracted params:', { bounds, zoom, node_id, filters, page, limit });
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -386,11 +424,13 @@ Deno.serve(async (req) => {
 
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[property-search-tree] Error:', errorMessage);
+    const errorStack = err instanceof Error ? err.stack : '';
+    console.error('[property-search-tree] Error:', errorMessage, errorStack);
 
     return new Response(
       JSON.stringify({
         error: errorMessage,
+        stack: errorStack,
         mode: 'clusters',
         mapData: [],
         listItems: [],

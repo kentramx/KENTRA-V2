@@ -48,8 +48,8 @@ export function usePropertySearchUnified() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchData = useCallback(async () => {
-    // Need viewport OR node_id
-    if (!viewport && !selectedNodeId) return;
+    // Need viewport to make a request
+    if (!viewport) return;
 
     // Cancel previous request
     if (abortControllerRef.current) {
@@ -64,17 +64,17 @@ export function usePropertySearchUnified() {
     setListError(null);
 
     try {
-      // Use new Quadtree endpoint
-      const { data, error } = await supabase.functions.invoke('property-search-tree', {
+      // TODO: Switch to property-search-tree once debugged
+      // Using property-search-unified temporarily
+      const { data, error } = await supabase.functions.invoke('property-search-unified', {
         body: {
-          // Viewport mode OR drill-down mode
-          ...(selectedNodeId
-            ? { node_id: selectedNodeId }
-            : { bounds: viewport?.bounds, zoom: viewport?.zoom }
-          ),
+          bounds: viewport?.bounds,
+          zoom: viewport?.zoom,
           filters,
           page: listPage,
           limit: 20,
+          // Pass geohash for exact cluster drilling (legacy system)
+          geohash_filter: selectedNodeId || undefined,
         },
       });
 
