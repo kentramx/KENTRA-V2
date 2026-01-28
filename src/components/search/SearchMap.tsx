@@ -211,8 +211,8 @@ export const SearchMap = memo(function SearchMap() {
           // Crear nuevo cluster marker
           const el = createClusterElement(cluster);
 
-          // CLICK HANDLER: Use marker's ACTUAL position, not data coordinates
-          // This fixes the bug where data coordinates don't match visual position
+          // CLICK HANDLER: Use fitBounds with cluster's ACTUAL bounds
+          // This ensures all properties in the cluster are visible after click
           const markerId = id;
           el.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -223,43 +223,51 @@ export const SearchMap = memo(function SearchMap() {
               return;
             }
 
-            // Get the marker's ACTUAL visual position
-            const markerPosition = currentMarkerData.marker.getLngLat();
-            const dataCoords = currentMarkerData.data;
+            const clusterData = currentMarkerData.data;
             const visualCount = el.textContent;
 
-            // DEBUG: Compare visual vs data
             console.log('[SearchMap] CLICK DEBUG:', {
               markerId,
               visualCount,
-              dataCount: dataCoords?.count,
-              markerPos: { lat: markerPosition.lat.toFixed(4), lng: markerPosition.lng.toFixed(4) },
-              dataPos: dataCoords ? { lat: dataCoords.lat?.toFixed(4), lng: dataCoords.lng?.toFixed(4) } : null,
-              positionMatch: dataCoords ?
-                (Math.abs(markerPosition.lat - dataCoords.lat) < 0.001 &&
-                 Math.abs(markerPosition.lng - dataCoords.lng) < 0.001) : false,
+              dataCount: clusterData?.count,
+              bounds: clusterData?.bounds,
             });
 
-            // Use the VISUAL count for zoom calculation (what user clicked on)
-            const visualCountNum = parseInt(visualCount || '1', 10) || 1;
-            const logCount = Math.log10(visualCountNum);
-            const zoomIncrement = Math.max(0.5, Math.min(3, 4 - logCount));
+            // If cluster has bounds, use fitBounds to show ALL properties
+            if (clusterData?.bounds) {
+              const { north, south, east, west } = clusterData.bounds;
 
-            const currentZoom = m.getZoom();
-            const targetZoom = Math.min(currentZoom + zoomIncrement, 17);
+              console.log('[SearchMap] Using fitBounds:', { north, south, east, west });
 
-            // FLY TO MARKER'S ACTUAL POSITION (not data coordinates!)
-            console.log('[SearchMap] Flying to MARKER position:', {
-              lng: markerPosition.lng.toFixed(4),
-              lat: markerPosition.lat.toFixed(4),
-              zoom: targetZoom,
-            });
+              m.fitBounds(
+                [[west, south], [east, north]],
+                {
+                  padding: 50,
+                  maxZoom: 17,
+                  duration: 500,
+                }
+              );
+            } else {
+              // Fallback: fly to center with logarithmic zoom
+              const markerPosition = currentMarkerData.marker.getLngLat();
+              const visualCountNum = parseInt(visualCount || '1', 10) || 1;
+              const logCount = Math.log10(visualCountNum);
+              const zoomIncrement = Math.max(0.5, Math.min(3, 4 - logCount));
+              const currentZoom = m.getZoom();
+              const targetZoom = Math.min(currentZoom + zoomIncrement, 17);
 
-            m.flyTo({
-              center: [markerPosition.lng, markerPosition.lat],
-              zoom: targetZoom,
-              duration: 500,
-            });
+              console.log('[SearchMap] Fallback flyTo:', {
+                lng: markerPosition.lng.toFixed(4),
+                lat: markerPosition.lat.toFixed(4),
+                zoom: targetZoom,
+              });
+
+              m.flyTo({
+                center: [markerPosition.lng, markerPosition.lat],
+                zoom: targetZoom,
+                duration: 500,
+              });
+            }
           });
 
           const marker = new maplibregl.Marker({ element: el })

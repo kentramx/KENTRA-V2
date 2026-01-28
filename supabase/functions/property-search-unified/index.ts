@@ -215,33 +215,58 @@ Deno.serve(async (req) => {
     if (clusterResult.error) throw clusterResult.error;
     if (listResult.error) throw listResult.error;
 
-    // Group by geohash
+    // Group by geohash - track bounds for each cluster
     const clusterMap = new Map<string, {
       count: number;
       latSum: number;
       lngSum: number;
+      minLat: number;
+      maxLat: number;
+      minLng: number;
+      maxLng: number;
       prices: number[];
     }>();
 
     for (const p of (clusterResult.data || [])) {
       const key = p[geohashCol] || 'unknown';
       if (!clusterMap.has(key)) {
-        clusterMap.set(key, { count: 0, latSum: 0, lngSum: 0, prices: [] });
+        clusterMap.set(key, {
+          count: 0,
+          latSum: 0,
+          lngSum: 0,
+          minLat: Infinity,
+          maxLat: -Infinity,
+          minLng: Infinity,
+          maxLng: -Infinity,
+          prices: [],
+        });
       }
       const cluster = clusterMap.get(key)!;
       cluster.count++;
       cluster.latSum += p.lat;
       cluster.lngSum += p.lng;
+      // Track actual bounds of properties in this cluster
+      cluster.minLat = Math.min(cluster.minLat, p.lat);
+      cluster.maxLat = Math.max(cluster.maxLat, p.lat);
+      cluster.minLng = Math.min(cluster.minLng, p.lng);
+      cluster.maxLng = Math.max(cluster.maxLng, p.lng);
       cluster.prices.push(p.price);
     }
 
-    // Convert to array
+    // Convert to array with bounds
     const clusters = Array.from(clusterMap.entries())
       .map(([id, c]) => ({
         id,
         count: c.count,
         lat: c.latSum / c.count,
         lng: c.lngSum / c.count,
+        // Actual bounds of all properties in this cluster
+        bounds: {
+          north: c.maxLat,
+          south: c.minLat,
+          east: c.maxLng,
+          west: c.minLng,
+        },
         min_price: Math.min(...c.prices),
         max_price: Math.max(...c.prices),
       }))
