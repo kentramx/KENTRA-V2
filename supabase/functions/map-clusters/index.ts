@@ -25,6 +25,7 @@ interface RequestBody {
     min_bedrooms?: number;
     max_bedrooms?: number;
     min_bathrooms?: number;
+    max_bathrooms?: number;
   };
 }
 
@@ -257,17 +258,18 @@ Deno.serve(async (req) => {
           prices: number[];
         }>();
 
-        for (const p of (properties || [])) {
-          const key = (p as Record<string, unknown>)[geohashColumn] as string || 'unknown';
+        // deno-lint-ignore no-explicit-any
+        for (const p of (properties || []) as any[]) {
+          const key = p[geohashColumn] as string || 'unknown';
 
           if (!grid.has(key)) {
             grid.set(key, { geohash: key, count: 0, lat: 0, lng: 0, prices: [] });
           }
           const cell = grid.get(key)!;
           cell.count++;
-          cell.lat += (p as Record<string, unknown>).lat as number;
-          cell.lng += (p as Record<string, unknown>).lng as number;
-          cell.prices.push((p as Record<string, unknown>).price as number);
+          cell.lat += p.lat as number;
+          cell.lng += p.lng as number;
+          cell.prices.push(p.price as number);
         }
 
         const clusterData = Array.from(grid.values()).map(cell => ({
@@ -319,8 +321,8 @@ Deno.serve(async (req) => {
         // Execute count and clusters in parallel
         const [countResult, clusterResult] = await Promise.all([
           countQuery,
-          // @ts-expect-error - RPC functions not in generated types
-          supabase.rpc(rpcName, {
+          // deno-lint-ignore no-explicit-any
+          (supabase.rpc as any)(rpcName, {
             p_north: bounds.north,
             p_south: bounds.south,
             p_east: bounds.east,

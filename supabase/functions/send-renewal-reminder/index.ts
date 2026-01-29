@@ -83,15 +83,16 @@ Deno.serve(async (req) => {
     for (const sub of subscriptions) {
       try {
         // Skip trial plans
-        const planName = (sub.subscription_plans as Record<string, unknown>)?.name;
+        // deno-lint-ignore no-explicit-any
+        const planData = sub.subscription_plans as any;
+        const planName = planData?.name;
         if (planName === 'agente_trial') {
           console.log(`[send-renewal-reminder] Skipping trial subscription for user ${sub.user_id}`);
           continue;
         }
 
-        const plan = sub.subscription_plans as Record<string, unknown>;
-        const amount = sub.billing_cycle === 'yearly' ? plan.price_yearly : plan.price_monthly;
-        const currency = plan.currency || 'MXN';
+        const amount = sub.billing_cycle === 'yearly' ? planData?.price_yearly : planData?.price_monthly;
+        const currency = planData?.currency || 'MXN';
         const renewalDate = new Date(sub.current_period_end!).toLocaleDateString('es-MX', {
           weekday: 'long',
           year: 'numeric',
@@ -105,7 +106,7 @@ Deno.serve(async (req) => {
             userId: sub.user_id,
             type: 'renewal_reminder',
             metadata: {
-              planName: plan.display_name,
+              planName: planData?.display_name || planName,
               amount: amount,
               currency: currency,
               renewalDate: renewalDate,
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
           console.error(`[send-renewal-reminder] Error sending notification for user ${sub.user_id}:`, notifError);
           errors.push(`User ${sub.user_id}: ${notifError.message}`);
         } else {
-          console.log(`[send-renewal-reminder] Reminder sent to user ${sub.user_id} for plan ${plan.display_name}`);
+          console.log(`[send-renewal-reminder] Reminder sent to user ${sub.user_id} for plan ${planData?.display_name || planName}`);
           remindersSent++;
         }
       } catch (err) {

@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
     // Build final array with aggregated data
     propertiesData?.forEach((property: Record<string, unknown>) => {
       propertyPerformance.push({
-        title: property.title,
+        title: String(property.title || ''),
         views: viewMap.get(property.id) || 0,
         favorites: favMap.get(property.id) || 0,
         conversations: convMap.get(property.id) || 0,

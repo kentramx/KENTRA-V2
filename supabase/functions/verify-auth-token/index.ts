@@ -5,7 +5,7 @@
  */
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { maskEmail } from "../_shared/emailHelper.ts";
 import {
@@ -21,6 +21,9 @@ import { logAuditEvent, createAuditEntry } from "../_shared/auditLog.ts";
 
 const FROM_EMAIL = "Kentra <no-reply@updates.kentra.com.mx>"; // Estandarizado con guión
 const REPLY_TO = "soporte@kentra.com.mx";
+
+// deno-lint-ignore no-explicit-any
+type AnySupabase = SupabaseClient<any, any, any>;
 
 /**
  * Hash SHA-256 del token para comparación
@@ -103,7 +106,7 @@ serve(async (req: Request): Promise<Response> => {
  */
 async function handleVerification(
   req: Request,
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: AnySupabase,
   { code, email }: VerifyVerificationRequest,
   headers: Record<string, string>
 ): Promise<Response> {
@@ -184,7 +187,7 @@ async function handleVerification(
  */
 async function handleRecovery(
   req: Request,
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: AnySupabase,
   { token, newPassword }: VerifyRecoveryRequest,
   headers: Record<string, string>
 ): Promise<Response> {

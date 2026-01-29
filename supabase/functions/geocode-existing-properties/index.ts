@@ -1,11 +1,14 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, getClientIP, rateLimitedResponse, apiRateLimit } from "../_shared/rateLimit.ts";
 
 const GOOGLE_MAPS_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+// deno-lint-ignore no-explicit-any
+type AnySupabase = SupabaseClient<any, any, any>;
 
 interface GeocodingParams {
   limit?: number;
@@ -37,31 +40,34 @@ function normalizeKey(parts: (string | null)[]): string {
 }
 
 async function getCachedCoords(
-  supabase: ReturnType<typeof createClient>,
+  supabase: AnySupabase,
   normalizedKey: string
 ): Promise<{ lat: number; lng: number } | null> {
   const { data, error } = await supabase
     .from('geocoding_cache')
-    .select('lat, lng')
+    .select('lat, lng, hits')
     .eq('normalized_key', normalizedKey)
     .single();
 
   if (error || !data) return null;
 
+  // deno-lint-ignore no-explicit-any
+  const cacheData = data as any;
+
   // Actualizar hits y last_used_at
   await supabase
     .from('geocoding_cache')
     .update({
-      hits: data.hits ? data.hits + 1 : 1,
+      hits: (cacheData.hits || 0) + 1,
       last_used_at: new Date().toISOString(),
     })
     .eq('normalized_key', normalizedKey);
 
-  return { lat: data.lat, lng: data.lng };
+  return { lat: cacheData.lat, lng: cacheData.lng };
 }
 
 async function saveToCache(
-  supabase: ReturnType<typeof createClient>,
+  supabase: AnySupabase,
   normalizedKey: string,
   lat: number,
   lng: number
