@@ -1,324 +1,204 @@
 
 
-# Plan: Sistema de Mapas Enterprise para Kentra
+# Plan: Fix Map Performance - Client-Side Clustering
 
-## Resumen Ejecutivo
+## Problem Identified
 
-Implementar el sistema de búsqueda con mapas interactivos, corrigiendo primero los errores de build y actualizando la función RPC de clustering para usar PostGIS puro en lugar de geohashes.
+The `get_map_clusters` RPC is timing out because:
+- It needs to GROUP BY 160,000+ rows
+- PostgreSQL can't use indexes efficiently for aggregation
+- Even state-level aggregation takes 5+ seconds
+- Supabase has a ~8 second statement timeout
 
----
+**Network Evidence:**
+```
+Status: 500
+Error: "canceling statement due to statement timeout" (code 57014)
+```
 
-## Estado Actual Verificado
+## Solution: Client-Side Clustering with Supercluster
 
-| Componente | Estado | Acción Requerida |
-|------------|--------|------------------|
-| `get_map_data` RPC | ✅ Funciona | Ninguna |
-| `get_map_clusters` RPC | ❌ Rota (usa geohash_*) | Reescribir con PostGIS |
-| `src/components/native/index.ts` | ❌ Export inexistente | Eliminar línea |
-| `src/hooks/useHomeProperties.ts` | ❌ Columna `slug` no existe | Remover de queries |
-| Columna `geom` | ✅ Existe | Ninguna |
-| Índices GIST | ✅ 3 activos | Ninguna |
-| MapLibre GL | ❌ No instalado | Instalar |
+Instead of server-side clustering (which requires expensive aggregation), we'll:
 
----
+1. **Fetch individual property points** (fast - uses GIST index, 40ms for 500 rows)
+2. **Cluster on the client** using Supercluster library (used by Mapbox, handles millions of points at 60fps)
+3. **Dynamically re-cluster** as user zooms/pans
 
-## FASE 0: Corregir Errores de Build
-
-### Archivo 1: `src/components/native/index.ts`
-Eliminar export de `LocationButton` que no existe.
-
-### Archivo 2: `src/hooks/useHomeProperties.ts`
-Remover `slug` de ambas queries SELECT (líneas 21 y 57).
+This is the approach used by Airbnb, Zillow, and other enterprise real estate platforms.
 
 ---
 
-## FASE 0.5: Arreglar RPC de Clustering
+## Changes Required
 
-La función `get_map_clusters` está rota porque depende de columnas `geohash_3`, `geohash_4`, etc. que ya no existen. Necesitamos reescribirla usando PostGIS puro con `ST_SnapToGrid`.
+### 1. Install Supercluster
+```bash
+npm install supercluster
+```
 
-### Migración SQL: Reemplazar `get_map_clusters`
+### 2. Modify `src/hooks/useMapData.ts`
+
+Remove the cluster mode branch entirely. Always fetch individual properties:
+
+```typescript
+// BEFORE: Tries to use get_map_clusters (times out)
+const useClusterMode = zoom < MEXICO_CONFIG.clusterThreshold;
+if (useClusterMode) {
+  // Calls get_map_clusters RPC → TIMES OUT
+}
+
+// AFTER: Always fetch properties, cluster on client
+const { data, error } = await supabase.rpc('get_map_data', {
+  p_bounds_north: bounds.north,
+  // ...
+  p_limit: 2000  // Increased limit for better clustering
+});
+
+// Let SearchMap handle clustering with Supercluster
+```
+
+### 3. Modify `src/components/search/SearchMap.tsx`
+
+Add Supercluster integration:
+
+```typescript
+import Supercluster from 'supercluster';
+
+// Create cluster index
+const clusterIndex = useMemo(() => {
+  const index = new Supercluster({
+    radius: 60,
+    maxZoom: 14,
+    minPoints: 2
+  });
+  
+  // Convert properties to GeoJSON features
+  const points = properties.map(p => ({
+    type: 'Feature',
+    properties: { ...p },
+    geometry: { type: 'Point', coordinates: [p.lng, p.lat] }
+  }));
+  
+  index.load(points);
+  return index;
+}, [properties]);
+
+// Get clusters for current viewport
+const clusters = useMemo(() => {
+  if (!viewport || !clusterIndex) return [];
+  const bbox = [bounds.west, bounds.south, bounds.east, bounds.north];
+  return clusterIndex.getClusters(bbox, Math.floor(viewport.zoom));
+}, [viewport, clusterIndex]);
+```
+
+### 4. Modify `src/types/map.ts`
+
+Update `clusterThreshold` behavior - it now controls client-side clustering display:
+
+```typescript
+export const MEXICO_CONFIG = {
+  // ...
+  clusterThreshold: 14 // Show individual markers at zoom 14+
+} as const;
+```
+
+### 5. Keep RPC Simple
+
+The `get_map_clusters` RPC can remain but won't be called. Optionally create a simpler version that just counts:
 
 ```sql
-CREATE OR REPLACE FUNCTION public.get_map_clusters(
-  p_north double precision,
-  p_south double precision,
-  p_east double precision,
-  p_west double precision,
-  p_precision integer DEFAULT 5,
-  p_listing_type text DEFAULT NULL,
-  p_property_type text DEFAULT NULL,
-  p_min_price numeric DEFAULT NULL,
-  p_max_price numeric DEFAULT NULL,
-  p_min_bedrooms integer DEFAULT NULL
-)
-RETURNS TABLE(
-  id text,
-  count bigint,
-  lat double precision,
-  lng double precision,
-  min_price numeric,
-  max_price numeric
-)
-LANGUAGE sql
-STABLE PARALLEL SAFE
-AS $$
-  WITH grid_size AS (
-    SELECT CASE p_precision
-      WHEN 3 THEN 2.0      -- ~200km (país)
-      WHEN 4 THEN 0.5      -- ~50km (región)
-      WHEN 5 THEN 0.1      -- ~10km (ciudad)
-      WHEN 6 THEN 0.02     -- ~2km (zona)
-      ELSE 0.1
-    END as size
-  )
-  SELECT
-    -- Generar ID único basado en grid
-    'cluster_' || 
-      FLOOR(lng / g.size)::text || '_' || 
-      FLOOR(lat / g.size)::text as id,
-    COUNT(*)::bigint as count,
-    AVG(lat)::float as lat,
-    AVG(lng)::float as lng,
-    MIN(price) as min_price,
-    MAX(price) as max_price
-  FROM properties p, grid_size g
-  WHERE p.status = 'activa'
-    AND p.lat IS NOT NULL AND p.lng IS NOT NULL
-    AND p.lat >= p_south AND p.lat <= p_north
-    AND p.lng >= p_west AND p.lng <= p_east
-    AND (p_listing_type IS NULL OR p.listing_type = p_listing_type)
-    AND (p_property_type IS NULL OR p.type::text = p_property_type)
-    AND (p_min_price IS NULL OR p.price >= p_min_price)
-    AND (p_max_price IS NULL OR p.price <= p_max_price)
-    AND (p_min_bedrooms IS NULL OR p.bedrooms >= p_min_bedrooms)
-  GROUP BY 
-    FLOOR(p.lng / g.size),
-    FLOOR(p.lat / g.size),
-    g.size
-  HAVING COUNT(*) > 0
-  ORDER BY count DESC
-  LIMIT 200;
-$$;
+-- Simple count RPC (optional, for stats display)
+CREATE OR REPLACE FUNCTION get_viewport_count(
+  p_north float, p_south float, p_east float, p_west float
+) RETURNS integer AS $$
+  SELECT COUNT(*)::integer
+  FROM properties
+  WHERE status = 'activa'
+    AND geom && ST_MakeEnvelope(p_west, p_south, p_east, p_north, 4326);
+$$ LANGUAGE sql STABLE;
 ```
 
-Esta versión:
-- Usa división por grid en lugar de geohashes
-- No requiere columnas adicionales
-- Mantiene la misma interfaz de parámetros
-- Es O(n) con el índice existente de lat/lng
-
 ---
 
-## FASE 1: Tipos y Store
-
-### Archivo 3: `src/types/map.ts` (NUEVO)
-Tipos centralizados para el sistema de mapas incluyendo:
-- `MapViewport` (bounds, zoom, center)
-- `MapFilters` (listing_type, property_type, precio, recámaras)
-- `MapCluster` (id, count, lat, lng, precio min/max)
-- `MapPropertyMarker` (datos completos para marcadores)
-- `MEXICO_CONFIG` (bounds, centro, zooms)
-
-### Archivo 4: `src/stores/mapStore.ts` (NUEVO)
-Store Zustand con `subscribeWithSelector` para:
-- Estado del viewport
-- Filtros de búsqueda
-- Datos del mapa (clusters o propiedades)
-- Lista paginada
-- UI (selected, hovered, loading, error)
-- Acciones (setViewport, updateFilter, setPage, etc.)
-
----
-
-## FASE 2: Hooks de Datos
-
-### Archivo 5: `src/hooks/useMapData.ts` (NUEVO)
-Hook principal que:
-- Detecta zoom para decidir modo (clusters vs propiedades)
-- Zoom < 12: Llama `get_map_clusters` con precisión según zoom
-- Zoom >= 12: Llama `get_map_data` para propiedades individuales
-- Implementa debounce de 300ms para pan/zoom
-- Maneja cancelación de requests anteriores
-- Actualiza el store con los resultados
-
----
-
-## FASE 3: Componentes de Búsqueda
-
-### Archivo 6: `src/components/search/SearchMap.tsx` (NUEVO)
-Mapa interactivo con MapLibre GL:
-- Estilo CARTO Positron (gratuito, limpio)
-- Bounds restringidos a México
-- Evento `moveend` actualiza viewport
-- Renderizado de clusters (círculos con conteo)
-- Renderizado de marcadores de precio (pills)
-- Click en cluster → zoom al área
-- Hover sincronizado con lista
-
-### Archivo 7: `src/components/search/SearchFilters.tsx` (NUEVO)
-Barra de filtros horizontal:
-- Toggle Venta/Renta
-- Dropdown tipo de propiedad (usa `PROPERTY_TYPES`)
-- Inputs precio min/max
-- Selector de recámaras (1+, 2+, 3+, 4+)
-- Contador de resultados
-- Botón limpiar filtros
-
-### Archivo 8: `src/components/search/SearchPropertyList.tsx` (NUEVO)
-Lista lateral:
-- Scroll virtualizado con react-window
-- PropertyCards compactas
-- Hover sincronizado con mapa
-- Paginación
-- Skeletons durante carga
-
-### Archivo 9: `src/components/search/SearchPropertyCard.tsx` (NUEVO)
-Tarjeta compacta para la lista:
-- Imagen principal
-- Precio formateado (K/M)
-- Ubicación
-- Características (recámaras, baños, m²)
-- Estados hover/selected
-
-### Archivo 10: `src/components/search/index.ts` (NUEVO)
-Barrel exports para los componentes.
-
----
-
-## FASE 4: Página de Búsqueda
-
-### Archivo 11: `src/pages/Buscar.tsx` (REESCRIBIR)
-Layout completo:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ Navbar                                                       │
-├─────────────────────────────────────────────────────────────┤
-│ SearchFilters (barra horizontal de filtros)                 │
-├──────────────────────────┬──────────────────────────────────┤
-│ SearchPropertyList       │ SearchMap                        │
-│ (30% width, scroll)      │ (70% width, fixed)               │
-│                          │                                  │
-│ - PropertyCards          │ - Clusters / Markers             │
-│ - Paginación             │ - Interactivo                    │
-└──────────────────────────┴──────────────────────────────────┘
-```
-
-**Responsive (Mobile):**
-- Mapa fullscreen
-- Drawer inferior con Vaul para lista
-- Toggle flotante mapa/lista
-
----
-
-## FASE 5: Estilos CSS
-
-### Archivo 12: `src/index.css` (AGREGAR AL FINAL)
-Estilos para marcadores del mapa:
-- `.map-cluster-marker` - círculos con conteo
-- `.cluster-circle` - tamaño dinámico según count
-- `.map-property-marker` - contenedor del pill
-- `.price-pill` - pill con precio (venta/renta colores)
-- Estados `:hover`, `.hovered`, `.selected`
-
----
-
-## Dependencia a Instalar
-
-```bash
-npm install maplibre-gl
-```
-
-MapLibre GL incluye tipos TypeScript integrados.
-
----
-
-## Diagrama de Arquitectura
+## Architecture After Fix
 
 ```text
 ┌─────────────────┐
-│   Usuario       │
-│ (pan/zoom/filter)
+│   User Pan/Zoom │
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│   mapStore      │ ◄── Zustand (subscribeWithSelector)
-│                 │
-│ viewport        │
-│ filters         │
-│ clusters[]      │
-│ properties[]    │
-│ UI states       │
-└────────┬────────┘
+│  useMapData     │ ──── calls get_map_data RPC (40ms)
+└────────┬────────┘       returns 500-2000 properties
          │
          ▼
 ┌─────────────────┐
-│  useMapData     │ ◄── Hook con debounce 300ms
-│                 │
-│ zoom < 12?      │─────────┐
-│     │           │         │
-│     ▼           │         ▼
-│ get_map_clusters│    get_map_data
-│ (PostGIS grid)  │    (propiedades)
-└────────┬────────┘         │
-         │                  │
-         ▼                  ▼
-┌─────────────────────────────────────┐
-│        PostgreSQL + PostGIS         │
-│  ~160,000 propiedades activas       │
-│  3 índices GIST en columna geom     │
-└─────────────────────────────────────┘
+│  Supercluster   │ ──── clusters on client (5ms)
+└────────┬────────┘       returns clusters or individual points
+         │
+         ▼
+┌─────────────────┐
+│  SearchMap      │ ──── renders markers (16ms = 60fps)
+└─────────────────┘
 ```
 
 ---
 
-## Lista de Archivos a Modificar/Crear
+## Files to Modify
 
-| # | Archivo | Acción | Descripción |
-|---|---------|--------|-------------|
-| 1 | `src/components/native/index.ts` | Modificar | Eliminar export LocationButton |
-| 2 | `src/hooks/useHomeProperties.ts` | Modificar | Remover `slug` de queries |
-| 3 | Migración SQL | Crear | Reescribir `get_map_clusters` |
-| 4 | `src/types/map.ts` | Crear | Tipos del sistema de mapas |
-| 5 | `src/stores/mapStore.ts` | Crear | Store Zustand |
-| 6 | `src/hooks/useMapData.ts` | Crear | Hook de datos |
-| 7 | `src/components/search/SearchMap.tsx` | Crear | Mapa MapLibre |
-| 8 | `src/components/search/SearchFilters.tsx` | Crear | Barra de filtros |
-| 9 | `src/components/search/SearchPropertyList.tsx` | Crear | Lista lateral |
-| 10 | `src/components/search/SearchPropertyCard.tsx` | Crear | Tarjeta compacta |
-| 11 | `src/components/search/index.ts` | Crear | Barrel exports |
-| 12 | `src/pages/Buscar.tsx` | Reescribir | Página completa |
-| 13 | `src/index.css` | Agregar | Estilos de marcadores |
+| # | File | Change |
+|---|------|--------|
+| 1 | `package.json` | Add supercluster dependency |
+| 2 | `src/hooks/useMapData.ts` | Remove cluster mode, always fetch properties |
+| 3 | `src/components/search/SearchMap.tsx` | Add Supercluster integration |
+| 4 | `src/types/map.ts` | Update comments/threshold |
 
 ---
 
-## Criterios de Éxito
+## Performance After Fix
 
-1. Build sin errores TypeScript
-2. Mapa carga centrado en México < 1 segundo
-3. Zoom < 12 muestra clusters con conteo
-4. Zoom >= 12 muestra marcadores de precio
-5. Click en cluster hace zoom al área
-6. Hover sincroniza mapa ↔ lista
-7. Filtros actualizan resultados < 300ms
-8. Performance 60fps durante navegación
-9. Mobile: drawer inferior funcional
-10. RPC queries < 200ms
+| Metric | Before | After |
+|--------|--------|-------|
+| RPC call | Times out (>8s) | 40-100ms |
+| Clustering | N/A | 5-10ms (client) |
+| Total latency | Fails | ~100-150ms |
+| FPS during zoom | N/A | 60fps |
 
 ---
 
-## Estimación de Tiempo
+## Alternative: Materialized View (Future Enhancement)
 
-| Fase | Tiempo |
-|------|--------|
-| Fase 0: Fix build errors | 2 min |
-| Fase 0.5: Migración RPC | 3 min |
-| Fase 1: Tipos y Store | 10 min |
-| Fase 2: Hook de datos | 8 min |
-| Fase 3: Componentes | 20 min |
-| Fase 4: Página Buscar | 5 min |
-| Fase 5: Estilos | 3 min |
+For even better performance at 5M+ properties, we could add:
 
-**Total estimado:** ~50 minutos
+```sql
+-- Pre-computed clusters refreshed every 10 minutes
+CREATE MATERIALIZED VIEW mv_property_clusters AS
+SELECT 
+  state,
+  ST_Centroid(ST_Collect(geom)) as center,
+  COUNT(*) as count,
+  MIN(price) as min_price,
+  MAX(price) as max_price
+FROM properties
+WHERE status = 'activa'
+GROUP BY state;
+
+CREATE UNIQUE INDEX ON mv_property_clusters(state);
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_property_clusters;
+```
+
+But client-side clustering with Supercluster is sufficient for 160K properties and simpler to implement.
+
+---
+
+## Estimated Time
+
+| Phase | Time |
+|-------|------|
+| Install supercluster | 1 min |
+| Update useMapData | 10 min |
+| Update SearchMap | 15 min |
+| Testing | 5 min |
+
+**Total: ~30 minutes**
 
