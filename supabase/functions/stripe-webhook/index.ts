@@ -3,6 +3,15 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
 import Stripe from 'https://esm.sh/stripe@11.16.0?target=deno';
 import { createLogger } from '../_shared/logger.ts';
 import { withSentry, captureException } from '../_shared/sentry.ts';
+import { checkRateLimit, getClientIP, rateLimitedResponse, RateLimitConfig } from '../_shared/rateLimit.ts';
+
+// Rate limit config for webhooks: 100 requests per minute per IP
+// Generous to allow Stripe retries, but protects against abuse
+const webhookRateLimit: RateLimitConfig = {
+  maxRequests: 100,
+  windowMs: 60 * 1000, // 1 minute
+  keyPrefix: 'stripe-webhook',
+};
 
 // ============================================================================
 // CONSTANTES DE ESTADOS DE SUSCRIPCIÓN
@@ -34,9 +43,9 @@ Deno.serve(withSentry(async (req) => {
   const requestId = crypto.randomUUID().slice(0, 8);
   const logger = createLogger('stripe-webhook', { requestId });
   const startTime = Date.now();
-  
+
   // Log de inicio con request ID para trazabilidad
-  logger.info('Webhook request received', { 
+  logger.info('Webhook request received', {
     method: req.method,
     url: req.url,
     userAgent: req.headers.get('user-agent')?.slice(0, 50),
@@ -44,6 +53,14 @@ Deno.serve(withSentry(async (req) => {
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // SECURITY: Rate limiting to protect against DDoS
+  const clientIP = getClientIP(req);
+  const rateLimitResult = checkRateLimit(clientIP, webhookRateLimit);
+  if (!rateLimitResult.allowed) {
+    logger.warn('Rate limit exceeded', { clientIP, remaining: rateLimitResult.remaining });
+    return rateLimitedResponse(rateLimitResult, corsHeaders);
   }
 
   try {
