@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
       // Use geohash_7 column for filtering (all our clusters use precision 7)
       let query = supabase
         .from('properties')
-        .select('id, title, slug, lat, lng, price, listing_type, type, bedrooms, bathrooms, sqft, colonia, municipality, state', { count: 'exact' })
+        .select('id, title, code, lat, lng, price, listing_type, type, bedrooms, bathrooms, sqft, colonia, municipality, state', { count: 'exact' })
         .eq('status', 'activa')
         .eq('geohash_7', geohash_filter);
 
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
           listItems: (data || []).map((p: any) => ({
             id: p.id,
             title: p.title,
-            slug: p.slug,
+            slug: p.code,
             lat: p.lat,
             lng: p.lng,
             price: p.price,
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       // Query for list (paginated with count)
       let listQuery = supabase
         .from('properties')
-        .select('id, title, slug, lat, lng, price, listing_type, type, bedrooms, bathrooms, sqft, colonia, municipality, state', { count: 'exact' })
+        .select('id, title, code, lat, lng, price, listing_type, type, bedrooms, bathrooms, sqft, colonia, municipality, state', { count: 'exact' })
         .eq('status', 'activa')
         .gte('lat', bounds.south)
         .lte('lat', bounds.north)
@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
           listItems: (listResult.data || []).map((p: any) => ({
             id: p.id,
             title: p.title,
-            slug: p.slug,
+            slug: p.code,
             lat: p.lat,
             lng: p.lng,
             price: p.price,
@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
     // Query for list (separate query for pagination)
     let listQuery = supabase
       .from('properties')
-      .select('id, title, slug, lat, lng, price, listing_type, type, bedrooms, bathrooms, sqft, colonia, municipality, state', { count: 'exact' })
+      .select('id, title, code, lat, lng, price, listing_type, type, bedrooms, bathrooms, sqft, colonia, municipality, state', { count: 'exact' })
       .eq('status', 'activa')
       .gte('lat', bounds.south)
       .lte('lat', bounds.north)
@@ -308,7 +308,7 @@ Deno.serve(async (req) => {
         listItems: (listResult.data || []).map((p: any) => ({
           id: p.id,
           title: p.title,
-          slug: p.slug,
+          slug: p.code,
           lat: p.lat,
           lng: p.lng,
           price: p.price,
@@ -338,12 +338,22 @@ Deno.serve(async (req) => {
     );
 
   } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[property-search-h3] Error:', errorMessage);
+    let errorMessage = 'Unknown error';
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    } else if (typeof err === 'object' && err !== null) {
+      // Handle Supabase error objects
+      const supaErr = err as { message?: string; details?: string; hint?: string; code?: string };
+      errorMessage = supaErr.message || supaErr.details || JSON.stringify(err);
+    } else {
+      errorMessage = String(err);
+    }
+    console.error('[property-search-h3] Error:', errorMessage, JSON.stringify(err));
 
     return new Response(
       JSON.stringify({
         error: errorMessage,
+        errorDetails: JSON.stringify(err),
         mode: 'clusters',
         mapData: [],
         listItems: [],
