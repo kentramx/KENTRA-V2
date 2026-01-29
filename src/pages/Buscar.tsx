@@ -1,5 +1,5 @@
 import { Toaster } from 'react-hot-toast';
-import { SearchMap } from '@/components/search/SearchMap';
+import { SearchMapEnterprise } from '@/components/search/SearchMapEnterprise';
 import { PropertyList } from '@/components/search/PropertyList';
 import { MapFilters } from '@/components/search/MapFilters';
 import { MapDebugPanel } from '@/components/search/MapDebugPanel';
@@ -34,7 +34,7 @@ export default function Buscar() {
 
           {/* Mapa */}
           <div className="flex-1 relative">
-            <SearchMap />
+            <SearchMapEnterprise />
           </div>
         </div>
       </div>

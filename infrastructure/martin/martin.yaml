@@ -1,0 +1,66 @@
+# Martin Tile Server Configuration
+# https://maplibre.org/martin/
+
+# Server settings
+listen_addresses: '0.0.0.0:3000'
+
+# Connection keep-alive settings
+keep_alive: 75
+
+# Worker threads (0 = auto-detect based on CPU cores)
+worker_processes: 0
+
+# PostgreSQL connection settings
+postgres:
+  # Connection string is provided via environment variable
+  connection_string: ${DATABASE_URL}
+
+  # Connection pool settings
+  pool_size: 20
+
+  # Auto-discovery settings
+  auto_publish:
+    # Don't auto-publish tables (we use custom functions)
+    tables: false
+    # Auto-publish our tile functions
+    functions: true
+    # Only from public schema
+    from_schemas: public
+
+  # Default SRID for geographic data
+  default_srid: 4326
+
+# Explicitly define our tile sources (functions)
+functions:
+  # H3 Clusters - for zoom levels 0-12
+  h3_clusters:
+    schema: public
+    function: get_h3_cluster_tiles
+    minzoom: 0
+    maxzoom: 12
+    bounds: [-118.5, 14.5, -86.5, 32.5]  # Mexico bounding box
+    # Function signature: (z, x, y, query_params)
+
+  # Individual Properties - for zoom levels 13-18
+  properties:
+    schema: public
+    function: get_property_tiles
+    minzoom: 13
+    maxzoom: 18
+    bounds: [-118.5, 14.5, -86.5, 32.5]  # Mexico bounding box
+
+  # H3 Hexagon polygons - for heat map visualization
+  h3_hexagons:
+    schema: public
+    function: get_h3_hexagon_tiles
+    minzoom: 6
+    maxzoom: 16
+    bounds: [-118.5, 14.5, -86.5, 32.5]  # Mexico bounding box
+
+# Sprite configuration (optional - for map icons)
+# sprites:
+#   kentra: /sprites/kentra
+
+# Font configuration (optional - for map labels)
+# fonts:
+#   - /fonts

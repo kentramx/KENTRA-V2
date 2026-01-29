@@ -40,7 +40,6 @@ AS $$
       WHEN 4 THEN geohash_4
       WHEN 5 THEN geohash_5
       WHEN 6 THEN geohash_6
-      WHEN 7 THEN geohash_7
       ELSE geohash_5
     END as id,
     AVG(lat)::float as lat,
@@ -67,7 +66,6 @@ AS $$
       WHEN 4 THEN geohash_4
       WHEN 5 THEN geohash_5
       WHEN 6 THEN geohash_6
-      WHEN 7 THEN geohash_7
       ELSE geohash_5
     END
   HAVING COUNT(*) > 0
