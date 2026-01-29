@@ -13,6 +13,7 @@ import { useTracking } from "@/hooks/useTracking";
 import { cn } from "@/lib/utils";
 import { useState, useCallback, memo } from "react";
 import { LazyImage } from "@/components/LazyImage";
+import { getPropertyTypeLabel } from "@/config/propertyTypes";
 
 interface PropertyCardProps {
   id: string;
@@ -116,17 +117,7 @@ const PropertyCardComponent = ({
   };
 
   const getTypeLabel = useCallback(() => {
-    const labels: Record<string, string> = {
-      casa: 'Casa',
-      departamento: 'Condo',
-      terreno: 'Terreno',
-      oficina: 'Oficina',
-      local: 'Local',
-      bodega: 'Bodega',
-      edificio: 'Edificio',
-      rancho: 'Rancho'
-    };
-    return labels[type] || type;
+    return getPropertyTypeLabel(type);
   }, [type]);
 
   const getDaysOnMarket = useCallback(() => {

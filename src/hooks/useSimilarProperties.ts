@@ -30,7 +30,7 @@ export const useSimilarProperties = (
     queryFn: async (): Promise<SimilarProperty[]> => {
       if (!propertyId || !propertyType || !propertyState) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('properties')
         .select(`
           id, title, price, bedrooms, bathrooms, sqft, parking,
@@ -38,11 +38,11 @@ export const useSimilarProperties = (
           images (url, position)
         `)
         .eq('status', 'activa')
-        .eq('type', propertyType as PropertyType)
+        .eq('type', propertyType as any)
         .eq('state', propertyState)
         .neq('id', propertyId)
         .order('created_at', { ascending: false })
-        .limit(limit);
+        .limit(limit) as any);
 
       if (error) throw error;
 
