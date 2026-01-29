@@ -203,14 +203,33 @@ export interface PropertyAmenity {
 // ============= ENUMS Y TIPOS =============
 
 export type PropertyType =
+  // Residencial
   | 'casa'
+  | 'casa_condominio'
   | 'departamento'
-  | 'terreno'
+  | 'duplex'
+  | 'penthouse'
+  | 'villa'
+  | 'loft'
+  | 'townhouse'
+  | 'estudio'
+  | 'rancho'
+  // Comercial
   | 'oficina'
   | 'local'
-  | 'bodega'
+  | 'consultorio'
   | 'edificio'
-  | 'rancho';
+  | 'hotel'
+  // Industrial
+  | 'bodega'
+  | 'nave_industrial'
+  // Terrenos
+  | 'terreno'
+  | 'terreno_comercial'
+  | 'terreno_industrial'
+  // Desarrollos
+  | 'desarrollo_vertical'
+  | 'desarrollo_horizontal';
 
 export type ListingType = 'venta' | 'renta';
 

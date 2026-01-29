@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { PropertyFormData } from '@/hooks/useFormWizard';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { CheckCircle2, Home, MapPin, Maximize, Bed, Bath, Car, FileText, Sparkles, XCircle, AlertCircle } from 'lucide-react';
+import { getPropertyTypeLabel } from '@/config/propertyTypes';
 
 interface Step6ReviewProps {
   formData: PropertyFormData;
@@ -16,26 +17,7 @@ export const Step6Review = ({ formData, imageFiles, existingImages = [] }: Step6
   const totalImages = imageFiles.length + existingImages.length;
   const totalAmenities = formData.amenities.reduce((sum, cat) => sum + cat.items.length, 0);
 
-  // Generar título automático igual que en PropertyFormWizard
-  const propertyTypeLabels: Record<string, string> = {
-    casa: 'Casa',
-    departamento: 'Departamento',
-    terreno: 'Terreno',
-    local_comercial: 'Local Comercial',
-    oficina: 'Oficina',
-    bodega: 'Bodega',
-    edificio: 'Edificio',
-    rancho: 'Rancho',
-    penthouse: 'Penthouse',
-    villa: 'Villa',
-    estudio: 'Estudio',
-    townhouse: 'Townhouse',
-    cabaña: 'Cabaña',
-    hacienda: 'Hacienda',
-    loft: 'Loft',
-  };
-  
-  const typeLabel = propertyTypeLabels[formData.type] || formData.type;
+  const typeLabel = getPropertyTypeLabel(formData.type);
   const listingTypeLabel = formData.for_sale && formData.for_rent 
     ? 'en Venta/Renta' 
     : formData.for_sale 
@@ -192,7 +174,7 @@ export const Step6Review = ({ formData, imageFiles, existingImages = [] }: Step6
           {/* Tipo de propiedad */}
           <div className="flex items-center gap-2 text-muted-foreground">
             <Home className="w-4 h-4" />
-            <span>{propertyTypeLabels[formData.type]}</span>
+            <span>{typeLabel}</span>
           </div>
 
           {/* Ubicación */}
