@@ -12,6 +12,12 @@
 -- Enable RLS
 ALTER TABLE user_subscriptions ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own subscription" ON user_subscriptions;
+DROP POLICY IF EXISTS "Users can update own subscription" ON user_subscriptions;
+DROP POLICY IF EXISTS "Service role has full access to subscriptions" ON user_subscriptions;
+DROP POLICY IF EXISTS "Admins can view all subscriptions" ON user_subscriptions;
+
 -- Policy: Users can only view their own subscription
 CREATE POLICY "Users can view own subscription"
   ON user_subscriptions
@@ -48,6 +54,12 @@ CREATE POLICY "Admins can view all subscriptions"
 
 -- Enable RLS
 ALTER TABLE payment_history ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own payment history" ON payment_history;
+DROP POLICY IF EXISTS "Service role can insert payment history" ON payment_history;
+DROP POLICY IF EXISTS "Service role can update payment history" ON payment_history;
+DROP POLICY IF EXISTS "Admins can view all payment history" ON payment_history;
 
 -- Policy: Users can only view their own payment history
 CREATE POLICY "Users can view own payment history"
@@ -86,6 +98,11 @@ CREATE POLICY "Admins can view all payment history"
 -- Enable RLS
 ALTER TABLE user_active_upsells ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own upsells" ON user_active_upsells;
+DROP POLICY IF EXISTS "Service role has full access to upsells" ON user_active_upsells;
+DROP POLICY IF EXISTS "Admins can view all upsells" ON user_active_upsells;
+
 -- Policy: Users can view their own upsells
 CREATE POLICY "Users can view own upsells"
   ON user_active_upsells
@@ -116,6 +133,11 @@ CREATE POLICY "Admins can view all upsells"
 
 -- Enable RLS
 ALTER TABLE subscription_changes ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own subscription changes" ON subscription_changes;
+DROP POLICY IF EXISTS "Service role can insert subscription changes" ON subscription_changes;
+DROP POLICY IF EXISTS "Admins can view all subscription changes" ON subscription_changes;
 
 -- Policy: Users can view their own subscription changes
 CREATE POLICY "Users can view own subscription changes"
@@ -148,6 +170,9 @@ CREATE POLICY "Admins can view all subscription changes"
 -- Enable RLS
 ALTER TABLE stripe_webhook_events ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Service role only for webhook events" ON stripe_webhook_events;
+
 -- Policy: Only service role can access webhook events
 CREATE POLICY "Service role only for webhook events"
   ON stripe_webhook_events
@@ -160,6 +185,11 @@ CREATE POLICY "Service role only for webhook events"
 
 -- Enable RLS (if not already)
 ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Anyone can view active plans" ON subscription_plans;
+DROP POLICY IF EXISTS "Service role can manage plans" ON subscription_plans;
+DROP POLICY IF EXISTS "Admins can manage plans" ON subscription_plans;
 
 -- Policy: Anyone can view active subscription plans
 CREATE POLICY "Anyone can view active plans"
