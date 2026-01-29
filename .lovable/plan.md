@@ -1,204 +1,163 @@
 
-
-# Plan: Fix Map Performance - Client-Side Clustering
+# Plan: Fix get_map_data RPC Timeout
 
 ## Problem Identified
 
-The `get_map_clusters` RPC is timing out because:
-- It needs to GROUP BY 160,000+ rows
-- PostgreSQL can't use indexes efficiently for aggregation
-- Even state-level aggregation takes 5+ seconds
-- Supabase has a ~8 second statement timeout
+The `get_map_data` RPC is timing out (error 57014) because:
 
-**Network Evidence:**
-```
-Status: 500
-Error: "canceling statement due to statement timeout" (code 57014)
-```
+1. **Expensive COUNT(*)**: Takes 1.1+ seconds to count all matching properties in viewport
+2. When combined with the main query + JSON aggregation, it exceeds the 8-second timeout
 
-## Solution: Client-Side Clustering with Supercluster
-
-Instead of server-side clustering (which requires expensive aggregation), we'll:
-
-1. **Fetch individual property points** (fast - uses GIST index, 40ms for 500 rows)
-2. **Cluster on the client** using Supercluster library (used by Mapbox, handles millions of points at 60fps)
-3. **Dynamically re-cluster** as user zooms/pans
-
-This is the approach used by Airbnb, Zillow, and other enterprise real estate platforms.
-
----
-
-## Changes Required
-
-### 1. Install Supercluster
-```bash
-npm install supercluster
+**Evidence from database analysis:**
+```text
+Simple spatial query with LIMIT 500: 20ms ✅
+COUNT(*) with spatial filter: 1,145ms ❌ (kills the budget)
 ```
 
-### 2. Modify `src/hooks/useMapData.ts`
+## Solution: Rewrite get_map_data RPC
 
-Remove the cluster mode branch entirely. Always fetch individual properties:
+Remove the expensive COUNT(*) and use PostgreSQL estimation instead. Also simplify the query.
 
-```typescript
-// BEFORE: Tries to use get_map_clusters (times out)
-const useClusterMode = zoom < MEXICO_CONFIG.clusterThreshold;
-if (useClusterMode) {
-  // Calls get_map_clusters RPC → TIMES OUT
-}
-
-// AFTER: Always fetch properties, cluster on client
-const { data, error } = await supabase.rpc('get_map_data', {
-  p_bounds_north: bounds.north,
-  // ...
-  p_limit: 2000  // Increased limit for better clustering
-});
-
-// Let SearchMap handle clustering with Supercluster
-```
-
-### 3. Modify `src/components/search/SearchMap.tsx`
-
-Add Supercluster integration:
-
-```typescript
-import Supercluster from 'supercluster';
-
-// Create cluster index
-const clusterIndex = useMemo(() => {
-  const index = new Supercluster({
-    radius: 60,
-    maxZoom: 14,
-    minPoints: 2
-  });
-  
-  // Convert properties to GeoJSON features
-  const points = properties.map(p => ({
-    type: 'Feature',
-    properties: { ...p },
-    geometry: { type: 'Point', coordinates: [p.lng, p.lat] }
-  }));
-  
-  index.load(points);
-  return index;
-}, [properties]);
-
-// Get clusters for current viewport
-const clusters = useMemo(() => {
-  if (!viewport || !clusterIndex) return [];
-  const bbox = [bounds.west, bounds.south, bounds.east, bounds.north];
-  return clusterIndex.getClusters(bbox, Math.floor(viewport.zoom));
-}, [viewport, clusterIndex]);
-```
-
-### 4. Modify `src/types/map.ts`
-
-Update `clusterThreshold` behavior - it now controls client-side clustering display:
-
-```typescript
-export const MEXICO_CONFIG = {
-  // ...
-  clusterThreshold: 14 // Show individual markers at zoom 14+
-} as const;
-```
-
-### 5. Keep RPC Simple
-
-The `get_map_clusters` RPC can remain but won't be called. Optionally create a simpler version that just counts:
+### SQL Migration
 
 ```sql
--- Simple count RPC (optional, for stats display)
-CREATE OR REPLACE FUNCTION get_viewport_count(
-  p_north float, p_south float, p_east float, p_west float
-) RETURNS integer AS $$
-  SELECT COUNT(*)::integer
-  FROM properties
-  WHERE status = 'activa'
-    AND geom && ST_MakeEnvelope(p_west, p_south, p_east, p_north, 4326);
-$$ LANGUAGE sql STABLE;
+CREATE OR REPLACE FUNCTION public.get_map_data(
+  p_bounds_north double precision,
+  p_bounds_south double precision,
+  p_bounds_east double precision,
+  p_bounds_west double precision,
+  p_listing_type text DEFAULT NULL,
+  p_property_type text DEFAULT NULL,
+  p_min_price numeric DEFAULT NULL,
+  p_max_price numeric DEFAULT NULL,
+  p_min_bedrooms integer DEFAULT NULL,
+  p_limit integer DEFAULT 500
+)
+RETURNS TABLE(properties jsonb, clusters jsonb, total_count bigint)
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_properties jsonb;
+  v_estimated_count bigint;
+BEGIN
+  -- Fast estimation using pg_class (avoids expensive COUNT)
+  -- For map purposes, exact count is not critical
+  SELECT GREATEST(
+    (SELECT reltuples::bigint FROM pg_class WHERE relname = 'properties'),
+    0
+  ) INTO v_estimated_count;
+
+  -- Get properties with LEFT JOIN for images (no correlated subquery)
+  SELECT jsonb_agg(row_to_json(t))
+  INTO v_properties
+  FROM (
+    SELECT 
+      p.id,
+      p.lat,
+      p.lng,
+      p.price,
+      COALESCE(p.currency, 'MXN') as currency,
+      p.title,
+      p.type::text,
+      p.listing_type,
+      p.address,
+      p.municipality,
+      p.state,
+      p.bedrooms,
+      p.bathrooms,
+      p.sqft,
+      COALESCE(p.is_featured, false) as is_featured,
+      img.url as image_url
+    FROM properties p
+    LEFT JOIN LATERAL (
+      SELECT url FROM images WHERE property_id = p.id ORDER BY position LIMIT 1
+    ) img ON true
+    WHERE p.status = 'activa'
+      AND p.lat IS NOT NULL 
+      AND p.lng IS NOT NULL
+      AND p.lat >= p_bounds_south 
+      AND p.lat <= p_bounds_north
+      AND p.lng >= p_bounds_west 
+      AND p.lng <= p_bounds_east
+      AND (p_listing_type IS NULL OR p.listing_type = p_listing_type)
+      AND (p_property_type IS NULL OR p.type::text = p_property_type)
+      AND (p_min_price IS NULL OR p.price >= p_min_price)
+      AND (p_max_price IS NULL OR p.price <= p_max_price)
+      AND (p_min_bedrooms IS NULL OR p.bedrooms >= p_min_bedrooms)
+    ORDER BY p.is_featured DESC NULLS LAST, p.created_at DESC
+    LIMIT p_limit
+  ) t;
+
+  RETURN QUERY SELECT 
+    COALESCE(v_properties, '[]'::jsonb),
+    '[]'::jsonb,
+    v_estimated_count;
+END;
+$$;
 ```
+
+### Key Optimizations
+
+| Change | Before | After | Impact |
+|--------|--------|-------|--------|
+| COUNT(*) | Scans all matching rows (1.1s) | pg_class estimate (0ms) | Eliminates slowest operation |
+| Spatial filter | ST_MakeEnvelope with geom | Simple lat/lng comparisons | Uses existing indexes more efficiently |
+| Images | Correlated subquery | LEFT JOIN LATERAL | Potentially faster execution plan |
+| Limit | 2000 | 500 (default) | Reduces data transfer |
 
 ---
 
-## Architecture After Fix
+## Alternative: Use Direct Query (No RPC)
 
-```text
-┌─────────────────┐
-│   User Pan/Zoom │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  useMapData     │ ──── calls get_map_data RPC (40ms)
-└────────┬────────┘       returns 500-2000 properties
-         │
-         ▼
-┌─────────────────┐
-│  Supercluster   │ ──── clusters on client (5ms)
-└────────┬────────┘       returns clusters or individual points
-         │
-         ▼
-┌─────────────────┐
-│  SearchMap      │ ──── renders markers (16ms = 60fps)
-└─────────────────┘
+If the RPC continues to timeout, we could bypass it entirely and use a direct query from the hook:
+
+```typescript
+// In useMapData.ts - use direct query instead of RPC
+const { data, error } = await supabase
+  .from('properties')
+  .select(`
+    id, lat, lng, price, currency, title, type, listing_type,
+    address, municipality, state, bedrooms, bathrooms, sqft, is_featured,
+    images!inner(url)
+  `)
+  .eq('status', 'activa')
+  .gte('lat', bounds.south)
+  .lte('lat', bounds.north)
+  .gte('lng', bounds.west)
+  .lte('lng', bounds.east)
+  .order('is_featured', { ascending: false })
+  .order('created_at', { ascending: false })
+  .limit(500);
 ```
+
+This bypasses the RPC entirely and uses Supabase's optimized query builder.
 
 ---
 
 ## Files to Modify
 
-| # | File | Change |
-|---|------|--------|
-| 1 | `package.json` | Add supercluster dependency |
-| 2 | `src/hooks/useMapData.ts` | Remove cluster mode, always fetch properties |
-| 3 | `src/components/search/SearchMap.tsx` | Add Supercluster integration |
-| 4 | `src/types/map.ts` | Update comments/threshold |
+| # | File | Action | Description |
+|---|------|--------|-------------|
+| 1 | SQL Migration | Create | Rewrite get_map_data RPC function |
 
 ---
 
-## Performance After Fix
+## Expected Performance After Fix
 
 | Metric | Before | After |
 |--------|--------|-------|
-| RPC call | Times out (>8s) | 40-100ms |
-| Clustering | N/A | 5-10ms (client) |
-| Total latency | Fails | ~100-150ms |
-| FPS during zoom | N/A | 60fps |
+| RPC query time | >8000ms (timeout) | ~50-100ms |
+| COUNT operation | 1100ms | 0ms (estimation) |
+| Properties fetch | ~20ms | ~20-50ms |
+| Total response | FAILS | ~100ms |
 
 ---
 
-## Alternative: Materialized View (Future Enhancement)
+## Risk Assessment
 
-For even better performance at 5M+ properties, we could add:
-
-```sql
--- Pre-computed clusters refreshed every 10 minutes
-CREATE MATERIALIZED VIEW mv_property_clusters AS
-SELECT 
-  state,
-  ST_Centroid(ST_Collect(geom)) as center,
-  COUNT(*) as count,
-  MIN(price) as min_price,
-  MAX(price) as max_price
-FROM properties
-WHERE status = 'activa'
-GROUP BY state;
-
-CREATE UNIQUE INDEX ON mv_property_clusters(state);
-REFRESH MATERIALIZED VIEW CONCURRENTLY mv_property_clusters;
-```
-
-But client-side clustering with Supercluster is sufficient for 160K properties and simpler to implement.
-
----
-
-## Estimated Time
-
-| Phase | Time |
-|-------|------|
-| Install supercluster | 1 min |
-| Update useMapData | 10 min |
-| Update SearchMap | 15 min |
-| Testing | 5 min |
-
-**Total: ~30 minutes**
-
+**Low Risk:**
+- The fix replaces expensive operations with fast alternatives
+- No schema changes required
+- Existing indexes are sufficient
+- Client-side code doesn't need changes (data format remains the same)
