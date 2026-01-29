@@ -35,6 +35,7 @@ const REQUIRES_ACTION_STATUSES = [SUBSCRIPTION_STATUSES.PAST_DUE, SUBSCRIPTION_S
 
 import { getCorsHeaders, corsHeaders } from '../_shared/cors.ts';
 import { checkBodySize, bodySizeLimitResponse, BODY_SIZE_LIMITS } from '../_shared/validation.ts';
+import { logAuditEvent, AuditEventType } from '../_shared/auditLog.ts';
 
 // Note: Stripe webhooks come from Stripe servers, not browser origins
 // We keep corsHeaders for compatibility but webhooks don't need CORS
@@ -117,74 +118,71 @@ Deno.serve(withSentry(async (req) => {
       }
     );
 
-    // === IDEMPOTENCIA: Verificar si ya procesamos este evento (FAIL-CLOSED) ===
-    const { data: existingEvent, error: checkError } = await supabaseClient
+    // === IDEMPOTENCIA ATÓMICA: INSERT-first pattern para evitar race conditions ===
+    // Intentamos insertar primero - si falla con unique constraint, otro proceso ya lo maneja
+    const { error: insertError } = await supabaseClient
       .from('stripe_webhook_events')
-      .select('id, processed_at, created_at')
-      .eq('event_id', event.id)
-      .maybeSingle();
+      .insert({
+        event_id: event.id,
+        event_type: event.type,
+        payload: event.data.object,
+        processed_at: null, // Will be set after successful processing
+      });
 
-    if (checkError) {
-      // FAIL-CLOSED: Si no podemos verificar idempotencia, rechazar la request
-      // Stripe reintentará automáticamente
-      logger.error('Idempotency check failed - rejecting request', { error: checkError });
-      return new Response(
-        JSON.stringify({ error: 'Idempotency check failed', retryable: true }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    if (insertError) {
+      // Si es error de duplicado (unique constraint), verificar estado del evento existente
+      if (insertError.code === '23505') {
+        // Consultar el evento existente para determinar si ya fue procesado
+        const { data: existingEvent } = await supabaseClient
+          .from('stripe_webhook_events')
+          .select('id, processed_at, created_at')
+          .eq('event_id', event.id)
+          .single();
 
-    if (existingEvent) {
-      // Si ya fue procesado exitosamente, skip
-      if (existingEvent.processed_at) {
-        logger.info(`Event ${event.id} already processed at ${existingEvent.processed_at}, skipping`);
-        return new Response(
-          JSON.stringify({ received: true, skipped: true, reason: 'duplicate' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Si existe pero no fue procesado, verificar si está "en progreso" (menos de 5 min)
-      const createdAt = new Date(existingEvent.created_at).getTime();
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-
-      if (createdAt > fiveMinutesAgo) {
-        // Evento reciente sin procesar = probablemente en progreso por otra instancia
-        logger.info(`Event ${event.id} in progress by another instance (created ${existingEvent.created_at}), skipping`);
-        return new Response(
-          JSON.stringify({ received: true, skipped: true, reason: 'in_progress' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Evento viejo sin procesar = falló antes, permitir reprocesamiento
-      logger.warn(`Event ${event.id} found unprocessed from ${existingEvent.created_at}, allowing retry`);
-      // Actualizar created_at para "reclamar" el evento
-      await supabaseClient
-        .from('stripe_webhook_events')
-        .update({ created_at: new Date().toISOString() })
-        .eq('event_id', event.id);
-    } else {
-      // Registrar el evento ANTES de procesarlo para evitar race conditions
-      // Use INSERT with ON CONFLICT to handle concurrent requests atomically
-      const { error: insertError } = await supabaseClient
-        .from('stripe_webhook_events')
-        .insert({
-          event_id: event.id,
-          event_type: event.type,
-          payload: event.data.object,
-          processed_at: null, // Will be set after successful processing
-        });
-
-      if (insertError) {
-        // Si es error de duplicado (unique constraint), otro proceso ya lo está manejando
-        if (insertError.code === '23505') {
-          logger.info(`Event ${event.id} being processed by another instance, skipping`);
+        if (existingEvent?.processed_at) {
+          // Ya fue procesado exitosamente
+          logger.info(`Event ${event.id} already processed at ${existingEvent.processed_at}, skipping`);
           return new Response(
-            JSON.stringify({ received: true, skipped: true, reason: 'concurrent' }),
+            JSON.stringify({ received: true, skipped: true, reason: 'duplicate' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
+
+        // Existe pero no fue procesado - verificar si está en progreso
+        if (existingEvent) {
+          const createdAt = new Date(existingEvent.created_at).getTime();
+          const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+
+          if (createdAt > fiveMinutesAgo) {
+            // Evento reciente = probablemente en progreso por otra instancia
+            logger.info(`Event ${event.id} in progress by another instance, skipping`);
+            return new Response(
+              JSON.stringify({ received: true, skipped: true, reason: 'in_progress' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Evento viejo sin procesar = falló antes, intentar reclamar con UPDATE atómico
+          const { data: claimed } = await supabaseClient
+            .from('stripe_webhook_events')
+            .update({ created_at: new Date().toISOString() })
+            .eq('event_id', event.id)
+            .is('processed_at', null)
+            .select('id')
+            .single();
+
+          if (!claimed) {
+            // Otro proceso lo reclamó primero
+            logger.info(`Event ${event.id} claimed by another instance, skipping`);
+            return new Response(
+              JSON.stringify({ received: true, skipped: true, reason: 'claimed' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          logger.warn(`Event ${event.id} reclaimed for retry after previous failure`);
+        }
+      } else {
         // FAIL-CLOSED: Any other insert error should reject the request
         logger.error('Failed to record webhook event - rejecting request', {
           error: insertError,
@@ -357,6 +355,20 @@ Deno.serve(withSentry(async (req) => {
           console.error('Error creating subscription:', subError);
         } else {
           console.log('Subscription created successfully for user:', userId);
+
+          // SECURITY: Audit log for subscription created
+          await logAuditEvent({
+            event_type: 'subscription.created' as AuditEventType,
+            user_id: userId,
+            ip_address: getClientIP(req),
+            success: true,
+            metadata: {
+              plan_id: planId,
+              stripe_subscription_id: subscription.id,
+              billing_cycle: billingCycle,
+              status: dbStatus,
+            },
+          }, supabaseClient);
 
           // === ASIGNAR ROL DE AGENTE SI ES PLAN DE AGENTE ===
           const { data: planInfo } = await supabaseClient
@@ -714,25 +726,38 @@ Deno.serve(withSentry(async (req) => {
             .eq('id', subRecord.id);
 
           // 2. Reactivar propiedades pausadas por falta de pago
-          // Solo reactivar hasta el límite del plan
+          // Solo reactivar hasta el límite del plan MENOS las ya activas
           const maxProperties = subRecord.subscription_plans?.features?.max_properties || 0;
 
-          const { data: pausedProperties } = await supabaseClient
+          // SECURITY FIX: Contar propiedades activas primero para no exceder límite
+          const { count: activeCount } = await supabaseClient
             .from('properties')
-            .select('id')
+            .select('*', { count: 'exact', head: true })
             .eq('agent_id', userId)
-            .eq('status', 'pausada')
-            .order('created_at', { ascending: true })
-            .limit(maxProperties);
+            .eq('status', 'activa');
 
-          if (pausedProperties && pausedProperties.length > 0) {
-            const propertyIds = pausedProperties.map(p => p.id);
-            await supabaseClient
+          const availableSlots = Math.max(0, maxProperties - (activeCount || 0));
+
+          if (availableSlots > 0) {
+            const { data: pausedProperties } = await supabaseClient
               .from('properties')
-              .update({ status: 'activa' })
-              .in('id', propertyIds);
+              .select('id')
+              .eq('agent_id', userId)
+              .eq('status', 'pausada')
+              .order('created_at', { ascending: true })
+              .limit(availableSlots); // Only reactivate up to available slots
 
-            console.log(`✅ Reactivated ${propertyIds.length} properties after payment success`);
+            if (pausedProperties && pausedProperties.length > 0) {
+              const propertyIds = pausedProperties.map(p => p.id);
+              await supabaseClient
+                .from('properties')
+                .update({ status: 'activa' })
+                .in('id', propertyIds);
+
+              console.log(`✅ Reactivated ${propertyIds.length} properties (${availableSlots} slots available, ${activeCount} already active)`);
+            }
+          } else {
+            console.log(`⚠️ No slots available for reactivation (${activeCount}/${maxProperties} active)`);
           }
 
           // 3. Enviar notificación de reactivación
@@ -963,7 +988,20 @@ Deno.serve(withSentry(async (req) => {
           console.error('Error canceling subscription:', cancelError);
         } else {
           console.log('Subscription canceled successfully');
-          
+
+          // SECURITY: Audit log for subscription canceled
+          if (existingSub?.user_id) {
+            await logAuditEvent({
+              event_type: 'subscription.canceled' as AuditEventType,
+              user_id: existingSub.user_id,
+              ip_address: getClientIP(req),
+              success: true,
+              metadata: {
+                stripe_subscription_id: subscription.id,
+              },
+            }, supabaseClient);
+          }
+
           // Enviar email de confirmación de cancelación
           if (existingSub && existingSub.user_id) {
             try {

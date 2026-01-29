@@ -1,5 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIP, rateLimitedResponse, RateLimitConfig } from '../_shared/rateLimit.ts';
+
+// Rate limit for public search: 60 requests per minute per IP
+const searchRateLimit: RateLimitConfig = {
+  maxRequests: 60,
+  windowMs: 60 * 1000,
+  keyPrefix: 'property-search',
+};
 
 // =============================================
 // ENTERPRISE MAP CLUSTERING - REWRITTEN FROM SCRATCH
@@ -54,13 +62,43 @@ Deno.serve(async (req) => {
 
   const startTime = Date.now();
 
+  // SECURITY: Rate limiting to prevent scraping
+  const clientIP = getClientIP(req);
+  const rateLimitResult = checkRateLimit(clientIP, searchRateLimit);
+  if (!rateLimitResult.allowed) {
+    return rateLimitedResponse(rateLimitResult, corsHeaders);
+  }
+
   try {
     const body: RequestBody = await req.json();
-    const { bounds, zoom, filters = {}, page = 1, limit = 20, geohash_filter } = body;
+    let { bounds, zoom, filters = {}, page = 1, limit = 20, geohash_filter } = body;
+
+    // SECURITY: Input validation to prevent DoS
+    page = Math.max(1, Math.min(page, 1000)); // Max 1000 pages
+    limit = Math.max(1, Math.min(limit, 100)); // Max 100 items per page
 
     if (!bounds || zoom === undefined) {
       return new Response(
         JSON.stringify({ error: 'bounds and zoom required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // SECURITY: Validate bounds are reasonable coordinates
+    if (bounds.north < -90 || bounds.north > 90 ||
+        bounds.south < -90 || bounds.south > 90 ||
+        bounds.east < -180 || bounds.east > 180 ||
+        bounds.west < -180 || bounds.west > 180) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid coordinates' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // SECURITY: Validate zoom is reasonable
+    if (zoom < 0 || zoom > 22) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid zoom level' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

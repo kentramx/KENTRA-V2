@@ -6,29 +6,48 @@ import { withRetry, isRetryableStripeError } from '../_shared/retry.ts';
 import { withCircuitBreaker } from '../_shared/circuitBreaker.ts';
 import { withSentry } from '../_shared/sentry.ts';
 import { getCorsHeaders } from '../_shared/cors.ts';
-import { checkBodySize, bodySizeLimitResponse, BODY_SIZE_LIMITS } from '../_shared/validation.ts';
+import { checkBodySize, bodySizeLimitResponse, BODY_SIZE_LIMITS, createSafeCheckoutMetadata } from '../_shared/validation.ts';
 import { checkRateLimit as checkRedisRateLimit } from '../_shared/redis.ts';
+import { validateCsrf } from '../_shared/csrfProtection.ts';
 
 /**
  * Validates that a redirect URL is safe (on allowed domain)
  * Prevents open redirect attacks in payment flows
+ * SECURITY: localhost removed - only production domains allowed
  */
-const ALLOWED_DOMAINS = ['kentra.mx', 'kentra.com.mx', 'www.kentra.mx', 'www.kentra.com.mx', 'localhost:5173', 'localhost:3000'];
+const ALLOWED_DOMAINS = ['kentra.mx', 'kentra.com.mx', 'www.kentra.mx', 'www.kentra.com.mx'];
 function isValidRedirectUrl(url: string | undefined, origin: string): boolean {
   if (!url) return true; // undefined is OK, will use default
 
   try {
     const parsed = new URL(url);
-    // Allow URLs on the same origin
+    // SECURITY: Only allow exact domain matches, no subdomain wildcards
+    const hostname = parsed.hostname;
+
+    // Check if origin is from a valid domain
     const originHost = new URL(origin).hostname;
-    if (parsed.hostname === originHost) return true;
-    // Allow URLs on allowed domains
-    return ALLOWED_DOMAINS.some(domain =>
-      parsed.hostname === domain || parsed.hostname.endsWith('.' + domain)
-    );
+    const isValidOrigin = ALLOWED_DOMAINS.includes(originHost) ||
+      (originHost === 'localhost' && Deno.env.get('ENVIRONMENT') === 'development');
+
+    if (!isValidOrigin) {
+      return false;
+    }
+
+    // Allow URLs on exact allowed domains only
+    if (ALLOWED_DOMAINS.includes(hostname)) {
+      return true;
+    }
+
+    // In development, allow localhost
+    if (hostname === 'localhost' && Deno.env.get('ENVIRONMENT') === 'development') {
+      return true;
+    }
+
+    return false;
   } catch {
     // Invalid URL - could be a relative path, check it starts with /
-    if (url.startsWith('/') && !url.startsWith('//')) {
+    // SECURITY: Must start with / but not // (protocol-relative)
+    if (url.startsWith('/') && !url.startsWith('//') && !url.includes('://')) {
       return true;
     }
     return false;
@@ -126,6 +145,17 @@ Deno.serve(withSentry(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // SECURITY: CSRF protection for state-changing operation
+  const isDev = Deno.env.get('ENVIRONMENT') === 'development';
+  const csrfResult = validateCsrf(req, { requireXRequestedWith: false, allowDev: isDev });
+  if (!csrfResult.valid) {
+    logger.warn('CSRF validation failed', { error: csrfResult.error });
+    return new Response(
+      JSON.stringify({ error: 'Invalid request origin' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
@@ -397,6 +427,14 @@ Deno.serve(withSentry(async (req) => {
 
       console.log('Creating upsell checkout with line items:', lineItems, 'mode:', mode);
 
+      // SECURITY: Use sanitized metadata to prevent injection attacks
+      const upsellOnlyMetadata = createSafeCheckoutMetadata({
+        userId: user.id,
+        upsellOnly: true,
+        upsellIds: upsellDetails.map((u) => u.id),
+        upsellQuantities: upsellDetails.map((u) => upsellQuantities[u.id] || 1),
+      });
+
       // Crear sesión
       const sessionParams: Record<string, unknown> = {
         mode,
@@ -406,12 +444,7 @@ Deno.serve(withSentry(async (req) => {
         success_url: finalSuccessUrl,
         cancel_url: finalCancelUrl,
         client_reference_id: user.id,
-        metadata: {
-          user_id: user.id,
-          upsell_only: 'true',
-          upsell_ids: upsellDetails.map((u) => u.id).join(','),
-          upsell_quantities: upsellDetails.map((u) => upsellQuantities[u.id] || 1).join(','),
-        },
+        metadata: upsellOnlyMetadata,
       };
 
       // Aplicar cupón si fue validado
@@ -588,22 +621,21 @@ Deno.serve(withSentry(async (req) => {
     ];
 
     // METADATA COMPLETA para webhook - CRÍTICO para sincronización correcta
-    const metadata: Record<string, string> = {
-      user_id: user.id,
-      plan_id: plan.id, // CRÍTICO: Necesario para que el webhook actualice la suscripción
-      plan_slug: upsellOnly ? 'upsell' : plan.name,
-      billing_cycle: billingCycle,
-      upsell_only: upsellOnly.toString(),
+    // SECURITY: Use sanitized metadata to prevent injection attacks
+    const upsellIds = upsells?.map((u: Record<string, unknown>) => u.id as string).filter(Boolean) || [];
+    const upsellQuantities = upsells?.map((u: Record<string, unknown>) => (u.quantity as number) || 1) || [];
+
+    const metadata = createSafeCheckoutMetadata({
+      userId: user.id,
+      planId: plan.id, // CRÍTICO: Necesario para que el webhook actualice la suscripción
+      planSlug: upsellOnly ? 'upsell' : plan.name,
+      billingCycle,
+      upsellOnly,
+      upsellIds,
+      upsellQuantities,
+      couponCode,
       environment: 'production',
-    };
-
-    if (upsells && upsells.length > 0) {
-      metadata.upsells = JSON.stringify(upsells);
-    }
-
-    if (couponCode) {
-      metadata.coupon_code = couponCode;
-    }
+    });
 
     console.log('Creating checkout with line items:', lineItems);
 

@@ -16,6 +16,16 @@ import {
   getVerificationEmailText
 } from "../_shared/authEmailTemplates.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIP, rateLimitedResponse, RateLimitConfig } from "../_shared/rateLimit.ts";
+import { validateCsrf } from "../_shared/csrfProtection.ts";
+import { logAuditEvent, createAuditEntry } from "../_shared/auditLog.ts";
+
+// SECURITY: Rate limit to prevent email bombing - 3 emails per 10 minutes per IP
+const emailRateLimit: RateLimitConfig = {
+  maxRequests: 3,
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  keyPrefix: 'email-verification',
+};
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -58,6 +68,25 @@ serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers });
+  }
+
+  // SECURITY: CSRF protection for state-changing operation
+  const isDev = Deno.env.get('ENVIRONMENT') === 'development';
+  const csrfResult = validateCsrf(req, { requireXRequestedWith: false, allowDev: isDev });
+  if (!csrfResult.valid) {
+    console.warn(`CSRF validation failed: ${csrfResult.error}`);
+    return new Response(
+      JSON.stringify({ error: "Invalid request origin" }),
+      { status: 403, headers: { ...headers, "Content-Type": "application/json" } }
+    );
+  }
+
+  // SECURITY: Rate limiting to prevent email bombing
+  const clientIP = getClientIP(req);
+  const rateLimitResult = checkRateLimit(clientIP, emailRateLimit);
+  if (!rateLimitResult.allowed) {
+    console.warn(`Rate limit exceeded for email verification from IP: ${clientIP}`);
+    return rateLimitedResponse(rateLimitResult, headers);
   }
 
   try {
@@ -234,6 +263,14 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     console.log(`✅ Verification email sent successfully. Resend ID: ${emailData?.id}`);
+
+    // SECURITY: Audit log for verification email sent
+    await logAuditEvent(createAuditEntry(req, 'auth.email_verification_sent', {
+      userId,
+      email,
+      success: true,
+      metadata: { resend_id: emailData?.id }
+    }), supabaseAdmin);
 
     return new Response(
       JSON.stringify({

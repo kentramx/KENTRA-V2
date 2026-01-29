@@ -29,8 +29,9 @@ const isAllowedOrigin = (origin: string): boolean => {
 };
 
 /**
- * Get CORS headers with origin validation
+ * Get CORS headers with origin validation and security headers
  * Only allows requests from whitelisted domains
+ * Includes OWASP recommended security headers
  */
 export const getCorsHeaders = (requestOrigin: string | null): Record<string, string> => {
   const origin = requestOrigin && isAllowedOrigin(requestOrigin)
@@ -38,10 +39,18 @@ export const getCorsHeaders = (requestOrigin: string | null): Record<string, str
     : ALLOWED_ORIGINS[0]; // Default to production domain
 
   return {
+    // CORS headers
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Max-Age': '86400',
+    // Security headers
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.stripe.com",
   };
 };
 

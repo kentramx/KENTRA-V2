@@ -3,6 +3,12 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { monitoring, setUser as setSentryUser, clearUser as clearSentryUser } from '@/lib/monitoring';
+import {
+  checkLoginAttempt,
+  recordFailedAttempt,
+  clearFailedAttempts,
+  getRateLimitMessage,
+} from '@/lib/bruteForceProtection';
 
 interface AuthError {
   message: string;
@@ -92,14 +98,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    // SECURITY: Check brute force protection before attempting login
+    const bruteForceCheck = checkLoginAttempt(email);
+    if (!bruteForceCheck.allowed) {
+      return {
+        error: {
+          message: getRateLimitMessage(bruteForceCheck),
+          code: bruteForceCheck.isLockedOut ? 'account_locked' : 'rate_limited',
+        },
+      };
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      // SECURITY: Record failed attempt for brute force protection
+      const failedResult = recordFailedAttempt(email);
+
+      // Add context to error message if rate limited
+      if (failedResult.attemptsRemaining !== undefined && failedResult.attemptsRemaining <= 2) {
+        return {
+          error: {
+            message: `${error.message}. Te quedan ${failedResult.attemptsRemaining} intento${failedResult.attemptsRemaining !== 1 ? 's' : ''}.`,
+            code: error.message,
+          },
+        };
+      }
+
       return { error };
     }
+
+    // SECURITY: Clear failed attempts on successful login
+    clearFailedAttempts(email);
 
     // SECURITY: Verify email is confirmed before allowing access
     const user = data.user;
@@ -252,33 +285,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   /**
    * Reenvía email de verificación usando sistema custom con Resend
+   * SECURITY: No longer uses intentional failed login to prevent user enumeration
    */
   const resendConfirmationEmail = async (email: string, userName?: string) => {
     try {
-      // Primero obtener el usuario ID del email
-      // This call intentionally fails but triggers email lookup
-      await supabase.auth.signInWithPassword({
-        email,
-        password: 'dummy_password_to_get_user_info_' + Date.now(), // Esto fallará pero nos da info
-      });
-
-      // Intentamos enviar de todas formas - la Edge Function buscará el usuario
+      // Call edge function directly - it will handle user lookup securely
+      // Always returns success to prevent email enumeration attacks
       const response = await supabase.functions.invoke('send-auth-verification-email', {
         body: {
-          userId: 'unknown', // La Edge Function manejará esto
+          userId: 'lookup', // Edge function will lookup by email
           email,
           userName: userName || ''
         }
       });
 
+      // Always return success to prevent enumeration
+      // The edge function handles whether the email exists or not
       if (response.error) {
-        // Si el error es de autenticación, ignorar y continuar
-        // Error logged via monitoring if needed
+        console.error('[Auth] Verification email error:', response.error);
       }
 
       return { error: null };
     } catch (error: unknown) {
-      return { error: { message: error instanceof Error ? error.message : 'Error inesperado' } };
+      // Always return success to prevent enumeration
+      console.error('[Auth] Verification email exception:', error);
+      return { error: null };
     }
   };
 

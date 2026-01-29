@@ -16,6 +16,8 @@ import {
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 import { getCorsHeaders, corsHeaders } from "../_shared/cors.ts";
+import { validateCsrf } from "../_shared/csrfProtection.ts";
+import { logAuditEvent, createAuditEntry } from "../_shared/auditLog.ts";
 
 const FROM_EMAIL = "Kentra <no-reply@updates.kentra.com.mx>"; // Estandarizado con guión
 const REPLY_TO = "soporte@kentra.com.mx";
@@ -54,6 +56,17 @@ serve(async (req: Request): Promise<Response> => {
     return new Response(null, { headers });
   }
 
+  // SECURITY: CSRF protection for state-changing operation
+  const isDev = Deno.env.get('ENVIRONMENT') === 'development';
+  const csrfResult = validateCsrf(req, { requireXRequestedWith: false, allowDev: isDev });
+  if (!csrfResult.valid) {
+    console.warn(`CSRF validation failed: ${csrfResult.error}`);
+    return new Response(
+      JSON.stringify({ error: "Invalid request origin" }),
+      { status: 403, headers: { ...headers, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const body = await req.json() as RequestBody;
 
@@ -65,9 +78,9 @@ serve(async (req: Request): Promise<Response> => {
     );
 
     if (body.type === "verification") {
-      return await handleVerification(supabaseAdmin, body, headers);
+      return await handleVerification(req, supabaseAdmin, body, headers);
     } else if (body.type === "recovery") {
-      return await handleRecovery(supabaseAdmin, body, headers);
+      return await handleRecovery(req, supabaseAdmin, body, headers);
     } else {
       return new Response(
         JSON.stringify({ error: "Invalid token type" }),
@@ -89,6 +102,7 @@ serve(async (req: Request): Promise<Response> => {
  * Maneja la verificación de código de email
  */
 async function handleVerification(
+  req: Request,
   supabaseAdmin: ReturnType<typeof createClient>,
   { code, email }: VerifyVerificationRequest,
   headers: Record<string, string>
@@ -148,9 +162,16 @@ async function handleVerification(
 
   console.log(`✅ Email verified successfully for user: ${tokenData.user_id}`);
 
+  // SECURITY: Audit log for email verification
+  await logAuditEvent(createAuditEntry(req, 'auth.email_verification_complete', {
+    userId: tokenData.user_id,
+    email: normalizedEmail,
+    success: true,
+  }), supabaseAdmin);
+
   return new Response(
-    JSON.stringify({ 
-      success: true, 
+    JSON.stringify({
+      success: true,
       message: "Email verificado correctamente",
       userId: tokenData.user_id
     }),
@@ -162,6 +183,7 @@ async function handleVerification(
  * Maneja la recuperación de contraseña
  */
 async function handleRecovery(
+  req: Request,
   supabaseAdmin: ReturnType<typeof createClient>,
   { token, newPassword }: VerifyRecoveryRequest,
   headers: Record<string, string>
@@ -173,7 +195,7 @@ async function handleRecovery(
     );
   }
 
-  // Validar contraseña - DEBE coincidir con frontend (12 chars, mayúscula, minúscula, número)
+  // Validar contraseña - DEBE coincidir con frontend (12 chars, mayúscula, minúscula, número, especial)
   const passwordErrors: string[] = [];
   if (newPassword.length < 12) {
     passwordErrors.push("al menos 12 caracteres");
@@ -186,6 +208,9 @@ async function handleRecovery(
   }
   if (!/[0-9]/.test(newPassword)) {
     passwordErrors.push("un número");
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
+    passwordErrors.push("un carácter especial (!@#$%^&*...)");
   }
 
   if (passwordErrors.length > 0) {
@@ -292,9 +317,17 @@ async function handleRecovery(
     console.error("⚠️ Error sending password change confirmation:", emailError);
   }
 
+  // SECURITY: Audit log for password change
+  await logAuditEvent(createAuditEntry(req, 'auth.password_reset_complete', {
+    userId: tokenData.user_id,
+    email: tokenData.email,
+    success: true,
+    metadata: { method: 'recovery_token' }
+  }), supabaseAdmin);
+
   return new Response(
-    JSON.stringify({ 
-      success: true, 
+    JSON.stringify({
+      success: true,
       message: "Contraseña actualizada correctamente"
     }),
     { status: 200, headers: { ...headers, "Content-Type": "application/json" } }

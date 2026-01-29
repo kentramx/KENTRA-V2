@@ -13,12 +13,13 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useTracking } from '@/hooks/useTracking';
 import kentraLogo from '@/assets/kentra-logo.png';
 
-// Password validation: min 12 chars, at least 1 uppercase, 1 lowercase, 1 number
+// Password validation: min 12 chars, uppercase, lowercase, number, special char
 const passwordSchema = z.string()
   .min(12, { message: 'La contraseña debe tener al menos 12 caracteres' })
   .regex(/[A-Z]/, { message: 'La contraseña debe contener al menos una mayúscula' })
   .regex(/[a-z]/, { message: 'La contraseña debe contener al menos una minúscula' })
-  .regex(/[0-9]/, { message: 'La contraseña debe contener al menos un número' });
+  .regex(/[0-9]/, { message: 'La contraseña debe contener al menos un número' })
+  .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, { message: 'La contraseña debe contener al menos un carácter especial (!@#$%^&*...)' });
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: 'Correo electrónico inválido' }),
