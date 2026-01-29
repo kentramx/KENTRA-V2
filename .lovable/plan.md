@@ -1,50 +1,135 @@
 
-# Plan para Corregir Errores de TypeScript en Edge Functions
+# Plan: Reposicionar Kentra como Plataforma de Inmuebles Generales
 
-## Problema
-El proyecto no puede compilarse debido a errores de TypeScript en 3 archivos compartidos de las Edge Functions. Esto causa que veas "Preview has not been built yet" en Lovable.
+## Resumen Ejecutivo
+Kentra ya soporta **8 tipos de propiedades** (casa, departamento, terreno, oficina, local, bodega, edificio, rancho), pero el copy de marketing y SEO todavía enfatiza "casas" y "hogar". Este plan cambia el posicionamiento de "especializada en casas" a **"marketplace inmobiliario integral"**.
 
-## Archivos a Corregir
+---
 
-### 1. emailHelper.ts
-**Error:** El tipo de retorno `data` es incompatible con la definición de la función.
+## Cambios Identificados
 
-**Solución:** Cambiar el tipo de retorno de `data` de `Record<string, unknown>` a `unknown` para aceptar cualquier respuesta de la API de Resend:
+### 1. Página Principal (Home.tsx)
+
+| Elemento | Actual | Propuesto |
+|----------|--------|-----------|
+| Trust Badge | "Plataforma inmobiliaria #1 en México" | ✅ Ya es genérico, mantener |
+| Headline H1 | "Tu próximo **hogar**, a un clic" | "Tu próximo **inmueble**, a un clic" |
+| Subtítulo | "Miles de propiedades verificadas en todo México" | ✅ Ya es genérico, mantener |
+| SEO Title | "...Casas, Departamentos y más" | "Propiedades en Venta y Renta" |
+| SEO Description | "...casas, departamentos, terrenos, oficinas" | "Cualquier tipo de inmueble..." |
+
+### 2. index.html (Meta Tags Globales)
+
+| Meta | Actual | Propuesto |
+|------|--------|-----------|
+| `<title>` | "El Marketplace Inmobiliario de México" | ✅ Mantener |
+| `<description>` | "...Miles de casas, departamentos y terrenos..." | "Miles de propiedades: residenciales, comerciales e industriales" |
+| OG description | Similar | Mismo cambio |
+| Twitter description | Similar | Mismo cambio |
+
+### 3. Datos Estructurados (structuredData.ts)
+
+| Campo | Actual | Propuesto |
+|-------|--------|-----------|
+| WebSite description | "...casas, departamentos, terrenos..." | "...cualquier tipo de inmueble: residencial, comercial, industrial y terrenos" |
+| Organization description | "Plataforma inmobiliaria líder en México" | ✅ Ya es genérico |
+
+### 4. Footer.tsx
+
+| Texto | Actual | Propuesto |
+|-------|--------|-----------|
+| Descripción | "...para comprar, vender y rentar propiedades" | ✅ Ya es genérico, mantener |
+
+### 5. Testimonials.tsx
+Los testimonios actuales ya mencionan "propiedades" y "departamentos" de forma genérica. ✅ No requiere cambios.
+
+---
+
+## Archivos a Modificar
+
 ```text
-Antes:  Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }>
-Después: Promise<{ success: boolean; data?: unknown; error?: string }>
+1. src/pages/Home.tsx
+   - Línea 92-93: SEO title/description
+   - Línea 127: Cambiar "hogar" → "inmueble"
+
+2. index.html
+   - Línea 11: Meta description
+   - Línea 21: OG description
+   - Línea 32: Twitter description
+
+3. src/utils/structuredData.ts
+   - Línea 107: WebSite description
 ```
 
-### 2. retry.ts  
-**Error:** No se puede convertir `Error` directamente a `Record<string, unknown>` para acceder a propiedades como `statusCode`.
+---
 
-**Solución:** Usar conversión segura a través de `unknown` primero y tipar `statusCode` correctamente:
-```text
-Antes:  (error as Record<string, unknown>).statusCode
-Después: const err = error as unknown as Record<string, unknown>;
-         const statusCode = typeof err.statusCode === 'number' ? err.statusCode 
-                          : typeof err.status === 'number' ? err.status : undefined;
+## Impacto SEO
+
+**Palabras clave objetivo ampliadas:**
+- Antes: "casas en venta México", "casas en renta"
+- Ahora: "inmuebles en venta", "propiedades comerciales", "oficinas en renta", "bodegas industriales", "terrenos"
+
+**Beneficios:**
+- Mayor alcance de búsquedas long-tail
+- Posicionamiento en segmentos comerciales/industriales
+- Consistencia entre funcionalidad (8 tipos) y marketing
+
+---
+
+## Sección Técnica
+
+### Cambios en código
+
+**Home.tsx (líneas 91-94, 127):**
+```tsx
+// SEO
+<SEOHead 
+  title="Kentra - Encuentra tu Propiedad Ideal en México | Venta y Renta" 
+  description="El marketplace inmobiliario de México. Propiedades residenciales, comerciales e industriales. Contacta agentes certificados." 
+  ...
+/>
+
+// Headline
+<h1 ...>
+  Tu próximo inmueble,
+  <span ...> a un clic</span>
+</h1>
 ```
 
-### 3. validation.ts
-**Error:** El tipo `object` no tiene propiedades indexables en TypeScript estricto.
-
-**Solución:** Hacer casting a `Record<string, unknown>` después de verificar que es objeto:
-```text
-Antes:  if (body.upsellOnly !== true)
-Después: const b = body as Record<string, unknown>;
-         if (b.upsellOnly !== true)
+**index.html (líneas 10-12, 21, 32):**
+```html
+<meta
+  name="description"
+  content="El marketplace inmobiliario de México. Miles de propiedades residenciales, comerciales e industriales en venta y renta. Agentes certificados y mapa interactivo."
+/>
+<meta property="og:description" content="Miles de propiedades: casas, departamentos, oficinas, bodegas y terrenos. Agentes certificados." />
+<meta name="twitter:description" content="Miles de propiedades residenciales y comerciales. Agentes certificados." />
 ```
 
-## Cambios Específicos
+**structuredData.ts (línea 107):**
+```typescript
+description: 'El marketplace inmobiliario de México. Propiedades residenciales, comerciales, industriales y terrenos en venta y renta.',
+```
 
-| Archivo | Línea(s) | Cambio |
-|---------|----------|--------|
-| emailHelper.ts | 130, 176, 189 | Cambiar tipo `data` a `unknown` |
-| retry.ts | 63-84, 89-102 | Refactorizar funciones de retry con tipos seguros |
-| validation.ts | 34-96, 106-142, 151-183, 192-223 | Usar `Record<string, unknown>` en lugar de `object` |
+---
 
-## Resumen Técnico
-- **Total de errores:** ~35 errores de TypeScript
-- **Tiempo estimado de corrección:** Inmediato al aprobar
-- **Impacto:** Una vez corregidos, el build pasará y el preview funcionará correctamente
+## Cambios NO Necesarios
+
+Los siguientes elementos **ya son genéricos** y no requieren modificación:
+
+- ✅ PropertyTypeSelector.tsx - Ya muestra los 8 tipos
+- ✅ MapFilters.tsx - Ya tiene todos los tipos en dropdown
+- ✅ types/property.ts - PropertyType ya incluye todos los tipos
+- ✅ Footer.tsx - Dice "propiedades" no "casas"
+- ✅ StatsCounter.tsx - Dice "Propiedades Activas"
+- ✅ Testimonials.tsx - Textos genéricos
+- ✅ Ayuda.tsx - FAQs ya mencionan "propiedades" genéricamente
+- ✅ PricingAgente.tsx - No menciona tipos específicos
+
+---
+
+## Estimación
+- **Archivos a modificar:** 3
+- **Líneas de código:** ~15
+- **Riesgo:** Bajo (solo cambios de texto/copy)
+- **Tiempo estimado:** 5-10 minutos
