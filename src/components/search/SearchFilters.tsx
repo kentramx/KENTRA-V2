@@ -63,14 +63,14 @@ export function SearchFilters() {
 
         {/* Property Type */}
         <Select
-          value={filters.property_type || ''}
-          onValueChange={(v) => updateFilter('property_type', v || undefined)}
+          value={filters.property_type || '__all__'}
+          onValueChange={(v) => updateFilter('property_type', v === '__all__' ? undefined : v)}
         >
           <SelectTrigger className="w-[180px] h-9">
             <SelectValue placeholder="Tipo de propiedad" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos los tipos</SelectItem>
+            <SelectItem value="__all__">Todos los tipos</SelectItem>
             {Object.entries(groupedTypes).map(([category, types]) => (
               <div key={category}>
                 <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -107,14 +107,14 @@ export function SearchFilters() {
 
         {/* Bedrooms */}
         <Select
-          value={filters.min_bedrooms?.toString() || ''}
-          onValueChange={(v) => updateFilter('min_bedrooms', v ? Number(v) : undefined)}
+          value={filters.min_bedrooms?.toString() || '__all__'}
+          onValueChange={(v) => updateFilter('min_bedrooms', v === '__all__' ? undefined : Number(v))}
         >
           <SelectTrigger className="w-[130px] h-9">
             <SelectValue placeholder="Recámaras" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Cualquiera</SelectItem>
+            <SelectItem value="__all__">Cualquiera</SelectItem>
             <SelectItem value="1">1+ recámaras</SelectItem>
             <SelectItem value="2">2+ recámaras</SelectItem>
             <SelectItem value="3">3+ recámaras</SelectItem>
