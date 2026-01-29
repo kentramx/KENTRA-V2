@@ -89,7 +89,8 @@ export const MEXICO_CONFIG = {
   defaultZoom: 6,
   minZoom: 4,
   maxZoom: 18,
-  clusterThreshold: 12 // Zoom level - below shows clusters, at/above shows properties
+  // Cluster threshold for Supercluster - shows individual markers at zoom >= 14
+  clusterThreshold: 14
 } as const;
 
 // Map zoom to clustering precision
