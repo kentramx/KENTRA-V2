@@ -674,12 +674,70 @@ Deno.serve(withSentry(async (req) => {
           break;
         }
 
-        // Reactivate if was past_due
-        if (subRecord.status === 'past_due') {
+        // 🔧 FIX P0: Reactivar suscripción Y propiedades si estaba past_due o suspended
+        const wasInactive = subRecord.status === 'past_due' || subRecord.status === 'suspended';
+
+        if (wasInactive) {
+          console.log(`🔄 Reactivating subscription from ${subRecord.status} to active`);
+
+          // 1. Actualizar status de suscripción a active
           await supabaseClient
             .from('user_subscriptions')
-            .update({ status: 'active' })
+            .update({
+              status: 'active',
+              // Limpiar metadata de fallo de pago
+              metadata: {
+                ...subRecord.metadata,
+                payment_failure_count: 0,
+                first_payment_failed_at: null,
+                last_payment_failed_at: null,
+                grace_days_remaining: null,
+              },
+            })
             .eq('id', subRecord.id);
+
+          // 2. Reactivar propiedades pausadas por falta de pago
+          // Solo reactivar hasta el límite del plan
+          const maxProperties = subRecord.subscription_plans?.features?.max_properties || 0;
+
+          const { data: pausedProperties } = await supabaseClient
+            .from('properties')
+            .select('id')
+            .eq('agent_id', userId)
+            .eq('status', 'pausada')
+            .order('created_at', { ascending: true })
+            .limit(maxProperties);
+
+          if (pausedProperties && pausedProperties.length > 0) {
+            const propertyIds = pausedProperties.map(p => p.id);
+            await supabaseClient
+              .from('properties')
+              .update({ status: 'activa' })
+              .in('id', propertyIds);
+
+            console.log(`✅ Reactivated ${propertyIds.length} properties after payment success`);
+          }
+
+          // 3. Enviar notificación de reactivación
+          await supabaseClient.functions.invoke('send-subscription-notification', {
+            body: {
+              userId: subRecord.user_id,
+              type: 'renewal_success',
+              metadata: {
+                planName: subRecord.subscription_plans?.display_name || 'Tu plan',
+                amount: (invoice.amount_paid / 100).toFixed(2),
+                nextBillingDate: new Date(subscription.current_period_end * 1000).toLocaleDateString('es-MX', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                }),
+                wasReactivated: true,
+                propertiesReactivated: pausedProperties?.length || 0,
+              },
+            },
+          });
+
+          console.log('📧 Sent reactivation notification');
         }
 
         // 🔧 FIX: Detectar tipo de factura para registro correcto
@@ -728,14 +786,14 @@ Deno.serve(withSentry(async (req) => {
           console.log('Synced subscription period dates from Stripe');
         }
 
-        // Send renewal success notification (only for renewals, not prorations)
-        if (!isProration) {
+        // Send renewal success notification (only for renewals, not prorations, and not if already sent for reactivation)
+        if (!isProration && !wasInactive) {
           await supabaseClient.functions.invoke('send-subscription-notification', {
             body: {
               userId: subRecord.user_id,
               type: 'renewal_success',
               metadata: {
-                planName: subRecord.subscription_plans.display_name,
+                planName: subRecord.subscription_plans?.display_name || 'Tu plan',
                 amount: (invoice.amount_paid / 100).toFixed(2),
                 nextBillingDate: new Date(subscription.current_period_end * 1000).toLocaleDateString('es-MX', {
                   year: 'numeric',
@@ -745,8 +803,10 @@ Deno.serve(withSentry(async (req) => {
               },
             },
           });
-        } else {
+        } else if (isProration) {
           console.log('Proration payment processed - skipping renewal notification');
+        } else if (wasInactive) {
+          console.log('Reactivation notification already sent - skipping duplicate');
         }
 
         break;
@@ -788,13 +848,40 @@ Deno.serve(withSentry(async (req) => {
             newPlanId = matchedPlan.id;
             console.log('Detected plan change from Stripe, new plan_id:', newPlanId, 'plan:', matchedPlan.name);
           } else {
-            // CRITICAL: Price in Stripe doesn't match any plan in DB - potential desync!
+            // 🚨 CRITICAL P0 FIX: Price in Stripe doesn't match any plan in DB - ALERT ADMIN!
             logger.error('STRIPE_DB_DESYNC: Stripe price_id not found in subscription_plans', {
               stripeSubscriptionId: subscription.id,
               stripePriceId: currentPriceId,
               userId: userId,
             });
-            // TODO: Alert admin about this desync
+
+            // Alert admin immediately
+            await supabaseClient.functions.invoke('send-admin-alerts', {
+              body: {
+                type: 'stripe_db_desync',
+                severity: 'critical',
+                message: `Stripe price_id no existe en DB: ${currentPriceId}`,
+                details: {
+                  stripeSubscriptionId: subscription.id,
+                  stripePriceId: currentPriceId,
+                  userId: userId,
+                  action_required: 'Verificar si el precio existe en subscription_plans o si el plan fue eliminado',
+                },
+              },
+            });
+
+            // Also log to admin_audit_log for tracking
+            await supabaseClient
+              .from('admin_audit_log')
+              .insert({
+                action: 'stripe_db_desync_detected',
+                details: {
+                  stripe_subscription_id: subscription.id,
+                  stripe_price_id: currentPriceId,
+                  user_id: userId,
+                  detected_at: new Date().toISOString(),
+                },
+              });
           }
         } else {
           logger.warn('No price_id found in subscription items', {
