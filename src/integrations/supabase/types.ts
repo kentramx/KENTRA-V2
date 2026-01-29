@@ -1565,6 +1565,8 @@ export type Database = {
           geohash_4: string | null
           geohash_5: string | null
           geohash_6: string | null
+          geohash_7: string | null
+          geohash_8: string | null
           geom: unknown
           has_inappropriate_images: boolean | null
           has_manipulated_images: boolean | null
@@ -1624,6 +1626,8 @@ export type Database = {
           geohash_4?: string | null
           geohash_5?: string | null
           geohash_6?: string | null
+          geohash_7?: string | null
+          geohash_8?: string | null
           geom?: unknown
           has_inappropriate_images?: boolean | null
           has_manipulated_images?: boolean | null
@@ -1683,6 +1687,8 @@ export type Database = {
           geohash_4?: string | null
           geohash_5?: string | null
           geohash_6?: string | null
+          geohash_7?: string | null
+          geohash_8?: string | null
           geom?: unknown
           has_inappropriate_images?: boolean | null
           has_manipulated_images?: boolean | null
@@ -1883,6 +1889,36 @@ export type Database = {
           },
         ]
       }
+      property_node_mapping: {
+        Row: {
+          leaf_node_id: string
+          property_id: string
+        }
+        Insert: {
+          leaf_node_id: string
+          property_id: string
+        }
+        Update: {
+          leaf_node_id?: string
+          property_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_node_mapping_leaf_node_id_fkey"
+            columns: ["leaf_node_id"]
+            isOneToOne: false
+            referencedRelation: "spatial_tree_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_node_mapping_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: true
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       property_views: {
         Row: {
           id: string
@@ -1924,6 +1960,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      required_cron_jobs: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          endpoint: string
+          id: number
+          is_critical: boolean | null
+          job_name: string
+          schedule: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          endpoint: string
+          id?: number
+          is_critical?: boolean | null
+          job_name: string
+          schedule: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          endpoint?: string
+          id?: number
+          is_critical?: boolean | null
+          job_name?: string
+          schedule?: string
+        }
+        Relationships: []
       }
       saved_searches: {
         Row: {
@@ -1975,6 +2041,89 @@ export type Database = {
           srtext?: string | null
         }
         Relationships: []
+      }
+      spatial_tree_nodes: {
+        Row: {
+          center_lat: number
+          center_lng: number
+          count_casa: number
+          count_departamento: number
+          count_local: number
+          count_oficina: number
+          count_otro: number
+          count_renta: number
+          count_terreno: number
+          count_venta: number
+          created_at: string | null
+          id: string
+          level: number
+          max_lat: number
+          max_lng: number
+          max_price: number | null
+          min_lat: number
+          min_lng: number
+          min_price: number | null
+          parent_id: string | null
+          total_count: number
+          updated_at: string | null
+        }
+        Insert: {
+          center_lat: number
+          center_lng: number
+          count_casa?: number
+          count_departamento?: number
+          count_local?: number
+          count_oficina?: number
+          count_otro?: number
+          count_renta?: number
+          count_terreno?: number
+          count_venta?: number
+          created_at?: string | null
+          id: string
+          level: number
+          max_lat: number
+          max_lng: number
+          max_price?: number | null
+          min_lat: number
+          min_lng: number
+          min_price?: number | null
+          parent_id?: string | null
+          total_count?: number
+          updated_at?: string | null
+        }
+        Update: {
+          center_lat?: number
+          center_lng?: number
+          count_casa?: number
+          count_departamento?: number
+          count_local?: number
+          count_oficina?: number
+          count_otro?: number
+          count_renta?: number
+          count_terreno?: number
+          count_venta?: number
+          created_at?: string | null
+          id?: string
+          level?: number
+          max_lat?: number
+          max_lng?: number
+          max_price?: number | null
+          min_lat?: number
+          min_lng?: number
+          min_price?: number | null
+          parent_id?: string | null
+          total_count?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spatial_tree_nodes_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "spatial_tree_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stripe_webhook_events: {
         Row: {
@@ -2537,6 +2686,31 @@ export type Database = {
         }
         Relationships: []
       }
+      mv_geohash_clusters_7: {
+        Row: {
+          avg_price: number | null
+          count: number | null
+          geohash: string | null
+          lat: number | null
+          listing_type: string | null
+          lng: number | null
+          max_price: number | null
+          min_price: number | null
+        }
+        Relationships: []
+      }
+      mv_geohash_clusters_7_all: {
+        Row: {
+          avg_price: number | null
+          count: number | null
+          geohash: string | null
+          lat: number | null
+          lng: number | null
+          max_price: number | null
+          min_price: number | null
+        }
+        Relationships: []
+      }
       mv_global_stats: {
         Row: {
           active_properties: number | null
@@ -2546,6 +2720,42 @@ export type Database = {
           total_reviews: number | null
           total_users: number | null
           unique_cities: number | null
+        }
+        Relationships: []
+      }
+      mv_property_clusters_gh3: {
+        Row: {
+          count: number | null
+          geohash: string | null
+          lat: number | null
+          listing_type: string | null
+          lng: number | null
+          max_price: number | null
+          min_price: number | null
+        }
+        Relationships: []
+      }
+      mv_property_clusters_gh4: {
+        Row: {
+          count: number | null
+          geohash: string | null
+          lat: number | null
+          listing_type: string | null
+          lng: number | null
+          max_price: number | null
+          min_price: number | null
+        }
+        Relationships: []
+      }
+      mv_property_clusters_gh5: {
+        Row: {
+          count: number | null
+          geohash: string | null
+          lat: number | null
+          listing_type: string | null
+          lng: number | null
+          max_price: number | null
+          min_price: number | null
         }
         Relationships: []
       }
@@ -2695,6 +2905,20 @@ export type Database = {
         }
         Returns: Json
       }
+      build_spatial_tree: {
+        Args: {
+          p_max_lat?: number
+          p_max_level?: number
+          p_max_lng?: number
+          p_min_lat?: number
+          p_min_lng?: number
+        }
+        Returns: {
+          details: string
+          duration_ms: number
+          phase: string
+        }[]
+      }
       can_create_property: { Args: { user_id: string }; Returns: boolean }
       can_create_property_with_upsells: {
         Args: { user_uuid: string }
@@ -2724,6 +2948,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_geohash_status: { Args: never; Returns: Json }
       check_property_limit: {
         Args: { p_user_id: string }
         Returns: {
@@ -2734,6 +2959,18 @@ export type Database = {
         }[]
       }
       cleanup_expired_auth_tokens: { Args: never; Returns: number }
+      compute_leaf_node_id: {
+        Args: {
+          p_lat: number
+          p_lng: number
+          p_max_lat?: number
+          p_max_level?: number
+          p_max_lng?: number
+          p_min_lat?: number
+          p_min_lng?: number
+        }
+        Returns: string
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -2885,8 +3122,136 @@ export type Database = {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
       }
+      get_clusters_by_geohash: {
+        Args: {
+          p_east: number
+          p_geohash_column: string
+          p_listing_type?: string
+          p_max_price?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_north: number
+          p_property_type?: string
+          p_south: number
+          p_west: number
+        }
+        Returns: {
+          count: number
+          geohash: string
+          lat: number
+          lng: number
+          max_price: number
+          min_price: number
+        }[]
+      }
+      get_clusters_gh3: {
+        Args: {
+          p_east: number
+          p_listing_type?: string
+          p_max_price?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_north: number
+          p_property_type?: string
+          p_south: number
+          p_west: number
+        }
+        Returns: {
+          count: number
+          geohash: string
+          lat: number
+          lng: number
+          max_price: number
+          min_price: number
+        }[]
+      }
+      get_clusters_gh4: {
+        Args: {
+          p_east: number
+          p_listing_type?: string
+          p_max_price?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_north: number
+          p_property_type?: string
+          p_south: number
+          p_west: number
+        }
+        Returns: {
+          count: number
+          geohash: string
+          lat: number
+          lng: number
+          max_price: number
+          min_price: number
+        }[]
+      }
+      get_clusters_gh5: {
+        Args: {
+          p_east: number
+          p_listing_type?: string
+          p_max_price?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_north: number
+          p_property_type?: string
+          p_south: number
+          p_west: number
+        }
+        Returns: {
+          count: number
+          geohash: string
+          lat: number
+          lng: number
+          max_price: number
+          min_price: number
+        }[]
+      }
+      get_clusters_with_bounds: {
+        Args: {
+          p_east: number
+          p_listing_type?: string
+          p_max_price?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_north: number
+          p_precision?: number
+          p_property_type?: string
+          p_south: number
+          p_west: number
+        }
+        Returns: {
+          bounds_east: number
+          bounds_north: number
+          bounds_south: number
+          bounds_west: number
+          count: number
+          id: string
+          lat: number
+          lng: number
+          max_price: number
+          min_price: number
+        }[]
+      }
+      get_cron_setup_instructions: {
+        Args: never
+        Returns: {
+          cron_schedule: string
+          curl_command: string
+          is_critical: boolean
+          job_name: string
+        }[]
+      }
       get_database_health: { Args: never; Returns: Json }
       get_featured_limit: { Args: { user_id: string }; Returns: number }
+      get_geohash_cluster_tiles: {
+        Args: { query_params?: Json; x: number; y: number; z: number }
+        Returns: string
+      }
+      get_geohash_precision_for_zoom: {
+        Args: { zoom: number }
+        Returns: number
+      }
       get_global_stats_cached: {
         Args: never
         Returns: {
@@ -2903,18 +3268,23 @@ export type Database = {
         Args: {
           p_east: number
           p_listing_type?: string
-          p_max_bedrooms?: number
           p_max_price?: number
-          p_min_bathrooms?: number
           p_min_bedrooms?: number
           p_min_price?: number
           p_north: number
+          p_precision?: number
           p_property_type?: string
           p_south: number
           p_west: number
-          p_zoom: number
         }
-        Returns: Json
+        Returns: {
+          count: number
+          id: string
+          lat: number
+          lng: number
+          max_price: number
+          min_price: number
+        }[]
       }
       get_map_data: {
         Args: {
@@ -2948,7 +3318,55 @@ export type Database = {
           rejected_today: number
         }[]
       }
+      get_node_children: {
+        Args: {
+          p_listing_type?: string
+          p_parent_id: string
+          p_property_type?: string
+        }
+        Returns: {
+          bounds_east: number
+          bounds_north: number
+          bounds_south: number
+          bounds_west: number
+          count: number
+          id: string
+          is_leaf: boolean
+          lat: number
+          lng: number
+          max_price: number
+          min_price: number
+        }[]
+      }
+      get_node_properties: {
+        Args: {
+          p_limit?: number
+          p_listing_type?: string
+          p_node_id: string
+          p_page?: number
+          p_property_type?: string
+        }
+        Returns: {
+          bathrooms: number
+          bedrooms: number
+          city: string
+          id: string
+          lat: number
+          listing_type: string
+          lng: number
+          neighborhood: string
+          price: number
+          property_type: string
+          sqft: number
+          state: string
+          title: string
+        }[]
+      }
       get_property_limit: { Args: { user_id: string }; Returns: number }
+      get_property_tiles: {
+        Args: { query_params?: Json; x: number; y: number; z: number }
+        Returns: string
+      }
       get_slow_queries: {
         Args: { min_duration_ms?: number }
         Returns: {
@@ -2960,6 +3378,29 @@ export type Database = {
         }[]
       }
       get_system_health_metrics: { Args: never; Returns: Json }
+      get_tree_clusters: {
+        Args: {
+          p_listing_type?: string
+          p_max_lat: number
+          p_max_lng: number
+          p_min_lat: number
+          p_min_lng: number
+          p_property_type?: string
+          p_zoom: number
+        }
+        Returns: {
+          bounds_east: number
+          bounds_north: number
+          bounds_south: number
+          bounds_west: number
+          count: number
+          id: string
+          lat: number
+          lng: number
+          max_price: number
+          min_price: number
+        }[]
+      }
       get_user_conversations: {
         Args: { p_limit?: number; p_offset?: number; p_user_id: string }
         Returns: {
@@ -3006,6 +3447,17 @@ export type Database = {
       is_admin_or_moderator: { Args: { user_uuid: string }; Returns: boolean }
       is_super_admin: { Args: { user_uuid: string }; Returns: boolean }
       longtransactionsenabled: { Args: never; Returns: boolean }
+      populate_geohash_batch: {
+        Args: { batch_size?: number }
+        Returns: {
+          remaining: number
+          rows_updated: number
+        }[]
+      }
+      populate_geohashes_batch: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -3049,7 +3501,32 @@ export type Database = {
       reactivate_property: { Args: { property_id: string }; Returns: undefined }
       refresh_agent_performance_stats: { Args: never; Returns: undefined }
       refresh_all_materialized_views: { Args: never; Returns: Json }
+      refresh_cluster_views: { Args: never; Returns: undefined }
+      refresh_geohash_clusters_extended: { Args: never; Returns: undefined }
       refresh_global_stats: { Args: never; Returns: undefined }
+      refresh_mv: { Args: { view_name: string }; Returns: undefined }
+      search_map_and_list: {
+        Args: {
+          p_bounds_east: number
+          p_bounds_north: number
+          p_bounds_south: number
+          p_bounds_west: number
+          p_limit?: number
+          p_listing_type?: string
+          p_max_bedrooms?: number
+          p_max_price?: number
+          p_max_sqft?: number
+          p_min_bathrooms?: number
+          p_min_bedrooms?: number
+          p_min_price?: number
+          p_min_sqft?: number
+          p_node_id?: string
+          p_page?: number
+          p_property_type?: string
+          p_zoom: number
+        }
+        Returns: Json
+      }
       search_properties: {
         Args: {
           p_bounds_east?: number
@@ -3702,6 +4179,7 @@ export type Database = {
       }
       unaccent: { Args: { "": string }; Returns: string }
       unlockrows: { Args: { "": string }; Returns: number }
+      update_tree_counts: { Args: never; Returns: undefined }
       updategeometrysrid: {
         Args: {
           catalogn_name: string
@@ -3712,6 +4190,7 @@ export type Database = {
         }
         Returns: string
       }
+      zoom_to_level: { Args: { p_zoom: number }; Returns: number }
     }
     Enums: {
       ai_moderation_status:

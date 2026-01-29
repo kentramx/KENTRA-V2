@@ -89,9 +89,9 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEOHead 
-        title="Kentra - Encuentra tu Propiedad Ideal en México | Casas, Departamentos y más" 
-        description="Plataforma inmobiliaria líder en México. Miles de propiedades en venta y renta: casas, departamentos, terrenos, oficinas. Contacta directamente con agentes certificados." 
-        canonical="/" 
+        title="Kentra - Encuentra tu Propiedad Ideal en México | Venta y Renta" 
+        description="El marketplace inmobiliario de México. Propiedades residenciales, comerciales e industriales. Contacta agentes certificados." 
+        canonical="/"
         structuredData={[generateWebsiteStructuredData(), generateOrganizationStructuredData()]} 
       />
       <Navbar />
@@ -124,7 +124,7 @@ const Home = () => {
             className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white text-balance max-w-3xl mx-auto mb-2 animate-fade-in-up drop-shadow-lg" 
             style={{ animationDelay: '100ms', letterSpacing: '-0.025em' }}
           >
-            Tu próximo hogar,
+            Tu próximo inmueble,
             <span className="bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent"> a un clic</span>
           </h1>
           

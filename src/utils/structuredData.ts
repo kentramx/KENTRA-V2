@@ -104,7 +104,7 @@ export function generateWebsiteStructuredData(): object {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Kentra',
-    description: 'Plataforma inmobiliaria líder en México. Encuentra casas, departamentos, terrenos y propiedades comerciales en venta y renta.',
+    description: 'El marketplace inmobiliario de México. Propiedades residenciales, comerciales, industriales y terrenos en venta y renta.',
     url: window.location.origin,
     potentialAction: {
       '@type': 'SearchAction',
