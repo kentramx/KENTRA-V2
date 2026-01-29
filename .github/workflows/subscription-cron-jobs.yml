@@ -1,0 +1,218 @@
+name: Subscription Cron Jobs
+
+on:
+  schedule:
+    # Expire trial subscriptions - Daily at 2:00 AM UTC
+    - cron: '0 2 * * *'
+    # Suspend past due subscriptions - Daily at 3:00 AM UTC
+    - cron: '0 3 * * *'
+    # Send payment reminders - Every 6 hours
+    - cron: '0 */6 * * *'
+    # Expire incomplete payments (OXXO/SPEI) - Every 2 hours
+    - cron: '0 */2 * * *'
+    # Expire upsells - Daily at 4:00 AM UTC
+    - cron: '0 4 * * *'
+    # Reconcile Stripe subscriptions - Daily at 5:00 AM UTC
+    - cron: '0 5 * * *'
+    # Send renewal reminders - Daily at 10:00 AM UTC
+    - cron: '0 10 * * *'
+    # Refresh materialized views - Every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Which job to run manually'
+        required: true
+        type: choice
+        options:
+          - all
+          - expire-trial-subscriptions
+          - suspend-past-due-subscriptions
+          - send-payment-reminders
+          - expire-incomplete-payments
+          - expire-upsells
+          - reconcile-stripe-subscriptions
+          - send-renewal-reminder
+          - refresh-materialized-views
+
+env:
+  SUPABASE_URL: https://rxtmnbcewprzfgkvehsq.supabase.co
+  # Service role key stored as GitHub secret
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+jobs:
+  expire-trial-subscriptions:
+    if: github.event.schedule == '0 2 * * *' || github.event.inputs.job == 'expire-trial-subscriptions' || github.event.inputs.job == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Expire Trial Subscriptions
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ env.SUPABASE_URL }}/functions/v1/expire-trial-subscriptions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_ROLE_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Request failed with status $http_code"
+            exit 1
+          fi
+
+  suspend-past-due-subscriptions:
+    if: github.event.schedule == '0 3 * * *' || github.event.inputs.job == 'suspend-past-due-subscriptions' || github.event.inputs.job == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Suspend Past Due Subscriptions
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ env.SUPABASE_URL }}/functions/v1/suspend-past-due-subscriptions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_ROLE_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Request failed with status $http_code"
+            exit 1
+          fi
+
+  send-payment-reminders:
+    if: github.event.schedule == '0 */6 * * *' || github.event.inputs.job == 'send-payment-reminders' || github.event.inputs.job == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Payment Reminders
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ env.SUPABASE_URL }}/functions/v1/send-payment-reminders" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_ROLE_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Request failed with status $http_code"
+            exit 1
+          fi
+
+  expire-incomplete-payments:
+    if: github.event.schedule == '0 */2 * * *' || github.event.inputs.job == 'expire-incomplete-payments' || github.event.inputs.job == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Expire Incomplete Payments
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ env.SUPABASE_URL }}/functions/v1/expire-incomplete-payments" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_ROLE_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Request failed with status $http_code"
+            exit 1
+          fi
+
+  expire-upsells:
+    if: github.event.schedule == '0 4 * * *' || github.event.inputs.job == 'expire-upsells' || github.event.inputs.job == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Expire Upsells
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ env.SUPABASE_URL }}/functions/v1/expire-upsells" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_ROLE_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Request failed with status $http_code"
+            exit 1
+          fi
+
+  reconcile-stripe-subscriptions:
+    if: github.event.schedule == '0 5 * * *' || github.event.inputs.job == 'reconcile-stripe-subscriptions' || github.event.inputs.job == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reconcile Stripe Subscriptions
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ env.SUPABASE_URL }}/functions/v1/reconcile-stripe-subscriptions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_ROLE_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Request failed with status $http_code"
+            exit 1
+          fi
+
+  send-renewal-reminder:
+    if: github.event.schedule == '0 10 * * *' || github.event.inputs.job == 'send-renewal-reminder' || github.event.inputs.job == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Renewal Reminders
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ env.SUPABASE_URL }}/functions/v1/send-renewal-reminder" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_ROLE_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Request failed with status $http_code"
+            exit 1
+          fi
+
+  refresh-materialized-views:
+    if: github.event.schedule == '*/15 * * * *' || github.event.inputs.job == 'refresh-materialized-views' || github.event.inputs.job == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh Materialized Views
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ env.SUPABASE_URL }}/functions/v1/refresh-materialized-views" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_ROLE_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Request failed with status $http_code"
+            exit 1
+          fi
