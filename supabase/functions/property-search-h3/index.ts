@@ -1,5 +1,12 @@
 /**
- * Edge Function: property-search-h3
+ * @deprecated Use property-search-vNext instead.
+ *
+ * This endpoint has inconsistent totals between clusters and list.
+ * Clusters come from MVs without advanced filters, list has all filters.
+ *
+ * Migration: property-search-vNext guarantees consistent totals.
+ *
+ * Edge Function: property-search-h3 (LEGACY)
  *
  * Enterprise-grade property search using geohash-based clustering.
  * (Originally designed for H3, but Supabase doesn't support H3 extension)

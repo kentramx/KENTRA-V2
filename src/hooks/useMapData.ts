@@ -1,9 +1,19 @@
+/**
+ * @deprecated Use usePropertySearchUnified instead.
+ *
+ * This hook fetches map data separately from list data, causing
+ * inconsistencies in totals when filters are applied.
+ *
+ * Migration: usePropertySearchUnified provides unified, consistent responses
+ * from the property-search-vNext endpoint.
+ */
 import { useEffect, useRef, useCallback } from 'react';
 import { useMapStore } from '@/stores/mapStore';
 import { supabase } from '@/integrations/supabase/client';
 import { useDebouncedCallback } from 'use-debounce';
 import toast from 'react-hot-toast';
 
+/** @deprecated Use usePropertySearchUnified instead */
 export function useMapData() {
   const {
     viewport,

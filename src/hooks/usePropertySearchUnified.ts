@@ -5,15 +5,26 @@ import { useDebouncedCallback } from 'use-debounce';
 import toast from 'react-hot-toast';
 
 /**
+ * Feature flag for the new vNext endpoint.
+ * Set to true to use the new unified search with consistent totals.
+ * Set to false to use the legacy property-search-h3.
+ */
+const USE_VNEXT_ENDPOINT = true;
+
+/**
  * Unified hook for property search on map view.
  *
- * V3: Uses geohash-based clustering with materialized views.
+ * V4: Uses property-search-vNext for consistent totals between map and list.
+ *
+ * KEY GUARANTEE: total === COUNT of properties matching filters
+ * - mapData and listItems derive from the SAME filtered dataset
+ * - No more divergence between cluster counts and list counts
  *
  * Two modes:
- * 1. Clusters mode (zoom < 14): Shows aggregated clusters from materialized views
+ * 1. Clusters mode (zoom < 14): Shows aggregated clusters from spatial tree
  * 2. Properties mode (zoom >= 14): Shows individual properties
  *
- * Drill-down: Pass geohash_filter to show properties within a specific cluster
+ * Drill-down: Pass node_id to show properties within a specific tree node
  */
 export function usePropertySearchUnified() {
   const {
@@ -38,7 +49,7 @@ export function usePropertySearchUnified() {
     listPages,
     hasActiveFilters,
     lastRequestMeta,
-    // Node-based drilling (replaces geohashFilter)
+    // Node-based drilling
     selectedNodeId,
     setSelectedNodeId,
     // Keep geohashFilter for backward compatibility during transition
@@ -65,26 +76,58 @@ export function usePropertySearchUnified() {
     setListError(null);
 
     try {
-      // Using property-search-h3 with geohash-based clustering
-      const { data, error } = await supabase.functions.invoke('property-search-h3', {
-        body: {
-          bounds: viewport?.bounds,
-          zoom: viewport?.zoom,
-          filters,
-          page: listPage,
-          limit: 20,
-          // Pass geohash for cluster drilling
-          geohash_filter: selectedNodeId || undefined,
-        },
+      // Choose endpoint based on feature flag
+      const endpoint = USE_VNEXT_ENDPOINT ? 'property-search-vNext' : 'property-search-h3';
+
+      // Build request body - vNext uses slightly different param names
+      const requestBody = USE_VNEXT_ENDPOINT
+        ? {
+            bounds: viewport?.bounds,
+            zoom: viewport?.zoom,
+            filters: {
+              listing_type: filters.listing_type || undefined,
+              property_type: filters.property_type || undefined,
+              min_price: filters.min_price || undefined,
+              max_price: filters.max_price || undefined,
+              min_bedrooms: filters.min_bedrooms || undefined,
+            },
+            page: listPage,
+            limit: 20,
+            node_id: selectedNodeId || undefined,
+          }
+        : {
+            bounds: viewport?.bounds,
+            zoom: viewport?.zoom,
+            filters,
+            page: listPage,
+            limit: 20,
+            geohash_filter: selectedNodeId || undefined,
+          };
+
+      const { data, error } = await supabase.functions.invoke(endpoint, {
+        body: requestBody,
       });
 
       if (error) throw error;
 
-      console.log('[usePropertySearchUnified] Received data', {
-        mode: data.mode,
-        mapDataLength: data.mapData?.length || 0,
-        total: data.total,
-      });
+      // Log for comparison during migration
+      if (USE_VNEXT_ENDPOINT) {
+        console.log('[usePropertySearchUnified] vNext response', {
+          mode: data.mode,
+          mapDataLength: data.mapData?.length || 0,
+          listItemsLength: data.listItems?.length || 0,
+          total: data.total,
+          page: data.page,
+          totalPages: data.totalPages,
+          meta: data._meta,
+        });
+      } else {
+        console.log('[usePropertySearchUnified] legacy response', {
+          mode: data.mode,
+          mapDataLength: data.mapData?.length || 0,
+          total: data.total,
+        });
+      }
 
       // Single action updates everything
       setUnifiedData({
@@ -100,12 +143,13 @@ export function usePropertySearchUnified() {
         setLastRequestMeta(data._meta);
       }
 
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        console.error('[usePropertySearchUnified] Error:', err);
-        setMapError(err);
-        setListError(err);
-        toast.error(`Error cargando propiedades: ${err.message}`, {
+    } catch (err: unknown) {
+      const error = err as Error & { name?: string };
+      if (error.name !== 'AbortError') {
+        console.error('[usePropertySearchUnified] Error:', error);
+        setMapError(error);
+        setListError(error);
+        toast.error(`Error cargando propiedades: ${error.message}`, {
           id: 'unified-search-error',
           duration: 5000,
         });
@@ -165,7 +209,7 @@ export function usePropertySearchUnified() {
     // Filters
     hasActiveFilters: hasActiveFilters(),
 
-    // Node-based drilling (new Quadtree system)
+    // Node-based drilling (Quadtree/Spatial tree system)
     selectedNodeId,
     setSelectedNodeId,
 
@@ -175,5 +219,8 @@ export function usePropertySearchUnified() {
 
     // Meta
     lastRequestMeta,
+
+    // Feature flag status (for debugging)
+    _usingVNext: USE_VNEXT_ENDPOINT,
   };
 }

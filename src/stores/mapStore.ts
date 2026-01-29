@@ -43,7 +43,9 @@ export interface Cluster {
   avg_price?: number;
   min_price?: number;
   max_price?: number;
-  bounds?: ClusterBounds; // Real bounds of properties in this cluster
+  bounds?: ClusterBounds; // Real bounds from vNext spatial tree
+  // Metadata from vNext for debugging
+  tree_level?: number;
 }
 
 export interface MapProperty {
@@ -224,6 +226,7 @@ export const useMapStore = create<MapState>()(
     setListPage: (page) => set({ listPage: page }),
 
     // Unified action - single source of truth
+    // Used by vNext endpoint which guarantees consistent totals
     setUnifiedData: (data) => {
       // Map clusters with bounds or properties
       const clusters = data.mode === 'clusters'
@@ -232,9 +235,10 @@ export const useMapStore = create<MapState>()(
             lat: c.lat,
             lng: c.lng,
             count: c.count,
+            avg_price: c.avg_price,
             min_price: c.min_price,
             max_price: c.max_price,
-            bounds: c.bounds, // Real bounds from unified endpoint
+            bounds: c.bounds, // Real bounds from vNext spatial tree
           }))
         : [];
 

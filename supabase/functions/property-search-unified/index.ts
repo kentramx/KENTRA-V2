@@ -1,3 +1,11 @@
+/**
+ * @deprecated Use property-search-vNext instead.
+ *
+ * This endpoint was an intermediate unification attempt.
+ * It has issues with total consistency when advanced filters are applied.
+ *
+ * Migration: property-search-vNext provides guaranteed consistent totals.
+ */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIP, rateLimitedResponse, RateLimitConfig } from '../_shared/rateLimit.ts';
@@ -10,7 +18,7 @@ const searchRateLimit: RateLimitConfig = {
 };
 
 // =============================================
-// ENTERPRISE MAP CLUSTERING - REWRITTEN FROM SCRATCH
+// ENTERPRISE MAP CLUSTERING - REWRITTEN FROM SCRATCH (DEPRECATED)
 // Garantía: total === SUM(cluster.count)
 // =============================================
 

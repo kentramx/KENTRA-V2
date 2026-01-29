@@ -1,3 +1,12 @@
+/**
+ * @deprecated Use property-search-vNext instead.
+ *
+ * This endpoint was a quadtree-based clustering experiment.
+ * property-search-vNext uses the same spatial tree internally but with
+ * guaranteed consistent totals and better filter support.
+ *
+ * Migration: property-search-vNext provides unified, consistent responses.
+ */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIP, rateLimitedResponse, RateLimitConfig } from '../_shared/rateLimit.ts';
@@ -10,7 +19,7 @@ const searchRateLimit: RateLimitConfig = {
 };
 
 // =============================================
-// ENTERPRISE MAP CLUSTERING V2 - QUADTREE
+// ENTERPRISE MAP CLUSTERING V2 - QUADTREE (DEPRECATED)
 // Invariant: parent.count === SUM(children.count) ALWAYS
 // =============================================
 

@@ -1,3 +1,12 @@
+/**
+ * @deprecated Use property-search-vNext instead.
+ *
+ * This endpoint is part of the legacy dual-endpoint architecture.
+ * It returns list data separately from map clusters, causing inconsistencies.
+ *
+ * Migration: property-search-vNext provides unified, consistent responses
+ * with guaranteed total consistency between mapData and listItems.
+ */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
 
