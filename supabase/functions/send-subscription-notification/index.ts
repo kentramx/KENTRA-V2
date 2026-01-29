@@ -6,7 +6,7 @@ import { checkRateLimit, getClientIP, rateLimitedResponse, apiRateLimit } from "
 
 interface NotificationRequest {
   userId: string;
-  type: 'renewal_success' | 'payment_failed' | 'payment_failed_day_3' | 'payment_failed_day_5' | 'payment_failed_day_7' | 'subscription_canceled' | 'subscription_expiring' | 'downgrade_confirmed' | 'upgrade_confirmed' | 'trial_expired' | 'trial_started' | 'trial_expiring' | 'subscription_suspended' | 'welcome_paid' | 'upsell_expired' | 'renewal_reminder';
+  type: 'renewal_success' | 'payment_failed' | 'payment_failed_day_3' | 'payment_failed_day_5' | 'payment_failed_day_7' | 'subscription_canceled' | 'subscription_expiring' | 'downgrade_confirmed' | 'downgrade_warning' | 'upgrade_confirmed' | 'trial_expired' | 'trial_started' | 'trial_expiring' | 'subscription_suspended' | 'welcome_paid' | 'upsell_expired' | 'renewal_reminder';
   metadata?: Record<string, unknown>;
 }
 
@@ -370,6 +370,31 @@ Deno.serve(async (req) => {
         );
         break;
 
+      case 'downgrade_warning':
+        // 🔧 FIX ENTERPRISE: Notificación ANTES del downgrade para informar consecuencias
+        subject = '⚠️ Importante: Tu downgrade afectará tus propiedades - Kentra';
+        htmlContent = wrapContent(
+          'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+          '⚠️ Atención: Cambio de plan solicitado',
+          `
+            <p style="color: #374151; font-size: 16px;">Hola ${userName},</p>
+            <p style="color: #374151; font-size: 16px;">Has solicitado cambiar tu plan de <strong>${metadata.previousPlan}</strong> a <strong>${metadata.newPlan}</strong>.</p>
+            <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+              <p style="margin: 0 0 12px 0; font-weight: bold; color: #92400e;">⚠️ Esto afectará tus propiedades:</p>
+              <ul style="color: #78350f; margin: 8px 0;">
+                ${Number(metadata.propertiesToPause) > 0 ? `<li><strong>${metadata.propertiesToPause} propiedades</strong> serán pausadas (exceden el límite de ${metadata.newPropertyLimit})</li>` : ''}
+                ${Number(metadata.featuredToRemove) > 0 ? `<li><strong>${metadata.featuredToRemove} destacadas</strong> serán removidas (exceden el límite de ${metadata.newFeaturedLimit})</li>` : ''}
+                ${Number(metadata.propertiesToPause) === 0 && Number(metadata.featuredToRemove) === 0 ? '<li>No hay cambios en tus propiedades activas</li>' : ''}
+              </ul>
+            </div>
+            <p style="color: #374151; font-size: 16px;">El cambio se procesará cuando confirmes. Si no deseas continuar, puedes cancelar desde tu panel.</p>
+            <div style="text-align: center; margin: 24px 0;">
+              <a href="${BASE_URL}/perfil?tab=subscription" style="background: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Ver mi suscripción</a>
+            </div>
+          `
+        );
+        break;
+
       case 'downgrade_confirmed':
         subject = 'Cambio de plan confirmado - Kentra';
         htmlContent = wrapContent(
@@ -382,12 +407,17 @@ Deno.serve(async (req) => {
               <p style="margin: 8px 0;"><strong>Plan anterior:</strong> ${metadata.previousPlan}</p>
               <p style="margin: 8px 0;"><strong>Nuevo plan:</strong> ${metadata.newPlan}</p>
               <p style="margin: 8px 0;"><strong>Efectivo desde:</strong> ${metadata.effectiveDate}</p>
+              <p style="margin: 8px 0;"><strong>Nuevo límite de propiedades:</strong> ${metadata.newPropertyLimit || 'Sin cambios'}</p>
+              <p style="margin: 8px 0;"><strong>Nuevo límite de destacadas:</strong> ${metadata.newFeaturedLimit || 'Sin cambios'}</p>
             </div>
-            ${metadata.propertiesRemoved > 0 ? `
+            ${(Number(metadata.propertiesRemoved) > 0 || Number(metadata.featuredRemoved) > 0) ? `
               <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-                <p style="margin: 0; color: #92400e;"><strong>⚠️ Propiedades pausadas:</strong> ${metadata.propertiesRemoved} propiedades fueron pausadas porque exceden el límite de tu nuevo plan.</p>
+                <p style="margin: 0 0 8px 0; color: #92400e; font-weight: bold;">⚠️ Cambios aplicados a tus propiedades:</p>
+                ${Number(metadata.propertiesRemoved) > 0 ? `<p style="margin: 4px 0; color: #92400e;"><strong>${metadata.propertiesRemoved} propiedades</strong> fueron pausadas porque exceden el límite de tu nuevo plan.</p>` : ''}
+                ${Number(metadata.featuredRemoved) > 0 ? `<p style="margin: 4px 0; color: #92400e;"><strong>${metadata.featuredRemoved} destacadas</strong> fueron removidas porque exceden el límite de tu nuevo plan.</p>` : ''}
               </div>
             ` : ''}
+            <p style="color: #374151; font-size: 16px;">Puedes reactivar las propiedades pausadas desde tu panel cuando quieras (hasta el límite de tu plan).</p>
             <div style="text-align: center; margin: 24px 0;">
               <a href="${BASE_URL}/panel-agente" style="background: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Ir a mi panel</a>
             </div>

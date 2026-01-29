@@ -103,7 +103,7 @@ Deno.serve(withSentry(async (req) => {
     // === IDEMPOTENCIA: Verificar si ya procesamos este evento (FAIL-CLOSED) ===
     const { data: existingEvent, error: checkError } = await supabaseClient
       .from('stripe_webhook_events')
-      .select('id, processed_at')
+      .select('id, processed_at, created_at')
       .eq('event_id', event.id)
       .maybeSingle();
 
@@ -118,39 +118,67 @@ Deno.serve(withSentry(async (req) => {
     }
 
     if (existingEvent) {
-      logger.info(`Event ${event.id} already processed, skipping`);
-      return new Response(
-        JSON.stringify({ received: true, skipped: true, reason: 'duplicate' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Registrar el evento ANTES de procesarlo para evitar race conditions
-    // Use INSERT with ON CONFLICT to handle concurrent requests atomically
-    const { error: insertError } = await supabaseClient
-      .from('stripe_webhook_events')
-      .insert({
-        event_id: event.id,
-        event_type: event.type,
-        payload: event.data.object,
-        processed_at: null, // Will be set after successful processing
-      });
-
-    if (insertError) {
-      // Si es error de duplicado (unique constraint), otro proceso ya lo está manejando
-      if (insertError.code === '23505') {
-        logger.info(`Event ${event.id} being processed by another instance, skipping`);
+      // Si ya fue procesado exitosamente, skip
+      if (existingEvent.processed_at) {
+        logger.info(`Event ${event.id} already processed at ${existingEvent.processed_at}, skipping`);
         return new Response(
-          JSON.stringify({ received: true, skipped: true, reason: 'concurrent' }),
+          JSON.stringify({ received: true, skipped: true, reason: 'duplicate' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      // FAIL-CLOSED: Any other insert error should reject the request
-      logger.error('Failed to record webhook event - rejecting request', { error: insertError });
-      return new Response(
-        JSON.stringify({ error: 'Failed to record event', retryable: true }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+
+      // Si existe pero no fue procesado, verificar si está "en progreso" (menos de 5 min)
+      const createdAt = new Date(existingEvent.created_at).getTime();
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+
+      if (createdAt > fiveMinutesAgo) {
+        // Evento reciente sin procesar = probablemente en progreso por otra instancia
+        logger.info(`Event ${event.id} in progress by another instance (created ${existingEvent.created_at}), skipping`);
+        return new Response(
+          JSON.stringify({ received: true, skipped: true, reason: 'in_progress' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Evento viejo sin procesar = falló antes, permitir reprocesamiento
+      logger.warn(`Event ${event.id} found unprocessed from ${existingEvent.created_at}, allowing retry`);
+      // Actualizar created_at para "reclamar" el evento
+      await supabaseClient
+        .from('stripe_webhook_events')
+        .update({ created_at: new Date().toISOString() })
+        .eq('event_id', event.id);
+    } else {
+      // Registrar el evento ANTES de procesarlo para evitar race conditions
+      // Use INSERT with ON CONFLICT to handle concurrent requests atomically
+      const { error: insertError } = await supabaseClient
+        .from('stripe_webhook_events')
+        .insert({
+          event_id: event.id,
+          event_type: event.type,
+          payload: event.data.object,
+          processed_at: null, // Will be set after successful processing
+        });
+
+      if (insertError) {
+        // Si es error de duplicado (unique constraint), otro proceso ya lo está manejando
+        if (insertError.code === '23505') {
+          logger.info(`Event ${event.id} being processed by another instance, skipping`);
+          return new Response(
+            JSON.stringify({ received: true, skipped: true, reason: 'concurrent' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        // FAIL-CLOSED: Any other insert error should reject the request
+        logger.error('Failed to record webhook event - rejecting request', {
+          error: insertError,
+          errorCode: insertError.code,
+          errorMessage: insertError.message
+        });
+        return new Response(
+          JSON.stringify({ error: 'Failed to record event', retryable: true }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     console.log('Processing new webhook event:', event.type, event.id);
@@ -236,16 +264,62 @@ Deno.serve(withSentry(async (req) => {
           session.subscription as string
         );
 
-        // Validate timestamps before converting
-        const periodStart = subscription.current_period_start 
-          ? new Date(subscription.current_period_start * 1000).toISOString()
-          : new Date().toISOString();
-        
-        const periodEnd = subscription.current_period_end
-          ? new Date(subscription.current_period_end * 1000).toISOString()
-          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Default: 30 días
+        // Map Stripe status to our status (handle edge cases)
+        const stripeStatus = subscription.status;
+        let dbStatus: string;
+        switch (stripeStatus) {
+          case 'active':
+          case 'trialing':
+            dbStatus = stripeStatus;
+            break;
+          case 'incomplete':
+          case 'incomplete_expired':
+            dbStatus = 'incomplete';
+            break;
+          case 'past_due':
+            dbStatus = 'past_due';
+            break;
+          case 'canceled':
+          case 'unpaid':
+            dbStatus = 'canceled';
+            break;
+          default:
+            logger.warn(`Unknown Stripe status: ${stripeStatus}, defaulting to 'active'`);
+            dbStatus = 'active';
+        }
+
+        // Validate timestamps before converting - log warning if using fallback
+        let periodStart: string;
+        let periodEnd: string;
+
+        if (subscription.current_period_start) {
+          periodStart = new Date(subscription.current_period_start * 1000).toISOString();
+        } else {
+          logger.warn(`Missing current_period_start for subscription ${subscription.id}, using now()`);
+          periodStart = new Date().toISOString();
+        }
+
+        if (subscription.current_period_end) {
+          periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+        } else {
+          logger.warn(`Missing current_period_end for subscription ${subscription.id}, using +30 days`);
+          periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        }
 
         // Create or update subscription record
+        // First check if user already has a subscription
+        const { data: existingSub } = await supabaseClient
+          .from('user_subscriptions')
+          .select('id, stripe_subscription_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (existingSub && existingSub.stripe_subscription_id !== subscription.id) {
+          // User has a DIFFERENT subscription - log warning but proceed
+          // This could happen if user switches plans or has concurrent sessions
+          logger.warn(`User ${userId} already has subscription ${existingSub.stripe_subscription_id}, replacing with ${subscription.id}`);
+        }
+
         const { error: subError } = await supabaseClient
           .from('user_subscriptions')
           .upsert({
@@ -253,11 +327,11 @@ Deno.serve(withSentry(async (req) => {
             plan_id: planId,
             stripe_subscription_id: subscription.id,
             stripe_customer_id: subscription.customer as string,
-            status: 'active',
+            status: dbStatus, // Use actual Stripe status
             billing_cycle: billingCycle || 'monthly',
             current_period_start: periodStart,
             current_period_end: periodEnd,
-            cancel_at_period_end: false,
+            cancel_at_period_end: subscription.cancel_at_period_end || false,
           }, {
             onConflict: 'user_id',
           });
@@ -417,29 +491,81 @@ Deno.serve(withSentry(async (req) => {
 
         if (subRecord) {
           const now = new Date();
-          const firstFailedAt = subRecord.metadata?.first_payment_failed_at
-            ? new Date(subRecord.metadata.first_payment_failed_at)
-            : now;
+
+          // Extract failure reason for categorization
+          const failureReason = invoice.last_finalization_error?.message || 'Unknown';
+          const failureCode = (invoice as any).last_payment_error?.decline_code ||
+                             (invoice as any).last_payment_error?.code || 'unknown';
+
+          // Categorize failure types
+          const NON_RECOVERABLE_CODES = ['fraudulent', 'lost_card', 'stolen_card', 'pickup_card'];
+          const REQUIRES_ACTION_CODES = ['authentication_required', 'card_not_supported'];
+          const isNonRecoverable = NON_RECOVERABLE_CODES.includes(failureCode);
+          const requiresUserAction = REQUIRES_ACTION_CODES.includes(failureCode) ||
+                                    failureCode === 'card_declined' ||
+                                    failureCode === 'expired_card';
+
+          // Determine first failure timestamp with validation
+          let firstFailedAt: Date;
+          if (subRecord.metadata?.first_payment_failed_at) {
+            const storedDate = new Date(subRecord.metadata.first_payment_failed_at);
+            // Validate: stored date should be in the past and within last 30 days
+            if (!isNaN(storedDate.getTime()) && storedDate < now &&
+                now.getTime() - storedDate.getTime() < 30 * 24 * 60 * 60 * 1000) {
+              firstFailedAt = storedDate;
+            } else {
+              logger.warn('Invalid first_payment_failed_at in metadata, resetting', {
+                stored: subRecord.metadata.first_payment_failed_at,
+                subscriptionId: subRecord.id
+              });
+              firstFailedAt = now;
+            }
+          } else {
+            firstFailedAt = now;
+          }
+
           const daysSinceFirstFailure = Math.floor((now.getTime() - firstFailedAt.getTime()) / (1000 * 60 * 60 * 24));
           const gracePeriodDays = 7;
           const graceDaysRemaining = Math.max(0, gracePeriodDays - daysSinceFirstFailure);
           const failureCount = (subRecord.metadata?.payment_failure_count || 0) + 1;
 
-          // Update to past_due status with enhanced tracking
+          // Determine if should suspend immediately
+          const MAX_STRIPE_ATTEMPTS = 4; // Stripe typically retries 3-4 times
+          const shouldSuspendImmediately = isNonRecoverable ||
+                                           (invoice.attempt_count >= MAX_STRIPE_ATTEMPTS && !invoice.next_payment_attempt);
+
+          // Determine target status
+          let targetStatus: string;
+          if (shouldSuspendImmediately) {
+            targetStatus = 'suspended';
+            logger.warn('Suspending immediately due to non-recoverable failure or max attempts', {
+              failureCode,
+              attemptCount: invoice.attempt_count,
+              isNonRecoverable
+            });
+          } else {
+            targetStatus = 'past_due';
+          }
+
+          // Update subscription status with enhanced tracking
           const { error: updateError } = await supabaseClient
             .from('user_subscriptions')
             .update({
-              status: 'past_due',
+              status: targetStatus,
               metadata: {
                 ...subRecord.metadata,
-                first_payment_failed_at: subRecord.metadata?.first_payment_failed_at || now.toISOString(),
+                first_payment_failed_at: firstFailedAt.toISOString(),
                 payment_failure_count: failureCount,
                 last_payment_failed_at: now.toISOString(),
                 stripe_attempt_count: invoice.attempt_count,
-                grace_days_remaining: graceDaysRemaining,
+                grace_days_remaining: shouldSuspendImmediately ? 0 : graceDaysRemaining,
                 next_retry_at: invoice.next_payment_attempt
                   ? new Date(invoice.next_payment_attempt * 1000).toISOString()
                   : null,
+                failure_code: failureCode,
+                failure_reason: failureReason,
+                is_non_recoverable: isNonRecoverable,
+                requires_user_action: requiresUserAction,
               }
             })
             .eq('id', subRecord.id);
@@ -457,21 +583,28 @@ Deno.serve(withSentry(async (req) => {
               amount: invoice.amount_due / 100,
               currency: invoice.currency.toUpperCase(),
               status: 'failed',
-              description: `Intento de pago fallido #${failureCount}`,
+              description: `Intento de pago fallido #${failureCount}${isNonRecoverable ? ' (no recuperable)' : ''}`,
               metadata: {
                 invoice_id: invoice.id,
                 attempt_count: failureCount,
                 stripe_attempt_count: invoice.attempt_count,
-                failure_reason: invoice.last_finalization_error?.message || 'Unknown',
+                failure_reason: failureReason,
+                failure_code: failureCode,
+                is_non_recoverable: isNonRecoverable,
               },
             });
 
-          // Determine notification type based on retry count
-          const notificationType = failureCount === 1
-            ? 'payment_failed'
-            : graceDaysRemaining <= 2
-              ? 'payment_failed_urgent'
-              : 'payment_failed_retry';
+          // Determine notification type based on failure severity
+          let notificationType: string;
+          if (shouldSuspendImmediately) {
+            notificationType = 'subscription_suspended';
+          } else if (failureCount === 1) {
+            notificationType = 'payment_failed';
+          } else if (graceDaysRemaining <= 2) {
+            notificationType = 'payment_failed_urgent';
+          } else {
+            notificationType = 'payment_failed_retry';
+          }
 
           // Send failure notification with retry info
           try {
@@ -642,19 +775,31 @@ Deno.serve(withSentry(async (req) => {
         // Detectar si el precio/plan cambió externamente (desde Stripe Dashboard)
         const currentPriceId = subscription.items?.data[0]?.price?.id;
         let newPlanId: string | null = null;
-        
+
         if (currentPriceId) {
-          // Buscar plan por stripe_price_id
+          // Buscar plan por stripe_price_id (check both monthly and yearly)
           const { data: matchedPlan } = await supabaseClient
             .from('subscription_plans')
-            .select('id')
+            .select('id, name')
             .or(`stripe_price_id.eq.${currentPriceId},stripe_price_id_yearly.eq.${currentPriceId}`)
             .maybeSingle();
-          
+
           if (matchedPlan) {
             newPlanId = matchedPlan.id;
-            console.log('Detected plan change from Stripe, new plan_id:', newPlanId);
+            console.log('Detected plan change from Stripe, new plan_id:', newPlanId, 'plan:', matchedPlan.name);
+          } else {
+            // CRITICAL: Price in Stripe doesn't match any plan in DB - potential desync!
+            logger.error('STRIPE_DB_DESYNC: Stripe price_id not found in subscription_plans', {
+              stripeSubscriptionId: subscription.id,
+              stripePriceId: currentPriceId,
+              userId: userId,
+            });
+            // TODO: Alert admin about this desync
           }
+        } else {
+          logger.warn('No price_id found in subscription items', {
+            stripeSubscriptionId: subscription.id,
+          });
         }
 
         // Detectar billing_cycle del precio actual

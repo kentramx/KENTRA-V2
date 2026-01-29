@@ -138,14 +138,24 @@ Deno.serve(withSentry(async (req) => {
     const currentPrice = currentSub.billing_cycle === 'yearly'
       ? Number(currentPlan.price_yearly)
       : Number(currentPlan.price_monthly);
-    
+
     const newPrice = billingCycle === 'yearly'
       ? Number(newPlan.price_yearly)
       : Number(newPlan.price_monthly);
 
     const isDowngrade = newPrice < currentPrice;
 
-    if (isDowngrade && !previewOnly) {
+    // 🔧 FIX ENTERPRISE: Calcular impacto del downgrade para preview y notificación
+    let downgradeImpact: {
+      propertiesToPause: number;
+      featuredToRemove: number;
+      activePropertiesCount: number;
+      activeFeaturedCount: number;
+      newPropertyLimit: number;
+      newFeaturedLimit: number;
+    } | null = null;
+
+    if (isDowngrade) {
       // Check active properties count
       const { count: activePropertiesCount, error: countError } = await supabaseClient
         .from('properties')
@@ -153,28 +163,30 @@ Deno.serve(withSentry(async (req) => {
         .eq('agent_id', user.id)
         .eq('status', 'activa');
 
-      const newPlanLimit = newPlan.features?.max_properties || 0;
+      // Check active featured count
+      const { count: activeFeaturedCount } = await supabaseClient
+        .from('featured_properties')
+        .select('*', { count: 'exact', head: true })
+        .eq('agent_id', user.id)
+        .eq('status', 'active')
+        .gt('end_date', new Date().toISOString());
 
-      if (countError) {
-        console.error('Error counting properties:', countError);
-      } else if (activePropertiesCount && activePropertiesCount > newPlanLimit) {
-        const excess = activePropertiesCount - newPlanLimit;
-        // Return 200 with success: false for business rule errors
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: 'EXCEEDS_PROPERTY_LIMIT',
-            message: `Tienes ${activePropertiesCount} propiedades activas, pero el plan ${newPlan.display_name} solo permite ${newPlanLimit}. Debes pausar o eliminar ${excess} ${excess === 1 ? 'propiedad' : 'propiedades'} antes de hacer el downgrade.`,
-            currentCount: activePropertiesCount,
-            newLimit: newPlanLimit,
-            excess,
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
-      }
+      const newPropertyLimit = newPlan.features?.max_properties || 0;
+      const newFeaturedLimit = newPlan.features?.featured_listings || 0;
+
+      const propertiesToPause = Math.max(0, (activePropertiesCount || 0) - newPropertyLimit);
+      const featuredToRemove = Math.max(0, (activeFeaturedCount || 0) - newFeaturedLimit);
+
+      downgradeImpact = {
+        propertiesToPause,
+        featuredToRemove,
+        activePropertiesCount: activePropertiesCount || 0,
+        activeFeaturedCount: activeFeaturedCount || 0,
+        newPropertyLimit,
+        newFeaturedLimit,
+      };
+
+      console.log('📊 Downgrade impact calculated:', downgradeImpact);
     }
 
     // Initialize Stripe
@@ -320,6 +332,15 @@ Deno.serve(withSentry(async (req) => {
 
     // If preview only, calculate proration without applying changes
     if (previewOnly) {
+      // 🔧 FIX ENTERPRISE: Obtener precios REALES desde Stripe, no desde DB
+      // Esto garantiza que los montos mostrados coincidan exactamente con lo que Stripe cobra
+      const currentStripePrice = stripeSubscription.items.data[0].price;
+      const currentPriceFromStripe = (currentStripePrice.unit_amount || 0) / 100;
+
+      // Obtener precio del nuevo plan desde Stripe
+      const newStripePrice = await stripe.prices.retrieve(newPriceId);
+      const newPriceFromStripe = (newStripePrice.unit_amount || 0) / 100;
+
       // ⏰ DIAGNOSIS - Time Calculations
       const now = Date.now();
       const periodEnd = stripeSubscription.current_period_end * 1000;
@@ -372,46 +393,24 @@ Deno.serve(withSentry(async (req) => {
         })),
       });
 
-      // Calculate current plan price for comparison
+      // 🔧 FIX: Usar precios de Stripe para determinar upgrade/downgrade
+      const isUpgrade = newPriceFromStripe > currentPriceFromStripe;
+      const isDowngrade = newPriceFromStripe < currentPriceFromStripe;
+
+      // 📊 DIAGNOSIS - Price Comparison (ahora usando precios de Stripe)
       const currentPlan = currentSub.subscription_plans;
-      const currentPrice = currentSub.billing_cycle === 'yearly'
-        ? Number(currentPlan.price_yearly)
-        : Number(currentPlan.price_monthly);
-      
-      const newPrice = billingCycle === 'yearly'
-        ? Number(newPlan.price_yearly)
-        : Number(newPlan.price_monthly);
-
-      const isUpgrade = newPrice > currentPrice;
-      const isDowngrade = newPrice < currentPrice;
-
-      // 📊 DIAGNOSIS - Price Comparison
-      console.log('📊 DIAGNOSIS - Price Comparison:', {
+      console.log('📊 DIAGNOSIS - Price Comparison (Stripe source of truth):', {
         currentPlanName: currentPlan.name,
         currentBillingCycle: currentSub.billing_cycle,
-        currentPrice,
+        currentPriceStripe: currentPriceFromStripe,
+        currentPriceDB: currentSub.billing_cycle === 'yearly' ? Number(currentPlan.price_yearly) : Number(currentPlan.price_monthly),
         newPlanName: newPlan.name,
         newBillingCycle: billingCycle,
-        newPrice,
-        simpleDifference: newPrice - currentPrice,
+        newPriceStripe: newPriceFromStripe,
+        newPriceDB: billingCycle === 'yearly' ? Number(newPlan.price_yearly) : Number(newPlan.price_monthly),
+        simpleDifference: newPriceFromStripe - currentPriceFromStripe,
         isUpgrade,
         isDowngrade,
-      });
-
-      // 🧮 DIAGNOSIS - Manual Proration Calculation
-      const usedValue = (daysElapsed / totalDays) * currentPrice;
-      const creditForRemaining = (daysRemaining / totalDays) * currentPrice;
-      const proportionalNewCost = (daysRemaining / totalDays) * newPrice;
-      const manualProration = proportionalNewCost - creditForRemaining;
-
-      console.log('🧮 DIAGNOSIS - Manual Proration Calculation:', {
-        usedValue: usedValue.toFixed(2),
-        creditForRemaining: creditForRemaining.toFixed(2),
-        proportionalNewCost: proportionalNewCost.toFixed(2),
-        manualProration: manualProration.toFixed(2),
-        stripeProration: (upcomingInvoice.amount_due / 100).toFixed(2),
-        difference: ((upcomingInvoice.amount_due / 100) - manualProration).toFixed(2),
-        percentageDifference: (((upcomingInvoice.amount_due / 100 - manualProration) / manualProration) * 100).toFixed(2) + '%',
       });
 
       console.log('Preview calculated:', {
@@ -458,8 +457,9 @@ Deno.serve(withSentry(async (req) => {
       });
 
       // Return preview with structure matching ProrationPreviewData interface
+      // 🔧 FIX ENTERPRISE: Todos los precios vienen de Stripe, no de DB
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           preview: {
             immediate_charge: immediateUpgradeCharge, // Only the upgrade cost, not next cycle
             currency: upcomingInvoice.currency.toUpperCase(),
@@ -470,9 +470,15 @@ Deno.serve(withSentry(async (req) => {
           },
           isUpgrade,
           isDowngrade,
-          currentPrice,
-          newPrice,
+          // 🔧 FIX: Precios de Stripe como fuente de verdad
+          currentPrice: currentPriceFromStripe * 100, // En centavos para consistencia
+          newPrice: newPriceFromStripe * 100, // En centavos para consistencia
+          // También incluir precios formateados en pesos para display
+          currentPriceDisplay: currentPriceFromStripe,
+          newPriceDisplay: newPriceFromStripe,
           currentPeriodEnd: new Date(upcomingInvoice.period_end * 1000).toISOString(),
+          // 🔧 FIX ENTERPRISE: Incluir impacto del downgrade para que el usuario sepa qué pasará
+          downgradeImpact: isDowngrade ? downgradeImpact : null,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -643,7 +649,8 @@ Deno.serve(withSentry(async (req) => {
           .eq('status', 'active');
       }
 
-      // Send downgrade confirmation
+      // 🔧 FIX ENTERPRISE: Enviar notificación de downgrade con TODOS los detalles
+      // Esto permite al usuario saber exactamente qué pasó con sus propiedades
       await supabaseClient.functions.invoke('send-subscription-notification', {
         body: {
           userId: user.id,
@@ -658,9 +665,19 @@ Deno.serve(withSentry(async (req) => {
             }),
             propertiesRemoved,
             featuredRemoved,
+            // 🔧 FIX: Incluir los nuevos límites para que el usuario sepa sus nuevos límites
+            newPropertyLimit: newPlanLimit,
             newFeaturedLimit,
           },
         },
+      });
+
+      console.log('📧 Downgrade notification sent:', {
+        userId: user.id,
+        propertiesRemoved,
+        featuredRemoved,
+        newPropertyLimit: newPlanLimit,
+        newFeaturedLimit,
       });
     }
 
