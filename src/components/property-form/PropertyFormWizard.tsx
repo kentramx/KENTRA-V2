@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Save, RotateCcw } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
+import { getPropertyTypeLabel } from '@/config/propertyTypes';
 
 type PropertyInsert = Database['public']['Tables']['properties']['Insert'];
 type PropertyUpdate = Database['public']['Tables']['properties']['Update'];
@@ -157,25 +158,7 @@ export const PropertyFormWizard = ({ property, onSuccess, onCancel }: PropertyFo
     }
 
     // Generar título automático basado en tipo y ubicación
-    const propertyTypeLabels: Record<string, string> = {
-      casa: 'Casa',
-      departamento: 'Departamento',
-      terreno: 'Terreno',
-      local_comercial: 'Local Comercial',
-      oficina: 'Oficina',
-      bodega: 'Bodega',
-      edificio: 'Edificio',
-      rancho: 'Rancho',
-      penthouse: 'Penthouse',
-      villa: 'Villa',
-      estudio: 'Estudio',
-      townhouse: 'Townhouse',
-      cabaña: 'Cabaña',
-      hacienda: 'Hacienda',
-      loft: 'Loft',
-    };
-    
-    const typeLabel = propertyTypeLabels[formData.type] || formData.type;
+    const typeLabel = getPropertyTypeLabel(formData.type);
     const listingTypeLabel = formData.for_sale && formData.for_rent 
       ? 'en Venta/Renta' 
       : formData.for_sale 
