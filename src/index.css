@@ -389,50 +389,6 @@
 .pac-item:hover { background: hsl(var(--muted)); }
 .pac-item-query { color: hsl(var(--foreground)); font-weight: 500; }
 
-/* Estilos personalizados para etiquetas de precio en marcadores del mapa */
-.marker-price-label {
-  background: white !important;
-  padding: 2px 6px !important;
-  border-radius: 8px !important;
-  font-weight: 700 !important;
-  font-size: 10px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
-  border: 1.5px solid currentColor !important;
-  white-space: nowrap !important;
-  margin-top: -50px !important;
-  display: inline-block !important;
-}
-
-/* Custom price markers estilo Airbnb */
-.custom-price-marker {
-  background: hsl(var(--background)) !important;
-  color: hsl(var(--foreground)) !important;
-  border: 1.5px solid hsl(var(--border)) !important;
-  border-radius: 20px !important;
-  padding: 6px 12px !important;
-  font-weight: 600 !important;
-  font-size: 13px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-  white-space: nowrap !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
-  animation: none !important;
-}
-
-.custom-price-marker:hover {
-  background: hsl(var(--primary)) !important;
-  color: hsl(var(--primary-foreground)) !important;
-  transform: scale(1.1) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
-  z-index: 1000 !important;
-  border-color: hsl(var(--primary)) !important;
-}
-
-/* Estilos para marcadores destacados/hover desde cards */
-.gm-style > div:first-child > div > div:nth-child(3) > div {
-  animation-timing-function: ease-in-out !important;
-}
-
 /* Forzar ancho del web component de Google Places */
 gmp-place-autocomplete {
   display: block;
@@ -450,27 +406,6 @@ gmp-place-autocomplete {
 
 .animate-shake {
   animation: shake 0.5s ease-in-out;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   MOBILE MAP UX - Prevenir zoom accidental de página
-   ═══════════════════════════════════════════════════════════ */
-
-/* Prevenir gestos de página dentro del mapa */
-[data-map-container] {
-  touch-action: none;
-}
-
-/* Permitir scroll normal en la lista de propiedades */
-.search-results-list {
-  touch-action: pan-y;
-}
-
-/* Estilos para fullscreen del mapa */
-[data-map-container]:fullscreen {
-  width: 100vw;
-  height: 100vh;
-  background: hsl(var(--background));
 }
 
 /* ═══════════════════════════════════════════════════════════
