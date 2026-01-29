@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
  * Set to true to use the new unified search with consistent totals.
  * Set to false to use the legacy property-search-h3.
  */
-const USE_VNEXT_ENDPOINT = true;
+const USE_VNEXT_ENDPOINT = false; // Temporarily disabled due to RPC timeout - using legacy endpoint
 
 /**
  * Unified hook for property search on map view.

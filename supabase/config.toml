@@ -161,3 +161,6 @@ verify_jwt = false
 
 [functions.property-search-h3]
 verify_jwt = false
+
+[functions.property-search-vNext]
+verify_jwt = false
