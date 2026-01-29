@@ -1,13 +1,14 @@
 /**
  * Edge Function: property-search-h3
  *
- * Enterprise-grade property search using H3 hexagonal indexing.
+ * Enterprise-grade property search using geohash-based clustering.
+ * (Originally designed for H3, but Supabase doesn't support H3 extension)
+ *
  * Designed to scale to 5M+ properties with sub-100ms response times.
  *
  * Features:
- * - H3-based hierarchical clustering (res 4-9)
+ * - Geohash-based hierarchical clustering (precision 7)
  * - Pre-computed materialized views for instant aggregations
- * - Automatic resolution selection based on zoom level
  * - Support for listing_type and other filters
  */
 
@@ -35,21 +36,8 @@ interface RequestBody {
   filters?: Filters;
   page?: number;
   limit?: number;
-  // For drilling into a specific H3 cell
-  h3_filter?: string;
-}
-
-/**
- * Maps zoom level to H3 resolution
- * Lower zoom = lower resolution = larger hexagons
- */
-function getH3Resolution(zoom: number): number {
-  if (zoom <= 6) return 4;   // ~1,770 km² (country/large region)
-  if (zoom <= 8) return 5;   // ~253 km² (region)
-  if (zoom <= 10) return 6;  // ~36 km² (city)
-  if (zoom <= 12) return 7;  // ~5 km² (district)
-  if (zoom <= 14) return 8;  // ~0.7 km² (neighborhood)
-  return 9;                  // ~0.1 km² (block)
+  // For drilling into a specific geohash cell
+  geohash_filter?: string;
 }
 
 /**
@@ -71,7 +59,7 @@ Deno.serve(async (req) => {
 
   try {
     const body: RequestBody = await req.json();
-    const { bounds, zoom, filters = {}, page = 1, limit = 20, h3_filter } = body;
+    const { bounds, zoom, filters = {}, page = 1, limit = 20, geohash_filter } = body;
 
     if (!bounds || zoom === undefined) {
       return new Response(
@@ -85,26 +73,18 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const h3Resolution = getH3Resolution(zoom);
-
     // =============================================
-    // H3 FILTER MODE (drilling into a specific hexagon)
+    // GEOHASH FILTER MODE (drilling into a specific geohash cell)
     // =============================================
-    if (h3_filter) {
-      console.log(`[property-search-h3] Drilling into H3 cell: ${h3_filter}`);
+    if (geohash_filter) {
+      console.log(`[property-search-h3] Drilling into geohash: ${geohash_filter}`);
 
-      // Determine which H3 column to query based on filter length
-      // H3 index strings have predictable lengths per resolution
-      const resFromFilter = h3_filter.length <= 10 ? 6 :
-                           h3_filter.length <= 11 ? 7 :
-                           h3_filter.length <= 12 ? 8 : 9;
-      const h3Col = `h3_res${resFromFilter}`;
-
+      // Use geohash_7 column for filtering (all our clusters use precision 7)
       let query = supabase
         .from('properties')
         .select('id, title, slug, lat, lng, price, listing_type, type, bedrooms, bathrooms, sqft, colonia, municipality, state', { count: 'exact' })
         .eq('status', 'activa')
-        .eq(h3Col, h3_filter);
+        .eq('geohash_7', geohash_filter);
 
       // Apply filters
       if (filters.listing_type) query = query.eq('listing_type', filters.listing_type);
@@ -152,9 +132,8 @@ Deno.serve(async (req) => {
           totalPages: Math.ceil(total / limit),
           _meta: {
             duration_ms: Date.now() - startTime,
-            mode: 'h3_filter',
-            h3_cell: h3_filter,
-            resolution: resFromFilter,
+            mode: 'geohash_filter',
+            geohash: geohash_filter,
           },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -252,23 +231,20 @@ Deno.serve(async (req) => {
     }
 
     // =============================================
-    // CLUSTERS MODE (zoom < 14) - Use H3 Materialized Views
+    // CLUSTERS MODE (zoom < 14) - Use Geohash Materialized Views
     // =============================================
 
-    // Determine which materialized view to use
-    const mvTable = filters.listing_type
-      ? `mv_h3_clusters_res${h3Resolution}`
-      : `mv_h3_clusters_res${h3Resolution}_all`;
+    // We use geohash precision 7 for all zoom levels (simplification)
+    // Determine which materialized view to use based on listing_type filter
+    const useAllVariant = !filters.listing_type;
+    const mvTable = useAllVariant ? 'mv_geohash_clusters_7_all' : 'mv_geohash_clusters_7';
 
-    // Check if the "all" variant exists, otherwise use filtered variant
-    const useAllVariant = !filters.listing_type && (h3Resolution === 6 || h3Resolution === 7);
-
-    console.log(`[property-search-h3] Using MV: ${mvTable}, resolution: ${h3Resolution}`);
+    console.log(`[property-search-h3] Using MV: ${mvTable}, zoom: ${zoom}`);
 
     // Query clusters from materialized view
     let clusterQuery = supabase
-      .from(useAllVariant ? `mv_h3_clusters_res${h3Resolution}_all` : `mv_h3_clusters_res${h3Resolution}`)
-      .select('h3_index, count, avg_price, min_price, max_price, lat, lng')
+      .from(mvTable)
+      .select('geohash, count, avg_price, min_price, max_price, lat, lng' + (useAllVariant ? '' : ', listing_type'))
       .gte('lat', bounds.south)
       .lte('lat', bounds.north)
       .gte('lng', bounds.west)
@@ -304,15 +280,15 @@ Deno.serve(async (req) => {
 
     if (clusterResult.error) {
       console.error('[property-search-h3] Cluster query error:', clusterResult.error);
-      // Fallback: if MV doesn't exist, return empty clusters
-      // This allows graceful degradation before migrations are run
+      // Fallback: if MV doesn't exist or has no data, return empty clusters
+      // This allows graceful degradation before data is populated
     }
     if (listResult.error) throw listResult.error;
 
-    // Process clusters
+    // Process clusters - use geohash as the ID
     const clusters = (clusterResult.data || []).map((c: any) => ({
-      id: c.h3_index,
-      h3_index: c.h3_index,
+      id: c.geohash,
+      geohash: c.geohash,
       count: Number(c.count),
       avg_price: Number(c.avg_price),
       min_price: Number(c.min_price),
@@ -352,7 +328,7 @@ Deno.serve(async (req) => {
         _meta: {
           duration_ms: Date.now() - startTime,
           mode: 'clusters',
-          h3_resolution: h3Resolution,
+          geohash_precision: 7,
           clusters_count: clusters.length,
           total_from_clusters: totalFromClusters,
           total_from_list: listTotal,

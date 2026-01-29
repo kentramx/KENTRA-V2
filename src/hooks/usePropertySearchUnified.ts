@@ -7,12 +7,13 @@ import toast from 'react-hot-toast';
 /**
  * Unified hook for property search on map view.
  *
- * V2: Uses Quadtree-based clustering with guaranteed count consistency.
- * Invariant: parent.count === SUM(children.count) ALWAYS
+ * V3: Uses geohash-based clustering with materialized views.
  *
  * Two modes:
- * 1. Viewport mode: Pass bounds + zoom for initial clusters
- * 2. Drill-down mode: Pass node_id for exact cluster expansion
+ * 1. Clusters mode (zoom < 14): Shows aggregated clusters from materialized views
+ * 2. Properties mode (zoom >= 14): Shows individual properties
+ *
+ * Drill-down: Pass geohash_filter to show properties within a specific cluster
  */
 export function usePropertySearchUnified() {
   const {
@@ -64,16 +65,15 @@ export function usePropertySearchUnified() {
     setListError(null);
 
     try {
-      // TODO: Switch to property-search-tree once debugged
-      // Using property-search-unified temporarily
-      const { data, error } = await supabase.functions.invoke('property-search-unified', {
+      // Using property-search-h3 with geohash-based clustering
+      const { data, error } = await supabase.functions.invoke('property-search-h3', {
         body: {
           bounds: viewport?.bounds,
           zoom: viewport?.zoom,
           filters,
           page: listPage,
           limit: 20,
-          // Pass geohash for exact cluster drilling (legacy system)
+          // Pass geohash for cluster drilling
           geohash_filter: selectedNodeId || undefined,
         },
       });
