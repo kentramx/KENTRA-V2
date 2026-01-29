@@ -471,3 +471,67 @@ gmp-place-autocomplete {
     font-size: 16px !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   MAP MARKERS - KENTRA ENTERPRISE MAPS
+   ═══════════════════════════════════════════════════════════ */
+
+.map-cluster-marker {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cluster-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 2px solid white;
+  transition: transform 0.2s;
+}
+
+.map-cluster-marker:hover .cluster-circle {
+  transform: scale(1.15);
+}
+
+.map-property-marker {
+  cursor: pointer;
+}
+
+.price-pill {
+  background: hsl(var(--background));
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 2px solid hsl(var(--primary));
+  color: hsl(var(--primary));
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.price-pill.rent {
+  border-color: hsl(217, 91%, 60%);
+  color: hsl(217, 91%, 60%);
+}
+
+.map-property-marker:hover .price-pill,
+.map-property-marker.hovered .price-pill {
+  transform: scale(1.1);
+  z-index: 100;
+}
+
+.map-property-marker.selected .price-pill {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  transform: scale(1.15);
+  z-index: 200;
+}
