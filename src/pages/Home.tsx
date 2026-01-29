@@ -19,9 +19,10 @@ import type { PropertySummary } from '@/types/property';
 import StatsCounter from '@/components/home/StatsCounter';
 import Testimonials from '@/components/home/Testimonials';
 import TrustedBy from '@/components/home/TrustedBy';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Footer } from "@/components/Footer";
+import { PROPERTY_TYPES, PROPERTY_CATEGORIES, PropertyCategory } from "@/config/propertyTypes";
 
 const Home = () => {
   const [listingType, setListingType] = useState<"venta" | "renta">("venta");
@@ -164,14 +165,19 @@ const Home = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos los tipos</SelectItem>
-                    <SelectItem value="casa">Casa</SelectItem>
-                    <SelectItem value="departamento">Departamento</SelectItem>
-                    <SelectItem value="terreno">Terreno</SelectItem>
-                    <SelectItem value="oficina">Oficina</SelectItem>
-                    <SelectItem value="local">Local Comercial</SelectItem>
-                    <SelectItem value="bodega">Bodega</SelectItem>
-                    <SelectItem value="edificio">Edificio</SelectItem>
-                    <SelectItem value="rancho">Rancho</SelectItem>
+                    {(['residencial', 'comercial', 'industrial', 'terrenos', 'desarrollos'] as PropertyCategory[]).map(category => (
+                      <SelectGroup key={category}>
+                        <SelectLabel className="text-xs font-semibold text-muted-foreground px-2">{PROPERTY_CATEGORIES[category]}</SelectLabel>
+                        {PROPERTY_TYPES
+                          .filter(t => t.category === category)
+                          .map(type => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))
+                        }
+                      </SelectGroup>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
