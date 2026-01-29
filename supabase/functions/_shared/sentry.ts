@@ -168,14 +168,17 @@ function parseStackTrace(stack: string): Array<Record<string, unknown>> {
 }
 
 /**
+ * Handler type for Deno.serve edge functions
+ */
+type EdgeFunctionHandler = (req: Request) => Promise<Response>;
+
+/**
  * Wrapper para funciones edge con manejo de errores automático
  */
-export function withSentry<T extends (...args: unknown[]) => Promise<Response>>(
-  handler: T
-): T {
-  return (async (...args: unknown[]) => {
+export function withSentry(handler: EdgeFunctionHandler): EdgeFunctionHandler {
+  return async (req: Request) => {
     try {
-      return await handler(...args);
+      return await handler(req);
     } catch (error) {
       console.error('[Edge Function Error]', error);
       
@@ -184,7 +187,8 @@ export function withSentry<T extends (...args: unknown[]) => Promise<Response>>(
           function: 'edge-function',
         },
         extra: {
-          args: JSON.stringify(args).slice(0, 1000), // Limitar tamaño
+          url: req.url,
+          method: req.method,
         },
       });
 
@@ -199,5 +203,5 @@ export function withSentry<T extends (...args: unknown[]) => Promise<Response>>(
         }
       );
     }
-  }) as T;
+  };
 }

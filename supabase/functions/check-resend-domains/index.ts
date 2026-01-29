@@ -68,10 +68,14 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // Analizar dominios - Resend devuelve array directamente
-    const domainList = Array.isArray(domains) ? domains : (domains as Record<string, unknown>)?.data || [];
+    // deno-lint-ignore no-explicit-any
+    const domainList: any[] = Array.isArray(domains) ? domains : 
+      (domains && typeof domains === 'object' && 'data' in (domains as object) && Array.isArray((domains as { data: unknown }).data)) 
+        ? (domains as { data: unknown[] }).data 
+        : [];
     console.log(`📧 Found ${domainList.length} domain(s) in Resend account:`);
     
-    const domainInfo = domainList.map((domain: Record<string, unknown>) => {
+    const domainInfo = domainList.map((domain) => {
       console.log(`   - ${domain.name} (status: ${domain.status}, region: ${domain.region})`);
       return {
         name: domain.name,
@@ -82,7 +86,7 @@ serve(async (req: Request): Promise<Response> => {
     });
 
     // Verificar si updates.kentra.com.mx está en la lista
-    const hasKentraDomain = domainList.some((d: Record<string, unknown>) => 
+    const hasKentraDomain = domainList.some((d) => 
       d.name === "updates.kentra.com.mx" || d.name === "kentra.com.mx"
     );
 
@@ -92,9 +96,13 @@ serve(async (req: Request): Promise<Response> => {
     let apiKeysInfo: Array<{ id: unknown; name: unknown; createdAt: unknown }> | null = null;
     try {
       const { data: apiKeys } = await resend.apiKeys.list();
-      const keysList = Array.isArray(apiKeys) ? apiKeys : (apiKeys as Record<string, unknown>)?.data || [];
+      // deno-lint-ignore no-explicit-any
+      const keysList: any[] = Array.isArray(apiKeys) ? apiKeys : 
+        (apiKeys && typeof apiKeys === 'object' && 'data' in (apiKeys as object) && Array.isArray((apiKeys as { data: unknown }).data)) 
+          ? (apiKeys as { data: unknown[] }).data 
+          : [];
       if (keysList.length > 0) {
-        apiKeysInfo = (keysList as Array<Record<string, unknown>>).map((key: Record<string, unknown>) => ({
+        apiKeysInfo = keysList.map((key) => ({
           id: key.id,
           name: key.name,
           createdAt: key.created_at

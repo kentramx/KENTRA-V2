@@ -334,10 +334,15 @@ Deno.serve(withSentry(async (req) => {
 
       // VALIDACIÓN 6: Verificar límite de slots adicionales
       if (upsells && upsells.length > 0) {
-        const slotUpsellIds = upsells.filter((u: Record<string, unknown>) => 
+        interface UpsellInput {
+          id?: string;
+          name?: string;
+          quantity?: number;
+        }
+        const slotUpsellIds = (upsells as UpsellInput[]).filter((u) => 
           u.name?.toLowerCase().includes('slot adicional') || 
           u.name?.toLowerCase().includes('paquete')
-        ).map((u: Record<string, unknown>) => u.id);
+        ).map((u) => u.id).filter(Boolean);
 
         if (slotUpsellIds.length > 0) {
           const { data: activeSlots, error: slotsError } = await supabaseClient
@@ -345,7 +350,7 @@ Deno.serve(withSentry(async (req) => {
             .select('id')
             .eq('user_id', user.id)
             .eq('status', 'active')
-            .in('upsell_id', slotUpsellIds);
+            .in('upsell_id', slotUpsellIds as string[]);
 
           if (slotsError) {
             console.error('Error checking active slots:', slotsError);
@@ -363,9 +368,14 @@ Deno.serve(withSentry(async (req) => {
       const customerId = activeSub.stripe_customer_id;
 
       // Obtener IDs y cantidades de upsells del frontend
-      const upsellIds = upsells.map((u: Record<string, unknown>) => u.id).filter(Boolean);
+      interface UpsellInput {
+        id?: string;
+        name?: string;
+        quantity?: number;
+      }
+      const upsellIds = (upsells as UpsellInput[]).map((u) => u.id).filter(Boolean);
       const upsellQuantities: Record<string, number> = {};
-      upsells.forEach((u: Record<string, unknown>) => {
+      (upsells as UpsellInput[]).forEach((u) => {
         if (u.id) {
           upsellQuantities[u.id] = Math.max(1, Math.min(u.quantity || 1, 100)); // Entre 1 y 100
         }
@@ -597,8 +607,13 @@ Deno.serve(withSentry(async (req) => {
           }
 
           // Build validated line items using DB price IDs (not client-provided)
+          interface UpsellInput {
+            id?: string;
+            name?: string;
+            quantity?: number;
+          }
           const upsellQuantities: Record<string, number> = {};
-          upsells.forEach((u: Record<string, unknown>) => {
+          (upsells as UpsellInput[]).forEach((u) => {
             if (u.id) {
               upsellQuantities[u.id] = Math.max(1, Math.min(u.quantity || 1, 100));
             }

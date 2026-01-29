@@ -354,7 +354,8 @@ Deno.serve(async (req) => {
       prices: number[];
     }>();
 
-    for (const p of (clusterResult.data || [])) {
+    // deno-lint-ignore no-explicit-any
+    for (const p of (clusterResult.data || []) as any[]) {
       const key = p[geohashCol] || 'unknown';
       if (!clusterMap.has(key)) {
         clusterMap.set(key, {

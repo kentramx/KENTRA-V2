@@ -25,8 +25,10 @@ function formatPrice(price: number): string {
 
 // Generar SVG para propiedad
 function generatePropertySVG(property: Record<string, unknown>): string {
-  const price = formatPrice(property.price || 0);
-  const title = property.title?.slice(0, 40) || "Propiedad";
+  const priceValue = typeof property.price === 'number' ? property.price : 0;
+  const price = formatPrice(priceValue);
+  const titleStr = typeof property.title === 'string' ? property.title : '';
+  const title = titleStr.slice(0, 40) || "Propiedad";
   const location = `${property.municipality || ""}, ${property.state || ""}`.slice(0, 35);
   const beds = property.bedrooms || 0;
   const baths = property.bathrooms || 0;
@@ -81,10 +83,12 @@ function generatePropertySVG(property: Record<string, unknown>): string {
 
 // Generar SVG para agente
 function generateAgentSVG(agent: Record<string, unknown>, stats: Record<string, unknown>): string {
-  const name = agent.name?.slice(0, 30) || "Agente";
+  const nameStr = typeof agent.name === 'string' ? agent.name : '';
+  const name = nameStr.slice(0, 30) || "Agente";
   const location = [agent.city, agent.state].filter(Boolean).join(", ").slice(0, 35) || "México";
   const properties = stats.activeProperties || 0;
-  const rating = stats.averageRating?.toFixed(1) || "N/A";
+  const avgRating = typeof stats.averageRating === 'number' ? stats.averageRating : null;
+  const rating = avgRating !== null ? avgRating.toFixed(1) : "N/A";
   const reviews = stats.totalReviews || 0;
   
   return `

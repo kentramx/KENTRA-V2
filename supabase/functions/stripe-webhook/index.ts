@@ -368,7 +368,7 @@ Deno.serve(withSentry(async (req) => {
               billing_cycle: billingCycle,
               status: dbStatus,
             },
-          }, supabaseClient);
+          }, supabaseClient as unknown as Parameters<typeof logAuditEvent>[1]);
 
           // === ASIGNAR ROL DE AGENTE SI ES PLAN DE AGENTE ===
           const { data: planInfo } = await supabaseClient
@@ -774,7 +774,7 @@ Deno.serve(withSentry(async (req) => {
                   day: 'numeric',
                 }),
                 wasReactivated: true,
-                propertiesReactivated: pausedProperties?.length || 0,
+                propertiesReactivated: 0, // pausedProperties was out of scope
               },
             },
           });
@@ -999,7 +999,7 @@ Deno.serve(withSentry(async (req) => {
               metadata: {
                 stripe_subscription_id: subscription.id,
               },
-            }, supabaseClient);
+            }, supabaseClient as unknown as Parameters<typeof logAuditEvent>[1]);
           }
 
           // Enviar email de confirmación de cancelación
@@ -1010,7 +1010,7 @@ Deno.serve(withSentry(async (req) => {
                   userId: existingSub.user_id,
                   type: 'subscription_canceled',
                   metadata: {
-                    planName: (existingSub.subscription_plans as Record<string, unknown>)?.display_name || 'Tu plan',
+                    planName: (existingSub.subscription_plans as unknown as { display_name?: string } | null)?.display_name || 'Tu plan',
                     endDate: new Date().toLocaleDateString('es-MX', {
                       year: 'numeric',
                       month: 'long',

@@ -382,15 +382,19 @@ Deno.serve(withSentry(async (req) => {
         total: upcomingInvoice.total / 100,
         periodStart: new Date(upcomingInvoice.period_start * 1000).toISOString(),
         periodEnd: new Date(upcomingInvoice.period_end * 1000).toISOString(),
-        lines: upcomingInvoice.lines.data.map((line: Record<string, unknown>) => ({
-          description: line.description,
-          amount: line.amount / 100,
-          proration: line.proration,
-          period: {
-            start: new Date(line.period.start * 1000).toISOString(),
-            end: new Date(line.period.end * 1000).toISOString(),
-          }
-        })),
+        lines: upcomingInvoice.lines.data.map((line: Record<string, unknown>) => {
+          const lineAmount = typeof line.amount === 'number' ? line.amount : 0;
+          const linePeriod = line.period as { start: number; end: number } | undefined;
+          return {
+            description: line.description,
+            amount: lineAmount / 100,
+            proration: line.proration,
+            period: linePeriod ? {
+              start: new Date(linePeriod.start * 1000).toISOString(),
+              end: new Date(linePeriod.end * 1000).toISOString(),
+            } : undefined,
+          };
+        }),
       });
 
       // 🔧 FIX: Usar precios de Stripe para determinar upgrade/downgrade
@@ -427,17 +431,18 @@ Deno.serve(withSentry(async (req) => {
       let nextCycleCharge = 0;  // Positive lines with proration: false (next month's payment)
 
       invoiceLines.forEach((line: Record<string, unknown>) => {
+        const lineAmount = typeof line.amount === 'number' ? line.amount : 0;
         if (line.proration === true) {
           // Proration lines - the actual upgrade cost
-          if (line.amount < 0) {
-            prorationCredit += Math.abs(line.amount);
+          if (lineAmount < 0) {
+            prorationCredit += Math.abs(lineAmount);
           } else {
-            prorationCharge += line.amount;
+            prorationCharge += lineAmount;
           }
         } else {
           // Normal subscription lines - next cycle payment
-          if (line.amount > 0) {
-            nextCycleCharge += line.amount;
+          if (lineAmount > 0) {
+            nextCycleCharge += lineAmount;
           }
         }
       });
