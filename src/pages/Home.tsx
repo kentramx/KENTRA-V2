@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { SEOHead } from "@/components/SEOHead";
 import { generateWebsiteStructuredData, generateOrganizationStructuredData } from "@/utils/structuredData";
-import { usePropertiesInfinite } from "@/hooks/usePropertiesInfinite";
+import { useHomeProperties } from "@/hooks/useHomeProperties";
 import type { PropertySummary } from '@/types/property';
 import StatsCounter from '@/components/home/StatsCounter';
 import Testimonials from '@/components/home/Testimonials';
@@ -44,12 +44,7 @@ const Home = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const navigate = useNavigate();
 
-  const { data: featuredData, isLoading: isLoadingFeatured } = usePropertiesInfinite({ status: ['activa'] });
-  const { data: recentData, isLoading: isLoadingRecent } = usePropertiesInfinite({ status: ['activa'] });
-  
-  const featuredProperties = (featuredData?.pages.flatMap(page => page.properties) || []).filter(p => p.is_featured === true) as PropertySummary[];
-  const recentProperties = recentData?.pages.flatMap(page => page.properties) || [] as PropertySummary[];
-  const isLoadingProperties = isLoadingFeatured || isLoadingRecent;
+  const { featuredProperties, recentProperties, isLoading: isLoadingProperties } = useHomeProperties();
 
   const handleSearch = () => {
     const params = new URLSearchParams();

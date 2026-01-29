@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DynamicBreadcrumbs } from "@/components/DynamicBreadcrumbs";
 import { PropertyImageGallery } from "@/components/PropertyImageGallery";
-import { PropertyMap } from "@/components/PropertyMap";
 import PropertyCard from "@/components/PropertyCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SEOHead } from "@/components/SEOHead";
@@ -940,12 +939,12 @@ const PropertyDetail = () => {
                 <CardTitle>Ubicación</CardTitle>
               </CardHeader>
               <CardContent>
-                <PropertyMap
-                  lat={property.lat}
-                  lng={property.lng}
-                  address={`${property.address}, ${property.municipality}, ${property.state}`}
-                  height="400px"
-                />
+                <div className="h-[400px] bg-muted rounded-lg flex items-center justify-center">
+                  <div className="text-center text-muted-foreground">
+                    <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>{property.address}, {property.municipality}, {property.state}</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 

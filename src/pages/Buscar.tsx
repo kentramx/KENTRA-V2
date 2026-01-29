@@ -1,46 +1,30 @@
-import { Toaster } from 'react-hot-toast';
-import { SearchMapEnterprise } from '@/components/search/SearchMapEnterprise';
-import { PropertyList } from '@/components/search/PropertyList';
-import { MapFilters } from '@/components/search/MapFilters';
-import { MapDebugPanel } from '@/components/search/MapDebugPanel';
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { MapPin, ArrowLeft } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 export default function Buscar() {
+  const navigate = useNavigate();
+
   return (
-    <>
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          error: {
-            duration: 10000,
-            style: {
-              background: '#7f1d1d',
-              color: '#fecaca',
-              border: '1px solid #dc2626',
-            },
-          },
-        }}
-      />
-
-      <div className="h-screen flex flex-col">
-        {/* Filtros */}
-        <MapFilters />
-
-        {/* Main content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Lista */}
-          <div className="w-[400px] flex-shrink-0 border-r overflow-hidden">
-            <PropertyList />
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="container mx-auto px-4 py-20">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="mb-8 p-6 rounded-full bg-primary/10 w-fit mx-auto">
+            <MapPin className="h-16 w-16 text-primary" />
           </div>
-
-          {/* Mapa */}
-          <div className="flex-1 relative">
-            <SearchMapEnterprise />
-          </div>
+          <h1 className="text-3xl font-bold mb-4">Buscador de Propiedades</h1>
+          <p className="text-lg text-muted-foreground mb-8">
+            Estamos trabajando en una nueva experiencia de búsqueda con mapas interactivos.
+            Próximamente podrás explorar propiedades de forma visual.
+          </p>
+          <Button onClick={() => navigate("/")} variant="outline" size="lg">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver al inicio
+          </Button>
         </div>
       </div>
-
-      {/* Debug Panel */}
-      <MapDebugPanel />
-    </>
+    </div>
   );
 }

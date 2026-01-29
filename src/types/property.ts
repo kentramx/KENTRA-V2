@@ -1,9 +1,15 @@
-import type { MapBounds } from '@/types/map';
-
 /**
  * Tipo central unificado para Property
  * ✅ Fuente única de verdad para todas las propiedades del sistema
  */
+
+// Map bounds interface (previously in map.ts)
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
 
 // ============= TIPO PRINCIPAL =============
 
@@ -252,8 +258,6 @@ export type AIModerationStatus =
 
 // ============= FILTROS =============
 
-// Re-exportar MapBounds desde map.ts para compatibilidad
-export type { MapBounds };
 
 // ViewportBounds es ahora MapViewport de map.ts
 export interface ViewportBounds {
